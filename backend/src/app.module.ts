@@ -6,6 +6,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { HolidaysModule } from './holidays/holidays.module';
+import { LeaveBalancesModule } from './leave-balances/leave-balances.module';
 import { LeaveRequestsModule } from './leave-requests/leave-requests.module';
 import { LeaveTypesModule } from './leave-types/leave-types.module';
 import { ServicesModule } from './services/services.module';
@@ -40,6 +41,7 @@ import { UsersModule } from './users/users.module';
     UsersModule,
     AuthModule,
     LeaveTypesModule,
+    LeaveBalancesModule,
     LeaveRequestsModule,
     HolidaysModule,
   ],
