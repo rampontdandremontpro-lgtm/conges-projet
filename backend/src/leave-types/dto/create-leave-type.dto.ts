@@ -59,6 +59,10 @@ export class CreateLeaveTypeDto {
   requiresValidation?: boolean;
 
   @IsOptional()
+  @IsBoolean()
+  requiresEmployeeSignature?: boolean;
+
+  @IsOptional()
   @IsEnum(LeaveAccrualMode)
   accrualMode?: LeaveAccrualMode;
 

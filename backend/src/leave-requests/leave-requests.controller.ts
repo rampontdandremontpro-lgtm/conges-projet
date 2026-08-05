@@ -20,6 +20,7 @@ import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { UserRole } from '../users/user.entity';
 import { CreateLeaveRequestDto } from './dto/create-leave-request.dto';
+import { SubmitLeaveRequestDto } from './dto/submit-leave-request.dto';
 import { UpdateLeaveRequestDto } from './dto/update-leave-request.dto';
 import { LeaveRequestsService } from './leave-requests.service';
 
@@ -53,6 +54,20 @@ export class LeaveRequestsController {
   @Get('my')
   findMyRequests(@Req() request: AuthenticatedRequest) {
     return this.leaveRequestsService.findMyRequests(request.user);
+  }
+
+  @Post(':id/submit')
+  @HttpCode(HttpStatus.OK)
+  submit(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() request: AuthenticatedRequest,
+    @Body() submitLeaveRequestDto: SubmitLeaveRequestDto,
+  ) {
+    return this.leaveRequestsService.submit(
+      id,
+      request.user,
+      submitLeaveRequestDto,
+    );
   }
 
   @Get(':id')

@@ -120,6 +120,8 @@ export class LeaveTypesService {
     leaveType.allowsHalfDays = values.allowsHalfDays;
     leaveType.allowsHours = values.allowsHours;
     leaveType.requiresValidation = values.requiresValidation;
+    leaveType.requiresEmployeeSignature =
+      values.requiresEmployeeSignature;
     leaveType.accrualMode = values.accrualMode;
     leaveType.monthlyAccrualDays = values.monthlyAccrualDays;
 
@@ -191,6 +193,10 @@ export class LeaveTypesService {
       allowsHours: dto.allowsHours ?? current?.allowsHours ?? false,
       requiresValidation:
         dto.requiresValidation ?? current?.requiresValidation ?? true,
+      requiresEmployeeSignature:
+        dto.requiresEmployeeSignature ??
+        current?.requiresEmployeeSignature ??
+        category === LeaveTypeCategory.CONGE,
       accrualMode,
       monthlyAccrualDays,
     };
@@ -207,6 +213,7 @@ export class LeaveTypesService {
     allowsHalfDays: boolean;
     allowsHours: boolean;
     requiresValidation: boolean;
+    requiresEmployeeSignature: boolean;
     accrualMode: LeaveAccrualMode;
     monthlyAccrualDays: number;
   }): void {

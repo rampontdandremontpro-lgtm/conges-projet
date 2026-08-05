@@ -28,6 +28,17 @@ export enum DayPeriod {
   APRES_MIDI = 'APRES_MIDI',
 }
 
+export enum SignatureType {
+  DRAWN = 'DRAWN',
+  INITIALS = 'INITIALS',
+}
+
+const nullableDecimalTransformer = {
+  to: (value: number | null): number | null => value,
+  from: (value: string | null): number | null =>
+    value === null ? null : Number(value),
+};
+
 @Entity('leave_requests')
 export class LeaveRequest {
   @PrimaryGeneratedColumn()
@@ -120,7 +131,7 @@ export class LeaveRequest {
 
   @Column({
     type: 'decimal',
-    precision: 6,
+    precision: 7,
     scale: 2,
     transformer: {
       to: (value: number): number => value,
@@ -155,10 +166,63 @@ export class LeaveRequest {
   modificationDeadline!: string | null;
 
   @Column({
+    type: 'decimal',
+    precision: 7,
+    scale: 2,
+    nullable: true,
+    transformer: nullableDecimalTransformer,
+  })
+  realBalanceBefore!: number | null;
+
+  @Column({
+    type: 'decimal',
+    precision: 7,
+    scale: 2,
+    nullable: true,
+    transformer: nullableDecimalTransformer,
+  })
+  potentialBalanceBefore!: number | null;
+
+  @Column({
+    type: 'decimal',
+    precision: 7,
+    scale: 2,
+    nullable: true,
+    transformer: nullableDecimalTransformer,
+  })
+  realBalanceAfter!: number | null;
+
+  @Column({
+    type: 'enum',
+    enum: SignatureType,
+    nullable: true,
+  })
+  employeeSignatureType!: SignatureType | null;
+
+  @Column({
+    type: 'longtext',
+    nullable: true,
+    select: false,
+  })
+  employeeSignatureData!: string | null;
+
+  @Column({
+    type: 'datetime',
+    nullable: true,
+  })
+  employeeSignedAt!: Date | null;
+
+  @Column({
     type: 'int',
     default: 1,
   })
   version!: number;
+
+  @Column({
+    type: 'datetime',
+    nullable: true,
+  })
+  lockedAt!: Date | null;
 
   @CreateDateColumn()
   createdAt!: Date;

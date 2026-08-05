@@ -90,6 +90,12 @@ export class LeaveType {
   requiresValidation!: boolean;
 
   @Column({
+    type: 'boolean',
+    default: false,
+  })
+  requiresEmployeeSignature!: boolean;
+
+  @Column({
     type: 'enum',
     enum: LeaveAccrualMode,
     default: LeaveAccrualMode.NORMALE,

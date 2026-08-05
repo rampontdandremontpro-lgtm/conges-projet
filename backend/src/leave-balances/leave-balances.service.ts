@@ -46,6 +46,19 @@ export interface LeaveBalanceView {
   updatedAt: Date;
 }
 
+export interface PaidLeaveReservationSummary {
+  realBalanceBefore: number;
+  potentialBalanceBefore: number;
+  realBalanceAfter: number;
+  potentialBalanceAfter: number;
+  reservations: Array<{
+    leaveBalanceId: number;
+    referencePeriod: string;
+    counterType: LeaveBalanceCounterType;
+    days: number;
+  }>;
+}
+
 @Injectable()
 export class LeaveBalancesService {
   constructor(
@@ -574,6 +587,130 @@ export class LeaveBalancesService {
     });
 
     return this.getBalanceView(data.balanceId);
+  }
+
+  async reservePaidLeaveForRequest(
+    manager: EntityManager,
+    data: {
+      employeeId: number;
+      leaveRequestId: number;
+      days: number;
+      actorId: number | null;
+      reason?: string | null;
+    },
+  ): Promise<PaidLeaveReservationSummary> {
+    const days = this.validatePositiveDays(data.days);
+
+    const balances = await manager
+      .getRepository(LeaveBalance)
+      .createQueryBuilder('balance')
+      .setLock('pessimistic_write')
+      .where('balance.employeeId = :employeeId', {
+        employeeId: data.employeeId,
+      })
+      .andWhere('balance.counterType = :counterType', {
+        counterType: LeaveBalanceCounterType.N_MINUS_1,
+      })
+      .orderBy('balance.referencePeriod', 'ASC')
+      .addOrderBy('balance.id', 'ASC')
+      .getMany();
+
+    if (balances.length === 0) {
+      throw new NotFoundException(
+        'Aucun compteur N-1 utilisable n’a été trouvé pour ce collaborateur.',
+      );
+    }
+
+    const realBalanceBefore = this.round(
+      balances.reduce(
+        (total, balance) => total + balance.availableDays,
+        0,
+      ),
+    );
+
+    const potentialBalanceBefore = this.round(
+      balances.reduce(
+        (total, balance) =>
+          total + balance.availableDays - balance.reservedDays,
+        0,
+      ),
+    );
+
+    if (potentialBalanceBefore < days) {
+      throw new BadRequestException(
+        `Le solde potentiel est insuffisant. Solde disponible : ${potentialBalanceBefore} jour(s), demande : ${days} jour(s).`,
+      );
+    }
+
+    let remainingDays = days;
+    const reservations: PaidLeaveReservationSummary['reservations'] =
+      [];
+
+    for (const balance of balances) {
+      if (remainingDays <= 0) {
+        break;
+      }
+
+      const potentialBefore = this.round(
+        balance.availableDays - balance.reservedDays,
+      );
+
+      if (potentialBefore <= 0) {
+        continue;
+      }
+
+      const reservedDays = this.round(
+        Math.min(potentialBefore, remainingDays),
+      );
+
+      balance.reservedDays = this.round(
+        balance.reservedDays + reservedDays,
+      );
+
+      const potentialAfter = this.round(
+        balance.availableDays - balance.reservedDays,
+      );
+
+      await manager.getRepository(LeaveBalance).save(balance);
+
+      await this.createMovement(manager, {
+        balance,
+        movementType: BalanceMovementType.RESERVATION,
+        days: reservedDays,
+        balanceBefore: potentialBefore,
+        balanceAfter: potentialAfter,
+        actorId: data.actorId,
+        leaveRequestId: data.leaveRequestId,
+        reason:
+          data.reason?.trim() ||
+          'Réservation liée à la soumission d’une demande de congés.',
+      });
+
+      reservations.push({
+        leaveBalanceId: balance.id,
+        referencePeriod: balance.referencePeriod,
+        counterType: balance.counterType,
+        days: reservedDays,
+      });
+
+      remainingDays = this.round(remainingDays - reservedDays);
+    }
+
+    if (remainingDays > 0) {
+      throw new BadRequestException(
+        'La réservation du solde n’a pas pu être effectuée intégralement.',
+      );
+    }
+
+    return {
+      realBalanceBefore,
+      potentialBalanceBefore,
+      realBalanceAfter: realBalanceBefore,
+      potentialBalanceAfter: this.round(
+        potentialBalanceBefore - days,
+      ),
+      reservations,
+    };
   }
 
   private async createMovement(
