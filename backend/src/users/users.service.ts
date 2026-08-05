@@ -59,6 +59,8 @@ export class UsersService {
       prenom: createUserDto.prenom.trim(),
       email,
       passwordHash: null,
+      passwordResetTokenHash: null,
+      passwordResetTokenExpiresAt: null,
       microsoftId: createUserDto.microsoftId?.trim() || null,
       role: createUserDto.role,
       employmentType: createUserDto.employmentType,
@@ -105,6 +107,17 @@ export class UsersService {
     return user;
   }
 
+  async findByEmail(email: string): Promise<User | null> {
+    return this.userRepository.findOne({
+      where: {
+        email: email.trim().toLowerCase(),
+      },
+      relations: {
+        service: true,
+      },
+    });
+  }
+
   async findByEmailWithPassword(
     email: string,
   ): Promise<User | null> {
@@ -116,6 +129,66 @@ export class UsersService {
         email: email.trim(),
       })
       .getOne();
+  }
+
+  async setPasswordResetToken(
+    id: number,
+    tokenHash: string,
+    expiresAt: Date,
+  ): Promise<void> {
+    const result = await this.userRepository.update(
+      { id },
+      {
+        passwordResetTokenHash: tokenHash,
+        passwordResetTokenExpiresAt: expiresAt,
+      },
+    );
+
+    if (!result.affected) {
+      throw new NotFoundException(
+        `L’utilisateur ${id} est introuvable.`,
+      );
+    }
+  }
+
+  async findByValidPasswordResetToken(
+    tokenHash: string,
+  ): Promise<User | null> {
+    return this.userRepository
+      .createQueryBuilder('user')
+      .addSelect('user.passwordResetTokenHash')
+      .addSelect('user.passwordResetTokenExpiresAt')
+      .leftJoinAndSelect('user.service', 'service')
+      .where('user.passwordResetTokenHash = :tokenHash', {
+        tokenHash,
+      })
+      .andWhere('user.passwordResetTokenExpiresAt > :now', {
+        now: new Date(),
+      })
+      .andWhere('user.isActive = :isActive', {
+        isActive: true,
+      })
+      .getOne();
+  }
+
+  async setPasswordAndClearResetToken(
+    id: number,
+    passwordHash: string,
+  ): Promise<void> {
+    const result = await this.userRepository.update(
+      { id },
+      {
+        passwordHash,
+        passwordResetTokenHash: null,
+        passwordResetTokenExpiresAt: null,
+      },
+    );
+
+    if (!result.affected) {
+      throw new NotFoundException(
+        `L’utilisateur ${id} est introuvable.`,
+      );
+    }
   }
 
   async update(

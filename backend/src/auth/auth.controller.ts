@@ -15,7 +15,7 @@ import { DefinePasswordDto } from './dto/define-password.dto';
 import { LoginDto } from './dto/login.dto';
 import { RequestPasswordDto } from './dto/request-password.dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
-import { AuthenticatedUser } from './jwt-payload.interface';
+import type { AuthenticatedUser } from './jwt-payload.interface';
 
 type AuthenticatedRequest = Request & {
   user: AuthenticatedUser;

@@ -63,6 +63,21 @@ export class User {
 
   @Column({
     type: 'varchar',
+    length: 64,
+    nullable: true,
+    select: false,
+  })
+  passwordResetTokenHash!: string | null;
+
+  @Column({
+    type: 'datetime',
+    nullable: true,
+    select: false,
+  })
+  passwordResetTokenExpiresAt!: Date | null;
+
+  @Column({
+    type: 'varchar',
     length: 255,
     nullable: true,
     unique: true,
