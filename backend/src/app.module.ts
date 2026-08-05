@@ -4,10 +4,11 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { AuthModule } from './auth/auth.module';
+import { LeaveRequestsModule } from './leave-requests/leave-requests.module';
+import { LeaveTypesModule } from './leave-types/leave-types.module';
 import { ServicesModule } from './services/services.module';
 import { UsersModule } from './users/users.module';
-import { AuthModule } from './auth/auth.module';
-import { LeaveTypesModule } from './leave-types/leave-types.module';
 
 @Module({
   imports: [
@@ -28,24 +29,17 @@ import { LeaveTypesModule } from './leave-types/leave-types.module';
           'DB_DATABASE',
           'gestion_conges_gmes',
         ),
-
         autoLoadEntities: true,
-
-        synchronize:
-          configService.get<string>('NODE_ENV', 'development') !==
-          'production',
-
+        synchronize: true,
         charset: 'utf8mb4',
       }),
     }),
 
     ServicesModule,
-
     UsersModule,
-
     AuthModule,
-
     LeaveTypesModule,
+    LeaveRequestsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
