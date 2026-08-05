@@ -12,6 +12,7 @@ import {
 } from 'typeorm';
 
 import type { AuthenticatedUser } from '../auth/jwt-payload.interface';
+import { DerogationsService } from '../derogations/derogations.service';
 import type { Holiday } from '../holidays/holiday.entity';
 import { HolidaysService } from '../holidays/holidays.service';
 import {
@@ -28,6 +29,10 @@ import { CreateLeaveRequestDto } from './dto/create-leave-request.dto';
 import { SubmitLeaveRequestDto } from './dto/submit-leave-request.dto';
 import { UpdateLeaveRequestDto } from './dto/update-leave-request.dto';
 import {
+  evaluateSubmissionNotice,
+  type SubmissionNoticeInfo,
+} from './leave-request-notice.util';
+import {
   LeaveRequestHistory,
   LeaveRequestHistoryAction,
 } from './leave-request-history.entity';
@@ -37,13 +42,6 @@ import {
   LeaveRequestStatus,
   SignatureType,
 } from './leave-request.entity';
-
-interface SubmissionNoticeResult {
-  daysBeforeStart: number;
-  requiredNoticeDays: 30 | 60;
-  isLongLeave: boolean;
-  overlapsSummerPeriod: boolean;
-}
 
 @Injectable()
 export class LeaveRequestsService {
@@ -57,6 +55,7 @@ export class LeaveRequestsService {
     private readonly usersService: UsersService,
     private readonly leaveTypesService: LeaveTypesService,
     private readonly holidaysService: HolidaysService,
+    private readonly derogationsService: DerogationsService,
     private readonly leaveBalancesService: LeaveBalancesService,
     private readonly dataSource: DataSource,
   ) {}
@@ -290,11 +289,13 @@ export class LeaveRequestsService {
       leaveRequest.calendarDuration = dates.calendarDuration;
       leaveRequest.deductedDays = dates.deductedDays;
 
-      const notice = this.validateSubmissionNotice(
+      const notice = evaluateSubmissionNotice(
         leaveRequest.startDate,
         leaveRequest.endDate,
         dates.calendarDuration,
       );
+
+      this.validateSubmissionTiming(notice);
 
       await this.ensureNoPersonalOverlap(manager, leaveRequest);
 
@@ -302,6 +303,21 @@ export class LeaveRequestsService {
         submitLeaveRequestDto.signatureType,
         submitLeaveRequestDto.signatureData,
       );
+
+      let derogationId: number | null = null;
+
+      if (!notice.isNoticeCompliant) {
+        const derogation =
+          await this.derogationsService.consumeGrantedDerogation(
+            manager,
+            {
+              leaveRequest,
+              actorId: authenticatedUser.id,
+            },
+          );
+
+        derogationId = derogation.id;
+      }
 
       let reservation: PaidLeaveReservationSummary | null = null;
 
@@ -352,6 +368,7 @@ export class LeaveRequestsService {
             requiredNoticeDays: notice.requiredNoticeDays,
             isLongLeave: notice.isLongLeave,
             overlapsSummerPeriod: notice.overlapsSummerPeriod,
+            derogationId,
             deductedDays: leaveRequest.deductedDays,
             potentialBalanceAfter:
               reservation?.potentialBalanceAfter ?? null,
@@ -507,87 +524,29 @@ export class LeaveRequestsService {
     }
   }
 
-  private validateSubmissionNotice(
-    startDateValue: string,
-    endDateValue: string,
-    calendarDuration: number,
-  ): SubmissionNoticeResult {
-    const startDate = this.parseDate(startDateValue);
-    const endDate = this.parseDate(endDateValue);
-    const today = new Date();
-    today.setUTCHours(0, 0, 0, 0);
-
-    const millisecondsPerDay = 24 * 60 * 60 * 1000;
-    const daysBeforeStart = Math.floor(
-      (startDate.getTime() - today.getTime()) /
-        millisecondsPerDay,
-    );
-
-    if (daysBeforeStart < 0) {
+  private validateSubmissionTiming(
+    notice: SubmissionNoticeInfo,
+  ): void {
+    if (notice.daysBeforeStart < 0) {
       throw new BadRequestException(
         'Une demande ne peut pas être soumise après sa date de début.',
       );
     }
 
-    if (daysBeforeStart < 3) {
+    if (notice.daysBeforeStart < 3) {
       throw new BadRequestException(
         'La demande ne peut plus être soumise à partir de J-2. Le départ doit être prévu au moins trois jours calendaires à l’avance.',
       );
     }
 
-    const isLongLeave = calendarDuration >= 21;
-    const overlapsSummerPeriod = this.overlapsSummerPeriod(
-      startDate,
-      endDate,
-    );
-    const requiredNoticeDays: 30 | 60 =
-      isLongLeave || overlapsSummerPeriod ? 60 : 30;
-
-    if (daysBeforeStart < requiredNoticeDays) {
-      if (daysBeforeStart <= 29) {
-        throw new BadRequestException(
-          `La demande est déposée à J-${daysBeforeStart}. Une dérogation RH accordée est obligatoire entre J-29 et J-3.`,
-        );
-      }
-
-      throw new BadRequestException(
-        `Cette demande exige un délai de ${requiredNoticeDays} jours calendaires. Le délai actuel est de ${daysBeforeStart} jours.`,
-      );
-    }
-
-    return {
-      daysBeforeStart,
-      requiredNoticeDays,
-      isLongLeave,
-      overlapsSummerPeriod,
-    };
-  }
-
-  private overlapsSummerPeriod(
-    startDate: Date,
-    endDate: Date,
-  ): boolean {
-    for (
-      let year = startDate.getUTCFullYear();
-      year <= endDate.getUTCFullYear();
-      year += 1
+    if (
+      !notice.isNoticeCompliant &&
+      !notice.isDerogationWindow
     ) {
-      const summerStart = new Date(
-        Date.UTC(year, 4, 1),
+      throw new BadRequestException(
+        `Cette demande exige un délai de ${notice.requiredNoticeDays} jours calendaires. Les dérogations RH sont autorisées uniquement entre J-29 et J-3. Le délai actuel est de ${notice.daysBeforeStart} jours.`,
       );
-      const summerEnd = new Date(
-        Date.UTC(year, 9, 31),
-      );
-
-      if (
-        startDate.getTime() <= summerEnd.getTime() &&
-        endDate.getTime() >= summerStart.getTime()
-      ) {
-        return true;
-      }
     }
-
-    return false;
   }
 
   private validateAndNormalizeSignature(

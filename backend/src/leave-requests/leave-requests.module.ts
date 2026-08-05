@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
+import { DerogationsModule } from '../derogations/derogations.module';
 import { HolidaysModule } from '../holidays/holidays.module';
 import { LeaveBalancesModule } from '../leave-balances/leave-balances.module';
 import { LeaveTypesModule } from '../leave-types/leave-types.module';
@@ -17,6 +18,7 @@ import { LeaveRequestsService } from './leave-requests.service';
       LeaveRequestHistory,
     ]),
     UsersModule,
+    DerogationsModule,
     LeaveTypesModule,
     HolidaysModule,
     LeaveBalancesModule,

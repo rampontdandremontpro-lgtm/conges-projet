@@ -1,0 +1,682 @@
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import {
+  DataSource,
+  EntityManager,
+  Repository,
+} from 'typeorm';
+
+import type { AuthenticatedUser } from '../auth/jwt-payload.interface';
+import {
+  LeaveRequestHistory,
+  LeaveRequestHistoryAction,
+} from '../leave-requests/leave-request-history.entity';
+import {
+  calculateDerogationExpiry,
+  evaluateSubmissionNotice,
+} from '../leave-requests/leave-request-notice.util';
+import {
+  LeaveRequest,
+  LeaveRequestStatus,
+} from '../leave-requests/leave-request.entity';
+import { CreateDerogationDto } from './dto/create-derogation.dto';
+import {
+  DecideDerogationDto,
+  DerogationDecision,
+} from './dto/decide-derogation.dto';
+import { DerogationQueryDto } from './dto/derogation-query.dto';
+import { UpdateDerogationDto } from './dto/update-derogation.dto';
+import {
+  Derogation,
+  DerogationStatus,
+} from './derogation.entity';
+
+const EXPIRABLE_DEROGATION_STATUSES = [
+  DerogationStatus.BROUILLON,
+  DerogationStatus.EN_ATTENTE_RH,
+  DerogationStatus.ACCORDEE,
+];
+
+@Injectable()
+export class DerogationsService {
+  constructor(
+    @InjectRepository(Derogation)
+    private readonly derogationRepository: Repository<Derogation>,
+
+    private readonly dataSource: DataSource,
+  ) {}
+
+  async createDraft(
+    authenticatedUser: AuthenticatedUser,
+    dto: CreateDerogationDto,
+  ): Promise<Derogation> {
+    const derogationId = await this.dataSource.transaction(
+      async (manager) => {
+        const leaveRequest = await this.findOwnedLeaveRequestForUpdate(
+          manager,
+          dto.leaveRequestId,
+          authenticatedUser.id,
+        );
+
+        this.ensureLeaveRequestIsDraft(leaveRequest);
+
+        const notice = evaluateSubmissionNotice(
+          leaveRequest.startDate,
+          leaveRequest.endDate,
+          leaveRequest.calendarDuration,
+        );
+
+        this.validateDerogationWindow(notice);
+
+        const repository = manager.getRepository(Derogation);
+        const existingDerogation = await repository.findOne({
+          where: {
+            leaveRequestId: leaveRequest.id,
+          },
+        });
+
+        if (existingDerogation) {
+          throw new ConflictException(
+            'Une dérogation existe déjà pour cette demande de congé.',
+          );
+        }
+
+        const derogation = repository.create({
+          employeeId: leaveRequest.employeeId,
+          leaveTypeId: leaveRequest.leaveTypeId,
+          leaveRequestId: leaveRequest.id,
+          requestedStartDate: leaveRequest.startDate,
+          requestedEndDate: leaveRequest.endDate,
+          reason: dto.reason.trim(),
+          status: DerogationStatus.BROUILLON,
+          requestedAt: new Date(),
+          decidedByRhId: null,
+          decisionComment: null,
+          decidedAt: null,
+          expiresAt: calculateDerogationExpiry(
+            leaveRequest.startDate,
+          ),
+          usedAt: null,
+        });
+
+        const savedDerogation = await repository.save(derogation);
+
+        return savedDerogation.id;
+      },
+    );
+
+    return this.findMyOne(derogationId, authenticatedUser);
+  }
+
+  async updateDraft(
+    id: number,
+    authenticatedUser: AuthenticatedUser,
+    dto: UpdateDerogationDto,
+  ): Promise<Derogation> {
+    await this.dataSource.transaction(async (manager) => {
+      const derogation = await this.findOwnedDerogationForUpdate(
+        manager,
+        id,
+        authenticatedUser.id,
+      );
+
+      this.ensureDerogationIsDraft(derogation);
+
+      if (!derogation.leaveRequestId) {
+        throw new BadRequestException(
+          'La demande de congé liée à cette dérogation n’existe plus.',
+        );
+      }
+
+      const leaveRequest = await this.findOwnedLeaveRequestForUpdate(
+        manager,
+        derogation.leaveRequestId,
+        authenticatedUser.id,
+      );
+
+      this.ensureLeaveRequestIsDraft(leaveRequest);
+
+      const notice = evaluateSubmissionNotice(
+        leaveRequest.startDate,
+        leaveRequest.endDate,
+        leaveRequest.calendarDuration,
+      );
+
+      this.validateDerogationWindow(notice);
+
+      derogation.leaveTypeId = leaveRequest.leaveTypeId;
+      derogation.requestedStartDate = leaveRequest.startDate;
+      derogation.requestedEndDate = leaveRequest.endDate;
+      derogation.reason = dto.reason.trim();
+      derogation.expiresAt = calculateDerogationExpiry(
+        leaveRequest.startDate,
+      );
+
+      await manager.getRepository(Derogation).save(derogation);
+    });
+
+    return this.findMyOne(id, authenticatedUser);
+  }
+
+  async submitDraft(
+    id: number,
+    authenticatedUser: AuthenticatedUser,
+  ): Promise<Derogation> {
+    await this.dataSource.transaction(async (manager) => {
+      const derogation = await this.findOwnedDerogationForUpdate(
+        manager,
+        id,
+        authenticatedUser.id,
+      );
+
+      this.ensureDerogationIsDraft(derogation);
+
+      if (!derogation.leaveRequestId) {
+        throw new BadRequestException(
+          'La demande de congé liée à cette dérogation n’existe plus.',
+        );
+      }
+
+      const leaveRequest = await this.findOwnedLeaveRequestForUpdate(
+        manager,
+        derogation.leaveRequestId,
+        authenticatedUser.id,
+      );
+
+      this.ensureLeaveRequestIsDraft(leaveRequest);
+
+      const notice = evaluateSubmissionNotice(
+        leaveRequest.startDate,
+        leaveRequest.endDate,
+        leaveRequest.calendarDuration,
+      );
+
+      this.validateDerogationWindow(notice);
+
+      const requestedAt = new Date();
+
+      derogation.leaveTypeId = leaveRequest.leaveTypeId;
+      derogation.requestedStartDate = leaveRequest.startDate;
+      derogation.requestedEndDate = leaveRequest.endDate;
+      derogation.status = DerogationStatus.EN_ATTENTE_RH;
+      derogation.requestedAt = requestedAt;
+      derogation.expiresAt = calculateDerogationExpiry(
+        leaveRequest.startDate,
+      );
+
+      await manager.getRepository(Derogation).save(derogation);
+
+      await this.createHistory(manager, {
+        leaveRequest,
+        action: LeaveRequestHistoryAction.DEROGATION_DEMANDEE,
+        actorId: authenticatedUser.id,
+        comment: derogation.reason,
+        metadata: {
+          derogationId: derogation.id,
+          daysBeforeStart: notice.daysBeforeStart,
+          requiredNoticeDays: notice.requiredNoticeDays,
+          expiresAt: derogation.expiresAt,
+        },
+      });
+    });
+
+    return this.findMyOne(id, authenticatedUser);
+  }
+
+  async deleteDraft(
+    id: number,
+    authenticatedUser: AuthenticatedUser,
+  ): Promise<void> {
+    await this.dataSource.transaction(async (manager) => {
+      const derogation = await this.findOwnedDerogationForUpdate(
+        manager,
+        id,
+        authenticatedUser.id,
+      );
+
+      this.ensureDerogationIsDraft(derogation);
+
+      await manager.getRepository(Derogation).remove(derogation);
+    });
+  }
+
+  async findMy(
+    authenticatedUser: AuthenticatedUser,
+  ): Promise<Derogation[]> {
+    await this.expireOutdatedDerogations();
+
+    return this.derogationRepository.find({
+      where: {
+        employeeId: authenticatedUser.id,
+      },
+      relations: {
+        leaveType: true,
+        leaveRequest: true,
+        decidedByRh: true,
+      },
+      order: {
+        requestedAt: 'DESC',
+      },
+    });
+  }
+
+  async findMyOne(
+    id: number,
+    authenticatedUser: AuthenticatedUser,
+  ): Promise<Derogation> {
+    await this.expireOutdatedDerogations();
+
+    const derogation = await this.derogationRepository.findOne({
+      where: {
+        id,
+        employeeId: authenticatedUser.id,
+      },
+      relations: {
+        leaveType: true,
+        leaveRequest: true,
+        decidedByRh: true,
+      },
+    });
+
+    if (!derogation) {
+      throw new NotFoundException(
+        `La dérogation ${id} est introuvable.`,
+      );
+    }
+
+    return derogation;
+  }
+
+  async findForManagement(
+    query: DerogationQueryDto,
+  ): Promise<Derogation[]> {
+    await this.expireOutdatedDerogations();
+
+    const queryBuilder = this.derogationRepository
+      .createQueryBuilder('derogation')
+      .leftJoinAndSelect('derogation.employee', 'employee')
+      .leftJoinAndSelect('derogation.leaveType', 'leaveType')
+      .leftJoinAndSelect(
+        'derogation.leaveRequest',
+        'leaveRequest',
+      )
+      .leftJoinAndSelect(
+        'derogation.decidedByRh',
+        'decidedByRh',
+      );
+
+    if (query.status) {
+      queryBuilder.where('derogation.status = :status', {
+        status: query.status,
+      });
+    }
+
+    return queryBuilder
+      .orderBy('derogation.requestedAt', 'DESC')
+      .addOrderBy('derogation.id', 'DESC')
+      .getMany();
+  }
+
+  async findOneForManagement(id: number): Promise<Derogation> {
+    await this.expireOutdatedDerogations();
+
+    const derogation = await this.derogationRepository.findOne({
+      where: { id },
+      relations: {
+        employee: true,
+        leaveType: true,
+        leaveRequest: true,
+        decidedByRh: true,
+      },
+    });
+
+    if (!derogation) {
+      throw new NotFoundException(
+        `La dérogation ${id} est introuvable.`,
+      );
+    }
+
+    return derogation;
+  }
+
+  async decide(
+    id: number,
+    authenticatedUser: AuthenticatedUser,
+    dto: DecideDerogationDto,
+  ): Promise<Derogation> {
+    let expiredDuringDecision = false;
+
+    await this.dataSource.transaction(async (manager) => {
+      const repository = manager.getRepository(Derogation);
+      const derogation = await repository
+        .createQueryBuilder('derogation')
+        .setLock('pessimistic_write')
+        .where('derogation.id = :id', { id })
+        .getOne();
+
+      if (!derogation) {
+        throw new NotFoundException(
+          `La dérogation ${id} est introuvable.`,
+        );
+      }
+
+      if (derogation.status !== DerogationStatus.EN_ATTENTE_RH) {
+        throw new BadRequestException(
+          'Seule une dérogation au statut EN_ATTENTE_RH peut être traitée.',
+        );
+      }
+
+      if (this.isExpired(derogation)) {
+        derogation.status = DerogationStatus.EXPIREE;
+        await repository.save(derogation);
+        expiredDuringDecision = true;
+        return;
+      }
+
+      if (!derogation.leaveRequestId) {
+        throw new BadRequestException(
+          'La demande de congé liée à cette dérogation n’existe plus.',
+        );
+      }
+
+      const leaveRequest = await manager
+        .getRepository(LeaveRequest)
+        .createQueryBuilder('leaveRequest')
+        .setLock('pessimistic_write')
+        .where('leaveRequest.id = :leaveRequestId', {
+          leaveRequestId: derogation.leaveRequestId,
+        })
+        .getOne();
+
+      if (!leaveRequest) {
+        throw new BadRequestException(
+          'La demande de congé liée à cette dérogation n’existe plus.',
+        );
+      }
+
+      if (leaveRequest.status !== LeaveRequestStatus.BROUILLON) {
+        throw new BadRequestException(
+          'La demande de congé liée n’est plus au statut BROUILLON.',
+        );
+      }
+
+      if (!this.matchesRequestSnapshot(derogation, leaveRequest)) {
+        throw new BadRequestException(
+          'Le type ou les dates du brouillon ont changé. La dérogation ne correspond plus à la demande.',
+        );
+      }
+
+      const now = new Date();
+      const isGranted =
+        dto.decision === DerogationDecision.ACCORDER;
+      const comment = dto.decisionComment?.trim() || null;
+
+      derogation.status = isGranted
+        ? DerogationStatus.ACCORDEE
+        : DerogationStatus.REFUSEE;
+      derogation.decidedByRhId = authenticatedUser.id;
+      derogation.decisionComment = comment;
+      derogation.decidedAt = now;
+
+      await repository.save(derogation);
+
+      await this.createHistory(manager, {
+        leaveRequest,
+        action: isGranted
+          ? LeaveRequestHistoryAction.DEROGATION_ACCORDEE
+          : LeaveRequestHistoryAction.DEROGATION_REFUSEE,
+        actorId: authenticatedUser.id,
+        comment,
+        metadata: {
+          derogationId: derogation.id,
+          status: derogation.status,
+          expiresAt: derogation.expiresAt,
+        },
+      });
+    });
+
+    if (expiredDuringDecision) {
+      throw new BadRequestException(
+        'Cette dérogation a expiré et ne peut plus être traitée.',
+      );
+    }
+
+    return this.findOneForManagement(id);
+  }
+
+  async consumeGrantedDerogation(
+    manager: EntityManager,
+    data: {
+      leaveRequest: LeaveRequest;
+      actorId: number;
+    },
+  ): Promise<Derogation> {
+    const now = new Date();
+    const repository = manager.getRepository(Derogation);
+
+    await repository
+      .createQueryBuilder()
+      .update(Derogation)
+      .set({ status: DerogationStatus.EXPIREE })
+      .where('leave_request_id = :leaveRequestId', {
+        leaveRequestId: data.leaveRequest.id,
+      })
+      .andWhere('status = :status', {
+        status: DerogationStatus.ACCORDEE,
+      })
+      .andWhere('used_at IS NULL')
+      .andWhere('expires_at IS NOT NULL')
+      .andWhere('expires_at <= :now', { now })
+      .execute();
+
+    const derogation = await repository
+      .createQueryBuilder('derogation')
+      .setLock('pessimistic_write')
+      .where('derogation.leaveRequestId = :leaveRequestId', {
+        leaveRequestId: data.leaveRequest.id,
+      })
+      .andWhere('derogation.employeeId = :employeeId', {
+        employeeId: data.leaveRequest.employeeId,
+      })
+      .andWhere('derogation.status = :status', {
+        status: DerogationStatus.ACCORDEE,
+      })
+      .andWhere('derogation.usedAt IS NULL')
+      .andWhere('derogation.expiresAt > :now', { now })
+      .getOne();
+
+    if (
+      !derogation ||
+      !this.matchesRequestSnapshot(
+        derogation,
+        data.leaveRequest,
+      )
+    ) {
+      throw new BadRequestException(
+        'Une dérogation RH accordée, valide et correspondant exactement à cette demande est obligatoire.',
+      );
+    }
+
+    derogation.status = DerogationStatus.UTILISEE;
+    derogation.usedAt = now;
+
+    await repository.save(derogation);
+
+    await this.createHistory(manager, {
+      leaveRequest: data.leaveRequest,
+      action: LeaveRequestHistoryAction.DEROGATION_UTILISEE,
+      actorId: data.actorId,
+      comment: null,
+      metadata: {
+        derogationId: derogation.id,
+        usedAt: now,
+      },
+    });
+
+    return derogation;
+  }
+
+  private validateDerogationWindow(
+    notice: ReturnType<typeof evaluateSubmissionNotice>,
+  ): void {
+    if (notice.daysBeforeStart < 0) {
+      throw new BadRequestException(
+        'Une dérogation ne peut pas être demandée après la date de début du congé.',
+      );
+    }
+
+    if (notice.daysBeforeStart < 3) {
+      throw new BadRequestException(
+        'Une dérogation ne peut plus être demandée à partir de J-2.',
+      );
+    }
+
+    if (notice.isNoticeCompliant) {
+      throw new BadRequestException(
+        'Le délai de prévenance est respecté. Aucune dérogation n’est nécessaire.',
+      );
+    }
+
+    if (!notice.isDerogationWindow) {
+      throw new BadRequestException(
+        `Les dérogations sont autorisées uniquement entre J-29 et J-3. Cette demande exige normalement un délai de ${notice.requiredNoticeDays} jours.`,
+      );
+    }
+  }
+
+  private ensureLeaveRequestIsDraft(
+    leaveRequest: LeaveRequest,
+  ): void {
+    if (leaveRequest.status !== LeaveRequestStatus.BROUILLON) {
+      throw new BadRequestException(
+        'Une dérogation ne peut être liée qu’à une demande de congé au statut BROUILLON.',
+      );
+    }
+  }
+
+  private ensureDerogationIsDraft(
+    derogation: Derogation,
+  ): void {
+    if (derogation.status !== DerogationStatus.BROUILLON) {
+      throw new BadRequestException(
+        'Seule une dérogation au statut BROUILLON peut être modifiée, supprimée ou transmise à la RH.',
+      );
+    }
+  }
+
+  private async findOwnedLeaveRequestForUpdate(
+    manager: EntityManager,
+    leaveRequestId: number,
+    employeeId: number,
+  ): Promise<LeaveRequest> {
+    const leaveRequest = await manager
+      .getRepository(LeaveRequest)
+      .createQueryBuilder('leaveRequest')
+      .setLock('pessimistic_write')
+      .where('leaveRequest.id = :leaveRequestId', {
+        leaveRequestId,
+      })
+      .andWhere('leaveRequest.employeeId = :employeeId', {
+        employeeId,
+      })
+      .getOne();
+
+    if (!leaveRequest) {
+      throw new NotFoundException(
+        `La demande de congé ${leaveRequestId} est introuvable.`,
+      );
+    }
+
+    return leaveRequest;
+  }
+
+  private async findOwnedDerogationForUpdate(
+    manager: EntityManager,
+    id: number,
+    employeeId: number,
+  ): Promise<Derogation> {
+    const derogation = await manager
+      .getRepository(Derogation)
+      .createQueryBuilder('derogation')
+      .setLock('pessimistic_write')
+      .where('derogation.id = :id', { id })
+      .andWhere('derogation.employeeId = :employeeId', {
+        employeeId,
+      })
+      .getOne();
+
+    if (!derogation) {
+      throw new NotFoundException(
+        `La dérogation ${id} est introuvable.`,
+      );
+    }
+
+    return derogation;
+  }
+
+  private matchesRequestSnapshot(
+    derogation: Derogation,
+    leaveRequest: LeaveRequest,
+  ): boolean {
+    return (
+      derogation.employeeId === leaveRequest.employeeId &&
+      derogation.leaveTypeId === leaveRequest.leaveTypeId &&
+      derogation.requestedStartDate === leaveRequest.startDate &&
+      derogation.requestedEndDate === leaveRequest.endDate
+    );
+  }
+
+  private isExpired(derogation: Derogation): boolean {
+    return Boolean(
+      derogation.expiresAt &&
+        derogation.expiresAt.getTime() <= Date.now(),
+    );
+  }
+
+  private async expireOutdatedDerogations(): Promise<void> {
+    await this.derogationRepository
+      .createQueryBuilder()
+      .update(Derogation)
+      .set({ status: DerogationStatus.EXPIREE })
+      .where('status IN (:...statuses)', {
+        statuses: EXPIRABLE_DEROGATION_STATUSES,
+      })
+      .andWhere('used_at IS NULL')
+      .andWhere('expires_at IS NOT NULL')
+      .andWhere('expires_at <= :now', {
+        now: new Date(),
+      })
+      .execute();
+  }
+
+  private async createHistory(
+    manager: EntityManager,
+    data: {
+      leaveRequest: LeaveRequest;
+      action: LeaveRequestHistoryAction;
+      actorId: number;
+      comment: string | null;
+      metadata: Record<string, unknown> | null;
+    },
+  ): Promise<void> {
+    const repository = manager.getRepository(LeaveRequestHistory);
+
+    await repository.save(
+      repository.create({
+        leaveRequestId: data.leaveRequest.id,
+        leaveRequest: data.leaveRequest,
+        action: data.action,
+        actorId: data.actorId,
+        oldStatus: data.leaveRequest.status,
+        newStatus: data.leaveRequest.status,
+        comment: data.comment,
+        metadata: data.metadata,
+      }),
+    );
+  }
+}
