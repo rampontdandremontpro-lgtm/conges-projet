@@ -7,6 +7,7 @@ import { AppService } from './app.service';
 import { ServicesModule } from './services/services.module';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
+import { LeaveTypesModule } from './leave-types/leave-types.module';
 
 @Module({
   imports: [
@@ -43,6 +44,8 @@ import { AuthModule } from './auth/auth.module';
     UsersModule,
 
     AuthModule,
+
+    LeaveTypesModule,
   ],
   controllers: [AppController],
   providers: [AppService],
