@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
+import { HolidaysModule } from '../holidays/holidays.module';
 import { LeaveTypesModule } from '../leave-types/leave-types.module';
 import { UsersModule } from '../users/users.module';
 import { LeaveRequest } from './leave-request.entity';
@@ -12,6 +13,7 @@ import { LeaveRequestsService } from './leave-requests.service';
     TypeOrmModule.forFeature([LeaveRequest]),
     UsersModule,
     LeaveTypesModule,
+    HolidaysModule,
   ],
   controllers: [LeaveRequestsController],
   providers: [LeaveRequestsService],

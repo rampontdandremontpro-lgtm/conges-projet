@@ -7,6 +7,8 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
+import type { Holiday } from '../holidays/holiday.entity';
+import { HolidaysService } from '../holidays/holidays.service';
 import { LeaveTypeCategory } from '../leave-types/leave-type.entity';
 import { LeaveTypesService } from '../leave-types/leave-types.service';
 import { UsersService } from '../users/users.service';
@@ -28,6 +30,8 @@ export class LeaveRequestsService {
     private readonly usersService: UsersService,
 
     private readonly leaveTypesService: LeaveTypesService,
+
+    private readonly holidaysService: HolidaysService,
   ) {}
 
   async createDraft(
@@ -55,7 +59,7 @@ export class LeaveRequestsService {
     const endPeriod =
       createLeaveRequestDto.endPeriod ?? DayPeriod.APRES_MIDI;
 
-    const dates = this.validateAndCalculateDates(
+    const dates = await this.validateAndCalculateDates(
       createLeaveRequestDto.startDate,
       createLeaveRequestDto.endDate,
       startPeriod,
@@ -150,7 +154,7 @@ export class LeaveRequestsService {
     const endPeriod =
       updateLeaveRequestDto.endPeriod ?? leaveRequest.endPeriod;
 
-    const dates = this.validateAndCalculateDates(
+    const dates = await this.validateAndCalculateDates(
       startDate,
       endDate,
       startPeriod,
@@ -258,16 +262,16 @@ export class LeaveRequestsService {
     }
   }
 
-  private validateAndCalculateDates(
+  private async validateAndCalculateDates(
     startDateValue: string,
     endDateValue: string,
     startPeriod: DayPeriod,
     endPeriod: DayPeriod,
     allowsHalfDays: boolean,
-  ): {
+  ): Promise<{
     calendarDuration: number;
     deductedDays: number;
-  } {
+  }> {
     const startDate = this.parseDate(startDateValue);
     const endDate = this.parseDate(endDateValue);
 
@@ -277,14 +281,29 @@ export class LeaveRequestsService {
       );
     }
 
-    if (
-      startDate.getUTCDay() === 0 ||
-      endDate.getUTCDay() === 0
-    ) {
-      throw new BadRequestException(
-        'Une demande ne peut pas commencer ou se terminer un dimanche.',
+    const nonDeductibleDays =
+      await this.holidaysService.findNonDeductibleBetween(
+        startDateValue,
+        endDateValue,
       );
-    }
+
+    const nonDeductibleDaysByDate = new Map(
+      nonDeductibleDays.map((day) => [day.date, day]),
+    );
+
+    this.validateBoundaryDate(
+      startDateValue,
+      startDate,
+      nonDeductibleDaysByDate.get(startDateValue),
+      'début',
+    );
+
+    this.validateBoundaryDate(
+      endDateValue,
+      endDate,
+      nonDeductibleDaysByDate.get(endDateValue),
+      'fin',
+    );
 
     if (
       !allowsHalfDays &&
@@ -320,6 +339,7 @@ export class LeaveRequestsService {
         endDate,
         startPeriod,
         endPeriod,
+        new Set(nonDeductibleDaysByDate.keys()),
       ),
     };
   }
@@ -329,14 +349,18 @@ export class LeaveRequestsService {
     endDate: Date,
     startPeriod: DayPeriod,
     endPeriod: DayPeriod,
+    nonDeductibleDates: Set<string>,
   ): number {
     let total = 0;
     const currentDate = new Date(startDate);
 
     while (currentDate.getTime() <= endDate.getTime()) {
+      const currentDateValue = currentDate.toISOString().slice(0, 10);
       const isSunday = currentDate.getUTCDay() === 0;
+      const isNonDeductible =
+        nonDeductibleDates.has(currentDateValue);
 
-      if (!isSunday) {
+      if (!isSunday && !isNonDeductible) {
         let value = 1;
 
         if (
@@ -360,6 +384,25 @@ export class LeaveRequestsService {
     }
 
     return Math.max(total, 0);
+  }
+
+  private validateBoundaryDate(
+    dateValue: string,
+    date: Date,
+    nonDeductibleDay: Holiday | undefined,
+    boundary: 'début' | 'fin',
+  ): void {
+    if (date.getUTCDay() === 0) {
+      throw new BadRequestException(
+        `La date de ${boundary} ne peut pas être un dimanche.`,
+      );
+    }
+
+    if (nonDeductibleDay) {
+      throw new BadRequestException(
+        `La date de ${boundary} ${dateValue} correspond à « ${nonDeductibleDay.name} » et n’est pas décomptable.`,
+      );
+    }
   }
 
   private calculateModificationDeadline(
