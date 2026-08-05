@@ -713,6 +713,156 @@ export class LeaveBalancesService {
     };
   }
 
+  async finalizePaidLeaveReservation(
+    manager: EntityManager,
+    data: {
+      employeeId: number;
+      leaveRequestId: number;
+      actorId: number;
+      expectedDays: number;
+      decision: 'VALIDATE' | 'REFUSE';
+    },
+  ): Promise<{
+    processedDays: number;
+    realBalanceAfter: number;
+  }> {
+    const movementRepository =
+      manager.getRepository(BalanceMovement);
+
+    const reservations = await movementRepository.find({
+      where: {
+        leaveRequestId: data.leaveRequestId,
+        movementType: BalanceMovementType.RESERVATION,
+      },
+      order: {
+        id: 'ASC',
+      },
+    });
+
+    if (reservations.length === 0) {
+      throw new NotFoundException(
+        'Aucune réservation de solde n’a été trouvée pour cette demande.',
+      );
+    }
+
+    const expectedDays = this.validatePositiveDays(
+      data.expectedDays,
+    );
+    const reservedDays = this.round(
+      reservations.reduce(
+        (total, reservation) => total + reservation.days,
+        0,
+      ),
+    );
+
+    if (reservedDays !== expectedDays) {
+      throw new ConflictException(
+        'La réservation du solde ne correspond pas au nombre de jours de la demande.',
+      );
+    }
+
+    let processedDays = 0;
+
+    for (const reservation of reservations) {
+      const balance = await this.findBalanceForUpdate(
+        manager,
+        reservation.leaveBalanceId,
+      );
+
+      const days = this.round(reservation.days);
+
+      if (balance.reservedDays < days) {
+        throw new BadRequestException(
+          'Les jours réservés sont insuffisants pour finaliser cette demande.',
+        );
+      }
+
+      if (data.decision === 'VALIDATE') {
+        if (balance.availableDays < days) {
+          throw new BadRequestException(
+            'Le solde disponible est insuffisant pour valider cette demande.',
+          );
+        }
+
+        const balanceBefore = this.round(
+          balance.availableDays,
+        );
+
+        balance.reservedDays = this.round(
+          balance.reservedDays - days,
+        );
+        balance.consumedDays = this.round(
+          balance.consumedDays + days,
+        );
+        balance.availableDays = this.round(
+          balance.availableDays - days,
+        );
+
+        await manager.getRepository(LeaveBalance).save(balance);
+
+        await this.createMovement(manager, {
+          balance,
+          movementType: BalanceMovementType.DEDUCTION,
+          days,
+          balanceBefore,
+          balanceAfter: balance.availableDays,
+          actorId: data.actorId,
+          leaveRequestId: data.leaveRequestId,
+          reason:
+            'Déduction définitive après validation de la demande.',
+        });
+      } else {
+        const potentialBefore = this.round(
+          balance.availableDays - balance.reservedDays,
+        );
+
+        balance.reservedDays = this.round(
+          balance.reservedDays - days,
+        );
+
+        const potentialAfter = this.round(
+          balance.availableDays - balance.reservedDays,
+        );
+
+        await manager.getRepository(LeaveBalance).save(balance);
+
+        await this.createMovement(manager, {
+          balance,
+          movementType:
+            BalanceMovementType.LIBERATION_RESERVATION,
+          days,
+          balanceBefore: potentialBefore,
+          balanceAfter: potentialAfter,
+          actorId: data.actorId,
+          leaveRequestId: data.leaveRequestId,
+          reason:
+            'Libération de la réservation après refus de la demande.',
+        });
+      }
+
+      processedDays = this.round(processedDays + days);
+    }
+
+    const balances = await manager.getRepository(LeaveBalance).find({
+      where: {
+        employeeId: data.employeeId,
+        counterType: LeaveBalanceCounterType.N_MINUS_1,
+      },
+    });
+
+    const realBalanceAfter = this.round(
+      balances.reduce(
+        (total, balance) => total + balance.availableDays,
+        0,
+      ),
+    );
+
+    return {
+      processedDays,
+      realBalanceAfter,
+    };
+  }
+
   private async createMovement(
     manager: EntityManager,
     data: {

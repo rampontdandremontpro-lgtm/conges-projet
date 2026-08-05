@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -24,10 +25,21 @@ import {
   LeaveTypeCategory,
 } from '../leave-types/leave-type.entity';
 import { LeaveTypesService } from '../leave-types/leave-types.service';
+import {
+  ServiceType,
+  ValidationMode,
+} from '../services/service.entity';
+import {
+  PresenceStatus,
+  User,
+  UserRole,
+} from '../users/user.entity';
 import { UsersService } from '../users/users.service';
 import { CreateLeaveRequestDto } from './dto/create-leave-request.dto';
+import { RefuseLeaveRequestDto } from './dto/refuse-leave-request.dto';
 import { SubmitLeaveRequestDto } from './dto/submit-leave-request.dto';
 import { UpdateLeaveRequestDto } from './dto/update-leave-request.dto';
+import { ValidateLeaveRequestDto } from './dto/validate-leave-request.dto';
 import {
   evaluateSubmissionNotice,
   type SubmissionNoticeInfo,
@@ -42,6 +54,19 @@ import {
   LeaveRequestStatus,
   SignatureType,
 } from './leave-request.entity';
+
+
+type DecisionAccessKind =
+  | 'RESPONSABLE_PRINCIPAL'
+  | 'DIRECTEUR_RH'
+  | 'DIRECTEUR_SEUL'
+  | 'RELAIS'
+  | 'URGENCE';
+
+interface DecisionAccess {
+  kind: DecisionAccessKind;
+  reason: string | null;
+}
 
 @Injectable()
 export class LeaveRequestsService {
@@ -117,9 +142,19 @@ export class LeaveRequestsService {
       realBalanceBefore: null,
       potentialBalanceBefore: null,
       realBalanceAfter: null,
+      finalDeciderId: null,
+      finalDecider: null,
+      finalDeciderRole: null,
+      decisionAt: null,
+      refusalComment: null,
       employeeSignatureType: null,
       employeeSignatureData: null,
       employeeSignedAt: null,
+      validatorSignatureType: null,
+      validatorSignatureData: null,
+      validatorSignedAt: null,
+      rhConfirmedDirectorAgreement: false,
+      rhDirectorAgreementConfirmedAt: null,
       version: 1,
       lockedAt: null,
     });
@@ -350,6 +385,16 @@ export class LeaveRequestsService {
       leaveRequest.potentialBalanceBefore =
         reservation?.potentialBalanceBefore ?? null;
       leaveRequest.realBalanceAfter = null;
+      leaveRequest.finalDeciderId = null;
+      leaveRequest.finalDeciderRole = null;
+      leaveRequest.decisionAt = null;
+      leaveRequest.refusalComment = null;
+      leaveRequest.validatorSignatureType = null;
+      leaveRequest.validatorSignatureData = null;
+      leaveRequest.validatorSignedAt = null;
+      leaveRequest.rhConfirmedDirectorAgreement = false;
+      leaveRequest.rhDirectorAgreementConfirmedAt = null;
+      leaveRequest.lockedAt = null;
       leaveRequest.version += 1;
 
       await manager.getRepository(LeaveRequest).save(leaveRequest);
@@ -381,6 +426,298 @@ export class LeaveRequestsService {
     return this.findOwnedRequest(id, authenticatedUser.id);
   }
 
+  async findPendingForDecision(
+    authenticatedUser: AuthenticatedUser,
+  ): Promise<LeaveRequest[]> {
+    const requests = await this.leaveRequestRepository.find({
+      where: {
+        status: LeaveRequestStatus.EN_ATTENTE_VALIDATION,
+      },
+      relations: {
+        employee: true,
+        createdBy: true,
+        leaveType: true,
+        service: true,
+        finalDecider: true,
+      },
+      order: {
+        submittedAt: 'ASC',
+        id: 'ASC',
+      },
+    });
+
+    if (
+      authenticatedUser.role === UserRole.DIRECTEUR ||
+      authenticatedUser.role === UserRole.RH
+    ) {
+      return requests;
+    }
+
+    if (
+      authenticatedUser.role ===
+      UserRole.RESPONSABLE_SERVICE
+    ) {
+      return requests.filter(
+        (leaveRequest) =>
+          leaveRequest.service.validationMode ===
+            ValidationMode.RESPONSABLE_PUIS_RELAIS &&
+          leaveRequest.service.primaryManagerId ===
+            authenticatedUser.id &&
+          leaveRequest.employeeId !== authenticatedUser.id &&
+          ![
+            UserRole.RESPONSABLE_SERVICE,
+            UserRole.RH,
+            UserRole.DIRECTEUR,
+          ].includes(leaveRequest.employee.role),
+      );
+    }
+
+    return [];
+  }
+
+  async findRequestForDecision(
+    id: number,
+    authenticatedUser: AuthenticatedUser,
+  ): Promise<LeaveRequest> {
+    const leaveRequest = await this.leaveRequestRepository.findOne({
+      where: { id },
+      relations: {
+        employee: true,
+        createdBy: true,
+        leaveType: true,
+        service: true,
+        finalDecider: true,
+      },
+    });
+
+    if (!leaveRequest) {
+      throw new NotFoundException(
+        `La demande de congé ${id} est introuvable.`,
+      );
+    }
+
+    if (
+      authenticatedUser.role === UserRole.DIRECTEUR ||
+      authenticatedUser.role === UserRole.RH
+    ) {
+      return leaveRequest;
+    }
+
+    if (
+      authenticatedUser.role ===
+        UserRole.RESPONSABLE_SERVICE &&
+      leaveRequest.service.validationMode ===
+        ValidationMode.RESPONSABLE_PUIS_RELAIS &&
+      leaveRequest.service.primaryManagerId ===
+        authenticatedUser.id &&
+      leaveRequest.employeeId !== authenticatedUser.id &&
+      ![
+        UserRole.RESPONSABLE_SERVICE,
+        UserRole.RH,
+        UserRole.DIRECTEUR,
+      ].includes(leaveRequest.employee.role)
+    ) {
+      return leaveRequest;
+    }
+
+    throw new ForbiddenException(
+      'Cette demande ne relève pas de votre périmètre.',
+    );
+  }
+
+  async validateRequest(
+    id: number,
+    authenticatedUser: AuthenticatedUser,
+    dto: ValidateLeaveRequestDto,
+  ): Promise<LeaveRequest> {
+    await this.dataSource.transaction(async (manager) => {
+      const leaveRequest =
+        await this.findRequestForDecisionUpdate(manager, id);
+
+      this.ensureRequestCanReceiveDecision(leaveRequest);
+
+      const access = await this.determineDecisionAccess(
+        manager,
+        leaveRequest,
+        authenticatedUser,
+        dto.emergencyTakeover ?? false,
+        dto.takeoverReason,
+      );
+
+      if (
+        authenticatedUser.role === UserRole.RH &&
+        dto.rhConfirmedDirectorAgreement !== true
+      ) {
+        throw new BadRequestException(
+          'La RH doit confirmer avoir obtenu l’accord du Directeur avant de valider.',
+        );
+      }
+
+      const validatorSignatureData =
+        this.validateAndNormalizeSignature(
+          dto.signatureType,
+          dto.signatureData,
+        );
+
+      let realBalanceAfter: number | null = null;
+
+      if (leaveRequest.leaveType.deductsPaidLeaveBalance) {
+        const balanceResult =
+          await this.leaveBalancesService.finalizePaidLeaveReservation(
+            manager,
+            {
+              employeeId: leaveRequest.employeeId,
+              leaveRequestId: leaveRequest.id,
+              actorId: authenticatedUser.id,
+              expectedDays: leaveRequest.deductedDays,
+              decision: 'VALIDATE',
+            },
+          );
+
+        realBalanceAfter = balanceResult.realBalanceAfter;
+      }
+
+      const decisionAt = new Date();
+      const oldStatus = leaveRequest.status;
+
+      leaveRequest.status = LeaveRequestStatus.VALIDEE;
+      leaveRequest.finalDeciderId = authenticatedUser.id;
+      leaveRequest.finalDeciderRole = authenticatedUser.role;
+      leaveRequest.decisionAt = decisionAt;
+      leaveRequest.refusalComment = null;
+      leaveRequest.validatorSignatureType = dto.signatureType;
+      leaveRequest.validatorSignatureData =
+        validatorSignatureData;
+      leaveRequest.validatorSignedAt = decisionAt;
+      leaveRequest.rhConfirmedDirectorAgreement =
+        authenticatedUser.role === UserRole.RH;
+      leaveRequest.rhDirectorAgreementConfirmedAt =
+        authenticatedUser.role === UserRole.RH
+          ? decisionAt
+          : null;
+      leaveRequest.realBalanceAfter = realBalanceAfter;
+      leaveRequest.lockedAt = decisionAt;
+      leaveRequest.version += 1;
+
+      await manager.getRepository(LeaveRequest).save(leaveRequest);
+
+      await this.saveDecisionAccessHistory(
+        manager,
+        leaveRequest,
+        authenticatedUser,
+        access,
+      );
+
+      await manager.getRepository(LeaveRequestHistory).save(
+        manager.getRepository(LeaveRequestHistory).create({
+          leaveRequestId: leaveRequest.id,
+          leaveRequest,
+          action: LeaveRequestHistoryAction.DEMANDE_VALIDEE,
+          actorId: authenticatedUser.id,
+          oldStatus,
+          newStatus: LeaveRequestStatus.VALIDEE,
+          comment: null,
+          metadata: {
+            finalDeciderRole: authenticatedUser.role,
+            accessKind: access.kind,
+            realBalanceBefore: leaveRequest.realBalanceBefore,
+            realBalanceAfter,
+            rhConfirmedDirectorAgreement:
+              leaveRequest.rhConfirmedDirectorAgreement,
+          },
+        }),
+      );
+    });
+
+    return this.findRequestForDecision(id, authenticatedUser);
+  }
+
+  async refuseRequest(
+    id: number,
+    authenticatedUser: AuthenticatedUser,
+    dto: RefuseLeaveRequestDto,
+  ): Promise<LeaveRequest> {
+    await this.dataSource.transaction(async (manager) => {
+      const leaveRequest =
+        await this.findRequestForDecisionUpdate(manager, id);
+
+      this.ensureRequestCanReceiveDecision(leaveRequest);
+
+      const access = await this.determineDecisionAccess(
+        manager,
+        leaveRequest,
+        authenticatedUser,
+        dto.emergencyTakeover ?? false,
+        dto.takeoverReason,
+      );
+
+      let realBalanceAfter: number | null = null;
+
+      if (leaveRequest.leaveType.deductsPaidLeaveBalance) {
+        const balanceResult =
+          await this.leaveBalancesService.finalizePaidLeaveReservation(
+            manager,
+            {
+              employeeId: leaveRequest.employeeId,
+              leaveRequestId: leaveRequest.id,
+              actorId: authenticatedUser.id,
+              expectedDays: leaveRequest.deductedDays,
+              decision: 'REFUSE',
+            },
+          );
+
+        realBalanceAfter = balanceResult.realBalanceAfter;
+      }
+
+      const decisionAt = new Date();
+      const oldStatus = leaveRequest.status;
+      const refusalComment = dto.comment?.trim() || null;
+
+      leaveRequest.status = LeaveRequestStatus.REFUSEE;
+      leaveRequest.finalDeciderId = authenticatedUser.id;
+      leaveRequest.finalDeciderRole = authenticatedUser.role;
+      leaveRequest.decisionAt = decisionAt;
+      leaveRequest.refusalComment = refusalComment;
+      leaveRequest.validatorSignatureType = null;
+      leaveRequest.validatorSignatureData = null;
+      leaveRequest.validatorSignedAt = null;
+      leaveRequest.rhConfirmedDirectorAgreement = false;
+      leaveRequest.rhDirectorAgreementConfirmedAt = null;
+      leaveRequest.realBalanceAfter = realBalanceAfter;
+      leaveRequest.lockedAt = decisionAt;
+      leaveRequest.version += 1;
+
+      await manager.getRepository(LeaveRequest).save(leaveRequest);
+
+      await this.saveDecisionAccessHistory(
+        manager,
+        leaveRequest,
+        authenticatedUser,
+        access,
+      );
+
+      await manager.getRepository(LeaveRequestHistory).save(
+        manager.getRepository(LeaveRequestHistory).create({
+          leaveRequestId: leaveRequest.id,
+          leaveRequest,
+          action: LeaveRequestHistoryAction.DEMANDE_REFUSEE,
+          actorId: authenticatedUser.id,
+          oldStatus,
+          newStatus: LeaveRequestStatus.REFUSEE,
+          comment: refusalComment,
+          metadata: {
+            finalDeciderRole: authenticatedUser.role,
+            accessKind: access.kind,
+            realBalanceBefore: leaveRequest.realBalanceBefore,
+            realBalanceAfter,
+          },
+        }),
+      );
+    });
+
+    return this.findRequestForDecision(id, authenticatedUser);
+  }
+
   async deleteDraft(
     id: number,
     authenticatedUser: AuthenticatedUser,
@@ -393,6 +730,282 @@ export class LeaveRequestsService {
     this.ensureDraft(leaveRequest);
 
     await this.leaveRequestRepository.remove(leaveRequest);
+  }
+
+  private async findRequestForDecisionUpdate(
+    manager: EntityManager,
+    id: number,
+  ): Promise<LeaveRequest> {
+    const leaveRequest = await manager
+      .getRepository(LeaveRequest)
+      .createQueryBuilder('leaveRequest')
+      .setLock('pessimistic_write')
+      .leftJoinAndSelect('leaveRequest.employee', 'employee')
+      .leftJoinAndSelect('leaveRequest.createdBy', 'createdBy')
+      .leftJoinAndSelect('leaveRequest.leaveType', 'leaveType')
+      .leftJoinAndSelect('leaveRequest.service', 'service')
+      .leftJoinAndSelect(
+        'leaveRequest.finalDecider',
+        'finalDecider',
+      )
+      .where('leaveRequest.id = :id', { id })
+      .getOne();
+
+    if (!leaveRequest) {
+      throw new NotFoundException(
+        `La demande de congé ${id} est introuvable.`,
+      );
+    }
+
+    return leaveRequest;
+  }
+
+  private ensureRequestCanReceiveDecision(
+    leaveRequest: LeaveRequest,
+  ): void {
+    if (
+      leaveRequest.status !==
+        LeaveRequestStatus.EN_ATTENTE_VALIDATION ||
+      leaveRequest.finalDeciderId !== null ||
+      leaveRequest.lockedAt !== null
+    ) {
+      const decisionMessage = leaveRequest.finalDecider
+        ? ` Cette demande a déjà été traitée par ${leaveRequest.finalDecider.prenom} ${leaveRequest.finalDecider.nom}.`
+        : '';
+
+      throw new ConflictException(
+        `Cette demande ne peut plus recevoir de décision.${decisionMessage}`,
+      );
+    }
+  }
+
+  private async determineDecisionAccess(
+    manager: EntityManager,
+    leaveRequest: LeaveRequest,
+    authenticatedUser: AuthenticatedUser,
+    emergencyTakeover: boolean,
+    takeoverReasonValue?: string,
+  ): Promise<DecisionAccess> {
+    if (leaveRequest.employeeId === authenticatedUser.id) {
+      throw new ForbiddenException(
+        'Vous ne pouvez pas traiter votre propre demande.',
+      );
+    }
+
+    if (leaveRequest.employee.role === UserRole.RH) {
+      if (authenticatedUser.role !== UserRole.DIRECTEUR) {
+        throw new ForbiddenException(
+          'Une demande déposée par la RH doit être traitée par le Directeur.',
+        );
+      }
+
+      return {
+        kind: 'DIRECTEUR_SEUL',
+        reason: null,
+      };
+    }
+
+    if (
+      leaveRequest.employee.role ===
+      UserRole.RESPONSABLE_SERVICE
+    ) {
+      if (
+        authenticatedUser.role !== UserRole.DIRECTEUR &&
+        authenticatedUser.role !== UserRole.RH
+      ) {
+        throw new ForbiddenException(
+          'La demande d’un Responsable de service doit être traitée par le Directeur ou la RH.',
+        );
+      }
+
+      return {
+        kind: 'DIRECTEUR_RH',
+        reason: null,
+      };
+    }
+
+    if (leaveRequest.service.serviceType === ServiceType.EXTERNE) {
+      if (
+        authenticatedUser.role !== UserRole.DIRECTEUR &&
+        authenticatedUser.role !== UserRole.RH
+      ) {
+        throw new ForbiddenException(
+          'La demande d’un collaborateur externe doit être traitée par le Directeur ou la RH.',
+        );
+      }
+
+      return {
+        kind: 'DIRECTEUR_RH',
+        reason: null,
+      };
+    }
+
+    switch (leaveRequest.service.validationMode) {
+      case ValidationMode.DIRECTEUR_ET_RH:
+        if (
+          authenticatedUser.role !== UserRole.DIRECTEUR &&
+          authenticatedUser.role !== UserRole.RH
+        ) {
+          throw new ForbiddenException(
+            'Cette demande doit être traitée par le Directeur ou la RH.',
+          );
+        }
+
+        return {
+          kind: 'DIRECTEUR_RH',
+          reason: null,
+        };
+
+      case ValidationMode.DIRECTEUR_SEUL:
+        if (authenticatedUser.role !== UserRole.DIRECTEUR) {
+          throw new ForbiddenException(
+            'Cette demande doit être traitée par le Directeur.',
+          );
+        }
+
+        return {
+          kind: 'DIRECTEUR_SEUL',
+          reason: null,
+        };
+
+      case ValidationMode.SANS_VALIDATION:
+        throw new BadRequestException(
+          'Ce service est configuré sans circuit de validation.',
+        );
+
+      case ValidationMode.RESPONSABLE_PUIS_RELAIS:
+        return this.determineManagerFirstAccess(
+          manager,
+          leaveRequest,
+          authenticatedUser,
+          emergencyTakeover,
+          takeoverReasonValue,
+        );
+
+      default:
+        throw new BadRequestException(
+          'Le circuit de validation du service est invalide.',
+        );
+    }
+  }
+
+  private async determineManagerFirstAccess(
+    manager: EntityManager,
+    leaveRequest: LeaveRequest,
+    authenticatedUser: AuthenticatedUser,
+    emergencyTakeover: boolean,
+    takeoverReasonValue?: string,
+  ): Promise<DecisionAccess> {
+    if (
+      authenticatedUser.role ===
+        UserRole.RESPONSABLE_SERVICE &&
+      leaveRequest.service.primaryManagerId ===
+        authenticatedUser.id
+    ) {
+      return {
+        kind: 'RESPONSABLE_PRINCIPAL',
+        reason: null,
+      };
+    }
+
+    if (
+      authenticatedUser.role !== UserRole.DIRECTEUR &&
+      authenticatedUser.role !== UserRole.RH
+    ) {
+      throw new ForbiddenException(
+        'Cette demande relève du Responsable principal du service.',
+      );
+    }
+
+    const primaryManager =
+      leaveRequest.service.primaryManagerId === null
+        ? null
+        : await manager.getRepository(User).findOneBy({
+            id: leaveRequest.service.primaryManagerId,
+          });
+
+    const managerUnavailable =
+      !primaryManager ||
+      !primaryManager.isActive ||
+      primaryManager.role !== UserRole.RESPONSABLE_SERVICE ||
+      primaryManager.serviceId !== leaveRequest.serviceId ||
+      primaryManager.presenceStatus !== PresenceStatus.PRESENT;
+
+    if (managerUnavailable) {
+      return {
+        kind: 'RELAIS',
+        reason:
+          'Le Responsable principal est absent ou indisponible.',
+      };
+    }
+
+    const takeoverAt = new Date(
+      (leaveRequest.submittedAt ?? leaveRequest.createdAt).getTime() +
+        leaveRequest.service.takeoverDelayDays *
+          24 *
+          60 *
+          60 *
+          1000,
+    );
+
+    if (Date.now() >= takeoverAt.getTime()) {
+      return {
+        kind: 'RELAIS',
+        reason: `Le délai de ${leaveRequest.service.takeoverDelayDays} jour(s) calendaires accordé au Responsable est expiré.`,
+      };
+    }
+
+    if (emergencyTakeover) {
+      const takeoverReason = takeoverReasonValue?.trim();
+
+      if (!takeoverReason) {
+        throw new BadRequestException(
+          'Le motif de l’intervention urgente est obligatoire.',
+        );
+      }
+
+      return {
+        kind: 'URGENCE',
+        reason: takeoverReason,
+      };
+    }
+
+    throw new ForbiddenException(
+      `Le Responsable principal reste prioritaire jusqu’au ${takeoverAt.toISOString()}. Une intervention anticipée du Directeur ou de la RH doit être déclarée comme urgente et motivée.`,
+    );
+  }
+
+  private async saveDecisionAccessHistory(
+    manager: EntityManager,
+    leaveRequest: LeaveRequest,
+    authenticatedUser: AuthenticatedUser,
+    access: DecisionAccess,
+  ): Promise<void> {
+    if (access.kind !== 'RELAIS' && access.kind !== 'URGENCE') {
+      return;
+    }
+
+    await manager.getRepository(LeaveRequestHistory).save(
+      manager.getRepository(LeaveRequestHistory).create({
+        leaveRequestId: leaveRequest.id,
+        leaveRequest,
+        action:
+          access.kind === 'RELAIS'
+            ? LeaveRequestHistoryAction.REPRISE_PAR_RELAIS
+            : LeaveRequestHistoryAction.INTERVENTION_URGENCE,
+        actorId: authenticatedUser.id,
+        oldStatus: LeaveRequestStatus.EN_ATTENTE_VALIDATION,
+        newStatus: LeaveRequestStatus.EN_ATTENTE_VALIDATION,
+        comment: access.reason,
+        metadata: {
+          actorRole: authenticatedUser.role,
+          primaryManagerId:
+            leaveRequest.service.primaryManagerId,
+          takeoverDelayDays:
+            leaveRequest.service.takeoverDelayDays,
+        },
+      }),
+    );
   }
 
   private async findOwnedRequest(

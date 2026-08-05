@@ -5,10 +5,14 @@ import {
   IsOptional,
   IsString,
   Length,
+  Max,
   Min,
 } from 'class-validator';
 
-import { ServiceType } from '../service.entity';
+import {
+  ServiceType,
+  ValidationMode,
+} from '../service.entity';
 
 export class CreateServiceDto {
   @IsString()
@@ -22,6 +26,16 @@ export class CreateServiceDto {
   @IsString()
   @Length(2, 150)
   externalCompanyName?: string;
+
+  @IsOptional()
+  @IsEnum(ValidationMode)
+  validationMode?: ValidationMode;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(30)
+  takeoverDelayDays?: number;
 
   @IsOptional()
   @IsInt()

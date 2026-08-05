@@ -10,7 +10,7 @@ import {
 
 import { LeaveType } from '../leave-types/leave-type.entity';
 import { Service } from '../services/service.entity';
-import { User } from '../users/user.entity';
+import { User, UserRole } from '../users/user.entity';
 
 export enum LeaveRequestStatus {
   BROUILLON = 'BROUILLON',
@@ -193,6 +193,38 @@ export class LeaveRequest {
   realBalanceAfter!: number | null;
 
   @Column({
+    type: 'int',
+    nullable: true,
+  })
+  finalDeciderId!: number | null;
+
+  @ManyToOne(() => User, {
+    nullable: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn({ name: 'finalDeciderId' })
+  finalDecider!: User | null;
+
+  @Column({
+    type: 'enum',
+    enum: UserRole,
+    nullable: true,
+  })
+  finalDeciderRole!: UserRole | null;
+
+  @Column({
+    type: 'datetime',
+    nullable: true,
+  })
+  decisionAt!: Date | null;
+
+  @Column({
+    type: 'text',
+    nullable: true,
+  })
+  refusalComment!: string | null;
+
+  @Column({
     type: 'enum',
     enum: SignatureType,
     nullable: true,
@@ -211,6 +243,38 @@ export class LeaveRequest {
     nullable: true,
   })
   employeeSignedAt!: Date | null;
+
+  @Column({
+    type: 'enum',
+    enum: SignatureType,
+    nullable: true,
+  })
+  validatorSignatureType!: SignatureType | null;
+
+  @Column({
+    type: 'longtext',
+    nullable: true,
+    select: false,
+  })
+  validatorSignatureData!: string | null;
+
+  @Column({
+    type: 'datetime',
+    nullable: true,
+  })
+  validatorSignedAt!: Date | null;
+
+  @Column({
+    type: 'boolean',
+    default: false,
+  })
+  rhConfirmedDirectorAgreement!: boolean;
+
+  @Column({
+    type: 'datetime',
+    nullable: true,
+  })
+  rhDirectorAgreementConfirmedAt!: Date | null;
 
   @Column({
     type: 'int',

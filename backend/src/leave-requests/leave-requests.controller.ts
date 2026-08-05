@@ -20,8 +20,10 @@ import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { UserRole } from '../users/user.entity';
 import { CreateLeaveRequestDto } from './dto/create-leave-request.dto';
+import { RefuseLeaveRequestDto } from './dto/refuse-leave-request.dto';
 import { SubmitLeaveRequestDto } from './dto/submit-leave-request.dto';
 import { UpdateLeaveRequestDto } from './dto/update-leave-request.dto';
+import { ValidateLeaveRequestDto } from './dto/validate-leave-request.dto';
 import { LeaveRequestsService } from './leave-requests.service';
 
 type AuthenticatedRequest = Request & {
@@ -67,6 +69,74 @@ export class LeaveRequestsController {
       id,
       request.user,
       submitLeaveRequestDto,
+    );
+  }
+
+  @Get('pending')
+  @Roles(
+    UserRole.RESPONSABLE_SERVICE,
+    UserRole.RH,
+    UserRole.DIRECTEUR,
+  )
+  findPendingForDecision(
+    @Req() request: AuthenticatedRequest,
+  ) {
+    return this.leaveRequestsService.findPendingForDecision(
+      request.user,
+    );
+  }
+
+  @Get('management/:id')
+  @Roles(
+    UserRole.RESPONSABLE_SERVICE,
+    UserRole.RH,
+    UserRole.DIRECTEUR,
+  )
+  findRequestForDecision(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    return this.leaveRequestsService.findRequestForDecision(
+      id,
+      request.user,
+    );
+  }
+
+  @Post(':id/validate')
+  @HttpCode(HttpStatus.OK)
+  @Roles(
+    UserRole.RESPONSABLE_SERVICE,
+    UserRole.RH,
+    UserRole.DIRECTEUR,
+  )
+  validateRequest(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() request: AuthenticatedRequest,
+    @Body() dto: ValidateLeaveRequestDto,
+  ) {
+    return this.leaveRequestsService.validateRequest(
+      id,
+      request.user,
+      dto,
+    );
+  }
+
+  @Post(':id/refuse')
+  @HttpCode(HttpStatus.OK)
+  @Roles(
+    UserRole.RESPONSABLE_SERVICE,
+    UserRole.RH,
+    UserRole.DIRECTEUR,
+  )
+  refuseRequest(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() request: AuthenticatedRequest,
+    @Body() dto: RefuseLeaveRequestDto,
+  ) {
+    return this.leaveRequestsService.refuseRequest(
+      id,
+      request.user,
+      dto,
     );
   }
 
