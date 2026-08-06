@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Not, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 
 import {
   PresenceStatus,
@@ -35,26 +35,33 @@ export class ServicesService {
   ): Promise<Service> {
     const name = createServiceDto.name.trim();
 
-    const existingService =
-      await this.serviceRepository.findOneBy({ name });
-
-    if (existingService) {
-      throw new ConflictException(
-        `Un service portant le nom « ${name} » existe déjà.`,
-      );
-    }
-
     this.validateExternalService(
       createServiceDto.serviceType,
       createServiceDto.externalCompanyName,
     );
 
+    const externalCompanyName =
+      createServiceDto.serviceType === ServiceType.EXTERNE
+        ? createServiceDto.externalCompanyName?.trim() ?? null
+        : null;
+
+    const existingService = await this.findDuplicateService(
+      name,
+      externalCompanyName,
+    );
+
+    if (existingService) {
+      throw new ConflictException(
+        `Un service portant le nom « ${name} » existe déjà pour cette entreprise.`,
+      );
+    }
+
     const hasMinimumPresenceRule =
       createServiceDto.hasMinimumPresenceRule ?? false;
 
     const minimumPresence = hasMinimumPresenceRule
-      ? (createServiceDto.minimumPresence ?? 0)
-      : 0;
+      ? (createServiceDto.minimumPresence ?? 1)
+      : null;
 
     this.validateMinimumPresence(
       hasMinimumPresenceRule,
@@ -83,10 +90,7 @@ export class ServicesService {
     const service = this.serviceRepository.create({
       name,
       serviceType: createServiceDto.serviceType,
-      externalCompanyName:
-        createServiceDto.serviceType === ServiceType.EXTERNE
-          ? createServiceDto.externalCompanyName?.trim()
-          : null,
+      externalCompanyName,
       primaryManagerId: null,
       primaryManager: null,
       validationMode,
@@ -141,20 +145,6 @@ export class ServicesService {
     const name =
       updateServiceDto.name?.trim() ?? service.name;
 
-    const existingService =
-      await this.serviceRepository.findOne({
-        where: {
-          name,
-          id: Not(id),
-        },
-      });
-
-    if (existingService) {
-      throw new ConflictException(
-        `Un service portant le nom « ${name} » existe déjà.`,
-      );
-    }
-
     const serviceType =
       updateServiceDto.serviceType ?? service.serviceType;
 
@@ -171,14 +161,27 @@ export class ServicesService {
       externalCompanyName,
     );
 
+    const existingService = await this.findDuplicateService(
+      name,
+      externalCompanyName,
+      id,
+    );
+
+    if (existingService) {
+      throw new ConflictException(
+        `Un service portant le nom « ${name} » existe déjà pour cette entreprise.`,
+      );
+    }
+
     const hasMinimumPresenceRule =
       updateServiceDto.hasMinimumPresenceRule ??
       service.hasMinimumPresenceRule;
 
     const minimumPresence = hasMinimumPresenceRule
       ? (updateServiceDto.minimumPresence ??
-        service.minimumPresence)
-      : 0;
+        service.minimumPresence ??
+        1)
+      : null;
 
     this.validateMinimumPresence(
       hasMinimumPresenceRule,
@@ -315,6 +318,31 @@ export class ServicesService {
     return manager;
   }
 
+  private async findDuplicateService(
+    name: string,
+    externalCompanyName: string | null,
+    excludedId?: number,
+  ): Promise<Service | null> {
+    const query = this.serviceRepository
+      .createQueryBuilder('service')
+      .where('LOWER(service.name) = LOWER(:name)', { name });
+
+    if (externalCompanyName === null) {
+      query.andWhere('service.externalCompanyName IS NULL');
+    } else {
+      query.andWhere(
+        'LOWER(service.externalCompanyName) = LOWER(:externalCompanyName)',
+        { externalCompanyName },
+      );
+    }
+
+    if (excludedId !== undefined) {
+      query.andWhere('service.id <> :excludedId', { excludedId });
+    }
+
+    return query.getOne();
+  }
+
   private validateValidationConfiguration(
     validationMode: ValidationMode,
     primaryManagerId: number | null,
@@ -356,9 +384,12 @@ export class ServicesService {
 
   private validateMinimumPresence(
     hasMinimumPresenceRule: boolean,
-    minimumPresence: number,
+    minimumPresence: number | null,
   ): void {
-    if (hasMinimumPresenceRule && minimumPresence < 1) {
+    if (
+      hasMinimumPresenceRule &&
+      (minimumPresence === null || minimumPresence < 1)
+    ) {
       throw new BadRequestException(
         'La présence minimale doit être supérieure ou égale à 1 lorsque la règle est activée.',
       );

@@ -16,7 +16,7 @@ import {
 
 export class CreateServiceDto {
   @IsString()
-  @Length(2, 150)
+  @Length(2, 180)
   name!: string;
 
   @IsEnum(ServiceType)
@@ -24,7 +24,7 @@ export class CreateServiceDto {
 
   @IsOptional()
   @IsString()
-  @Length(2, 150)
+  @Length(2, 180)
   externalCompanyName?: string;
 
   @IsOptional()

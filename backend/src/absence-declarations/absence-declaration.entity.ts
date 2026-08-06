@@ -2,6 +2,7 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  Index,
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
@@ -30,71 +31,64 @@ const nullableDecimalTransformer = {
 };
 
 @Entity('absence_declarations')
+@Index('IDX_absence_employee_dates', ['employeeId', 'startDate', 'endDate'])
+@Index('IDX_absence_status_declared', ['status', 'declaredAt'])
 export class AbsenceDeclaration {
-  @PrimaryGeneratedColumn()
+  @PrimaryGeneratedColumn({ type: 'bigint' })
   id!: number;
 
-  @Column({ type: 'int' })
+  @Column({ name: 'employee_id', type: 'bigint' })
   employeeId!: number;
 
-  @ManyToOne(() => User, {
-    nullable: false,
-    onDelete: 'RESTRICT',
-  })
-  @JoinColumn({ name: 'employeeId' })
+  @ManyToOne(() => User, { nullable: false, onDelete: 'RESTRICT' })
+  @JoinColumn({ name: 'employee_id' })
   employee!: User;
 
-  @Column({ type: 'int' })
+  @Column({ name: 'created_by_id', type: 'bigint' })
   createdById!: number;
 
-  @ManyToOne(() => User, {
-    nullable: false,
-    onDelete: 'RESTRICT',
-  })
-  @JoinColumn({ name: 'createdById' })
+  @ManyToOne(() => User, { nullable: false, onDelete: 'RESTRICT' })
+  @JoinColumn({ name: 'created_by_id' })
   createdBy!: User;
 
-  @Column({ type: 'int' })
+  @Column({ name: 'leave_type_id', type: 'bigint' })
   leaveTypeId!: number;
 
-  @ManyToOne(() => LeaveType, {
-    nullable: false,
-    onDelete: 'RESTRICT',
-  })
-  @JoinColumn({ name: 'leaveTypeId' })
+  @ManyToOne(() => LeaveType, { nullable: false, onDelete: 'RESTRICT' })
+  @JoinColumn({ name: 'leave_type_id' })
   leaveType!: LeaveType;
 
-  @Column({ type: 'int' })
+  @Column({ name: 'service_id', type: 'bigint' })
   serviceId!: number;
 
-  @ManyToOne(() => Service, {
-    nullable: false,
-    onDelete: 'RESTRICT',
-  })
-  @JoinColumn({ name: 'serviceId' })
+  @ManyToOne(() => Service, { nullable: false, onDelete: 'RESTRICT' })
+  @JoinColumn({ name: 'service_id' })
   service!: Service;
 
-  @Column({ type: 'date' })
+  @Column({ name: 'start_date', type: 'date' })
   startDate!: string;
 
-  @Column({ type: 'date' })
+  @Column({ name: 'end_date', type: 'date' })
   endDate!: string;
 
   @Column({
+    name: 'start_period',
     type: 'enum',
     enum: DayPeriod,
-    default: DayPeriod.MATIN,
+    nullable: true,
   })
-  startPeriod!: DayPeriod;
+  startPeriod!: DayPeriod | null;
 
   @Column({
+    name: 'end_period',
     type: 'enum',
     enum: DayPeriod,
-    default: DayPeriod.APRES_MIDI,
+    nullable: true,
   })
-  endPeriod!: DayPeriod;
+  endPeriod!: DayPeriod | null;
 
   @Column({
+    name: 'duration_days',
     type: 'decimal',
     precision: 7,
     scale: 2,
@@ -104,6 +98,7 @@ export class AbsenceDeclaration {
   durationDays!: number | null;
 
   @Column({
+    name: 'duration_hours',
     type: 'decimal',
     precision: 7,
     scale: 2,
@@ -122,25 +117,22 @@ export class AbsenceDeclaration {
   @Column({ type: 'text', nullable: true })
   comment!: string | null;
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ name: 'declared_at', type: 'datetime', nullable: true })
   declaredAt!: Date | null;
 
-  @Column({ type: 'int', nullable: true })
+  @Column({ name: 'verified_by_rh_id', type: 'bigint', nullable: true })
   verifiedByRhId!: number | null;
 
-  @ManyToOne(() => User, {
-    nullable: true,
-    onDelete: 'SET NULL',
-  })
-  @JoinColumn({ name: 'verifiedByRhId' })
+  @ManyToOne(() => User, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'verified_by_rh_id' })
   verifiedByRh!: User | null;
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ name: 'verified_at', type: 'datetime', nullable: true })
   verifiedAt!: Date | null;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ name: 'created_at', type: 'datetime' })
   createdAt!: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ name: 'updated_at', type: 'datetime' })
   updatedAt!: Date;
 }

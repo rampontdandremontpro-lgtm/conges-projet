@@ -44,6 +44,12 @@ export class JwtStrategy extends PassportStrategy(
   async validate(
     payload: JwtPayload,
   ): Promise<AuthenticatedUser> {
+    if (payload.purpose !== 'access') {
+      throw new UnauthorizedException(
+        'Le jeton d’authentification n’est pas valide.',
+      );
+    }
+
     const user = await this.usersService.findOne(
       payload.sub,
     );

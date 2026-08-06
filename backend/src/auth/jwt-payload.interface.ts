@@ -4,6 +4,7 @@ export interface JwtPayload {
   sub: number;
   email: string;
   role: UserRole;
+  purpose: 'access';
 }
 
 export interface AuthenticatedUser {

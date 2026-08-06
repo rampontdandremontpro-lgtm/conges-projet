@@ -580,7 +580,7 @@ export class AbsenceDeclarationsService {
       );
     }
 
-    if (leaveType.category !== LeaveTypeCategory.ABSENCE) {
+    if (leaveType.category !== LeaveTypeCategory.DECLARATION_ABSENCE) {
       throw new BadRequestException(
         'Une déclaration d’absence doit utiliser un type de la catégorie ABSENCE.',
       );

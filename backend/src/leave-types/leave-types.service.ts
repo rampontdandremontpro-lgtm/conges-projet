@@ -9,11 +9,7 @@ import { Not, Repository } from 'typeorm';
 
 import { CreateLeaveTypeDto } from './dto/create-leave-type.dto';
 import { UpdateLeaveTypeDto } from './dto/update-leave-type.dto';
-import {
-  LeaveAccrualMode,
-  LeaveType,
-  LeaveTypeCategory,
-} from './leave-type.entity';
+import { LeaveType, LeaveTypeCategory } from './leave-type.entity';
 
 @Injectable()
 export class LeaveTypesService {
@@ -22,49 +18,38 @@ export class LeaveTypesService {
     private readonly leaveTypeRepository: Repository<LeaveType>,
   ) {}
 
-  async create(
-    createLeaveTypeDto: CreateLeaveTypeDto,
-  ): Promise<LeaveType> {
-    const name = createLeaveTypeDto.name.trim();
+  async create(dto: CreateLeaveTypeDto): Promise<LeaveType> {
+    const name = dto.name.trim();
+    const existing = await this.leaveTypeRepository.findOneBy({ name });
 
-    const existingLeaveType =
-      await this.leaveTypeRepository.findOneBy({ name });
-
-    if (existingLeaveType) {
+    if (existing) {
       throw new ConflictException(
         `Un type portant le nom « ${name} » existe déjà.`,
       );
     }
 
-    const values = this.resolveValues(createLeaveTypeDto);
-
+    const values = this.resolveValues(dto);
     this.validateBusinessRules(values);
 
-    const leaveType = this.leaveTypeRepository.create({
-      name,
-      ...values,
-      isActive: true,
-    });
-
-    return this.leaveTypeRepository.save(leaveType);
+    return this.leaveTypeRepository.save(
+      this.leaveTypeRepository.create({
+        name,
+        ...values,
+        isActive: true,
+      }),
+    );
   }
 
   async findAllActive(): Promise<LeaveType[]> {
     return this.leaveTypeRepository.find({
       where: { isActive: true },
-      order: {
-        category: 'ASC',
-        name: 'ASC',
-      },
+      order: { category: 'ASC', name: 'ASC' },
     });
   }
 
   async findAllForManagement(): Promise<LeaveType[]> {
     return this.leaveTypeRepository.find({
-      order: {
-        category: 'ASC',
-        name: 'ASC',
-      },
+      order: { category: 'ASC', name: 'ASC' },
     });
   }
 
@@ -80,53 +65,26 @@ export class LeaveTypesService {
     return leaveType;
   }
 
-  async update(
-    id: number,
-    updateLeaveTypeDto: UpdateLeaveTypeDto,
-  ): Promise<LeaveType> {
+  async update(id: number, dto: UpdateLeaveTypeDto): Promise<LeaveType> {
     const leaveType = await this.findOne(id);
-    const name = updateLeaveTypeDto.name?.trim() ?? leaveType.name;
-
-    const existingLeaveType = await this.leaveTypeRepository.findOne({
-      where: {
-        name,
-        id: Not(id),
-      },
+    const name = dto.name?.trim() ?? leaveType.name;
+    const existing = await this.leaveTypeRepository.findOne({
+      where: { name, id: Not(id) },
     });
 
-    if (existingLeaveType) {
+    if (existing) {
       throw new ConflictException(
         `Un type portant le nom « ${name} » existe déjà.`,
       );
     }
 
-    const values = this.resolveValues(
-      updateLeaveTypeDto,
-      leaveType,
-    );
-
+    const values = this.resolveValues(dto, leaveType);
     this.validateBusinessRules(values);
 
-    leaveType.name = name;
-    leaveType.category = values.category;
-    leaveType.deductsPaidLeaveBalance =
-      values.deductsPaidLeaveBalance;
-    leaveType.documentRequired = values.documentRequired;
-    leaveType.documentCanBeAddedLater =
-      values.documentCanBeAddedLater;
-    leaveType.employeeCanCreate = values.employeeCanCreate;
-    leaveType.rhOnly = values.rhOnly;
-    leaveType.allowsDays = values.allowsDays;
-    leaveType.allowsHalfDays = values.allowsHalfDays;
-    leaveType.allowsHours = values.allowsHours;
-    leaveType.requiresValidation = values.requiresValidation;
-    leaveType.requiresEmployeeSignature =
-      values.requiresEmployeeSignature;
-    leaveType.accrualMode = values.accrualMode;
-    leaveType.monthlyAccrualDays = values.monthlyAccrualDays;
+    Object.assign(leaveType, { name, ...values });
 
-    if (updateLeaveTypeDto.isActive !== undefined) {
-      leaveType.isActive = updateLeaveTypeDto.isActive;
+    if (dto.isActive !== undefined) {
+      leaveType.isActive = dto.isActive;
     }
 
     return this.leaveTypeRepository.save(leaveType);
@@ -135,14 +93,12 @@ export class LeaveTypesService {
   async disable(id: number): Promise<LeaveType> {
     const leaveType = await this.findOne(id);
     leaveType.isActive = false;
-
     return this.leaveTypeRepository.save(leaveType);
   }
 
   async enable(id: number): Promise<LeaveType> {
     const leaveType = await this.findOne(id);
     leaveType.isActive = true;
-
     return this.leaveTypeRepository.save(leaveType);
   }
 
@@ -158,20 +114,6 @@ export class LeaveTypesService {
       );
     }
 
-    const accrualMode =
-      dto.accrualMode ??
-      current?.accrualMode ??
-      LeaveAccrualMode.NORMALE;
-
-    let monthlyAccrualDays =
-      dto.monthlyAccrualDays ??
-      current?.monthlyAccrualDays ??
-      2.5;
-
-    if (accrualMode === LeaveAccrualMode.AUCUNE) {
-      monthlyAccrualDays = 0;
-    }
-
     return {
       category,
       deductsPaidLeaveBalance:
@@ -183,22 +125,16 @@ export class LeaveTypesService {
       documentCanBeAddedLater:
         dto.documentCanBeAddedLater ??
         current?.documentCanBeAddedLater ??
-        false,
+        true,
       employeeCanCreate:
         dto.employeeCanCreate ?? current?.employeeCanCreate ?? true,
       rhOnly: dto.rhOnly ?? current?.rhOnly ?? false,
       allowsDays: dto.allowsDays ?? current?.allowsDays ?? true,
       allowsHalfDays:
-        dto.allowsHalfDays ?? current?.allowsHalfDays ?? false,
+        dto.allowsHalfDays ?? current?.allowsHalfDays ?? true,
       allowsHours: dto.allowsHours ?? current?.allowsHours ?? false,
       requiresValidation:
         dto.requiresValidation ?? current?.requiresValidation ?? true,
-      requiresEmployeeSignature:
-        dto.requiresEmployeeSignature ??
-        current?.requiresEmployeeSignature ??
-        category === LeaveTypeCategory.CONGE,
-      accrualMode,
-      monthlyAccrualDays,
     };
   }
 
@@ -213,15 +149,8 @@ export class LeaveTypesService {
     allowsHalfDays: boolean;
     allowsHours: boolean;
     requiresValidation: boolean;
-    requiresEmployeeSignature: boolean;
-    accrualMode: LeaveAccrualMode;
-    monthlyAccrualDays: number;
   }): void {
-    if (
-      !values.allowsDays &&
-      !values.allowsHalfDays &&
-      !values.allowsHours
-    ) {
+    if (!values.allowsDays && !values.allowsHalfDays && !values.allowsHours) {
       throw new BadRequestException(
         'Le type doit autoriser les jours, les demi-journées ou les heures.',
       );
@@ -233,10 +162,7 @@ export class LeaveTypesService {
       );
     }
 
-    if (
-      values.documentCanBeAddedLater &&
-      !values.documentRequired
-    ) {
+    if (values.documentCanBeAddedLater && !values.documentRequired) {
       throw new BadRequestException(
         'Le dépôt différé ne peut être activé que pour un justificatif obligatoire.',
       );
@@ -244,47 +170,16 @@ export class LeaveTypesService {
 
     if (
       values.deductsPaidLeaveBalance &&
-      values.category !== LeaveTypeCategory.CONGE
+      values.category !== LeaveTypeCategory.DEMANDE_CONGE
     ) {
       throw new BadRequestException(
-        'Seul un type de congé peut diminuer le solde de congés payés.',
+        'Seul un type de demande de congé peut diminuer le solde.',
       );
     }
 
-    if (
-      values.deductsPaidLeaveBalance &&
-      !values.requiresValidation
-    ) {
+    if (values.deductsPaidLeaveBalance && !values.requiresValidation) {
       throw new BadRequestException(
         'Un type diminuant le solde doit nécessiter une validation.',
-      );
-    }
-
-    if (
-      values.accrualMode === LeaveAccrualMode.NORMALE &&
-      values.monthlyAccrualDays !== 2.5
-    ) {
-      throw new BadRequestException(
-        'Une acquisition normale doit correspondre à 2,5 jours par mois.',
-      );
-    }
-
-    if (
-      values.accrualMode === LeaveAccrualMode.REDUITE &&
-      (values.monthlyAccrualDays <= 0 ||
-        values.monthlyAccrualDays >= 2.5)
-    ) {
-      throw new BadRequestException(
-        'Une acquisition réduite doit être supérieure à 0 et inférieure à 2,5 jours.',
-      );
-    }
-
-    if (
-      values.accrualMode === LeaveAccrualMode.AUCUNE &&
-      values.monthlyAccrualDays !== 0
-    ) {
-      throw new BadRequestException(
-        'Une acquisition suspendue doit correspondre à 0 jour.',
       );
     }
   }

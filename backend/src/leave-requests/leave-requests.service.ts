@@ -50,6 +50,8 @@ import { UsersService } from '../users/users.service';
 import { CancelLeaveRequestDto } from './dto/cancel-leave-request.dto';
 import { CreateLeaveRequestDto } from './dto/create-leave-request.dto';
 import { RefuseLeaveRequestDto } from './dto/refuse-leave-request.dto';
+import { RequestCancellationAfterValidationDto } from './dto/request-cancellation-after-validation.dto';
+import { RespondCancellationDto } from './dto/respond-cancellation.dto';
 import { SubmitLeaveRequestDto } from './dto/submit-leave-request.dto';
 import { UpdateLeaveRequestDto } from './dto/update-leave-request.dto';
 import { ValidateLeaveRequestDto } from './dto/validate-leave-request.dto';
@@ -57,10 +59,7 @@ import {
   evaluateSubmissionNotice,
   type SubmissionNoticeInfo,
 } from './leave-request-notice.util';
-import {
-  LeaveRequestHistory,
-  LeaveRequestHistoryAction,
-} from './leave-request-history.entity';
+import { AuditAction, AuditLog } from '../audit/audit-log.entity';
 import {
   DayPeriod,
   LeaveRequest,
@@ -91,8 +90,8 @@ export class LeaveRequestsService {
     @InjectRepository(LeaveRequest)
     private readonly leaveRequestRepository: Repository<LeaveRequest>,
 
-    @InjectRepository(LeaveRequestHistory)
-    private readonly historyRepository: Repository<LeaveRequestHistory>,
+    @InjectRepository(AuditLog)
+    private readonly historyRepository: Repository<AuditLog>,
 
     private readonly usersService: UsersService,
     private readonly leaveTypesService: LeaveTypesService,
@@ -173,8 +172,16 @@ export class LeaveRequestsService {
       validatorSignedAt: null,
       rhConfirmedDirectorAgreement: false,
       rhDirectorAgreementConfirmedAt: null,
+      isUrgent: false,
+      urgentReason: null,
       version: 1,
       lockedAt: null,
+      cancellationRequestedById: null,
+      cancellationRequestedBy: null,
+      cancellationReason: null,
+      employeeCancellationConsent: null,
+      employeeCancellationResponseAt: null,
+      cancelledAt: null,
     });
 
     const savedRequest = await this.leaveRequestRepository.save(
@@ -185,7 +192,7 @@ export class LeaveRequestsService {
       this.historyRepository.create({
         leaveRequestId: savedRequest.id,
         leaveRequest: savedRequest,
-        action: LeaveRequestHistoryAction.BROUILLON_CREE,
+        action: AuditAction.BROUILLON_CREE,
         actorId: employee.id,
         actor: employee,
         oldStatus: null,
@@ -421,13 +428,13 @@ export class LeaveRequestsService {
         leaveRequest,
       );
 
-      await manager.getRepository(LeaveRequestHistory).save(
-        manager.getRepository(LeaveRequestHistory).create({
+      await manager.getRepository(AuditLog).save(
+        manager.getRepository(AuditLog).create({
           leaveRequestId: leaveRequest.id,
           leaveRequest,
           action: isSubmittedRequest
-            ? LeaveRequestHistoryAction.DEMANDE_MODIFIEE_AVANT_DECISION
-            : LeaveRequestHistoryAction.BROUILLON_MODIFIE,
+            ? AuditAction.DEMANDE_MODIFIEE_AVANT_DECISION
+            : AuditAction.BROUILLON_MODIFIE,
           actorId: authenticatedUser.id,
           oldStatus,
           newStatus: leaveRequest.status,
@@ -591,11 +598,11 @@ export class LeaveRequestsService {
 
       await manager.getRepository(LeaveRequest).save(leaveRequest);
 
-      await manager.getRepository(LeaveRequestHistory).save(
-        manager.getRepository(LeaveRequestHistory).create({
+      await manager.getRepository(AuditLog).save(
+        manager.getRepository(AuditLog).create({
           leaveRequestId: leaveRequest.id,
           leaveRequest,
-          action: LeaveRequestHistoryAction.DEMANDE_SOUMISE,
+          action: AuditAction.DEMANDE_SOUMISE,
           actorId: authenticatedUser.id,
           oldStatus,
           newStatus: LeaveRequestStatus.EN_ATTENTE_VALIDATION,
@@ -792,6 +799,9 @@ export class LeaveRequestsService {
           ? decisionAt
           : null;
       leaveRequest.realBalanceAfter = realBalanceAfter;
+      leaveRequest.isUrgent = access.kind === 'URGENCE';
+      leaveRequest.urgentReason =
+        access.kind === 'URGENCE' ? access.reason : null;
       leaveRequest.lockedAt = decisionAt;
       leaveRequest.version += 1;
 
@@ -804,11 +814,11 @@ export class LeaveRequestsService {
         access,
       );
 
-      await manager.getRepository(LeaveRequestHistory).save(
-        manager.getRepository(LeaveRequestHistory).create({
+      await manager.getRepository(AuditLog).save(
+        manager.getRepository(AuditLog).create({
           leaveRequestId: leaveRequest.id,
           leaveRequest,
-          action: LeaveRequestHistoryAction.DEMANDE_VALIDEE,
+          action: AuditAction.DEMANDE_VALIDEE,
           actorId: authenticatedUser.id,
           oldStatus,
           newStatus: LeaveRequestStatus.VALIDEE,
@@ -896,6 +906,9 @@ export class LeaveRequestsService {
       leaveRequest.rhConfirmedDirectorAgreement = false;
       leaveRequest.rhDirectorAgreementConfirmedAt = null;
       leaveRequest.realBalanceAfter = realBalanceAfter;
+      leaveRequest.isUrgent = access.kind === 'URGENCE';
+      leaveRequest.urgentReason =
+        access.kind === 'URGENCE' ? access.reason : null;
       leaveRequest.lockedAt = decisionAt;
       leaveRequest.version += 1;
 
@@ -908,11 +921,11 @@ export class LeaveRequestsService {
         access,
       );
 
-      await manager.getRepository(LeaveRequestHistory).save(
-        manager.getRepository(LeaveRequestHistory).create({
+      await manager.getRepository(AuditLog).save(
+        manager.getRepository(AuditLog).create({
           leaveRequestId: leaveRequest.id,
           leaveRequest,
-          action: LeaveRequestHistoryAction.DEMANDE_REFUSEE,
+          action: AuditAction.DEMANDE_REFUSEE,
           actorId: authenticatedUser.id,
           oldStatus,
           newStatus: LeaveRequestStatus.REFUSEE,
@@ -1001,11 +1014,11 @@ export class LeaveRequestsService {
 
       await manager.getRepository(LeaveRequest).save(leaveRequest);
 
-      await manager.getRepository(LeaveRequestHistory).save(
-        manager.getRepository(LeaveRequestHistory).create({
+      await manager.getRepository(AuditLog).save(
+        manager.getRepository(AuditLog).create({
           leaveRequestId: leaveRequest.id,
           leaveRequest,
-          action: LeaveRequestHistoryAction.DEMANDE_ANNULEE,
+          action: AuditAction.DEMANDE_ANNULEE,
           actorId: authenticatedUser.id,
           oldStatus,
           newStatus: LeaveRequestStatus.ANNULEE,
@@ -1026,6 +1039,267 @@ export class LeaveRequestsService {
     });
 
     return this.findOwnedRequest(id, authenticatedUser.id);
+  }
+
+  async requestCancellationAfterValidation(
+    id: number,
+    authenticatedUser: AuthenticatedUser,
+    dto: RequestCancellationAfterValidationDto,
+  ): Promise<LeaveRequest> {
+    await this.dataSource.transaction(async (manager) => {
+      const leaveRequest =
+        await this.findRequestForDecisionUpdate(manager, id);
+
+      const isOwner =
+        leaveRequest.employeeId === authenticatedUser.id;
+      const isRh = authenticatedUser.role === UserRole.RH;
+
+      if (!isOwner && !isRh) {
+        throw new ForbiddenException(
+          'Seul le collaborateur concerné ou la RH peut demander cette annulation.',
+        );
+      }
+
+      if (leaveRequest.status !== LeaveRequestStatus.VALIDEE) {
+        throw new BadRequestException(
+          'Seule une demande validée peut faire l’objet d’une annulation après validation.',
+        );
+      }
+
+      const requestedAt = new Date();
+      const reason = dto.reason.trim();
+
+      leaveRequest.cancellationRequestedById =
+        authenticatedUser.id;
+      leaveRequest.cancellationReason = reason;
+      leaveRequest.employeeCancellationConsent = isOwner
+        ? true
+        : null;
+      leaveRequest.employeeCancellationResponseAt = isOwner
+        ? requestedAt
+        : null;
+      leaveRequest.cancelledAt = null;
+      leaveRequest.status =
+        LeaveRequestStatus.ANNULATION_EN_ATTENTE_ACCORD;
+      leaveRequest.version += 1;
+
+      await manager.getRepository(LeaveRequest).save(leaveRequest);
+
+      await manager.getRepository(AuditLog).save(
+        manager.getRepository(AuditLog).create({
+          leaveRequestId: leaveRequest.id,
+          action:
+            AuditAction.ANNULATION_APRES_VALIDATION_DEMANDEE,
+          actorId: authenticatedUser.id,
+          oldStatus: LeaveRequestStatus.VALIDEE,
+          newStatus:
+            LeaveRequestStatus.ANNULATION_EN_ATTENTE_ACCORD,
+          comment: reason,
+          metadata: {
+            initiatedByRole: authenticatedUser.role,
+            employeeConsent: isOwner ? true : null,
+          },
+        }),
+      );
+    });
+
+    return this.findCancellationRequest(id, authenticatedUser);
+  }
+
+  async respondToCancellation(
+    id: number,
+    authenticatedUser: AuthenticatedUser,
+    dto: RespondCancellationDto,
+  ): Promise<LeaveRequest> {
+    await this.dataSource.transaction(async (manager) => {
+      const leaveRequest =
+        await this.findRequestForDecisionUpdate(manager, id);
+
+      if (leaveRequest.employeeId !== authenticatedUser.id) {
+        throw new ForbiddenException(
+          'Seul le collaborateur concerné peut répondre à cette demande d’annulation.',
+        );
+      }
+
+      if (
+        leaveRequest.status !==
+        LeaveRequestStatus.ANNULATION_EN_ATTENTE_ACCORD
+      ) {
+        throw new BadRequestException(
+          'Cette demande n’est pas en attente d’un accord d’annulation.',
+        );
+      }
+
+      if (leaveRequest.employeeCancellationConsent !== null) {
+        throw new ConflictException(
+          'Une réponse a déjà été enregistrée pour cette demande d’annulation.',
+        );
+      }
+
+      const respondedAt = new Date();
+      leaveRequest.employeeCancellationConsent = dto.consent;
+      leaveRequest.employeeCancellationResponseAt = respondedAt;
+
+      if (!dto.consent) {
+        leaveRequest.status = LeaveRequestStatus.VALIDEE;
+      }
+
+      leaveRequest.version += 1;
+      await manager.getRepository(LeaveRequest).save(leaveRequest);
+
+      await manager.getRepository(AuditLog).save(
+        manager.getRepository(AuditLog).create({
+          leaveRequestId: leaveRequest.id,
+          action: dto.consent
+            ? AuditAction.ANNULATION_ACCEPTEE_PAR_COLLABORATEUR
+            : AuditAction.ANNULATION_REFUSEE_PAR_COLLABORATEUR,
+          actorId: authenticatedUser.id,
+          oldStatus:
+            LeaveRequestStatus.ANNULATION_EN_ATTENTE_ACCORD,
+          newStatus: dto.consent
+            ? LeaveRequestStatus.ANNULATION_EN_ATTENTE_ACCORD
+            : LeaveRequestStatus.VALIDEE,
+          comment: null,
+          metadata: {
+            consent: dto.consent,
+            respondedAt,
+          },
+        }),
+      );
+    });
+
+    return this.findCancellationRequest(id, authenticatedUser);
+  }
+
+  async completeCancellationAfterValidation(
+    id: number,
+    authenticatedUser: AuthenticatedUser,
+  ): Promise<LeaveRequest> {
+    if (authenticatedUser.role !== UserRole.RH) {
+      throw new ForbiddenException(
+        'Seule la RH peut finaliser une annulation après validation.',
+      );
+    }
+
+    await this.dataSource.transaction(async (manager) => {
+      const leaveRequest =
+        await this.findRequestForDecisionUpdate(manager, id);
+
+      if (
+        leaveRequest.status !==
+        LeaveRequestStatus.ANNULATION_EN_ATTENTE_ACCORD
+      ) {
+        throw new BadRequestException(
+          'Cette demande n’est pas en cours d’annulation.',
+        );
+      }
+
+      if (leaveRequest.employeeCancellationConsent !== true) {
+        throw new BadRequestException(
+          'L’accord du collaborateur est obligatoire avant la finalisation.',
+        );
+      }
+
+      let realBalanceAfter = leaveRequest.realBalanceAfter;
+      let recreditedDays = 0;
+
+      if (leaveRequest.leaveType.deductsPaidLeaveBalance) {
+        const recredit =
+          await this.leaveBalancesService.recreditPaidLeaveForCancelledRequest(
+            manager,
+            {
+              employeeId: leaveRequest.employeeId,
+              leaveRequestId: leaveRequest.id,
+              actorId: authenticatedUser.id,
+              expectedDays: leaveRequest.deductedDays,
+            },
+          );
+
+        realBalanceAfter = recredit.realBalanceAfter;
+        recreditedDays = recredit.recreditedDays;
+      }
+
+      const cancelledAt = new Date();
+      leaveRequest.status =
+        LeaveRequestStatus.ANNULEE_APRES_VALIDATION;
+      leaveRequest.cancelledAt = cancelledAt;
+      leaveRequest.realBalanceAfter = realBalanceAfter;
+      leaveRequest.version += 1;
+
+      await manager.getRepository(LeaveRequest).save(leaveRequest);
+
+      await manager.getRepository(AuditLog).save(
+        manager.getRepository(AuditLog).create({
+          leaveRequestId: leaveRequest.id,
+          action:
+            AuditAction.ANNULATION_APRES_VALIDATION_TERMINEE,
+          actorId: authenticatedUser.id,
+          oldStatus:
+            LeaveRequestStatus.ANNULATION_EN_ATTENTE_ACCORD,
+          newStatus:
+            LeaveRequestStatus.ANNULEE_APRES_VALIDATION,
+          comment: leaveRequest.cancellationReason,
+          metadata: {
+            cancelledAt,
+            recreditedDays,
+            realBalanceAfter,
+          },
+        }),
+      );
+    });
+
+    try {
+      await this.generatedDocumentsService.ensureCancellationPdf(
+        id,
+        authenticatedUser.id,
+      );
+    } catch (error) {
+      this.logger.error(
+        `La demande ${id} a été annulée, mais son PDF d’annulation n’a pas pu être généré immédiatement.`,
+        error instanceof Error ? error.stack : undefined,
+      );
+    }
+
+    return this.findCancellationRequest(id, authenticatedUser);
+  }
+
+  async findCancellationRequest(
+    id: number,
+    authenticatedUser: AuthenticatedUser,
+  ): Promise<LeaveRequest> {
+    const leaveRequest = await this.leaveRequestRepository.findOne({
+      where: { id },
+      relations: {
+        employee: true,
+        createdBy: true,
+        leaveType: true,
+        service: true,
+        finalDecider: true,
+        cancellationRequestedBy: true,
+      },
+    });
+
+    if (!leaveRequest) {
+      throw new NotFoundException(
+        `La demande de congé ${id} est introuvable.`,
+      );
+    }
+
+    const canRead =
+      leaveRequest.employeeId === authenticatedUser.id ||
+      authenticatedUser.role === UserRole.RH ||
+      authenticatedUser.role === UserRole.DIRECTEUR ||
+      (authenticatedUser.role ===
+        UserRole.RESPONSABLE_SERVICE &&
+        authenticatedUser.serviceId === leaveRequest.serviceId);
+
+    if (!canRead) {
+      throw new ForbiddenException(
+        'Vous ne pouvez pas consulter cette annulation.',
+      );
+    }
+
+    return leaveRequest;
   }
 
   async deleteDraft(
@@ -1350,14 +1624,14 @@ export class LeaveRequestsService {
       return;
     }
 
-    await manager.getRepository(LeaveRequestHistory).save(
-      manager.getRepository(LeaveRequestHistory).create({
+    await manager.getRepository(AuditLog).save(
+      manager.getRepository(AuditLog).create({
         leaveRequestId: leaveRequest.id,
         leaveRequest,
         action:
           access.kind === 'RELAIS'
-            ? LeaveRequestHistoryAction.REPRISE_PAR_RELAIS
-            : LeaveRequestHistoryAction.INTERVENTION_URGENCE,
+            ? AuditAction.REPRISE_PAR_RELAIS
+            : AuditAction.INTERVENTION_URGENCE,
         actorId: authenticatedUser.id,
         oldStatus: LeaveRequestStatus.EN_ATTENTE_VALIDATION,
         newStatus: LeaveRequestStatus.EN_ATTENTE_VALIDATION,
@@ -1447,7 +1721,7 @@ export class LeaveRequestsService {
       );
     }
 
-    if (leaveType.category !== LeaveTypeCategory.CONGE) {
+    if (leaveType.category !== LeaveTypeCategory.DEMANDE_CONGE) {
       throw new BadRequestException(
         'Le type sélectionné ne correspond pas à une demande de congé.',
       );

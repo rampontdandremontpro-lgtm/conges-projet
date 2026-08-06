@@ -31,29 +31,20 @@ export enum PresenceStatus {
 
 @Entity('users')
 export class User {
-  @PrimaryGeneratedColumn()
+  @PrimaryGeneratedColumn({ type: 'bigint' })
   id!: number;
 
-  @Column({
-    type: 'varchar',
-    length: 100,
-  })
+  @Column({ type: 'varchar', length: 100 })
   nom!: string;
 
-  @Column({
-    type: 'varchar',
-    length: 100,
-  })
+  @Column({ type: 'varchar', length: 100 })
   prenom!: string;
 
-  @Column({
-    type: 'varchar',
-    length: 180,
-    unique: true,
-  })
+  @Column({ type: 'varchar', length: 190, unique: true })
   email!: string;
 
   @Column({
+    name: 'password_hash',
     type: 'varchar',
     length: 255,
     nullable: true,
@@ -62,21 +53,7 @@ export class User {
   passwordHash!: string | null;
 
   @Column({
-    type: 'varchar',
-    length: 64,
-    nullable: true,
-    select: false,
-  })
-  passwordResetTokenHash!: string | null;
-
-  @Column({
-    type: 'datetime',
-    nullable: true,
-    select: false,
-  })
-  passwordResetTokenExpiresAt!: Date | null;
-
-  @Column({
+    name: 'microsoft_id',
     type: 'varchar',
     length: 255,
     nullable: true,
@@ -84,53 +61,67 @@ export class User {
   })
   microsoftId!: string | null;
 
-  @Column({
-    type: 'enum',
-    enum: UserRole,
-  })
+  @Column({ type: 'enum', enum: UserRole })
   role!: UserRole;
 
   @Column({
+    name: 'employment_type',
     type: 'enum',
     enum: EmploymentType,
+    default: EmploymentType.INTERNE,
   })
   employmentType!: EmploymentType;
 
-  @Column({
-    type: 'date',
+  @Column({ name: 'service_id', type: 'bigint', nullable: true })
+  serviceId!: number;
+
+  @ManyToOne(() => Service, {
+    nullable: true,
+    onDelete: 'SET NULL',
   })
+  @JoinColumn({ name: 'service_id' })
+  service!: Service;
+
+  @Column({ name: 'hire_date', type: 'date', nullable: true })
   hireDate!: string;
 
   @Column({
+    name: 'presence_status',
     type: 'enum',
     enum: PresenceStatus,
     default: PresenceStatus.PRESENT,
   })
   presenceStatus!: PresenceStatus;
 
-  @Column({
-    type: 'boolean',
-    default: true,
-  })
+  @Column({ name: 'is_active', type: 'boolean', default: true })
   isActive!: boolean;
 
   @Column({
-    type: 'int',
+    name: 'signature_type',
+    type: 'varchar',
+    length: 30,
+    nullable: true,
   })
-  serviceId!: number;
+  signatureType!: string | null;
 
-  @ManyToOne(() => Service, {
-    nullable: false,
-    onDelete: 'RESTRICT',
+  @Column({
+    name: 'signature_data',
+    type: 'longtext',
+    nullable: true,
+    select: false,
   })
-  @JoinColumn({
-    name: 'serviceId',
-  })
-  service!: Service;
+  signatureData!: string | null;
 
-  @CreateDateColumn()
+  @Column({
+    name: 'signature_updated_at',
+    type: 'datetime',
+    nullable: true,
+  })
+  signatureUpdatedAt!: Date | null;
+
+  @CreateDateColumn({ name: 'created_at', type: 'datetime' })
   createdAt!: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ name: 'updated_at', type: 'datetime' })
   updatedAt!: Date;
 }

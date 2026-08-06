@@ -12,10 +12,7 @@ import {
 } from 'typeorm';
 
 import type { AuthenticatedUser } from '../auth/jwt-payload.interface';
-import {
-  LeaveRequestHistory,
-  LeaveRequestHistoryAction,
-} from '../leave-requests/leave-request-history.entity';
+import { AuditAction, AuditLog } from '../audit/audit-log.entity';
 import {
   calculateDerogationExpiry,
   evaluateSubmissionNotice,
@@ -37,7 +34,7 @@ import {
 } from './derogation.entity';
 
 const EXPIRABLE_DEROGATION_STATUSES = [
-  DerogationStatus.BROUILLON,
+  DerogationStatus.EN_ATTENTE_RH,
   DerogationStatus.EN_ATTENTE_RH,
   DerogationStatus.ACCORDEE,
 ];
@@ -93,7 +90,7 @@ export class DerogationsService {
           requestedStartDate: leaveRequest.startDate,
           requestedEndDate: leaveRequest.endDate,
           reason: dto.reason.trim(),
-          status: DerogationStatus.BROUILLON,
+          status: DerogationStatus.EN_ATTENTE_RH,
           requestedAt: new Date(),
           decidedByRhId: null,
           decisionComment: null,
@@ -213,7 +210,7 @@ export class DerogationsService {
 
       await this.createHistory(manager, {
         leaveRequest,
-        action: LeaveRequestHistoryAction.DEROGATION_DEMANDEE,
+        action: AuditAction.DEROGATION_DEMANDEE,
         actorId: authenticatedUser.id,
         comment: derogation.reason,
         metadata: {
@@ -401,7 +398,7 @@ export class DerogationsService {
 
       if (leaveRequest.status !== LeaveRequestStatus.BROUILLON) {
         throw new BadRequestException(
-          'La demande de congé liée n’est plus au statut BROUILLON.',
+          'La demande de congé liée n’est plus au statut EN_ATTENTE_RH.',
         );
       }
 
@@ -428,8 +425,8 @@ export class DerogationsService {
       await this.createHistory(manager, {
         leaveRequest,
         action: isGranted
-          ? LeaveRequestHistoryAction.DEROGATION_ACCORDEE
-          : LeaveRequestHistoryAction.DEROGATION_REFUSEE,
+          ? AuditAction.DEROGATION_ACCORDEE
+          : AuditAction.DEROGATION_REFUSEE,
         actorId: authenticatedUser.id,
         comment,
         metadata: {
@@ -509,7 +506,7 @@ export class DerogationsService {
 
     await this.createHistory(manager, {
       leaveRequest: data.leaveRequest,
-      action: LeaveRequestHistoryAction.DEROGATION_UTILISEE,
+      action: AuditAction.DEROGATION_UTILISEE,
       actorId: data.actorId,
       comment: null,
       metadata: {
@@ -598,10 +595,10 @@ export class DerogationsService {
     /*
      * Les dates ou le type ont changé : l'accord RH
      * précédent ne couvre plus la nouvelle version.
-     * La même ligne est remise en brouillon pour respecter
+     * La même ligne est remise en attente RH pour respecter
      * l'unicité d'une dérogation par demande.
      */
-    derogation.status = DerogationStatus.BROUILLON;
+    derogation.status = DerogationStatus.EN_ATTENTE_RH;
     derogation.decidedByRhId = null;
     derogation.decisionComment = null;
     derogation.decidedAt = null;
@@ -638,7 +635,7 @@ export class DerogationsService {
 
     if (
       ![
-        DerogationStatus.BROUILLON,
+        DerogationStatus.EN_ATTENTE_RH,
         DerogationStatus.EN_ATTENTE_RH,
         DerogationStatus.ACCORDEE,
       ].includes(derogation.status)
@@ -697,7 +694,7 @@ export class DerogationsService {
   ): void {
     if (leaveRequest.status !== LeaveRequestStatus.BROUILLON) {
       throw new BadRequestException(
-        'Une dérogation ne peut être liée qu’à une demande de congé au statut BROUILLON.',
+        'Une dérogation ne peut être liée qu’à une demande de congé au statut EN_ATTENTE_RH.',
       );
     }
   }
@@ -705,9 +702,9 @@ export class DerogationsService {
   private ensureDerogationIsDraft(
     derogation: Derogation,
   ): void {
-    if (derogation.status !== DerogationStatus.BROUILLON) {
+    if (derogation.status !== DerogationStatus.EN_ATTENTE_RH) {
       throw new BadRequestException(
-        'Seule une dérogation au statut BROUILLON peut être modifiée, supprimée ou transmise à la RH.',
+        'Seule une dérogation au statut EN_ATTENTE_RH peut être modifiée, supprimée ou transmise à la RH.',
       );
     }
   }
@@ -801,13 +798,13 @@ export class DerogationsService {
     manager: EntityManager,
     data: {
       leaveRequest: LeaveRequest;
-      action: LeaveRequestHistoryAction;
+      action: AuditAction;
       actorId: number;
       comment: string | null;
       metadata: Record<string, unknown> | null;
     },
   ): Promise<void> {
-    const repository = manager.getRepository(LeaveRequestHistory);
+    const repository = manager.getRepository(AuditLog);
 
     await repository.save(
       repository.create({

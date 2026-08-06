@@ -22,16 +22,12 @@ export class UsersService {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
-
     private readonly servicesService: ServicesService,
   ) {}
 
   async create(createUserDto: CreateUserDto): Promise<User> {
     const email = createUserDto.email.trim().toLowerCase();
-
-    const existingUser = await this.userRepository.findOneBy({
-      email,
-    });
+    const existingUser = await this.userRepository.findOneBy({ email });
 
     if (existingUser) {
       throw new ConflictException(
@@ -59,8 +55,6 @@ export class UsersService {
       prenom: createUserDto.prenom.trim(),
       email,
       passwordHash: null,
-      passwordResetTokenHash: null,
-      passwordResetTokenExpiresAt: null,
       microsoftId: createUserDto.microsoftId?.trim() || null,
       role: createUserDto.role,
       employmentType: createUserDto.employmentType,
@@ -69,33 +63,26 @@ export class UsersService {
       isActive: true,
       serviceId: service.id,
       service,
+      signatureType: null,
+      signatureData: null,
+      signatureUpdatedAt: null,
     });
 
     const savedUser = await this.userRepository.save(user);
-
     return this.findOne(savedUser.id);
   }
 
   async findAll(): Promise<User[]> {
     return this.userRepository.find({
-      relations: {
-        service: true,
-      },
-      order: {
-        nom: 'ASC',
-        prenom: 'ASC',
-      },
+      relations: { service: true },
+      order: { nom: 'ASC', prenom: 'ASC' },
     });
   }
 
   async findOne(id: number): Promise<User> {
     const user = await this.userRepository.findOne({
-      where: {
-        id,
-      },
-      relations: {
-        service: true,
-      },
+      where: { id },
+      relations: { service: true },
     });
 
     if (!user) {
@@ -109,12 +96,8 @@ export class UsersService {
 
   async findByEmail(email: string): Promise<User | null> {
     return this.userRepository.findOne({
-      where: {
-        email: email.trim().toLowerCase(),
-      },
-      relations: {
-        service: true,
-      },
+      where: { email: email.trim().toLowerCase() },
+      relations: { service: true },
     });
   }
 
@@ -131,57 +114,10 @@ export class UsersService {
       .getOne();
   }
 
-  async setPasswordResetToken(
-    id: number,
-    tokenHash: string,
-    expiresAt: Date,
-  ): Promise<void> {
+  async setPassword(id: number, passwordHash: string): Promise<void> {
     const result = await this.userRepository.update(
       { id },
-      {
-        passwordResetTokenHash: tokenHash,
-        passwordResetTokenExpiresAt: expiresAt,
-      },
-    );
-
-    if (!result.affected) {
-      throw new NotFoundException(
-        `L’utilisateur ${id} est introuvable.`,
-      );
-    }
-  }
-
-  async findByValidPasswordResetToken(
-    tokenHash: string,
-  ): Promise<User | null> {
-    return this.userRepository
-      .createQueryBuilder('user')
-      .addSelect('user.passwordResetTokenHash')
-      .addSelect('user.passwordResetTokenExpiresAt')
-      .leftJoinAndSelect('user.service', 'service')
-      .where('user.passwordResetTokenHash = :tokenHash', {
-        tokenHash,
-      })
-      .andWhere('user.passwordResetTokenExpiresAt > :now', {
-        now: new Date(),
-      })
-      .andWhere('user.isActive = :isActive', {
-        isActive: true,
-      })
-      .getOne();
-  }
-
-  async setPasswordAndClearResetToken(
-    id: number,
-    passwordHash: string,
-  ): Promise<void> {
-    const result = await this.userRepository.update(
-      { id },
-      {
-        passwordHash,
-        passwordResetTokenHash: null,
-        passwordResetTokenExpiresAt: null,
-      },
+      { passwordHash },
     );
 
     if (!result.affected) {
@@ -196,15 +132,11 @@ export class UsersService {
     updateUserDto: UpdateUserDto,
   ): Promise<User> {
     const user = await this.findOne(id);
-
     const email =
       updateUserDto.email?.trim().toLowerCase() ?? user.email;
 
     const existingUser = await this.userRepository.findOne({
-      where: {
-        email,
-        id: Not(id),
-      },
+      where: { email, id: Not(id) },
     });
 
     if (existingUser) {
@@ -233,10 +165,7 @@ export class UsersService {
     const employmentType =
       updateUserDto.employmentType ?? user.employmentType;
 
-    this.validateEmploymentType(
-      employmentType,
-      service.serviceType,
-    );
+    this.validateEmploymentType(employmentType, service.serviceType);
 
     user.nom = updateUserDto.nom?.trim() ?? user.nom;
     user.prenom = updateUserDto.prenom?.trim() ?? user.prenom;
@@ -248,8 +177,7 @@ export class UsersService {
     user.service = service;
 
     if (updateUserDto.microsoftId !== undefined) {
-      user.microsoftId =
-        updateUserDto.microsoftId.trim() || null;
+      user.microsoftId = updateUserDto.microsoftId.trim() || null;
     }
 
     if (updateUserDto.isActive !== undefined) {
@@ -257,27 +185,20 @@ export class UsersService {
     }
 
     await this.userRepository.save(user);
-
     return this.findOne(id);
   }
 
   async disable(id: number): Promise<User> {
     const user = await this.findOne(id);
-
     user.isActive = false;
-
     await this.userRepository.save(user);
-
     return this.findOne(id);
   }
 
   async enable(id: number): Promise<User> {
     const user = await this.findOne(id);
-
     user.isActive = true;
-
     await this.userRepository.save(user);
-
     return this.findOne(id);
   }
 

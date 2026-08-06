@@ -7,122 +7,62 @@ import {
 } from 'typeorm';
 
 export enum LeaveTypeCategory {
-  CONGE = 'CONGE',
-  ABSENCE = 'ABSENCE',
-}
-
-export enum LeaveAccrualMode {
-  NORMALE = 'NORMALE',
-  REDUITE = 'REDUITE',
-  AUCUNE = 'AUCUNE',
+  DEMANDE_CONGE = 'DEMANDE_CONGE',
+  DECLARATION_ABSENCE = 'DECLARATION_ABSENCE',
 }
 
 @Entity('leave_types')
 export class LeaveType {
-  @PrimaryGeneratedColumn()
+  @PrimaryGeneratedColumn({ type: 'bigint' })
   id!: number;
 
-  @Column({
-    type: 'varchar',
-    length: 120,
-    unique: true,
-  })
+  @Column({ type: 'varchar', length: 160, unique: true })
   name!: string;
 
-  @Column({
-    type: 'enum',
-    enum: LeaveTypeCategory,
-  })
+  @Column({ type: 'enum', enum: LeaveTypeCategory })
   category!: LeaveTypeCategory;
 
   @Column({
+    name: 'deducts_paid_leave_balance',
     type: 'boolean',
     default: false,
   })
   deductsPaidLeaveBalance!: boolean;
 
-  @Column({
-    type: 'boolean',
-    default: false,
-  })
+  @Column({ name: 'document_required', type: 'boolean', default: false })
   documentRequired!: boolean;
 
   @Column({
+    name: 'document_can_be_added_later',
     type: 'boolean',
-    default: false,
+    default: true,
   })
   documentCanBeAddedLater!: boolean;
 
-  @Column({
-    type: 'boolean',
-    default: true,
-  })
+  @Column({ name: 'employee_can_create', type: 'boolean', default: true })
   employeeCanCreate!: boolean;
 
-  @Column({
-    type: 'boolean',
-    default: false,
-  })
+  @Column({ name: 'rh_only', type: 'boolean', default: false })
   rhOnly!: boolean;
 
-  @Column({
-    type: 'boolean',
-    default: true,
-  })
+  @Column({ name: 'allows_days', type: 'boolean', default: true })
   allowsDays!: boolean;
 
-  @Column({
-    type: 'boolean',
-    default: false,
-  })
+  @Column({ name: 'allows_half_days', type: 'boolean', default: true })
   allowsHalfDays!: boolean;
 
-  @Column({
-    type: 'boolean',
-    default: false,
-  })
+  @Column({ name: 'allows_hours', type: 'boolean', default: false })
   allowsHours!: boolean;
 
-  @Column({
-    type: 'boolean',
-    default: true,
-  })
+  @Column({ name: 'requires_validation', type: 'boolean', default: true })
   requiresValidation!: boolean;
 
-  @Column({
-    type: 'boolean',
-    default: false,
-  })
-  requiresEmployeeSignature!: boolean;
-
-  @Column({
-    type: 'enum',
-    enum: LeaveAccrualMode,
-    default: LeaveAccrualMode.NORMALE,
-  })
-  accrualMode!: LeaveAccrualMode;
-
-  @Column({
-    type: 'decimal',
-    precision: 4,
-    scale: 2,
-    default: 2.5,
-    transformer: {
-      to: (value: number): number => value,
-      from: (value: string): number => Number(value),
-    },
-  })
-  monthlyAccrualDays!: number;
-
-  @Column({
-    type: 'boolean',
-    default: true,
-  })
+  @Column({ name: 'is_active', type: 'boolean', default: true })
   isActive!: boolean;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ name: 'created_at', type: 'datetime' })
   createdAt!: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ name: 'updated_at', type: 'datetime' })
   updatedAt!: Date;
 }

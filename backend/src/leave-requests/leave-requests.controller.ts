@@ -25,6 +25,8 @@ import { UserRole } from '../users/user.entity';
 import { CancelLeaveRequestDto } from './dto/cancel-leave-request.dto';
 import { CreateLeaveRequestDto } from './dto/create-leave-request.dto';
 import { RefuseLeaveRequestDto } from './dto/refuse-leave-request.dto';
+import { RequestCancellationAfterValidationDto } from './dto/request-cancellation-after-validation.dto';
+import { RespondCancellationDto } from './dto/respond-cancellation.dto';
 import { SubmitLeaveRequestDto } from './dto/submit-leave-request.dto';
 import { UpdateLeaveRequestDto } from './dto/update-leave-request.dto';
 import { ValidateLeaveRequestDto } from './dto/validate-leave-request.dto';
@@ -157,6 +159,85 @@ export class LeaveRequestsController {
       request.user,
       dto,
     );
+  }
+
+  @Post(':id/cancellation-request')
+  @HttpCode(HttpStatus.OK)
+  requestCancellationAfterValidation(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() request: AuthenticatedRequest,
+    @Body() dto: RequestCancellationAfterValidationDto,
+  ) {
+    return this.leaveRequestsService.requestCancellationAfterValidation(
+      id,
+      request.user,
+      dto,
+    );
+  }
+
+  @Post(':id/cancellation-consent')
+  @HttpCode(HttpStatus.OK)
+  respondToCancellation(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() request: AuthenticatedRequest,
+    @Body() dto: RespondCancellationDto,
+  ) {
+    return this.leaveRequestsService.respondToCancellation(
+      id,
+      request.user,
+      dto,
+    );
+  }
+
+  @Post(':id/cancellation-complete')
+  @HttpCode(HttpStatus.OK)
+  @Roles(UserRole.RH)
+  completeCancellationAfterValidation(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    return this.leaveRequestsService.completeCancellationAfterValidation(
+      id,
+      request.user,
+    );
+  }
+
+  @Get(':id/cancellation')
+  findCancellation(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    return this.leaveRequestsService.findCancellationRequest(
+      id,
+      request.user,
+    );
+  }
+
+  @Get(':id/cancellation-pdf')
+  async downloadCancellationPdf(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() request: AuthenticatedRequest,
+    @Res({ passthrough: true }) response: Response,
+  ): Promise<StreamableFile> {
+    const file =
+      await this.generatedDocumentsService.getCancellationPdf(
+        id,
+        request.user,
+      );
+
+    response.setHeader('Content-Type', 'application/pdf');
+    response.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${file.filename}"`,
+    );
+    response.setHeader('Content-Length', String(file.buffer.length));
+    response.setHeader(
+      'X-Document-Reference',
+      file.referenceNumber,
+    );
+    response.setHeader('X-Document-Checksum', file.checksum);
+
+    return new StreamableFile(file.buffer);
   }
 
   @Get(':id/pdf')

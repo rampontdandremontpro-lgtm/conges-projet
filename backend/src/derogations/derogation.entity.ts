@@ -12,7 +12,6 @@ import { LeaveType } from '../leave-types/leave-type.entity';
 import { User } from '../users/user.entity';
 
 export enum DerogationStatus {
-  BROUILLON = 'BROUILLON',
   EN_ATTENTE_RH = 'EN_ATTENTE_RH',
   ACCORDEE = 'ACCORDEE',
   REFUSEE = 'REFUSEE',
@@ -21,74 +20,45 @@ export enum DerogationStatus {
 }
 
 @Entity('derogations')
-@Index('IDX_derogations_employee_status', [
-  'employeeId',
-  'status',
-])
-@Index('IDX_derogations_status_requested', [
-  'status',
-  'requestedAt',
-])
+@Index('IDX_derogations_employee_status', ['employeeId', 'status'])
+@Index('IDX_derogations_status_requested', ['status', 'requestedAt'])
 export class Derogation {
-  @PrimaryGeneratedColumn()
+  @PrimaryGeneratedColumn({ type: 'bigint' })
   id!: number;
 
-  @Column({
-    name: 'employee_id',
-    type: 'int',
-  })
+  @Column({ name: 'employee_id', type: 'bigint' })
   employeeId!: number;
 
-  @ManyToOne(() => User, {
-    nullable: false,
-    onDelete: 'RESTRICT',
-  })
+  @ManyToOne(() => User, { nullable: false, onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'employee_id' })
   employee!: User;
 
-  @Column({
-    name: 'leave_type_id',
-    type: 'int',
-  })
+  @Column({ name: 'leave_type_id', type: 'bigint' })
   leaveTypeId!: number;
 
-  @ManyToOne(() => LeaveType, {
-    nullable: false,
-    onDelete: 'RESTRICT',
-  })
+  @ManyToOne(() => LeaveType, { nullable: false, onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'leave_type_id' })
   leaveType!: LeaveType;
 
   @Column({
     name: 'leave_request_id',
-    type: 'int',
+    type: 'bigint',
     nullable: true,
     unique: true,
   })
   leaveRequestId!: number | null;
 
-  @ManyToOne(() => LeaveRequest, {
-    nullable: true,
-    onDelete: 'SET NULL',
-  })
+  @ManyToOne(() => LeaveRequest, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'leave_request_id' })
   leaveRequest!: LeaveRequest | null;
 
-  @Column({
-    name: 'requested_start_date',
-    type: 'date',
-  })
+  @Column({ name: 'requested_start_date', type: 'date' })
   requestedStartDate!: string;
 
-  @Column({
-    name: 'requested_end_date',
-    type: 'date',
-  })
+  @Column({ name: 'requested_end_date', type: 'date' })
   requestedEndDate!: string;
 
-  @Column({
-    type: 'text',
-  })
+  @Column({ type: 'text' })
   reason!: string;
 
   @Column({
@@ -105,45 +75,22 @@ export class Derogation {
   })
   requestedAt!: Date;
 
-  @Column({
-    name: 'decided_by_rh_id',
-    type: 'int',
-    nullable: true,
-  })
+  @Column({ name: 'decided_by_rh_id', type: 'bigint', nullable: true })
   decidedByRhId!: number | null;
 
-  @ManyToOne(() => User, {
-    nullable: true,
-    onDelete: 'SET NULL',
-  })
+  @ManyToOne(() => User, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'decided_by_rh_id' })
   decidedByRh!: User | null;
 
-  @Column({
-    name: 'decision_comment',
-    type: 'text',
-    nullable: true,
-  })
+  @Column({ name: 'decision_comment', type: 'text', nullable: true })
   decisionComment!: string | null;
 
-  @Column({
-    name: 'decided_at',
-    type: 'datetime',
-    nullable: true,
-  })
+  @Column({ name: 'decided_at', type: 'datetime', nullable: true })
   decidedAt!: Date | null;
 
-  @Column({
-    name: 'expires_at',
-    type: 'datetime',
-    nullable: true,
-  })
+  @Column({ name: 'expires_at', type: 'datetime', nullable: true })
   expiresAt!: Date | null;
 
-  @Column({
-    name: 'used_at',
-    type: 'datetime',
-    nullable: true,
-  })
+  @Column({ name: 'used_at', type: 'datetime', nullable: true })
   usedAt!: Date | null;
 }

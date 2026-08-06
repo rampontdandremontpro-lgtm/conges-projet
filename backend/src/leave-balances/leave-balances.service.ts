@@ -979,6 +979,134 @@ export class LeaveBalancesService {
     };
   }
 
+  async recreditPaidLeaveForCancelledRequest(
+    manager: EntityManager,
+    data: {
+      employeeId: number;
+      leaveRequestId: number;
+      actorId: number;
+      expectedDays: number;
+    },
+  ): Promise<{
+    recreditedDays: number;
+    realBalanceAfter: number;
+  }> {
+    const expectedDays = this.validatePositiveDays(
+      data.expectedDays,
+    );
+
+    const movements = await manager
+      .getRepository(BalanceMovement)
+      .find({
+        where: {
+          leaveRequestId: data.leaveRequestId,
+          movementType: In([
+            BalanceMovementType.DEDUCTION,
+            BalanceMovementType.RECREDIT,
+          ]),
+        },
+        order: { id: 'ASC' },
+      });
+
+    const netDeductionByBalance = new Map<number, number>();
+
+    for (const movement of movements) {
+      const current =
+        netDeductionByBalance.get(movement.leaveBalanceId) ?? 0;
+      const signedDays =
+        movement.movementType === BalanceMovementType.DEDUCTION
+          ? movement.days
+          : -movement.days;
+
+      netDeductionByBalance.set(
+        movement.leaveBalanceId,
+        this.round(current + signedDays),
+      );
+    }
+
+    const allocations = [...netDeductionByBalance.entries()]
+      .filter(([, days]) => days > 0)
+      .map(([leaveBalanceId, days]) => ({
+        leaveBalanceId,
+        days: this.round(days),
+      }));
+
+    const totalToRecredit = this.round(
+      allocations.reduce((total, item) => total + item.days, 0),
+    );
+
+    if (totalToRecredit === 0) {
+      throw new ConflictException(
+        'Cette demande a déjà été recréditée ou ne possède aucune déduction active.',
+      );
+    }
+
+    if (totalToRecredit !== expectedDays) {
+      throw new ConflictException(
+        'Le total des déductions actives ne correspond pas au nombre de jours de la demande.',
+      );
+    }
+
+    for (const allocation of allocations) {
+      const balance = await this.findBalanceForUpdate(
+        manager,
+        allocation.leaveBalanceId,
+      );
+
+      if (balance.employeeId !== data.employeeId) {
+        throw new ConflictException(
+          'Le mouvement de solde ne correspond pas au collaborateur de la demande.',
+        );
+      }
+
+      if (balance.consumedDays < allocation.days) {
+        throw new ConflictException(
+          'Le compteur ne contient pas assez de jours consommés pour effectuer le recrédit.',
+        );
+      }
+
+      const balanceBefore = this.round(balance.availableDays);
+
+      balance.consumedDays = this.round(
+        balance.consumedDays - allocation.days,
+      );
+      balance.availableDays = this.round(
+        balance.availableDays + allocation.days,
+      );
+
+      await manager.getRepository(LeaveBalance).save(balance);
+
+      await this.createMovement(manager, {
+        balance,
+        movementType: BalanceMovementType.RECREDIT,
+        days: allocation.days,
+        balanceBefore,
+        balanceAfter: balance.availableDays,
+        actorId: data.actorId,
+        leaveRequestId: data.leaveRequestId,
+        reason:
+          'Recrédit après annulation d’une demande de congé validée.',
+      });
+    }
+
+    const balances = await manager.getRepository(LeaveBalance).find({
+      where: {
+        employeeId: data.employeeId,
+        counterType: LeaveBalanceCounterType.N_MINUS_1,
+      },
+    });
+
+    return {
+      recreditedDays: totalToRecredit,
+      realBalanceAfter: this.round(
+        balances.reduce(
+          (total, balance) => total + balance.availableDays,
+          0,
+        ),
+      ),
+    };
+  }
+
   private async findActiveReservationAllocations(
     manager: EntityManager,
     leaveRequestId: number,

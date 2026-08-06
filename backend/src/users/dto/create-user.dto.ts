@@ -24,7 +24,7 @@ export class CreateUserDto {
   prenom!: string;
 
   @IsEmail()
-  @Length(5, 180)
+  @Length(5, 190)
   email!: string;
 
   @IsEnum(UserRole)

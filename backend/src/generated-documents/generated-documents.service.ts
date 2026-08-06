@@ -22,16 +22,17 @@ import { Repository } from 'typeorm';
 
 import type { AuthenticatedUser } from '../auth/jwt-payload.interface';
 import {
+  Document,
+  DocumentKind,
+  DocumentStatus,
+} from '../documents/document.entity';
+import {
   DayPeriod,
   LeaveRequest,
   LeaveRequestStatus,
   SignatureType,
 } from '../leave-requests/leave-request.entity';
 import { UserRole } from '../users/user.entity';
-import {
-  GeneratedDocument,
-  GeneratedDocumentType,
-} from './generated-document.entity';
 
 export interface ValidationPdfFile {
   buffer: Buffer;
@@ -50,13 +51,13 @@ export class GeneratedDocumentsService {
 
   private readonly logoPath = resolve(
     process.cwd(),
-    'assets',
+    'asset',
     'gmes-logo.png',
   );
 
   constructor(
-    @InjectRepository(GeneratedDocument)
-    private readonly generatedDocumentRepository: Repository<GeneratedDocument>,
+    @InjectRepository(Document)
+    private readonly documentRepository: Repository<Document>,
 
     @InjectRepository(LeaveRequest)
     private readonly leaveRequestRepository: Repository<LeaveRequest>,
@@ -65,37 +66,32 @@ export class GeneratedDocumentsService {
   async ensureValidationPdf(
     leaveRequestId: number,
     generatedByUserId: number | null,
-  ): Promise<GeneratedDocument> {
+  ): Promise<Document> {
     const leaveRequest =
       await this.findValidatedRequestWithSignatures(leaveRequestId);
 
-    let generatedDocument =
-      await this.generatedDocumentRepository.findOne({
-        where: {
-          leaveRequestId,
-          documentType: GeneratedDocumentType.VALIDATION_PDF,
-        },
-        order: {
-          generatedAt: 'DESC',
-        },
-      });
+    let storedDocument = await this.documentRepository.findOne({
+      where: {
+        leaveRequestId,
+        documentKind: DocumentKind.PDF_VALIDATION,
+      },
+      order: {
+        uploadedAt: 'DESC',
+      },
+    });
 
-    const isNewDocument = generatedDocument === null;
-    const generatedAt =
-      generatedDocument?.generatedAt ?? new Date();
-    const referenceNumber =
-      generatedDocument?.referenceNumber ??
-      this.createValidationReference(leaveRequest, generatedAt);
+    const isNewDocument = storedDocument === null;
+    const generatedAt = storedDocument?.uploadedAt ?? new Date();
+    const referenceNumber = storedDocument?.originalName
+      ? storedDocument.originalName.replace(/\.pdf$/i, '')
+      : this.createValidationReference(leaveRequest, generatedAt);
     const storageKey =
-      generatedDocument?.storageKey ??
-      this.createValidationStorageKey(
-        referenceNumber,
-        generatedAt,
-      );
+      storedDocument?.storageKey ??
+      this.createValidationStorageKey(referenceNumber, generatedAt);
     const absolutePath = this.resolvePrivateStoragePath(storageKey);
 
-    if (generatedDocument && (await this.fileExists(absolutePath))) {
-      return generatedDocument;
+    if (storedDocument && (await this.fileExists(absolutePath))) {
+      return storedDocument;
     }
 
     const documentFingerprint = this.createDocumentFingerprint(
@@ -111,36 +107,42 @@ export class GeneratedDocumentsService {
       documentFingerprint,
     });
 
-    const checksum = createHash('sha256')
-      .update(pdfBuffer)
-      .digest('hex');
-
     await this.writeFileAtomically(absolutePath, pdfBuffer);
 
     try {
-      if (generatedDocument) {
-        generatedDocument.checksum = checksum;
-        generatedDocument.generatedByUserId ??=
-          generatedByUserId;
+      const uploaderId =
+        generatedByUserId ??
+        leaveRequest.finalDeciderId ??
+        leaveRequest.employeeId;
+
+      if (storedDocument) {
+        storedDocument.originalName = `${referenceNumber}.pdf`;
+        storedDocument.mimeType = 'application/pdf';
+        storedDocument.fileSize = pdfBuffer.length;
+        storedDocument.status = DocumentStatus.ACCEPTE;
+        storedDocument.uploadedById = uploaderId;
       } else {
-        generatedDocument =
-          this.generatedDocumentRepository.create({
-            leaveRequestId: leaveRequest.id,
-            leaveRequest,
-            leaveCancellationId: null,
-            documentType:
-              GeneratedDocumentType.VALIDATION_PDF,
-            referenceNumber,
-            storageKey,
-            checksum,
-            generatedAt,
-            generatedByUserId,
-          });
+        storedDocument = this.documentRepository.create({
+          leaveRequestId: leaveRequest.id,
+          leaveRequest,
+          absenceDeclarationId: null,
+          absenceDeclaration: null,
+          documentKind: DocumentKind.PDF_VALIDATION,
+          originalName: `${referenceNumber}.pdf`,
+          storageKey,
+          mimeType: 'application/pdf',
+          fileSize: pdfBuffer.length,
+          status: DocumentStatus.ACCEPTE,
+          uploadedById: uploaderId,
+          verifiedByRhId: null,
+          rejectionReason: null,
+          retentionUntil: null,
+          verifiedAt: null,
+          deletedAt: null,
+        });
       }
 
-      return await this.generatedDocumentRepository.save(
-        generatedDocument,
-      );
+      return await this.documentRepository.save(storedDocument);
     } catch (error) {
       if (isNewDocument) {
         await rm(absolutePath, { force: true });
@@ -148,9 +150,7 @@ export class GeneratedDocumentsService {
 
       throw new InternalServerErrorException(
         'Le PDF a été produit, mais son enregistrement a échoué.',
-        {
-          cause: error,
-        },
+        { cause: error },
       );
     }
   }
@@ -167,13 +167,13 @@ export class GeneratedDocumentsService {
       authenticatedUser,
     );
 
-    const generatedDocument = await this.ensureValidationPdf(
+    const storedDocument = await this.ensureValidationPdf(
       leaveRequest.id,
       leaveRequest.finalDeciderId,
     );
 
     const absolutePath = this.resolvePrivateStoragePath(
-      generatedDocument.storageKey,
+      storedDocument.storageKey,
     );
 
     let buffer: Buffer;
@@ -183,31 +183,276 @@ export class GeneratedDocumentsService {
     } catch (error) {
       throw new InternalServerErrorException(
         'Le fichier PDF officiel est introuvable dans le stockage privé.',
-        {
-          cause: error,
-        },
+        { cause: error },
       );
     }
 
     const checksum = createHash('sha256')
       .update(buffer)
       .digest('hex');
-
-    if (
-      generatedDocument.checksum !== null &&
-      generatedDocument.checksum !== checksum
-    ) {
-      throw new InternalServerErrorException(
-        'Le contrôle d’intégrité du PDF a échoué.',
-      );
-    }
+    const referenceNumber =
+      storedDocument.originalName?.replace(/\.pdf$/i, '') ??
+      this.createValidationReference(leaveRequest, storedDocument.uploadedAt);
 
     return {
       buffer,
-      filename: `${generatedDocument.referenceNumber}.pdf`,
-      referenceNumber: generatedDocument.referenceNumber,
+      filename: `${referenceNumber}.pdf`,
+      referenceNumber,
       checksum,
     };
+  }
+
+  async ensureCancellationPdf(
+    leaveRequestId: number,
+    generatedByUserId: number,
+  ): Promise<Document> {
+    const leaveRequest =
+      await this.findCancelledRequestForPdf(leaveRequestId);
+
+    let storedDocument = await this.documentRepository.findOne({
+      where: {
+        leaveRequestId,
+        documentKind: DocumentKind.PDF_ANNULATION,
+      },
+      order: { uploadedAt: 'DESC' },
+    });
+
+    const generatedAt = storedDocument?.uploadedAt ?? new Date();
+    const referenceNumber =
+      storedDocument?.originalName?.replace(/\.pdf$/i, '') ??
+      `ANNULATION-${generatedAt.getFullYear()}-${String(
+        leaveRequest.id,
+      ).padStart(6, '0')}`;
+    const storageKey =
+      storedDocument?.storageKey ??
+      [
+        'generated-documents',
+        'cancellation',
+        String(generatedAt.getFullYear()),
+        `${referenceNumber}.pdf`,
+      ].join('/');
+    const absolutePath = this.resolvePrivateStoragePath(storageKey);
+
+    if (storedDocument && (await this.fileExists(absolutePath))) {
+      return storedDocument;
+    }
+
+    const pdfBuffer = await this.buildCancellationPdf({
+      leaveRequest,
+      referenceNumber,
+      generatedAt,
+    });
+
+    await this.writeFileAtomically(absolutePath, pdfBuffer);
+
+    try {
+      if (storedDocument) {
+        storedDocument.originalName = `${referenceNumber}.pdf`;
+        storedDocument.mimeType = 'application/pdf';
+        storedDocument.fileSize = pdfBuffer.length;
+        storedDocument.status = DocumentStatus.ACCEPTE;
+        storedDocument.uploadedById = generatedByUserId;
+      } else {
+        storedDocument = this.documentRepository.create({
+          leaveRequestId: leaveRequest.id,
+          leaveRequest,
+          absenceDeclarationId: null,
+          absenceDeclaration: null,
+          documentKind: DocumentKind.PDF_ANNULATION,
+          originalName: `${referenceNumber}.pdf`,
+          storageKey,
+          mimeType: 'application/pdf',
+          fileSize: pdfBuffer.length,
+          status: DocumentStatus.ACCEPTE,
+          uploadedById: generatedByUserId,
+          verifiedByRhId: null,
+          rejectionReason: null,
+          retentionUntil: null,
+          verifiedAt: null,
+          deletedAt: null,
+        });
+      }
+
+      return await this.documentRepository.save(storedDocument);
+    } catch (error) {
+      await rm(absolutePath, { force: true });
+      throw new InternalServerErrorException(
+        'Le PDF d’annulation a été produit, mais son enregistrement a échoué.',
+        { cause: error },
+      );
+    }
+  }
+
+  async getCancellationPdf(
+    leaveRequestId: number,
+    authenticatedUser: AuthenticatedUser,
+  ): Promise<ValidationPdfFile> {
+    const leaveRequest =
+      await this.findCancelledRequestForPdf(leaveRequestId);
+
+    this.ensureUserCanAccessValidationPdf(
+      leaveRequest,
+      authenticatedUser,
+    );
+
+    const storedDocument = await this.ensureCancellationPdf(
+      leaveRequestId,
+      leaveRequest.cancellationRequestedById ??
+        leaveRequest.employeeId,
+    );
+    const absolutePath = this.resolvePrivateStoragePath(
+      storedDocument.storageKey,
+    );
+    const buffer = await readFile(absolutePath);
+    const referenceNumber =
+      storedDocument.originalName?.replace(/\.pdf$/i, '') ??
+      `ANNULATION-${new Date().getFullYear()}-${String(
+        leaveRequest.id,
+      ).padStart(6, '0')}`;
+
+    return {
+      buffer,
+      filename: `${referenceNumber}.pdf`,
+      referenceNumber,
+      checksum: createHash('sha256').update(buffer).digest('hex'),
+    };
+  }
+
+  private async findCancelledRequestForPdf(
+    leaveRequestId: number,
+  ): Promise<LeaveRequest> {
+    const leaveRequest = await this.leaveRequestRepository.findOne({
+      where: { id: leaveRequestId },
+      relations: {
+        employee: true,
+        createdBy: true,
+        leaveType: true,
+        service: true,
+        finalDecider: true,
+        cancellationRequestedBy: true,
+      },
+    });
+
+    if (!leaveRequest) {
+      throw new NotFoundException(
+        `La demande de congé ${leaveRequestId} est introuvable.`,
+      );
+    }
+
+    if (
+      leaveRequest.status !==
+        LeaveRequestStatus.ANNULEE_APRES_VALIDATION ||
+      leaveRequest.cancelledAt === null
+    ) {
+      throw new BadRequestException(
+        'Le PDF d’annulation est disponible uniquement après la finalisation de l’annulation.',
+      );
+    }
+
+    return leaveRequest;
+  }
+
+  private async buildCancellationPdf(input: {
+    leaveRequest: LeaveRequest;
+    referenceNumber: string;
+    generatedAt: Date;
+  }): Promise<Buffer> {
+    const { leaveRequest, referenceNumber, generatedAt } = input;
+
+    return new Promise<Buffer>((resolvePromise, rejectPromise) => {
+      const chunks: Buffer[] = [];
+      const document = new PDFDocument({
+        size: 'A4',
+        margins: { top: 48, right: 48, bottom: 48, left: 48 },
+        info: {
+          Title: 'Annulation d’une demande de congé validée',
+          Author: 'GMES',
+          Subject: referenceNumber,
+        },
+      });
+
+      document.on('data', (chunk: Buffer) => chunks.push(chunk));
+      document.on('end', () =>
+        resolvePromise(Buffer.concat(chunks)),
+      );
+      document.on('error', rejectPromise);
+
+      document
+        .font('Helvetica-Bold')
+        .fontSize(18)
+        .text('GMES', { align: 'center' })
+        .moveDown(0.4)
+        .fontSize(15)
+        .text('Annulation d’une demande de congé validée', {
+          align: 'center',
+        })
+        .moveDown(0.3)
+        .font('Helvetica')
+        .fontSize(9)
+        .text(`Référence : ${referenceNumber}`, { align: 'center' })
+        .moveDown(2);
+
+      const rows: Array<[string, string]> = [
+        [
+          'Collaborateur',
+          `${leaveRequest.employee.prenom} ${leaveRequest.employee.nom}`,
+        ],
+        ['Service', leaveRequest.service.name],
+        ['Type de congé', leaveRequest.leaveType.name],
+        [
+          'Période annulée',
+          `${this.formatDateOnly(leaveRequest.startDate)} au ${this.formatDateOnly(leaveRequest.endDate)}`,
+        ],
+        ['Jours recrédités', this.formatDays(leaveRequest.deductedDays)],
+        [
+          'Motif',
+          leaveRequest.cancellationReason ?? 'Non renseigné',
+        ],
+        [
+          'Demande d’annulation initiée par',
+          leaveRequest.cancellationRequestedBy
+            ? `${leaveRequest.cancellationRequestedBy.prenom} ${leaveRequest.cancellationRequestedBy.nom}`
+            : 'Utilisateur non disponible',
+        ],
+        [
+          'Accord du collaborateur',
+          leaveRequest.employeeCancellationConsent === true
+            ? `Oui, le ${this.formatDateTime(leaveRequest.employeeCancellationResponseAt)}`
+            : 'Non renseigné',
+        ],
+        [
+          'Annulation finalisée le',
+          this.formatDateTime(leaveRequest.cancelledAt),
+        ],
+        [
+          'Solde après recrédit',
+          this.formatOptionalDays(leaveRequest.realBalanceAfter),
+        ],
+      ];
+
+      for (const [label, value] of rows) {
+        document
+          .font('Helvetica-Bold')
+          .fontSize(10)
+          .text(label);
+        document
+          .font('Helvetica')
+          .fontSize(10)
+          .text(value)
+          .moveDown(0.7);
+      }
+
+      document
+        .moveDown(1.5)
+        .fontSize(8)
+        .fillColor('#555555')
+        .text(
+          `Document confidentiel — Généré le ${this.formatDateTime(generatedAt)} — ${referenceNumber}`,
+          { align: 'center' },
+        );
+
+      document.end();
+    });
   }
 
   private async findValidatedRequestWithSignatures(
@@ -236,9 +481,15 @@ export class GeneratedDocumentsService {
       );
     }
 
-    if (leaveRequest.status !== LeaveRequestStatus.VALIDEE) {
+    if (
+      ![
+        LeaveRequestStatus.VALIDEE,
+        LeaveRequestStatus.ANNULATION_EN_ATTENTE_ACCORD,
+        LeaveRequestStatus.ANNULEE_APRES_VALIDATION,
+      ].includes(leaveRequest.status)
+    ) {
       throw new BadRequestException(
-        'Un PDF officiel est généré uniquement pour une demande validée.',
+        'Un PDF officiel est disponible uniquement pour une demande validée ou annulée après validation.',
       );
     }
 

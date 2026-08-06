@@ -29,83 +29,41 @@ const decimalTransformer = {
 };
 
 @Entity('balance_movements')
-@Index('IDX_balance_movements_employee_created', [
-  'employeeId',
-  'createdAt',
-])
+@Index('IDX_balance_movements_employee_created', ['employeeId', 'createdAt'])
 @Index('IDX_balance_movements_leave_request', ['leaveRequestId'])
-@Index(
-  'UQ_balance_movements_monthly_accrual',
-  ['employeeId', 'movementType', 'accrualMonth'],
-  { unique: true },
-)
 export class BalanceMovement {
-  @PrimaryGeneratedColumn()
+  @PrimaryGeneratedColumn({ type: 'bigint' })
   id!: number;
 
-  @Column({
-    name: 'employee_id',
-    type: 'int',
-  })
+  @Column({ name: 'employee_id', type: 'bigint' })
   employeeId!: number;
 
-  @ManyToOne(() => User, {
-    nullable: false,
-    onDelete: 'RESTRICT',
-  })
+  @ManyToOne(() => User, { nullable: false, onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'employee_id' })
   employee!: User;
 
-  @Column({
-    name: 'leave_balance_id',
-    type: 'int',
-  })
+  @Column({ name: 'leave_balance_id', type: 'bigint' })
   leaveBalanceId!: number;
 
-  @ManyToOne(
-    () => LeaveBalance,
-    (leaveBalance) => leaveBalance.movements,
-    {
-      nullable: false,
-      onDelete: 'RESTRICT',
-    },
-  )
+  @ManyToOne(() => LeaveBalance, { nullable: false, onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'leave_balance_id' })
   leaveBalance!: LeaveBalance;
 
-  @Column({
-    name: 'leave_request_id',
-    type: 'int',
-    nullable: true,
-  })
+  @Column({ name: 'leave_request_id', type: 'bigint', nullable: true })
   leaveRequestId!: number | null;
 
-  @ManyToOne(() => LeaveRequest, {
-    nullable: true,
-    onDelete: 'SET NULL',
-  })
+  @ManyToOne(() => LeaveRequest, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'leave_request_id' })
   leaveRequest!: LeaveRequest | null;
 
-  @Column({
-    name: 'actor_id',
-    type: 'int',
-    nullable: true,
-  })
+  @Column({ name: 'actor_id', type: 'bigint', nullable: true })
   actorId!: number | null;
 
-  @ManyToOne(() => User, {
-    nullable: true,
-    onDelete: 'SET NULL',
-  })
+  @ManyToOne(() => User, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'actor_id' })
   actor!: User | null;
 
-  @Column({
-    name: 'movement_type',
-    type: 'enum',
-    enum: BalanceMovementType,
-  })
+  @Column({ name: 'movement_type', type: 'enum', enum: BalanceMovementType })
   movementType!: BalanceMovementType;
 
   @Column({
@@ -134,29 +92,9 @@ export class BalanceMovement {
   })
   balanceAfter!: number;
 
-  @Column({
-    name: 'accrual_month',
-    type: 'varchar',
-    length: 7,
-    nullable: true,
-  })
-  accrualMonth!: string | null;
-
-  @Column({
-    name: 'effective_date',
-    type: 'date',
-    nullable: true,
-  })
-  effectiveDate!: string | null;
-
-  @Column({
-    type: 'text',
-    nullable: true,
-  })
+  @Column({ type: 'text', nullable: true })
   reason!: string | null;
 
-  @CreateDateColumn({
-    name: 'created_at',
-  })
+  @CreateDateColumn({ name: 'created_at', type: 'datetime' })
   createdAt!: Date;
 }

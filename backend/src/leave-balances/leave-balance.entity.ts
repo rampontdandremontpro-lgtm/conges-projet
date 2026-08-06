@@ -4,13 +4,11 @@ import {
   Index,
   JoinColumn,
   ManyToOne,
-  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 
 import { User } from '../users/user.entity';
-import { BalanceMovement } from './balance-movement.entity';
 
 export enum LeaveBalanceCounterType {
   N_MINUS_1 = 'N-1',
@@ -30,34 +28,20 @@ const decimalTransformer = {
   { unique: true },
 )
 export class LeaveBalance {
-  @PrimaryGeneratedColumn()
+  @PrimaryGeneratedColumn({ type: 'bigint' })
   id!: number;
 
-  @Column({
-    name: 'employee_id',
-    type: 'int',
-  })
+  @Column({ name: 'employee_id', type: 'bigint' })
   employeeId!: number;
 
-  @ManyToOne(() => User, {
-    nullable: false,
-    onDelete: 'RESTRICT',
-  })
+  @ManyToOne(() => User, { nullable: false, onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'employee_id' })
   employee!: User;
 
-  @Column({
-    name: 'reference_period',
-    type: 'varchar',
-    length: 20,
-  })
+  @Column({ name: 'reference_period', type: 'varchar', length: 20 })
   referencePeriod!: string;
 
-  @Column({
-    name: 'counter_type',
-    type: 'varchar',
-    length: 20,
-  })
+  @Column({ name: 'counter_type', type: 'varchar', length: 20 })
   counterType!: LeaveBalanceCounterType;
 
   @Column({
@@ -100,14 +84,6 @@ export class LeaveBalance {
   })
   availableDays!: number;
 
-  @OneToMany(
-    () => BalanceMovement,
-    (movement) => movement.leaveBalance,
-  )
-  movements!: BalanceMovement[];
-
-  @UpdateDateColumn({
-    name: 'updated_at',
-  })
+  @UpdateDateColumn({ name: 'updated_at', type: 'datetime' })
   updatedAt!: Date;
 }

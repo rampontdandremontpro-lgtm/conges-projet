@@ -1,5 +1,4 @@
 import {
-  Check,
   Column,
   CreateDateColumn,
   Entity,
@@ -27,66 +26,70 @@ export enum DocumentStatus {
   SUPPRIME = 'SUPPRIME',
 }
 
-const bigintTransformer = {
-  to: (value: number): number => value,
-  from: (value: string): number => Number(value),
+const nullableBigintTransformer = {
+  to: (value: number | null): number | null => value,
+  from: (value: string | null): number | null =>
+    value === null ? null : Number(value),
 };
 
 @Entity('documents')
-@Index('IDX_documents_kind_status', ['documentKind', 'status'])
 @Index('IDX_documents_leave_request', ['leaveRequestId'])
-@Index('IDX_documents_absence_declaration', [
-  'absenceDeclarationId',
-])
-@Check(
-  'CHK_documents_single_parent',
-  '((`leaveRequestId` IS NOT NULL AND `absenceDeclarationId` IS NULL) OR (`leaveRequestId` IS NULL AND `absenceDeclarationId` IS NOT NULL))',
-)
+@Index('IDX_documents_absence_declaration', ['absenceDeclarationId'])
+@Index('IDX_documents_kind_status', ['documentKind', 'status'])
 export class Document {
-  @PrimaryGeneratedColumn()
+  @PrimaryGeneratedColumn({ type: 'bigint' })
   id!: number;
 
-  @Column({ type: 'int', nullable: true })
+  @Column({ name: 'leave_request_id', type: 'bigint', nullable: true })
   leaveRequestId!: number | null;
 
-  @ManyToOne(() => LeaveRequest, {
-    nullable: true,
-    onDelete: 'CASCADE',
-  })
-  @JoinColumn({ name: 'leaveRequestId' })
+  @ManyToOne(() => LeaveRequest, { nullable: true, onDelete: 'RESTRICT' })
+  @JoinColumn({ name: 'leave_request_id' })
   leaveRequest!: LeaveRequest | null;
 
-  @Column({ type: 'int', nullable: true })
+  @Column({
+    name: 'absence_declaration_id',
+    type: 'bigint',
+    nullable: true,
+  })
   absenceDeclarationId!: number | null;
 
   @ManyToOne(() => AbsenceDeclaration, {
     nullable: true,
-    onDelete: 'CASCADE',
+    onDelete: 'RESTRICT',
   })
-  @JoinColumn({ name: 'absenceDeclarationId' })
+  @JoinColumn({ name: 'absence_declaration_id' })
   absenceDeclaration!: AbsenceDeclaration | null;
 
-  @Column({
-    type: 'enum',
-    enum: DocumentKind,
-    default: DocumentKind.JUSTIFICATIF,
-  })
+  @Column({ name: 'document_kind', type: 'enum', enum: DocumentKind })
   documentKind!: DocumentKind;
 
-  @Column({ type: 'varchar', length: 255 })
-  originalName!: string;
+  @Column({
+    name: 'original_name',
+    type: 'varchar',
+    length: 255,
+    nullable: true,
+  })
+  originalName!: string | null;
 
-  @Column({ type: 'varchar', length: 500, unique: true })
+  @Column({ name: 'storage_key', type: 'varchar', length: 500, unique: true })
   storageKey!: string;
 
-  @Column({ type: 'varchar', length: 100 })
-  mimeType!: string;
+  @Column({
+    name: 'mime_type',
+    type: 'varchar',
+    length: 100,
+    nullable: true,
+  })
+  mimeType!: string | null;
 
   @Column({
+    name: 'file_size',
     type: 'bigint',
-    transformer: bigintTransformer,
+    nullable: true,
+    transformer: nullableBigintTransformer,
   })
-  fileSize!: number;
+  fileSize!: number | null;
 
   @Column({
     type: 'enum',
@@ -95,38 +98,32 @@ export class Document {
   })
   status!: DocumentStatus;
 
-  @Column({ type: 'int' })
+  @Column({ name: 'uploaded_by_id', type: 'bigint' })
   uploadedById!: number;
 
-  @ManyToOne(() => User, {
-    nullable: false,
-    onDelete: 'RESTRICT',
-  })
-  @JoinColumn({ name: 'uploadedById' })
+  @ManyToOne(() => User, { nullable: false, onDelete: 'RESTRICT' })
+  @JoinColumn({ name: 'uploaded_by_id' })
   uploadedBy!: User;
 
-  @Column({ type: 'int', nullable: true })
+  @Column({ name: 'verified_by_rh_id', type: 'bigint', nullable: true })
   verifiedByRhId!: number | null;
 
-  @ManyToOne(() => User, {
-    nullable: true,
-    onDelete: 'SET NULL',
-  })
-  @JoinColumn({ name: 'verifiedByRhId' })
+  @ManyToOne(() => User, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'verified_by_rh_id' })
   verifiedByRh!: User | null;
 
-  @Column({ type: 'text', nullable: true })
+  @Column({ name: 'rejection_reason', type: 'text', nullable: true })
   rejectionReason!: string | null;
 
-  @Column({ type: 'date', nullable: true })
+  @Column({ name: 'retention_until', type: 'date', nullable: true })
   retentionUntil!: string | null;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ name: 'uploaded_at', type: 'datetime' })
   uploadedAt!: Date;
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ name: 'verified_at', type: 'datetime', nullable: true })
   verifiedAt!: Date | null;
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ name: 'deleted_at', type: 'datetime', nullable: true })
   deletedAt!: Date | null;
 }

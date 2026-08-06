@@ -3,6 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { AbsenceDeclarationsModule } from './absence-declarations/absence-declarations.module';
+import { AuditModule } from './audit/audit.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
@@ -12,6 +13,8 @@ import { HolidaysModule } from './holidays/holidays.module';
 import { LeaveBalancesModule } from './leave-balances/leave-balances.module';
 import { LeaveRequestsModule } from './leave-requests/leave-requests.module';
 import { LeaveTypesModule } from './leave-types/leave-types.module';
+import { NotificationsModule } from './notifications/notifications.module';
+import { SettingsModule } from './settings/settings.module';
 import { ServicesModule } from './services/services.module';
 import { UsersModule } from './users/users.module';
 
@@ -35,11 +38,16 @@ import { UsersModule } from './users/users.module';
           'gestion_conges_gmes',
         ),
         autoLoadEntities: true,
-        synchronize: true,
+        synchronize: false,
+        supportBigNumbers: true,
+        bigNumberStrings: false,
         charset: 'utf8mb4',
       }),
     }),
 
+    AuditModule,
+    SettingsModule,
+    NotificationsModule,
     ServicesModule,
     AbsenceDeclarationsModule,
     UsersModule,

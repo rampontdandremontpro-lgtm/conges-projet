@@ -2,6 +2,7 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  Index,
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
@@ -33,6 +34,11 @@ export enum SignatureType {
   INITIALS = 'INITIALS',
 }
 
+const decimalTransformer = {
+  to: (value: number): number => value,
+  from: (value: string): number => Number(value),
+};
+
 const nullableDecimalTransformer = {
   to: (value: number | null): number | null => value,
   from: (value: string | null): number | null =>
@@ -40,77 +46,49 @@ const nullableDecimalTransformer = {
 };
 
 @Entity('leave_requests')
+@Index('IDX_leave_requests_employee_dates', ['employeeId', 'startDate', 'endDate'])
+@Index('IDX_leave_requests_service_status', ['serviceId', 'status'])
+@Index('IDX_leave_requests_status_submitted', ['status', 'submittedAt'])
 export class LeaveRequest {
-  @PrimaryGeneratedColumn()
+  @PrimaryGeneratedColumn({ type: 'bigint' })
   id!: number;
 
-  @Column({
-    type: 'int',
-  })
+  @Column({ name: 'employee_id', type: 'bigint' })
   employeeId!: number;
 
-  @ManyToOne(() => User, {
-    nullable: false,
-    onDelete: 'RESTRICT',
-  })
-  @JoinColumn({
-    name: 'employeeId',
-  })
+  @ManyToOne(() => User, { nullable: false, onDelete: 'RESTRICT' })
+  @JoinColumn({ name: 'employee_id' })
   employee!: User;
 
-  @Column({
-    type: 'int',
-  })
+  @Column({ name: 'created_by_id', type: 'bigint' })
   createdById!: number;
 
-  @ManyToOne(() => User, {
-    nullable: false,
-    onDelete: 'RESTRICT',
-  })
-  @JoinColumn({
-    name: 'createdById',
-  })
+  @ManyToOne(() => User, { nullable: false, onDelete: 'RESTRICT' })
+  @JoinColumn({ name: 'created_by_id' })
   createdBy!: User;
 
-  @Column({
-    type: 'int',
-  })
+  @Column({ name: 'leave_type_id', type: 'bigint' })
   leaveTypeId!: number;
 
-  @ManyToOne(() => LeaveType, {
-    nullable: false,
-    onDelete: 'RESTRICT',
-  })
-  @JoinColumn({
-    name: 'leaveTypeId',
-  })
+  @ManyToOne(() => LeaveType, { nullable: false, onDelete: 'RESTRICT' })
+  @JoinColumn({ name: 'leave_type_id' })
   leaveType!: LeaveType;
 
-  @Column({
-    type: 'int',
-  })
+  @Column({ name: 'service_id', type: 'bigint' })
   serviceId!: number;
 
-  @ManyToOne(() => Service, {
-    nullable: false,
-    onDelete: 'RESTRICT',
-  })
-  @JoinColumn({
-    name: 'serviceId',
-  })
+  @ManyToOne(() => Service, { nullable: false, onDelete: 'RESTRICT' })
+  @JoinColumn({ name: 'service_id' })
   service!: Service;
 
-  @Column({
-    type: 'date',
-  })
+  @Column({ name: 'start_date', type: 'date' })
   startDate!: string;
 
-  @Column({
-    type: 'date',
-  })
+  @Column({ name: 'end_date', type: 'date' })
   endDate!: string;
 
   @Column({
+    name: 'start_period',
     type: 'enum',
     enum: DayPeriod,
     default: DayPeriod.MATIN,
@@ -118,25 +96,22 @@ export class LeaveRequest {
   startPeriod!: DayPeriod;
 
   @Column({
+    name: 'end_period',
     type: 'enum',
     enum: DayPeriod,
     default: DayPeriod.APRES_MIDI,
   })
   endPeriod!: DayPeriod;
 
-  @Column({
-    type: 'int',
-  })
+  @Column({ name: 'calendar_duration', type: 'int' })
   calendarDuration!: number;
 
   @Column({
+    name: 'deducted_days',
     type: 'decimal',
     precision: 7,
     scale: 2,
-    transformer: {
-      to: (value: number): number => value,
-      from: (value: string): number => Number(value),
-    },
+    transformer: decimalTransformer,
   })
   deductedDays!: number;
 
@@ -147,25 +122,17 @@ export class LeaveRequest {
   })
   status!: LeaveRequestStatus;
 
-  @Column({
-    type: 'text',
-    nullable: true,
-  })
+  @Column({ type: 'text', nullable: true })
   comment!: string | null;
 
-  @Column({
-    type: 'datetime',
-    nullable: true,
-  })
+  @Column({ name: 'submitted_at', type: 'datetime', nullable: true })
   submittedAt!: Date | null;
 
-  @Column({
-    type: 'date',
-    nullable: true,
-  })
+  @Column({ name: 'modification_deadline', type: 'date', nullable: true })
   modificationDeadline!: string | null;
 
   @Column({
+    name: 'real_balance_before',
     type: 'decimal',
     precision: 7,
     scale: 2,
@@ -175,6 +142,7 @@ export class LeaveRequest {
   realBalanceBefore!: number | null;
 
   @Column({
+    name: 'potential_balance_before',
     type: 'decimal',
     precision: 7,
     scale: 2,
@@ -184,6 +152,7 @@ export class LeaveRequest {
   potentialBalanceBefore!: number | null;
 
   @Column({
+    name: 'real_balance_after',
     type: 'decimal',
     precision: 7,
     scale: 2,
@@ -192,105 +161,125 @@ export class LeaveRequest {
   })
   realBalanceAfter!: number | null;
 
-  @Column({
-    type: 'int',
-    nullable: true,
-  })
+  @Column({ name: 'final_decider_id', type: 'bigint', nullable: true })
   finalDeciderId!: number | null;
 
-  @ManyToOne(() => User, {
-    nullable: true,
-    onDelete: 'SET NULL',
-  })
-  @JoinColumn({ name: 'finalDeciderId' })
+  @ManyToOne(() => User, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'final_decider_id' })
   finalDecider!: User | null;
 
   @Column({
+    name: 'final_decider_role',
     type: 'enum',
     enum: UserRole,
     nullable: true,
   })
   finalDeciderRole!: UserRole | null;
 
-  @Column({
-    type: 'datetime',
-    nullable: true,
-  })
+  @Column({ name: 'decision_at', type: 'datetime', nullable: true })
   decisionAt!: Date | null;
 
-  @Column({
-    type: 'text',
-    nullable: true,
-  })
+  @Column({ name: 'refusal_comment', type: 'text', nullable: true })
   refusalComment!: string | null;
 
   @Column({
-    type: 'enum',
-    enum: SignatureType,
+    name: 'employee_signature_type',
+    type: 'varchar',
+    length: 30,
     nullable: true,
   })
   employeeSignatureType!: SignatureType | null;
 
   @Column({
+    name: 'employee_signature_data',
     type: 'longtext',
     nullable: true,
     select: false,
   })
   employeeSignatureData!: string | null;
 
-  @Column({
-    type: 'datetime',
-    nullable: true,
-  })
+  @Column({ name: 'employee_signed_at', type: 'datetime', nullable: true })
   employeeSignedAt!: Date | null;
 
   @Column({
-    type: 'enum',
-    enum: SignatureType,
+    name: 'validator_signature_type',
+    type: 'varchar',
+    length: 30,
     nullable: true,
   })
   validatorSignatureType!: SignatureType | null;
 
   @Column({
+    name: 'validator_signature_data',
     type: 'longtext',
     nullable: true,
     select: false,
   })
   validatorSignatureData!: string | null;
 
-  @Column({
-    type: 'datetime',
-    nullable: true,
-  })
+  @Column({ name: 'validator_signed_at', type: 'datetime', nullable: true })
   validatorSignedAt!: Date | null;
 
   @Column({
+    name: 'rh_confirmed_director_agreement',
     type: 'boolean',
     default: false,
   })
   rhConfirmedDirectorAgreement!: boolean;
 
   @Column({
+    name: 'rh_director_agreement_confirmed_at',
     type: 'datetime',
     nullable: true,
   })
   rhDirectorAgreementConfirmedAt!: Date | null;
 
-  @Column({
-    type: 'int',
-    default: 1,
-  })
+  @Column({ name: 'is_urgent', type: 'boolean', default: false })
+  isUrgent!: boolean;
+
+  @Column({ name: 'urgent_reason', type: 'text', nullable: true })
+  urgentReason!: string | null;
+
+  @Column({ type: 'int', default: 1 })
   version!: number;
 
+  @Column({ name: 'locked_at', type: 'datetime', nullable: true })
+  lockedAt!: Date | null;
+
   @Column({
+    name: 'cancellation_requested_by_id',
+    type: 'bigint',
+    nullable: true,
+  })
+  cancellationRequestedById!: number | null;
+
+  @ManyToOne(() => User, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'cancellation_requested_by_id' })
+  cancellationRequestedBy!: User | null;
+
+  @Column({ name: 'cancellation_reason', type: 'text', nullable: true })
+  cancellationReason!: string | null;
+
+  @Column({
+    name: 'employee_cancellation_consent',
+    type: 'boolean',
+    nullable: true,
+  })
+  employeeCancellationConsent!: boolean | null;
+
+  @Column({
+    name: 'employee_cancellation_response_at',
     type: 'datetime',
     nullable: true,
   })
-  lockedAt!: Date | null;
+  employeeCancellationResponseAt!: Date | null;
 
-  @CreateDateColumn()
+  @Column({ name: 'cancelled_at', type: 'datetime', nullable: true })
+  cancelledAt!: Date | null;
+
+  @CreateDateColumn({ name: 'created_at', type: 'datetime' })
   createdAt!: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ name: 'updated_at', type: 'datetime' })
   updatedAt!: Date;
 }

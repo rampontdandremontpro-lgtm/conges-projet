@@ -1,25 +1,13 @@
 import {
   BadRequestException,
-  ConflictException,
   Injectable,
   Logger,
   OnApplicationBootstrap,
   OnApplicationShutdown,
 } from '@nestjs/common';
-import { DataSource, EntityManager, IsNull } from 'typeorm';
+import { DataSource, EntityManager } from 'typeorm';
 
-import {
-  AbsenceDeclaration,
-  AbsenceDeclarationStatus,
-} from '../absence-declarations/absence-declaration.entity';
-import {
-  LeaveRequest,
-  LeaveRequestStatus,
-} from '../leave-requests/leave-request.entity';
-import {
-  LeaveAccrualMode,
-  LeaveType,
-} from '../leave-types/leave-type.entity';
+import { SettingsService } from '../settings/settings.service';
 import { User, UserRole } from '../users/user.entity';
 import {
   BalanceMovement,
@@ -61,11 +49,6 @@ export interface MonthlyAccrualRunResult {
   }>;
 }
 
-interface NonStandardAccrualPeriod {
-  leaveType: LeaveType;
-  source: 'CONGE' | 'ABSENCE';
-}
-
 interface MonthInformation {
   year: number;
   month: number;
@@ -93,7 +76,10 @@ export class MonthlyAccrualService
   private scheduler?: NodeJS.Timeout;
   private automaticRunInProgress = false;
 
-  constructor(private readonly dataSource: DataSource) {}
+  constructor(
+    private readonly dataSource: DataSource,
+    private readonly settingsService: SettingsService,
+  ) {}
 
   onApplicationBootstrap(): void {
     void this.runAutomaticAccrualIfDue();
@@ -124,11 +110,20 @@ export class MonthlyAccrualService
       );
     }
 
-    const daysPerEmployee = await this.getConfiguredMonthlyAccrualDays();
+    const daysPerEmployee = await this.settingsService.getNumber(
+      'MONTHLY_ACCRUAL_RATE',
+      2.5,
+    );
+
+    if (daysPerEmployee <= 0) {
+      throw new BadRequestException(
+        'Le paramètre MONTHLY_ACCRUAL_RATE doit être strictement positif.',
+      );
+    }
+
     const employees = await this.findEligibleEmployees(
       monthInformation.lastDate,
     );
-
     const result: MonthlyAccrualRunResult = {
       accrualMonth: monthInformation.accrualMonth,
       effectiveDate: monthInformation.lastDate,
@@ -147,27 +142,7 @@ export class MonthlyAccrualService
           nom: employee.nom,
           prenom: employee.prenom,
           reason:
-            'Arrivée en cours de mois : calcul au prorata à traiter par la RH lorsque la formule sera validée.',
-        });
-        continue;
-      }
-
-      const nonStandardAccrualPeriod =
-        await this.findNonStandardAccrualPeriod(
-          employee.id,
-          monthInformation,
-        );
-
-      if (nonStandardAccrualPeriod) {
-        result.manualReviewRequired.push({
-          employeeId: employee.id,
-          nom: employee.nom,
-          prenom: employee.prenom,
-          reason:
-            nonStandardAccrualPeriod.leaveType.accrualMode ===
-            LeaveAccrualMode.AUCUNE
-              ? `Une période « ${nonStandardAccrualPeriod.leaveType.name} » suspend l’acquisition. Le calcul doit être contrôlé par la RH.`
-              : `Une période « ${nonStandardAccrualPeriod.leaveType.name} » applique une acquisition réduite. Le taux exact doit être contrôlé par la RH.`,
+            'Arrivée en cours de mois : le prorata doit être contrôlé par la RH tant que sa formule définitive n’est pas validée.',
         });
         continue;
       }
@@ -211,8 +186,7 @@ export class MonthlyAccrualService
       return;
     }
 
-    const now = new Date();
-    const localDate = this.getMartiniqueDateParts(now);
+    const localDate = this.getMartiniqueDateParts(new Date());
     const lastDay = new Date(
       Date.UTC(localDate.year, localDate.month, 0),
     ).getUTCDate();
@@ -222,29 +196,25 @@ export class MonthlyAccrualService
     }
 
     this.automaticRunInProgress = true;
-
     const accrualMonth = `${localDate.year}-${String(
       localDate.month,
     ).padStart(2, '0')}`;
 
     try {
       const result = await this.runForMonth(accrualMonth, null);
-
       this.logger.log(
         [
           `Acquisition mensuelle ${accrualMonth} terminée.`,
           `${result.creditedEmployees.length} collaborateur(s) crédité(s).`,
           `${result.alreadyCreditedEmployees.length} déjà crédité(s).`,
-          `${result.legacyMovementsLinked.length} ancien(s) mouvement(s) rattaché(s).`,
           `${result.manualReviewRequired.length} dossier(s) à contrôler par la RH.`,
         ].join(' '),
       );
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : String(error);
-
       this.logger.error(
-        `Échec de l’acquisition mensuelle ${accrualMonth} : ${message}`,
+        `Échec de l’acquisition mensuelle ${accrualMonth} : ${
+          error instanceof Error ? error.message : String(error)
+        }`,
       );
     } finally {
       this.automaticRunInProgress = false;
@@ -262,29 +232,30 @@ export class MonthlyAccrualService
         leaveBalanceId: number;
         movementId: number;
       }
-    | {
-        status: 'ALREADY_CREDITED';
-      }
-    | {
-        status: 'LEGACY_LINKED';
-        movementId: number;
-      }
+    | { status: 'ALREADY_CREDITED' }
+    | { status: 'LEGACY_LINKED'; movementId: number }
   > {
     return this.dataSource.transaction(async (manager) => {
+      const balance = await this.findOrCreateMonthlyBalance(
+        manager,
+        data.employee,
+        data.monthInformation.referencePeriod,
+      );
+      const reason = this.buildMonthlyAccrualReason(
+        data.monthInformation,
+        data.days,
+      );
       const movementRepository = manager.getRepository(BalanceMovement);
-
       const existingMovement = await movementRepository.findOne({
         where: {
           employeeId: data.employee.id,
           movementType: BalanceMovementType.ACQUISITION,
-          accrualMonth: data.monthInformation.accrualMonth,
+          reason,
         },
       });
 
       if (existingMovement) {
-        return {
-          status: 'ALREADY_CREDITED' as const,
-        };
+        return { status: 'ALREADY_CREDITED' as const };
       }
 
       const legacyMovement = await this.findLegacyMonthlyMovement(
@@ -294,24 +265,11 @@ export class MonthlyAccrualService
       );
 
       if (legacyMovement) {
-        legacyMovement.accrualMonth =
-          data.monthInformation.accrualMonth;
-        legacyMovement.effectiveDate =
-          data.monthInformation.lastDate;
-
-        await movementRepository.save(legacyMovement);
-
         return {
           status: 'LEGACY_LINKED' as const,
           movementId: legacyMovement.id,
         };
       }
-
-      const balance = await this.findOrCreateMonthlyBalance(
-        manager,
-        data.employee,
-        data.monthInformation.referencePeriod,
-      );
 
       const balanceBefore = this.round(balance.availableDays);
       const balanceAfter = this.round(balanceBefore + data.days);
@@ -320,7 +278,6 @@ export class MonthlyAccrualService
         balance.acquiredDays + data.days,
       );
       balance.availableDays = balanceAfter;
-
       await manager.getRepository(LeaveBalance).save(balance);
 
       const movement = movementRepository.create({
@@ -331,35 +288,24 @@ export class MonthlyAccrualService
         leaveRequestId: null,
         leaveRequest: null,
         actorId: data.actorId,
+        actor: null,
         movementType: BalanceMovementType.ACQUISITION,
         days: data.days,
         balanceBefore,
         balanceAfter,
-        accrualMonth: data.monthInformation.accrualMonth,
-        effectiveDate: data.monthInformation.lastDate,
-        reason: this.buildMonthlyAccrualReason(
-          data.monthInformation,
-          data.days,
+        reason,
+        createdAt: new Date(
+          `${data.monthInformation.lastDate}T23:59:59-04:00`,
         ),
       });
 
-      try {
-        const savedMovement = await movementRepository.save(movement);
+      const savedMovement = await movementRepository.save(movement);
 
-        return {
-          status: 'CREDITED' as const,
-          leaveBalanceId: balance.id,
-          movementId: savedMovement.id,
-        };
-      } catch (error) {
-        if (this.isDuplicateEntryError(error)) {
-          throw new ConflictException(
-            `L’acquisition ${data.monthInformation.accrualMonth} a déjà été enregistrée pour le collaborateur ${data.employee.id}.`,
-          );
-        }
-
-        throw error;
-      }
+      return {
+        status: 'CREDITED' as const,
+        leaveBalanceId: balance.id,
+        movementId: savedMovement.id,
+      };
     });
   }
 
@@ -368,121 +314,12 @@ export class MonthlyAccrualService
       .getRepository(User)
       .createQueryBuilder('user')
       .where('user.isActive = :isActive', { isActive: true })
-      .andWhere('user.role != :adminRole', {
-        adminRole: UserRole.ADMIN,
-      })
+      .andWhere('user.role != :adminRole', { adminRole: UserRole.ADMIN })
+      .andWhere('user.hireDate IS NOT NULL')
       .andWhere('user.hireDate <= :lastDate', { lastDate })
       .orderBy('user.nom', 'ASC')
       .addOrderBy('user.prenom', 'ASC')
       .getMany();
-  }
-
-  private async findNonStandardAccrualPeriod(
-    employeeId: number,
-    monthInformation: MonthInformation,
-  ): Promise<NonStandardAccrualPeriod | null> {
-    const accrualModes = [
-      LeaveAccrualMode.REDUITE,
-      LeaveAccrualMode.AUCUNE,
-    ];
-
-    const leaveRequest = await this.dataSource
-      .getRepository(LeaveRequest)
-      .createQueryBuilder('request')
-      .innerJoinAndSelect('request.leaveType', 'leaveType')
-      .where('request.employeeId = :employeeId', { employeeId })
-      .andWhere('request.status = :status', {
-        status: LeaveRequestStatus.VALIDEE,
-      })
-      .andWhere('request.startDate <= :lastDate', {
-        lastDate: monthInformation.lastDate,
-      })
-      .andWhere('request.endDate >= :firstDate', {
-        firstDate: monthInformation.firstDate,
-      })
-      .andWhere('leaveType.accrualMode IN (:...accrualModes)', {
-        accrualModes,
-      })
-      .orderBy('request.startDate', 'ASC')
-      .getOne();
-
-    if (leaveRequest) {
-      return {
-        leaveType: leaveRequest.leaveType,
-        source: 'CONGE',
-      };
-    }
-
-    const absenceDeclaration = await this.dataSource
-      .getRepository(AbsenceDeclaration)
-      .createQueryBuilder('absence')
-      .innerJoinAndSelect('absence.leaveType', 'leaveType')
-      .where('absence.employeeId = :employeeId', { employeeId })
-      .andWhere('absence.status = :status', {
-        status: AbsenceDeclarationStatus.ENREGISTREE,
-      })
-      .andWhere('absence.startDate <= :lastDate', {
-        lastDate: monthInformation.lastDate,
-      })
-      .andWhere('absence.endDate >= :firstDate', {
-        firstDate: monthInformation.firstDate,
-      })
-      .andWhere('leaveType.accrualMode IN (:...accrualModes)', {
-        accrualModes,
-      })
-      .orderBy('absence.startDate', 'ASC')
-      .getOne();
-
-    if (!absenceDeclaration) {
-      return null;
-    }
-
-    return {
-      leaveType: absenceDeclaration.leaveType,
-      source: 'ABSENCE',
-    };
-  }
-
-  private async getConfiguredMonthlyAccrualDays(): Promise<number> {
-    const leaveTypes = await this.dataSource.getRepository(LeaveType).find({
-      where: {
-        isActive: true,
-        deductsPaidLeaveBalance: true,
-      },
-      order: {
-        id: 'ASC',
-      },
-    });
-
-    if (leaveTypes.length === 0) {
-      throw new BadRequestException(
-        'Aucun type de congé payé actif ne permet de déterminer la valeur d’acquisition mensuelle.',
-      );
-    }
-
-    const configuredValues = [
-      ...new Set(
-        leaveTypes.map((leaveType) =>
-          this.round(leaveType.monthlyAccrualDays),
-        ),
-      ),
-    ];
-
-    if (configuredValues.length !== 1) {
-      throw new ConflictException(
-        'Les types diminuant le solde ne possèdent pas tous la même valeur d’acquisition mensuelle.',
-      );
-    }
-
-    const days = configuredValues[0];
-
-    if (days <= 0) {
-      throw new BadRequestException(
-        'La valeur d’acquisition mensuelle doit être strictement positive.',
-      );
-    }
-
-    return days;
   }
 
   private async findOrCreateMonthlyBalance(
@@ -491,7 +328,6 @@ export class MonthlyAccrualService
     referencePeriod: string,
   ): Promise<LeaveBalance> {
     const repository = manager.getRepository(LeaveBalance);
-
     const existingBalance = await repository
       .createQueryBuilder('balance')
       .setLock('pessimistic_write')
@@ -529,33 +365,22 @@ export class MonthlyAccrualService
     employeeId: number,
     monthInformation: MonthInformation,
   ): Promise<BalanceMovement | null> {
-    const legacyMovements = await manager
-      .getRepository(BalanceMovement)
-      .find({
-        where: {
-          employeeId,
-          movementType: BalanceMovementType.ACQUISITION,
-          accrualMonth: IsNull(),
-        },
-        order: {
-          id: 'ASC',
-        },
-      });
-
-    const normalizedMonthLabel = this.normalizeText(
-      monthInformation.monthLabel,
-    );
+    const movements = await manager.getRepository(BalanceMovement).find({
+      where: {
+        employeeId,
+        movementType: BalanceMovementType.ACQUISITION,
+      },
+      order: { id: 'ASC' },
+    });
+    const monthLabel = this.normalizeText(monthInformation.monthLabel);
 
     return (
-      legacyMovements.find((movement) => {
-        const normalizedReason = this.normalizeText(
-          movement.reason ?? '',
-        );
-
+      movements.find((movement) => {
+        const reason = this.normalizeText(movement.reason ?? '');
         return (
-          normalizedReason.includes('acquisition') &&
-          normalizedReason.includes(normalizedMonthLabel) &&
-          normalizedReason.includes(String(monthInformation.year))
+          reason.includes('acquisition') &&
+          reason.includes(monthLabel) &&
+          reason.includes(String(monthInformation.year))
         );
       }) ?? null
     );
@@ -578,11 +403,8 @@ export class MonthlyAccrualService
       lastDay,
     ).padStart(2, '0')}`;
     const referencePeriod =
-      month >= 6
-        ? `${year}-${year + 1}`
-        : `${year - 1}-${year}`;
-
-    const monthLabels = [
+      month >= 6 ? `${year}-${year + 1}` : `${year - 1}-${year}`;
+    const labels = [
       'janvier',
       'février',
       'mars',
@@ -604,7 +426,7 @@ export class MonthlyAccrualService
       lastDate,
       accrualMonth,
       referencePeriod,
-      monthLabel: monthLabels[month - 1],
+      monthLabel: labels[month - 1],
     };
   }
 
@@ -619,7 +441,7 @@ export class MonthlyAccrualService
       ? `d’${monthInformation.monthLabel}`
       : `de ${monthInformation.monthLabel}`;
 
-    return `Acquisition mensuelle ${monthPart} : +${this.formatDays(
+    return `Acquisition mensuelle ${monthPart} ${monthInformation.year} : +${this.formatDays(
       days,
     )} jours`;
   }
@@ -633,10 +455,8 @@ export class MonthlyAccrualService
       hour: '2-digit',
       hourCycle: 'h23',
     });
-
-    const parts = formatter.formatToParts(date);
     const values = new Map(
-      parts.map((part) => [part.type, part.value]),
+      formatter.formatToParts(date).map((part) => [part.type, part.value]),
     );
 
     return {
@@ -649,7 +469,6 @@ export class MonthlyAccrualService
 
   private getMartiniqueDateString(date: Date): string {
     const parts = this.getMartiniqueDateParts(date);
-
     return `${parts.year}-${String(parts.month).padStart(2, '0')}-${String(
       parts.day,
     ).padStart(2, '0')}`;
@@ -669,22 +488,6 @@ export class MonthlyAccrualService
       .replace(/[\u0300-\u036f]/g, '')
       .replace(/[’']/g, '')
       .toLowerCase();
-  }
-
-  private isDuplicateEntryError(error: unknown): boolean {
-    if (!error || typeof error !== 'object') {
-      return false;
-    }
-
-    const candidate = error as {
-      code?: string;
-      driverError?: { code?: string };
-    };
-
-    return (
-      candidate.code === 'ER_DUP_ENTRY' ||
-      candidate.driverError?.code === 'ER_DUP_ENTRY'
-    );
   }
 
   private round(value: number): number {

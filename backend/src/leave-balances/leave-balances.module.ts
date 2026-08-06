@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
+import { SettingsModule } from '../settings/settings.module';
 import { UsersModule } from '../users/users.module';
 import { BalanceMovement } from './balance-movement.entity';
 import { LeaveBalance } from './leave-balance.entity';
@@ -15,6 +16,7 @@ import { MonthlyAccrualService } from './monthly-accrual.service';
       BalanceMovement,
     ]),
     UsersModule,
+    SettingsModule,
   ],
   controllers: [LeaveBalancesController],
   providers: [LeaveBalancesService, MonthlyAccrualService],
