@@ -17,6 +17,7 @@ import * as path from 'node:path';
 import {
   DataSource,
   In,
+  IsNull,
   Not,
   Repository,
 } from 'typeorm';
@@ -818,12 +819,38 @@ export class DocumentsService {
     leaveRequestId: number | null;
     absenceDeclarationId: number | null;
   }): Promise<number> {
+    const hasLeaveRequest = input.leaveRequestId !== null;
+    const hasAbsenceDeclaration =
+      input.absenceDeclarationId !== null;
+
+    if (hasLeaveRequest === hasAbsenceDeclaration) {
+      throw new BadRequestException(
+        'Un justificatif doit être rattaché à une seule demande de congé ou à une seule déclaration d’absence.',
+      );
+    }
+
+    if (input.leaveRequestId !== null) {
+      return this.documentRepository.count({
+        where: {
+          leaveRequestId: input.leaveRequestId,
+          absenceDeclarationId: IsNull(),
+          status: In(ACTIVE_DOCUMENT_STATUSES),
+        },
+      });
+    }
+
+    const absenceDeclarationId = input.absenceDeclarationId;
+
+    if (absenceDeclarationId === null) {
+      throw new BadRequestException(
+        'La déclaration d’absence associée au justificatif est manquante.',
+      );
+    }
+
     return this.documentRepository.count({
       where: {
-        leaveRequestId:
-          input.leaveRequestId ?? undefined,
-        absenceDeclarationId:
-          input.absenceDeclarationId ?? undefined,
+        leaveRequestId: IsNull(),
+        absenceDeclarationId,
         status: In(ACTIVE_DOCUMENT_STATUSES),
       },
     });
