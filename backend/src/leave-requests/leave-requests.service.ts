@@ -13,6 +13,10 @@ import {
   Repository,
 } from 'typeorm';
 
+import {
+  AbsenceDeclaration,
+  AbsenceDeclarationStatus,
+} from '../absence-declarations/absence-declaration.entity';
 import type { AuthenticatedUser } from '../auth/jwt-payload.interface';
 import { DerogationsService } from '../derogations/derogations.service';
 import { GeneratedDocumentsService } from '../generated-documents/generated-documents.service';
@@ -1152,6 +1156,30 @@ export class LeaveRequestsService {
     if (overlappingRequest) {
       throw new BadRequestException(
         `Cette demande chevauche votre demande n°${overlappingRequest.id} du ${overlappingRequest.startDate} au ${overlappingRequest.endDate}.`,
+      );
+    }
+
+    const overlappingAbsence = await manager
+      .getRepository(AbsenceDeclaration)
+      .createQueryBuilder('absence')
+      .where('absence.employeeId = :employeeId', {
+        employeeId: leaveRequest.employeeId,
+      })
+      .andWhere('absence.startDate <= :endDate', {
+        endDate: leaveRequest.endDate,
+      })
+      .andWhere('absence.endDate >= :startDate', {
+        startDate: leaveRequest.startDate,
+      })
+      .andWhere('absence.status <> :cancelledStatus', {
+        cancelledStatus: AbsenceDeclarationStatus.ANNULEE,
+      })
+      .orderBy('absence.startDate', 'ASC')
+      .getOne();
+
+    if (overlappingAbsence) {
+      throw new BadRequestException(
+        `Cette demande chevauche votre déclaration d’absence n°${overlappingAbsence.id} du ${overlappingAbsence.startDate} au ${overlappingAbsence.endDate}.`,
       );
     }
   }

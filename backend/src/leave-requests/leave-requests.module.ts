@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
+import { AbsenceDeclaration } from '../absence-declarations/absence-declaration.entity';
 import { DerogationsModule } from '../derogations/derogations.module';
 import { GeneratedDocumentsModule } from '../generated-documents/generated-documents.module';
 import { HolidaysModule } from '../holidays/holidays.module';
@@ -17,6 +18,7 @@ import { LeaveRequestsService } from './leave-requests.service';
     TypeOrmModule.forFeature([
       LeaveRequest,
       LeaveRequestHistory,
+      AbsenceDeclaration,
     ]),
     UsersModule,
     DerogationsModule,

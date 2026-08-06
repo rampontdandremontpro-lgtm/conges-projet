@@ -9,6 +9,10 @@ import {
 import { DataSource, EntityManager, IsNull } from 'typeorm';
 
 import {
+  AbsenceDeclaration,
+  AbsenceDeclarationStatus,
+} from '../absence-declarations/absence-declaration.entity';
+import {
   LeaveRequest,
   LeaveRequestStatus,
 } from '../leave-requests/leave-request.entity';
@@ -55,6 +59,11 @@ export interface MonthlyAccrualRunResult {
     prenom: string;
     reason: string;
   }>;
+}
+
+interface NonStandardAccrualPeriod {
+  leaveType: LeaveType;
+  source: 'CONGE' | 'ABSENCE';
 }
 
 interface MonthInformation {
@@ -143,22 +152,22 @@ export class MonthlyAccrualService
         continue;
       }
 
-      const nonStandardAccrualRequest =
-        await this.findNonStandardAccrualRequest(
+      const nonStandardAccrualPeriod =
+        await this.findNonStandardAccrualPeriod(
           employee.id,
           monthInformation,
         );
 
-      if (nonStandardAccrualRequest) {
+      if (nonStandardAccrualPeriod) {
         result.manualReviewRequired.push({
           employeeId: employee.id,
           nom: employee.nom,
           prenom: employee.prenom,
           reason:
-            nonStandardAccrualRequest.leaveType.accrualMode ===
+            nonStandardAccrualPeriod.leaveType.accrualMode ===
             LeaveAccrualMode.AUCUNE
-              ? `Une période « ${nonStandardAccrualRequest.leaveType.name} » suspend l’acquisition. Le calcul doit être contrôlé par la RH.`
-              : `Une période « ${nonStandardAccrualRequest.leaveType.name} » applique une acquisition réduite. Le taux exact doit être contrôlé par la RH.`,
+              ? `Une période « ${nonStandardAccrualPeriod.leaveType.name} » suspend l’acquisition. Le calcul doit être contrôlé par la RH.`
+              : `Une période « ${nonStandardAccrualPeriod.leaveType.name} » applique une acquisition réduite. Le taux exact doit être contrôlé par la RH.`,
         });
         continue;
       }
@@ -368,11 +377,16 @@ export class MonthlyAccrualService
       .getMany();
   }
 
-  private async findNonStandardAccrualRequest(
+  private async findNonStandardAccrualPeriod(
     employeeId: number,
     monthInformation: MonthInformation,
-  ): Promise<LeaveRequest | null> {
-    return this.dataSource
+  ): Promise<NonStandardAccrualPeriod | null> {
+    const accrualModes = [
+      LeaveAccrualMode.REDUITE,
+      LeaveAccrualMode.AUCUNE,
+    ];
+
+    const leaveRequest = await this.dataSource
       .getRepository(LeaveRequest)
       .createQueryBuilder('request')
       .innerJoinAndSelect('request.leaveType', 'leaveType')
@@ -387,13 +401,46 @@ export class MonthlyAccrualService
         firstDate: monthInformation.firstDate,
       })
       .andWhere('leaveType.accrualMode IN (:...accrualModes)', {
-        accrualModes: [
-          LeaveAccrualMode.REDUITE,
-          LeaveAccrualMode.AUCUNE,
-        ],
+        accrualModes,
       })
       .orderBy('request.startDate', 'ASC')
       .getOne();
+
+    if (leaveRequest) {
+      return {
+        leaveType: leaveRequest.leaveType,
+        source: 'CONGE',
+      };
+    }
+
+    const absenceDeclaration = await this.dataSource
+      .getRepository(AbsenceDeclaration)
+      .createQueryBuilder('absence')
+      .innerJoinAndSelect('absence.leaveType', 'leaveType')
+      .where('absence.employeeId = :employeeId', { employeeId })
+      .andWhere('absence.status = :status', {
+        status: AbsenceDeclarationStatus.ENREGISTREE,
+      })
+      .andWhere('absence.startDate <= :lastDate', {
+        lastDate: monthInformation.lastDate,
+      })
+      .andWhere('absence.endDate >= :firstDate', {
+        firstDate: monthInformation.firstDate,
+      })
+      .andWhere('leaveType.accrualMode IN (:...accrualModes)', {
+        accrualModes,
+      })
+      .orderBy('absence.startDate', 'ASC')
+      .getOne();
+
+    if (!absenceDeclaration) {
+      return null;
+    }
+
+    return {
+      leaveType: absenceDeclaration.leaveType,
+      source: 'ABSENCE',
+    };
   }
 
   private async getConfiguredMonthlyAccrualDays(): Promise<number> {
