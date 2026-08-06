@@ -10,6 +10,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import {
   DataSource,
   EntityManager,
+  In,
   Repository,
 } from 'typeorm';
 
@@ -18,6 +19,10 @@ import {
   AbsenceDeclarationStatus,
 } from '../absence-declarations/absence-declaration.entity';
 import type { AuthenticatedUser } from '../auth/jwt-payload.interface';
+import {
+  Document,
+  DocumentStatus,
+} from '../documents/document.entity';
 import { DerogationsService } from '../derogations/derogations.service';
 import { GeneratedDocumentsService } from '../generated-documents/generated-documents.service';
 import type { Holiday } from '../holidays/holiday.entity';
@@ -324,6 +329,23 @@ export class LeaveRequestsService {
 
       this.validateLeaveType(leaveType);
 
+      if (
+        leaveType.documentRequired &&
+        !leaveType.documentCanBeAddedLater
+      ) {
+        const hasActiveDocument =
+          await this.hasActiveRequiredDocument(
+            manager,
+            leaveRequest.id,
+          );
+
+        if (!hasActiveDocument) {
+          throw new BadRequestException(
+            'Le justificatif obligatoire doit être ajouté avant la soumission de cette demande.',
+          );
+        }
+      }
+
       const dates = await this.validateAndCalculateDates(
         leaveRequest.startDate,
         leaveRequest.endDate,
@@ -546,6 +568,10 @@ export class LeaveRequestsService {
         await this.findRequestForDecisionUpdate(manager, id);
 
       this.ensureRequestCanReceiveDecision(leaveRequest);
+      await this.ensureRequiredDocumentsAccepted(
+        manager,
+        leaveRequest,
+      );
 
       const access = await this.determineDecisionAccess(
         manager,
@@ -665,6 +691,10 @@ export class LeaveRequestsService {
         await this.findRequestForDecisionUpdate(manager, id);
 
       this.ensureRequestCanReceiveDecision(leaveRequest);
+      await this.ensureRequiredDocumentsAccepted(
+        manager,
+        leaveRequest,
+      );
 
       const access = await this.determineDecisionAccess(
         manager,
@@ -753,6 +783,61 @@ export class LeaveRequestsService {
     this.ensureDraft(leaveRequest);
 
     await this.leaveRequestRepository.remove(leaveRequest);
+  }
+
+  private async hasActiveRequiredDocument(
+    manager: EntityManager,
+    leaveRequestId: number,
+  ): Promise<boolean> {
+    const count = await manager.getRepository(Document).count({
+      where: {
+        leaveRequestId,
+        status: In([
+          DocumentStatus.EN_ATTENTE,
+          DocumentStatus.ACCEPTE,
+          DocumentStatus.REJETE,
+        ]),
+      },
+    });
+
+    return count > 0;
+  }
+
+  private async ensureRequiredDocumentsAccepted(
+    manager: EntityManager,
+    leaveRequest: LeaveRequest,
+  ): Promise<void> {
+    if (!leaveRequest.leaveType.documentRequired) {
+      return;
+    }
+
+    const documents = await manager.getRepository(Document).find({
+      where: {
+        leaveRequestId: leaveRequest.id,
+        status: In([
+          DocumentStatus.EN_ATTENTE,
+          DocumentStatus.ACCEPTE,
+          DocumentStatus.REJETE,
+        ]),
+      },
+    });
+
+    if (documents.length === 0) {
+      throw new BadRequestException(
+        'Le justificatif obligatoire doit être fourni avant toute décision.',
+      );
+    }
+
+    if (
+      documents.some(
+        (document) =>
+          document.status !== DocumentStatus.ACCEPTE,
+      )
+    ) {
+      throw new BadRequestException(
+        'Tous les justificatifs actifs doivent être acceptés par la RH avant toute décision.',
+      );
+    }
   }
 
   private async findRequestForDecisionUpdate(

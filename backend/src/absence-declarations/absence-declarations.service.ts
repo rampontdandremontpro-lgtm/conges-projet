@@ -5,9 +5,13 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 
 import type { AuthenticatedUser } from '../auth/jwt-payload.interface';
+import {
+  Document,
+  DocumentStatus,
+} from '../documents/document.entity';
 import {
   LeaveRequest,
   LeaveRequestStatus,
@@ -34,6 +38,9 @@ export class AbsenceDeclarationsService {
   constructor(
     @InjectRepository(AbsenceDeclaration)
     private readonly absenceDeclarationRepository: Repository<AbsenceDeclaration>,
+
+    @InjectRepository(Document)
+    private readonly documentRepository: Repository<Document>,
 
     @InjectRepository(LeaveRequest)
     private readonly leaveRequestRepository: Repository<LeaveRequest>,
@@ -310,7 +317,10 @@ export class AbsenceDeclarationsService {
       declaration.leaveType.rhOnly &&
       authenticatedUser.role === UserRole.RH;
 
-    if (isDirectorSelfDeclaration || isRhOnlyDeclaration) {
+    if (
+      (isDirectorSelfDeclaration || isRhOnlyDeclaration) &&
+      !declaration.leaveType.documentRequired
+    ) {
       declaration.status = AbsenceDeclarationStatus.ENREGISTREE;
       declaration.verifiedByRhId =
         authenticatedUser.role === UserRole.RH
@@ -318,8 +328,22 @@ export class AbsenceDeclarationsService {
           : null;
       declaration.verifiedAt = now;
     } else if (declaration.leaveType.documentRequired) {
-      declaration.status =
-        AbsenceDeclarationStatus.JUSTIFICATIF_EN_ATTENTE;
+      const hasActiveDocument = await this.hasActiveDocument(
+        declaration.id,
+      );
+
+      if (
+        !hasActiveDocument &&
+        !declaration.leaveType.documentCanBeAddedLater
+      ) {
+        throw new BadRequestException(
+          'Le justificatif obligatoire doit être ajouté avant la transmission de cette déclaration.',
+        );
+      }
+
+      declaration.status = hasActiveDocument
+        ? AbsenceDeclarationStatus.A_VERIFIER_PAR_RH
+        : AbsenceDeclarationStatus.JUSTIFICATIF_EN_ATTENTE;
     } else {
       declaration.status =
         AbsenceDeclarationStatus.A_VERIFIER_PAR_RH;
@@ -343,6 +367,10 @@ export class AbsenceDeclarationsService {
       throw new BadRequestException(
         'Seule une déclaration complète au statut A_VERIFIER_PAR_RH peut être enregistrée.',
       );
+    }
+
+    if (declaration.leaveType.documentRequired) {
+      await this.ensureRequiredDocumentsAccepted(declaration.id);
     }
 
     declaration.status = AbsenceDeclarationStatus.ENREGISTREE;
@@ -431,6 +459,82 @@ export class AbsenceDeclarationsService {
     await this.absenceDeclarationRepository.save(declaration);
 
     return this.findOneWithRelations(id);
+  }
+
+  async markDocumentMissing(
+    id: number,
+  ): Promise<AbsenceDeclaration> {
+    const declaration = await this.findOneWithRelations(id);
+
+    if (
+      [
+        AbsenceDeclarationStatus.BROUILLON,
+        AbsenceDeclarationStatus.ENREGISTREE,
+        AbsenceDeclarationStatus.ANNULEE,
+      ].includes(declaration.status)
+    ) {
+      return declaration;
+    }
+
+    if (declaration.leaveType.documentRequired) {
+      declaration.status =
+        AbsenceDeclarationStatus.JUSTIFICATIF_EN_ATTENTE;
+      declaration.verifiedByRhId = null;
+      declaration.verifiedAt = null;
+
+      await this.absenceDeclarationRepository.save(declaration);
+    }
+
+    return this.findOneWithRelations(id);
+  }
+
+  private async hasActiveDocument(
+    absenceDeclarationId: number,
+  ): Promise<boolean> {
+    const count = await this.documentRepository.count({
+      where: {
+        absenceDeclarationId,
+        status: In([
+          DocumentStatus.EN_ATTENTE,
+          DocumentStatus.ACCEPTE,
+          DocumentStatus.REJETE,
+        ]),
+      },
+    });
+
+    return count > 0;
+  }
+
+  private async ensureRequiredDocumentsAccepted(
+    absenceDeclarationId: number,
+  ): Promise<void> {
+    const documents = await this.documentRepository.find({
+      where: {
+        absenceDeclarationId,
+        status: In([
+          DocumentStatus.EN_ATTENTE,
+          DocumentStatus.ACCEPTE,
+          DocumentStatus.REJETE,
+        ]),
+      },
+    });
+
+    if (documents.length === 0) {
+      throw new BadRequestException(
+        'Le justificatif obligatoire doit être fourni avant l’enregistrement de l’absence.',
+      );
+    }
+
+    if (
+      documents.some(
+        (document) =>
+          document.status !== DocumentStatus.ACCEPTE,
+      )
+    ) {
+      throw new BadRequestException(
+        'Tous les justificatifs actifs doivent être acceptés par la RH avant l’enregistrement de l’absence.',
+      );
+    }
   }
 
   private async resolveEmployee(
