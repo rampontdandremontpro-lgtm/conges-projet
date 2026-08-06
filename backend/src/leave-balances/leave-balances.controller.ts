@@ -21,8 +21,11 @@ import { CorrectLeaveBalanceDto } from './dto/correct-leave-balance.dto';
 import { InitializeLeaveBalanceDto } from './dto/initialize-leave-balance.dto';
 import { LeaveBalanceQueryDto } from './dto/leave-balance-query.dto';
 import { RunMonthlyAccrualDto } from './dto/run-monthly-accrual.dto';
+import { CloseReferencePeriodDto } from './dto/close-reference-period.dto';
+import { ExceptionalCarryoverDto } from './dto/exceptional-carryover.dto';
 import { LeaveBalancesService } from './leave-balances.service';
 import { MonthlyAccrualService } from './monthly-accrual.service';
+import { ReferencePeriodService } from './reference-period.service';
 
 type AuthenticatedRequest = Request & {
   user: AuthenticatedUser;
@@ -34,6 +37,7 @@ export class LeaveBalancesController {
   constructor(
     private readonly leaveBalancesService: LeaveBalancesService,
     private readonly monthlyAccrualService: MonthlyAccrualService,
+    private readonly referencePeriodService: ReferencePeriodService,
   ) {}
 
   @Get('my/history')
@@ -91,6 +95,38 @@ export class LeaveBalancesController {
     return this.leaveBalancesService.getEmployeeBalances(
       employeeId,
       query,
+    );
+  }
+
+  @Get('period/:referencePeriod/preview')
+  @Roles(UserRole.RH)
+  previewReferencePeriod(
+    @Param('referencePeriod') referencePeriod: string,
+  ): Promise<unknown> {
+    return this.referencePeriodService.previewClosure(referencePeriod);
+  }
+
+  @Post('period/carryover')
+  @Roles(UserRole.RH)
+  approveExceptionalCarryover(
+    @Req() request: AuthenticatedRequest,
+    @Body() dto: ExceptionalCarryoverDto,
+  ) {
+    return this.referencePeriodService.approveExceptionalCarryover(
+      request.user,
+      dto,
+    );
+  }
+
+  @Post('period/close')
+  @Roles(UserRole.RH)
+  closeReferencePeriod(
+    @Req() request: AuthenticatedRequest,
+    @Body() dto: CloseReferencePeriodDto,
+  ) {
+    return this.referencePeriodService.closeReferencePeriod(
+      request.user,
+      dto,
     );
   }
 

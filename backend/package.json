@@ -20,7 +20,8 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "db:seed:test": "powershell -ExecutionPolicy Bypass -File .\\database\\seed-test-accounts.ps1",
-    "test:smoke": "node .\\scripts\\smoke-test.mjs"
+    "test:smoke": "node .\\scripts\\smoke-test.mjs",
+    "test:functional": "node .\\scripts\\functional-test.mjs"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",

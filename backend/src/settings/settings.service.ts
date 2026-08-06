@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { EntityManager, Repository } from 'typeorm';
 
 import type { AuthenticatedUser } from '../auth/jwt-payload.interface';
 import { User } from '../users/user.entity';
@@ -155,6 +155,36 @@ export class SettingsService {
     }
 
     return days;
+  }
+
+  async upsertInternal(
+    key: string,
+    value: string,
+    description: string | null,
+    updatedById: number | null,
+    manager?: EntityManager,
+  ): Promise<Setting> {
+    const repository = manager
+      ? manager.getRepository(Setting)
+      : this.settingRepository;
+    const normalizedKey = this.normalizeKey(key);
+    let setting = await repository.findOneBy({ settingKey: normalizedKey });
+
+    if (!setting) {
+      setting = repository.create({
+        settingKey: normalizedKey,
+        settingValue: value,
+        description,
+        updatedById,
+        updatedBy: null,
+      });
+    } else {
+      setting.settingValue = value;
+      setting.description = description;
+      setting.updatedById = updatedById;
+    }
+
+    return repository.save(setting);
   }
 
   async update(

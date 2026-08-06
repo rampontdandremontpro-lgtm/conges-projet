@@ -19,6 +19,7 @@ import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { UserRole } from '../users/user.entity';
 import { CreateHolidayDto } from './dto/create-holiday.dto';
+import { SyncHolidaysDto } from './dto/sync-holidays.dto';
 import { UpdateHolidayDto } from './dto/update-holiday.dto';
 import { HolidaysService } from './holidays.service';
 
@@ -41,6 +42,15 @@ export class HolidaysController {
       request.user,
       createHolidayDto,
     );
+  }
+
+  @Post('sync/martinique')
+  @Roles(UserRole.ADMIN, UserRole.RH)
+  syncMartinique(
+    @Req() request: AuthenticatedRequest,
+    @Body() dto: SyncHolidaysDto,
+  ) {
+    return this.holidaysService.syncMartinique(dto.year, request.user);
   }
 
   @Get('management')
