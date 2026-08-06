@@ -34,6 +34,11 @@ const decimalTransformer = {
   'createdAt',
 ])
 @Index('IDX_balance_movements_leave_request', ['leaveRequestId'])
+@Index(
+  'UQ_balance_movements_monthly_accrual',
+  ['employeeId', 'movementType', 'accrualMonth'],
+  { unique: true },
+)
 export class BalanceMovement {
   @PrimaryGeneratedColumn()
   id!: number;
@@ -128,6 +133,21 @@ export class BalanceMovement {
     transformer: decimalTransformer,
   })
   balanceAfter!: number;
+
+  @Column({
+    name: 'accrual_month',
+    type: 'varchar',
+    length: 7,
+    nullable: true,
+  })
+  accrualMonth!: string | null;
+
+  @Column({
+    name: 'effective_date',
+    type: 'date',
+    nullable: true,
+  })
+  effectiveDate!: string | null;
 
   @Column({
     type: 'text',

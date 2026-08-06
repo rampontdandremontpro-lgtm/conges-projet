@@ -20,7 +20,9 @@ import { AddBalanceAccrualDto } from './dto/add-balance-accrual.dto';
 import { CorrectLeaveBalanceDto } from './dto/correct-leave-balance.dto';
 import { InitializeLeaveBalanceDto } from './dto/initialize-leave-balance.dto';
 import { LeaveBalanceQueryDto } from './dto/leave-balance-query.dto';
+import { RunMonthlyAccrualDto } from './dto/run-monthly-accrual.dto';
 import { LeaveBalancesService } from './leave-balances.service';
+import { MonthlyAccrualService } from './monthly-accrual.service';
 
 type AuthenticatedRequest = Request & {
   user: AuthenticatedUser;
@@ -31,6 +33,7 @@ type AuthenticatedRequest = Request & {
 export class LeaveBalancesController {
   constructor(
     private readonly leaveBalancesService: LeaveBalancesService,
+    private readonly monthlyAccrualService: MonthlyAccrualService,
   ) {}
 
   @Get('my/history')
@@ -100,6 +103,18 @@ export class LeaveBalancesController {
     return this.leaveBalancesService.initializeBalance(
       request.user,
       dto,
+    );
+  }
+
+  @Post('accrual/run')
+  @Roles(UserRole.RH)
+  runMonthlyAccrual(
+    @Req() request: AuthenticatedRequest,
+    @Body() dto: RunMonthlyAccrualDto,
+  ) {
+    return this.monthlyAccrualService.runForMonth(
+      dto.accrualMonth,
+      request.user.id,
     );
   }
 

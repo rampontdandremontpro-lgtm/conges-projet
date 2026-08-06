@@ -152,13 +152,54 @@ export class LeaveBalancesService {
     authenticatedUser: AuthenticatedUser,
     dto: AddBalanceAccrualDto,
   ): Promise<LeaveBalanceView> {
-    const days = this.round(dto.days);
+    const days = this.validatePositiveDays(dto.days);
+    const monthInformation = this.getAccrualMonthInformation(
+      dto.accrualMonth,
+    );
+
+    if (
+      monthInformation.effectiveDate >
+      this.getMartiniqueDateString(new Date())
+    ) {
+      throw new BadRequestException(
+        `Le mois ${dto.accrualMonth} n’est pas terminé. L’acquisition ne peut être créditée qu’au dernier jour du mois.`,
+      );
+    }
 
     await this.dataSource.transaction(async (manager) => {
       const balance = await this.findBalanceForUpdate(
         manager,
         balanceId,
       );
+
+      if (balance.counterType !== LeaveBalanceCounterType.N) {
+        throw new BadRequestException(
+          'Une acquisition mensuelle doit être créditée sur le compteur N « Congés en cours d’acquisition ».',
+        );
+      }
+
+      if (balance.referencePeriod !== monthInformation.referencePeriod) {
+        throw new BadRequestException(
+          `Le mois ${dto.accrualMonth} appartient à la période ${monthInformation.referencePeriod}.`,
+        );
+      }
+
+      const movementRepository =
+        manager.getRepository(BalanceMovement);
+
+      const existingMovement = await movementRepository.findOne({
+        where: {
+          employeeId: balance.employeeId,
+          movementType: BalanceMovementType.ACQUISITION,
+          accrualMonth: dto.accrualMonth,
+        },
+      });
+
+      if (existingMovement) {
+        throw new ConflictException(
+          `L’acquisition du mois ${dto.accrualMonth} a déjà été enregistrée pour ce collaborateur.`,
+        );
+      }
 
       const balanceBefore = this.round(balance.availableDays);
 
@@ -179,8 +220,14 @@ export class LeaveBalancesService {
         balanceAfter: balance.availableDays,
         actorId: authenticatedUser.id,
         leaveRequestId: null,
+        accrualMonth: dto.accrualMonth,
+        effectiveDate: monthInformation.effectiveDate,
         reason:
-          dto.reason?.trim() || 'Acquisition de congés payés.',
+          dto.reason?.trim() ||
+          this.buildMonthlyAccrualReason(
+            monthInformation.monthLabel,
+            days,
+          ),
       });
     });
 
@@ -873,6 +920,8 @@ export class LeaveBalancesService {
       balanceAfter: number;
       actorId: number | null;
       leaveRequestId: number | null;
+      accrualMonth?: string | null;
+      effectiveDate?: string | null;
       reason: string | null;
     },
   ): Promise<BalanceMovement> {
@@ -888,6 +937,8 @@ export class LeaveBalancesService {
       days: this.round(data.days),
       balanceBefore: this.round(data.balanceBefore),
       balanceAfter: this.round(data.balanceAfter),
+      accrualMonth: data.accrualMonth ?? null,
+      effectiveDate: data.effectiveDate ?? null,
       reason: data.reason,
     });
 
@@ -1050,6 +1101,89 @@ export class LeaveBalancesService {
       default:
         return 3;
     }
+  }
+
+
+  private getAccrualMonthInformation(accrualMonth: string): {
+    effectiveDate: string;
+    referencePeriod: string;
+    monthLabel: string;
+  } {
+    const match = /^(\d{4})-(0[1-9]|1[0-2])$/.exec(accrualMonth);
+
+    if (!match) {
+      throw new BadRequestException(
+        'Le mois d’acquisition doit respecter le format AAAA-MM.',
+      );
+    }
+
+    const year = Number(match[1]);
+    const month = Number(match[2]);
+    const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
+    const effectiveDate = `${year}-${String(month).padStart(
+      2,
+      '0',
+    )}-${String(lastDay).padStart(2, '0')}`;
+    const referencePeriod =
+      month >= 6
+        ? `${year}-${year + 1}`
+        : `${year - 1}-${year}`;
+    const monthLabels = [
+      'janvier',
+      'février',
+      'mars',
+      'avril',
+      'mai',
+      'juin',
+      'juillet',
+      'août',
+      'septembre',
+      'octobre',
+      'novembre',
+      'décembre',
+    ];
+
+    return {
+      effectiveDate,
+      referencePeriod,
+      monthLabel: monthLabels[month - 1],
+    };
+  }
+
+  private buildMonthlyAccrualReason(
+    monthLabel: string,
+    days: number,
+  ): string {
+    const usesElision = ['avril', 'août', 'octobre'].includes(
+      monthLabel,
+    );
+    const monthPart = usesElision
+      ? `d’${monthLabel}`
+      : `de ${monthLabel}`;
+    const daysLabel = days
+      .toFixed(2)
+      .replace(/0+$/, '')
+      .replace(/\.$/, '')
+      .replace('.', ',');
+
+    return `Acquisition mensuelle ${monthPart} : +${daysLabel} jours`;
+  }
+
+  private getMartiniqueDateString(date: Date): string {
+    const formatter = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Martinique',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    });
+    const parts = formatter.formatToParts(date);
+    const values = new Map(
+      parts.map((part) => [part.type, part.value]),
+    );
+
+    return `${values.get('year')}-${values.get('month')}-${values.get(
+      'day',
+    )}`;
   }
 
   private round(value: number): number {

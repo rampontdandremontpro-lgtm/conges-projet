@@ -6,6 +6,7 @@ import { BalanceMovement } from './balance-movement.entity';
 import { LeaveBalance } from './leave-balance.entity';
 import { LeaveBalancesController } from './leave-balances.controller';
 import { LeaveBalancesService } from './leave-balances.service';
+import { MonthlyAccrualService } from './monthly-accrual.service';
 
 @Module({
   imports: [
@@ -16,7 +17,11 @@ import { LeaveBalancesService } from './leave-balances.service';
     UsersModule,
   ],
   controllers: [LeaveBalancesController],
-  providers: [LeaveBalancesService],
-  exports: [LeaveBalancesService, TypeOrmModule],
+  providers: [LeaveBalancesService, MonthlyAccrualService],
+  exports: [
+    LeaveBalancesService,
+    MonthlyAccrualService,
+    TypeOrmModule,
+  ],
 })
 export class LeaveBalancesModule {}
