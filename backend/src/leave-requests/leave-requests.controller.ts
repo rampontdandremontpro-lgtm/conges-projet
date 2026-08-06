@@ -10,11 +10,14 @@ import {
   Patch,
   Post,
   Req,
+  Res,
+  StreamableFile,
   UseGuards,
 } from '@nestjs/common';
-import type { Request } from 'express';
+import type { Request, Response } from 'express';
 
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { GeneratedDocumentsService } from '../generated-documents/generated-documents.service';
 import type { AuthenticatedUser } from '../auth/jwt-payload.interface';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
@@ -40,6 +43,7 @@ type AuthenticatedRequest = Request & {
 export class LeaveRequestsController {
   constructor(
     private readonly leaveRequestsService: LeaveRequestsService,
+    private readonly generatedDocumentsService: GeneratedDocumentsService,
   ) {}
 
   @Post()
@@ -138,6 +142,45 @@ export class LeaveRequestsController {
       request.user,
       dto,
     );
+  }
+
+  @Get(':id/pdf')
+  @Roles(
+    UserRole.COLLABORATEUR,
+    UserRole.RESPONSABLE_SERVICE,
+    UserRole.RH,
+    UserRole.DIRECTEUR,
+  )
+  async downloadValidationPdf(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() request: AuthenticatedRequest,
+    @Res({ passthrough: true }) response: Response,
+  ): Promise<StreamableFile> {
+    const file =
+      await this.generatedDocumentsService.getValidationPdf(
+        id,
+        request.user,
+      );
+
+    response.setHeader('Content-Type', 'application/pdf');
+    response.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${file.filename}"`,
+    );
+    response.setHeader(
+      'Content-Length',
+      String(file.buffer.length),
+    );
+    response.setHeader(
+      'X-Document-Reference',
+      file.referenceNumber,
+    );
+    response.setHeader(
+      'X-Document-Checksum',
+      file.checksum,
+    );
+
+    return new StreamableFile(file.buffer);
   }
 
   @Get(':id')

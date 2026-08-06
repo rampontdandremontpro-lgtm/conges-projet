@@ -3,6 +3,7 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -14,6 +15,7 @@ import {
 
 import type { AuthenticatedUser } from '../auth/jwt-payload.interface';
 import { DerogationsService } from '../derogations/derogations.service';
+import { GeneratedDocumentsService } from '../generated-documents/generated-documents.service';
 import type { Holiday } from '../holidays/holiday.entity';
 import { HolidaysService } from '../holidays/holidays.service';
 import {
@@ -70,6 +72,10 @@ interface DecisionAccess {
 
 @Injectable()
 export class LeaveRequestsService {
+  private readonly logger = new Logger(
+    LeaveRequestsService.name,
+  );
+
   constructor(
     @InjectRepository(LeaveRequest)
     private readonly leaveRequestRepository: Repository<LeaveRequest>,
@@ -82,6 +88,7 @@ export class LeaveRequestsService {
     private readonly holidaysService: HolidaysService,
     private readonly derogationsService: DerogationsService,
     private readonly leaveBalancesService: LeaveBalancesService,
+    private readonly generatedDocumentsService: GeneratedDocumentsService,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -628,6 +635,18 @@ export class LeaveRequestsService {
         }),
       );
     });
+
+    try {
+      await this.generatedDocumentsService.ensureValidationPdf(
+        id,
+        authenticatedUser.id,
+      );
+    } catch (error) {
+      this.logger.error(
+        `La demande ${id} a été validée, mais son PDF n’a pas pu être généré immédiatement. Le téléchargement relancera automatiquement la génération.`,
+        error instanceof Error ? error.stack : undefined,
+      );
+    }
 
     return this.findRequestForDecision(id, authenticatedUser);
   }
@@ -1206,6 +1225,21 @@ export class LeaveRequestsService {
     if (decodedSignature.length === 0) {
       throw new BadRequestException(
         'La signature dessinée est vide.',
+      );
+    }
+
+    const pngHeader = Buffer.from([
+      0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+    ]);
+
+    if (
+      decodedSignature.length < pngHeader.length ||
+      !decodedSignature
+        .subarray(0, pngHeader.length)
+        .equals(pngHeader)
+    ) {
+      throw new BadRequestException(
+        'La signature dessinée doit contenir une véritable image PNG.',
       );
     }
 
