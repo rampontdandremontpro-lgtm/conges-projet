@@ -195,12 +195,12 @@ export class LeaveRequestsController {
   }
 
   @Patch(':id')
-  updateDraft(
+  updateRequest(
     @Param('id', ParseIntPipe) id: number,
     @Req() request: AuthenticatedRequest,
     @Body() updateLeaveRequestDto: UpdateLeaveRequestDto,
   ) {
-    return this.leaveRequestsService.updateDraft(
+    return this.leaveRequestsService.updateRequest(
       id,
       request.user,
       updateLeaveRequestDto,

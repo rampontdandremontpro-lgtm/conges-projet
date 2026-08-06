@@ -521,6 +521,100 @@ export class DerogationsService {
     return derogation;
   }
 
+  async prepareForRequestResubmission(
+    manager: EntityManager,
+    data: {
+      leaveRequest: LeaveRequest;
+    },
+  ): Promise<{
+    derogationId: number;
+    status: DerogationStatus;
+    requiresRhDecision: boolean;
+  } | null> {
+    const notice = evaluateSubmissionNotice(
+      data.leaveRequest.startDate,
+      data.leaveRequest.endDate,
+      data.leaveRequest.calendarDuration,
+    );
+
+    /*
+     * La demande modifiée respecte désormais le délai :
+     * l'ancienne dérogation reste dans l'historique mais
+     * n'est plus nécessaire pour la nouvelle soumission.
+     */
+    if (notice.isNoticeCompliant) {
+      return null;
+    }
+
+    const repository = manager.getRepository(Derogation);
+    const derogation = await repository
+      .createQueryBuilder('derogation')
+      .setLock('pessimistic_write')
+      .where('derogation.leaveRequestId = :leaveRequestId', {
+        leaveRequestId: data.leaveRequest.id,
+      })
+      .getOne();
+
+    if (!derogation) {
+      return null;
+    }
+
+    const stillMatchesApprovedRequest =
+      this.matchesRequestSnapshot(
+        derogation,
+        data.leaveRequest,
+      );
+
+    derogation.leaveTypeId = data.leaveRequest.leaveTypeId;
+    derogation.requestedStartDate =
+      data.leaveRequest.startDate;
+    derogation.requestedEndDate =
+      data.leaveRequest.endDate;
+    derogation.expiresAt = calculateDerogationExpiry(
+      data.leaveRequest.startDate,
+    );
+    derogation.usedAt = null;
+
+    if (
+      derogation.status === DerogationStatus.UTILISEE &&
+      stillMatchesApprovedRequest
+    ) {
+      /*
+       * Seul un champ sans incidence sur l'autorisation
+       * RH a changé. La même dérogation peut être
+       * consommée à nouveau lors de la nouvelle signature.
+       */
+      derogation.status = DerogationStatus.ACCORDEE;
+
+      await repository.save(derogation);
+
+      return {
+        derogationId: derogation.id,
+        status: derogation.status,
+        requiresRhDecision: false,
+      };
+    }
+
+    /*
+     * Les dates ou le type ont changé : l'accord RH
+     * précédent ne couvre plus la nouvelle version.
+     * La même ligne est remise en brouillon pour respecter
+     * l'unicité d'une dérogation par demande.
+     */
+    derogation.status = DerogationStatus.BROUILLON;
+    derogation.decidedByRhId = null;
+    derogation.decisionComment = null;
+    derogation.decidedAt = null;
+
+    await repository.save(derogation);
+
+    return {
+      derogationId: derogation.id,
+      status: derogation.status,
+      requiresRhDecision: true,
+    };
+  }
+
   private validateDerogationWindow(
     notice: ReturnType<typeof evaluateSubmissionNotice>,
   ): void {

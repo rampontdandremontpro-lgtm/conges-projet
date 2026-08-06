@@ -7,6 +7,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { createHash } from 'node:crypto';
 import {
   DataSource,
   EntityManager,
@@ -224,81 +225,238 @@ export class LeaveRequestsService {
     return this.findOwnedRequest(id, authenticatedUser.id);
   }
 
-  async updateDraft(
+  async updateRequest(
     id: number,
     authenticatedUser: AuthenticatedUser,
     updateLeaveRequestDto: UpdateLeaveRequestDto,
   ): Promise<LeaveRequest> {
-    const leaveRequest = await this.findOwnedRequest(
-      id,
-      authenticatedUser.id,
-    );
+    await this.dataSource.transaction(async (manager) => {
+      const leaveRequest = await this.findOwnedRequestForUpdate(
+        manager,
+        id,
+        authenticatedUser.id,
+      );
 
-    this.ensureDraft(leaveRequest);
+      const oldStatus = leaveRequest.status;
+      const isSubmittedRequest =
+        oldStatus === LeaveRequestStatus.EN_ATTENTE_VALIDATION;
 
-    const leaveType =
-      updateLeaveRequestDto.leaveTypeId !== undefined &&
-      updateLeaveRequestDto.leaveTypeId !== leaveRequest.leaveTypeId
-        ? await this.leaveTypesService.findOne(
-            updateLeaveRequestDto.leaveTypeId,
-          )
-        : leaveRequest.leaveType;
+      if (
+        oldStatus !== LeaveRequestStatus.BROUILLON &&
+        !isSubmittedRequest
+      ) {
+        throw new BadRequestException(
+          'Seule une demande en brouillon ou en attente de validation peut être modifiée.',
+        );
+      }
 
-    this.validateLeaveType(leaveType);
+      if (isSubmittedRequest) {
+        this.ensureModificationAllowed(leaveRequest.startDate);
+      }
 
-    const startDate =
-      updateLeaveRequestDto.startDate ?? leaveRequest.startDate;
-    const endDate =
-      updateLeaveRequestDto.endDate ?? leaveRequest.endDate;
-    const startPeriod =
-      updateLeaveRequestDto.startPeriod ?? leaveRequest.startPeriod;
-    const endPeriod =
-      updateLeaveRequestDto.endPeriod ?? leaveRequest.endPeriod;
+      const oldLeaveType = leaveRequest.leaveType;
+      const oldSnapshot = {
+        leaveTypeId: leaveRequest.leaveTypeId,
+        startDate: leaveRequest.startDate,
+        endDate: leaveRequest.endDate,
+        startPeriod: leaveRequest.startPeriod,
+        endPeriod: leaveRequest.endPeriod,
+        calendarDuration: leaveRequest.calendarDuration,
+        deductedDays: leaveRequest.deductedDays,
+        comment: leaveRequest.comment,
+        submittedAt: leaveRequest.submittedAt,
+        employeeSignatureType:
+          leaveRequest.employeeSignatureType,
+        employeeSignedAt: leaveRequest.employeeSignedAt,
+        employeeSignatureHash: this.hashSignature(
+          leaveRequest.employeeSignatureData,
+        ),
+        version: leaveRequest.version,
+      };
 
-    const dates = await this.validateAndCalculateDates(
-      startDate,
-      endDate,
-      startPeriod,
-      endPeriod,
-      leaveType.allowsHalfDays,
-    );
+      const leaveType =
+        updateLeaveRequestDto.leaveTypeId !== undefined &&
+        updateLeaveRequestDto.leaveTypeId !==
+          leaveRequest.leaveTypeId
+          ? await manager.getRepository(LeaveType).findOneBy({
+              id: updateLeaveRequestDto.leaveTypeId,
+            })
+          : oldLeaveType;
 
-    leaveRequest.leaveTypeId = leaveType.id;
-    leaveRequest.leaveType = leaveType;
-    leaveRequest.startDate = startDate;
-    leaveRequest.endDate = endDate;
-    leaveRequest.startPeriod = startPeriod;
-    leaveRequest.endPeriod = endPeriod;
-    leaveRequest.calendarDuration = dates.calendarDuration;
-    leaveRequest.deductedDays = dates.deductedDays;
-    leaveRequest.modificationDeadline =
-      this.calculateModificationDeadline(startDate);
-    leaveRequest.version += 1;
+      if (!leaveType) {
+        throw new NotFoundException(
+          `Le type de congé ${updateLeaveRequestDto.leaveTypeId} est introuvable.`,
+        );
+      }
 
-    if (updateLeaveRequestDto.comment !== undefined) {
-      leaveRequest.comment =
-        updateLeaveRequestDto.comment.trim() || null;
-    }
+      this.validateLeaveType(leaveType);
 
-    await this.leaveRequestRepository.save(leaveRequest);
+      const startDate =
+        updateLeaveRequestDto.startDate ??
+        leaveRequest.startDate;
+      const endDate =
+        updateLeaveRequestDto.endDate ?? leaveRequest.endDate;
+      const startPeriod =
+        updateLeaveRequestDto.startPeriod ??
+        leaveRequest.startPeriod;
+      const endPeriod =
+        updateLeaveRequestDto.endPeriod ??
+        leaveRequest.endPeriod;
 
-    await this.historyRepository.save(
-      this.historyRepository.create({
-        leaveRequestId: leaveRequest.id,
+      if (isSubmittedRequest) {
+        /*
+         * Le départ éventuellement modifié doit lui aussi
+         * rester au minimum à J-7.
+         */
+        this.ensureModificationAllowed(startDate);
+      }
+
+      const dates = await this.validateAndCalculateDates(
+        startDate,
+        endDate,
+        startPeriod,
+        endPeriod,
+        leaveType.allowsHalfDays,
+      );
+
+      if (isSubmittedRequest) {
+        const notice = evaluateSubmissionNotice(
+          startDate,
+          endDate,
+          dates.calendarDuration,
+        );
+
+        this.validateSubmissionTiming(notice);
+      }
+
+      leaveRequest.leaveTypeId = leaveType.id;
+      leaveRequest.leaveType = leaveType;
+      leaveRequest.startDate = startDate;
+      leaveRequest.endDate = endDate;
+      leaveRequest.startPeriod = startPeriod;
+      leaveRequest.endPeriod = endPeriod;
+      leaveRequest.calendarDuration = dates.calendarDuration;
+      leaveRequest.deductedDays = dates.deductedDays;
+      leaveRequest.modificationDeadline =
+        this.calculateModificationDeadline(startDate);
+
+      if (updateLeaveRequestDto.comment !== undefined) {
+        leaveRequest.comment =
+          updateLeaveRequestDto.comment.trim() || null;
+      }
+
+      let releasedReservation:
+        | Awaited<
+            ReturnType<
+              LeaveBalancesService['releasePaidLeaveReservationForRequest']
+            >
+          >
+        | null = null;
+
+      let derogationPreparation:
+        | Awaited<
+            ReturnType<
+              DerogationsService['prepareForRequestResubmission']
+            >
+          >
+        | null = null;
+
+      if (isSubmittedRequest) {
+        await this.ensureNoPersonalOverlap(
+          manager,
+          leaveRequest,
+        );
+
+        if (oldLeaveType.deductsPaidLeaveBalance) {
+          releasedReservation =
+            await this.leaveBalancesService.releasePaidLeaveReservationForRequest(
+              manager,
+              {
+                employeeId: leaveRequest.employeeId,
+                leaveRequestId: leaveRequest.id,
+                actorId: authenticatedUser.id,
+                reason:
+                  'Libération de la réservation après modification de la demande avant décision.',
+              },
+            );
+        }
+
+        derogationPreparation =
+          await this.derogationsService.prepareForRequestResubmission(
+            manager,
+            {
+              leaveRequest,
+            },
+          );
+
+        /*
+         * La demande quitte temporairement la file des
+         * valideurs. Elle doit être signée et soumise à
+         * nouveau par son propriétaire.
+         */
+        leaveRequest.status = LeaveRequestStatus.BROUILLON;
+        leaveRequest.submittedAt = null;
+        leaveRequest.employeeSignatureType = null;
+        leaveRequest.employeeSignatureData = null;
+        leaveRequest.employeeSignedAt = null;
+        leaveRequest.realBalanceBefore = null;
+        leaveRequest.potentialBalanceBefore = null;
+        leaveRequest.realBalanceAfter = null;
+        leaveRequest.finalDeciderId = null;
+        leaveRequest.finalDeciderRole = null;
+        leaveRequest.decisionAt = null;
+        leaveRequest.refusalComment = null;
+        leaveRequest.validatorSignatureType = null;
+        leaveRequest.validatorSignatureData = null;
+        leaveRequest.validatorSignedAt = null;
+        leaveRequest.rhConfirmedDirectorAgreement = false;
+        leaveRequest.rhDirectorAgreementConfirmedAt = null;
+        leaveRequest.lockedAt = null;
+      }
+
+      leaveRequest.version += 1;
+
+      await manager.getRepository(LeaveRequest).save(
         leaveRequest,
-        action: LeaveRequestHistoryAction.BROUILLON_MODIFIE,
-        actorId: authenticatedUser.id,
-        oldStatus: LeaveRequestStatus.BROUILLON,
-        newStatus: LeaveRequestStatus.BROUILLON,
-        comment: null,
-        metadata: {
-          version: leaveRequest.version,
-          startDate: leaveRequest.startDate,
-          endDate: leaveRequest.endDate,
-          deductedDays: leaveRequest.deductedDays,
-        },
-      }),
-    );
+      );
+
+      await manager.getRepository(LeaveRequestHistory).save(
+        manager.getRepository(LeaveRequestHistory).create({
+          leaveRequestId: leaveRequest.id,
+          leaveRequest,
+          action: isSubmittedRequest
+            ? LeaveRequestHistoryAction.DEMANDE_MODIFIEE_AVANT_DECISION
+            : LeaveRequestHistoryAction.BROUILLON_MODIFIE,
+          actorId: authenticatedUser.id,
+          oldStatus,
+          newStatus: leaveRequest.status,
+          comment: null,
+          metadata: {
+            previousVersion: oldSnapshot.version,
+            version: leaveRequest.version,
+            previousRequest: oldSnapshot,
+            updatedRequest: {
+              leaveTypeId: leaveRequest.leaveTypeId,
+              startDate: leaveRequest.startDate,
+              endDate: leaveRequest.endDate,
+              startPeriod: leaveRequest.startPeriod,
+              endPeriod: leaveRequest.endPeriod,
+              calendarDuration:
+                leaveRequest.calendarDuration,
+              deductedDays: leaveRequest.deductedDays,
+              comment: leaveRequest.comment,
+            },
+            signatureInvalidated: isSubmittedRequest,
+            reservationReleasedDays:
+              releasedReservation?.releasedDays ?? 0,
+            releasedReservations:
+              releasedReservation?.releases ?? [],
+            derogationPreparation,
+            requiresNewSignature: isSubmittedRequest,
+          },
+        }),
+      );
+    });
 
     return this.findOwnedRequest(id, authenticatedUser.id);
   }
@@ -1151,6 +1309,23 @@ export class LeaveRequestsService {
       .getRepository(LeaveRequest)
       .createQueryBuilder('leaveRequest')
       .setLock('pessimistic_write')
+      .leftJoinAndSelect(
+        'leaveRequest.employee',
+        'employee',
+      )
+      .leftJoinAndSelect(
+        'leaveRequest.createdBy',
+        'createdBy',
+      )
+      .leftJoinAndSelect(
+        'leaveRequest.leaveType',
+        'leaveType',
+      )
+      .leftJoinAndSelect(
+        'leaveRequest.service',
+        'service',
+      )
+      .addSelect('leaveRequest.employeeSignatureData')
       .where('leaveRequest.id = :id', { id })
       .andWhere('leaveRequest.employeeId = :employeeId', {
         employeeId,
@@ -1506,6 +1681,35 @@ export class LeaveRequestsService {
         `La date de ${boundary} ${dateValue} correspond à « ${nonDeductibleDay.name} » et n’est pas décomptable.`,
       );
     }
+  }
+
+  private ensureModificationAllowed(
+    startDateValue: string,
+  ): void {
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
+
+    const modificationDeadline = this.parseDate(
+      this.calculateModificationDeadline(startDateValue),
+    );
+
+    if (today.getTime() > modificationDeadline.getTime()) {
+      throw new BadRequestException(
+        'Cette demande ne peut plus être modifiée : la limite de J-7 calendaires avant le départ est dépassée.',
+      );
+    }
+  }
+
+  private hashSignature(
+    signatureData: string | null,
+  ): string | null {
+    if (!signatureData) {
+      return null;
+    }
+
+    return createHash('sha256')
+      .update(signatureData)
+      .digest('hex');
   }
 
   private calculateModificationDeadline(

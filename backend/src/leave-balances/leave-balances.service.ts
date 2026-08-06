@@ -8,6 +8,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import {
   DataSource,
   EntityManager,
+  In,
   Repository,
 } from 'typeorm';
 
@@ -52,6 +53,16 @@ export interface PaidLeaveReservationSummary {
   realBalanceAfter: number;
   potentialBalanceAfter: number;
   reservations: Array<{
+    leaveBalanceId: number;
+    referencePeriod: string;
+    counterType: LeaveBalanceCounterType;
+    days: number;
+  }>;
+}
+
+export interface PaidLeaveReservationReleaseSummary {
+  releasedDays: number;
+  releases: Array<{
     leaveBalanceId: number;
     referencePeriod: string;
     counterType: LeaveBalanceCounterType;
@@ -152,54 +163,13 @@ export class LeaveBalancesService {
     authenticatedUser: AuthenticatedUser,
     dto: AddBalanceAccrualDto,
   ): Promise<LeaveBalanceView> {
-    const days = this.validatePositiveDays(dto.days);
-    const monthInformation = this.getAccrualMonthInformation(
-      dto.accrualMonth,
-    );
-
-    if (
-      monthInformation.effectiveDate >
-      this.getMartiniqueDateString(new Date())
-    ) {
-      throw new BadRequestException(
-        `Le mois ${dto.accrualMonth} n’est pas terminé. L’acquisition ne peut être créditée qu’au dernier jour du mois.`,
-      );
-    }
+    const days = this.round(dto.days);
 
     await this.dataSource.transaction(async (manager) => {
       const balance = await this.findBalanceForUpdate(
         manager,
         balanceId,
       );
-
-      if (balance.counterType !== LeaveBalanceCounterType.N) {
-        throw new BadRequestException(
-          'Une acquisition mensuelle doit être créditée sur le compteur N « Congés en cours d’acquisition ».',
-        );
-      }
-
-      if (balance.referencePeriod !== monthInformation.referencePeriod) {
-        throw new BadRequestException(
-          `Le mois ${dto.accrualMonth} appartient à la période ${monthInformation.referencePeriod}.`,
-        );
-      }
-
-      const movementRepository =
-        manager.getRepository(BalanceMovement);
-
-      const existingMovement = await movementRepository.findOne({
-        where: {
-          employeeId: balance.employeeId,
-          movementType: BalanceMovementType.ACQUISITION,
-          accrualMonth: dto.accrualMonth,
-        },
-      });
-
-      if (existingMovement) {
-        throw new ConflictException(
-          `L’acquisition du mois ${dto.accrualMonth} a déjà été enregistrée pour ce collaborateur.`,
-        );
-      }
 
       const balanceBefore = this.round(balance.availableDays);
 
@@ -220,14 +190,8 @@ export class LeaveBalancesService {
         balanceAfter: balance.availableDays,
         actorId: authenticatedUser.id,
         leaveRequestId: null,
-        accrualMonth: dto.accrualMonth,
-        effectiveDate: monthInformation.effectiveDate,
         reason:
-          dto.reason?.trim() ||
-          this.buildMonthlyAccrualReason(
-            monthInformation.monthLabel,
-            days,
-          ),
+          dto.reason?.trim() || 'Acquisition de congés payés.',
       });
     });
 
@@ -648,6 +612,18 @@ export class LeaveBalancesService {
   ): Promise<PaidLeaveReservationSummary> {
     const days = this.validatePositiveDays(data.days);
 
+    const existingActiveReservations =
+      await this.findActiveReservationAllocations(
+        manager,
+        data.leaveRequestId,
+      );
+
+    if (existingActiveReservations.length > 0) {
+      throw new ConflictException(
+        'Une réservation active existe déjà pour cette demande.',
+      );
+    }
+
     const balances = await manager
       .getRepository(LeaveBalance)
       .createQueryBuilder('balance')
@@ -760,6 +736,95 @@ export class LeaveBalancesService {
     };
   }
 
+  async releasePaidLeaveReservationForRequest(
+    manager: EntityManager,
+    data: {
+      employeeId: number;
+      leaveRequestId: number;
+      actorId: number | null;
+      reason?: string | null;
+    },
+  ): Promise<PaidLeaveReservationReleaseSummary> {
+    const activeReservations =
+      await this.findActiveReservationAllocations(
+        manager,
+        data.leaveRequestId,
+      );
+
+    if (activeReservations.length === 0) {
+      return {
+        releasedDays: 0,
+        releases: [],
+      };
+    }
+
+    let releasedDays = 0;
+    const releases: PaidLeaveReservationReleaseSummary['releases'] =
+      [];
+
+    for (const reservation of activeReservations) {
+      const balance = await this.findBalanceForUpdate(
+        manager,
+        reservation.leaveBalanceId,
+      );
+
+      if (balance.employeeId !== data.employeeId) {
+        throw new ConflictException(
+          'La réservation trouvée ne correspond pas au collaborateur de la demande.',
+        );
+      }
+
+      const days = this.round(reservation.days);
+
+      if (balance.reservedDays < days) {
+        throw new ConflictException(
+          'Les jours réservés sont insuffisants pour annuler la réservation de cette demande.',
+        );
+      }
+
+      const potentialBefore = this.round(
+        balance.availableDays - balance.reservedDays,
+      );
+
+      balance.reservedDays = this.round(
+        balance.reservedDays - days,
+      );
+
+      const potentialAfter = this.round(
+        balance.availableDays - balance.reservedDays,
+      );
+
+      await manager.getRepository(LeaveBalance).save(balance);
+
+      await this.createMovement(manager, {
+        balance,
+        movementType:
+          BalanceMovementType.LIBERATION_RESERVATION,
+        days,
+        balanceBefore: potentialBefore,
+        balanceAfter: potentialAfter,
+        actorId: data.actorId,
+        leaveRequestId: data.leaveRequestId,
+        reason:
+          data.reason?.trim() ||
+          'Libération de la réservation avant nouvelle soumission.',
+      });
+
+      releasedDays = this.round(releasedDays + days);
+      releases.push({
+        leaveBalanceId: balance.id,
+        referencePeriod: balance.referencePeriod,
+        counterType: balance.counterType,
+        days,
+      });
+    }
+
+    return {
+      releasedDays,
+      releases,
+    };
+  }
+
   async finalizePaidLeaveReservation(
     manager: EntityManager,
     data: {
@@ -773,22 +838,15 @@ export class LeaveBalancesService {
     processedDays: number;
     realBalanceAfter: number;
   }> {
-    const movementRepository =
-      manager.getRepository(BalanceMovement);
+    const activeReservations =
+      await this.findActiveReservationAllocations(
+        manager,
+        data.leaveRequestId,
+      );
 
-    const reservations = await movementRepository.find({
-      where: {
-        leaveRequestId: data.leaveRequestId,
-        movementType: BalanceMovementType.RESERVATION,
-      },
-      order: {
-        id: 'ASC',
-      },
-    });
-
-    if (reservations.length === 0) {
+    if (activeReservations.length === 0) {
       throw new NotFoundException(
-        'Aucune réservation de solde n’a été trouvée pour cette demande.',
+        'Aucune réservation active de solde n’a été trouvée pour cette demande.',
       );
     }
 
@@ -796,25 +854,32 @@ export class LeaveBalancesService {
       data.expectedDays,
     );
     const reservedDays = this.round(
-      reservations.reduce(
-        (total, reservation) => total + reservation.days,
+      activeReservations.reduce(
+        (total, reservation) =>
+          total + reservation.days,
         0,
       ),
     );
 
     if (reservedDays !== expectedDays) {
       throw new ConflictException(
-        'La réservation du solde ne correspond pas au nombre de jours de la demande.',
+        'La réservation active du solde ne correspond pas au nombre de jours de la demande.',
       );
     }
 
     let processedDays = 0;
 
-    for (const reservation of reservations) {
+    for (const reservation of activeReservations) {
       const balance = await this.findBalanceForUpdate(
         manager,
         reservation.leaveBalanceId,
       );
+
+      if (balance.employeeId !== data.employeeId) {
+        throw new ConflictException(
+          'La réservation trouvée ne correspond pas au collaborateur de la demande.',
+        );
+      }
 
       const days = this.round(reservation.days);
 
@@ -845,7 +910,9 @@ export class LeaveBalancesService {
           balance.availableDays - days,
         );
 
-        await manager.getRepository(LeaveBalance).save(balance);
+        await manager.getRepository(LeaveBalance).save(
+          balance,
+        );
 
         await this.createMovement(manager, {
           balance,
@@ -871,7 +938,9 @@ export class LeaveBalancesService {
           balance.availableDays - balance.reservedDays,
         );
 
-        await manager.getRepository(LeaveBalance).save(balance);
+        await manager.getRepository(LeaveBalance).save(
+          balance,
+        );
 
         await this.createMovement(manager, {
           balance,
@@ -910,6 +979,56 @@ export class LeaveBalancesService {
     };
   }
 
+  private async findActiveReservationAllocations(
+    manager: EntityManager,
+    leaveRequestId: number,
+  ): Promise<
+    Array<{
+      leaveBalanceId: number;
+      days: number;
+    }>
+  > {
+    const movements = await manager
+      .getRepository(BalanceMovement)
+      .find({
+        where: {
+          leaveRequestId,
+          movementType: In([
+            BalanceMovementType.RESERVATION,
+            BalanceMovementType.LIBERATION_RESERVATION,
+          ]),
+        },
+        order: {
+          id: 'ASC',
+        },
+      });
+
+    const amountsByBalance = new Map<number, number>();
+
+    for (const movement of movements) {
+      const currentAmount =
+        amountsByBalance.get(movement.leaveBalanceId) ?? 0;
+
+      const delta =
+        movement.movementType ===
+        BalanceMovementType.RESERVATION
+          ? movement.days
+          : -movement.days;
+
+      amountsByBalance.set(
+        movement.leaveBalanceId,
+        this.round(currentAmount + delta),
+      );
+    }
+
+    return [...amountsByBalance.entries()]
+      .filter(([, days]) => days > 0)
+      .map(([leaveBalanceId, days]) => ({
+        leaveBalanceId,
+        days: this.round(days),
+      }));
+  }
+
   private async createMovement(
     manager: EntityManager,
     data: {
@@ -920,8 +1039,6 @@ export class LeaveBalancesService {
       balanceAfter: number;
       actorId: number | null;
       leaveRequestId: number | null;
-      accrualMonth?: string | null;
-      effectiveDate?: string | null;
       reason: string | null;
     },
   ): Promise<BalanceMovement> {
@@ -937,8 +1054,6 @@ export class LeaveBalancesService {
       days: this.round(data.days),
       balanceBefore: this.round(data.balanceBefore),
       balanceAfter: this.round(data.balanceAfter),
-      accrualMonth: data.accrualMonth ?? null,
-      effectiveDate: data.effectiveDate ?? null,
       reason: data.reason,
     });
 
@@ -1101,89 +1216,6 @@ export class LeaveBalancesService {
       default:
         return 3;
     }
-  }
-
-
-  private getAccrualMonthInformation(accrualMonth: string): {
-    effectiveDate: string;
-    referencePeriod: string;
-    monthLabel: string;
-  } {
-    const match = /^(\d{4})-(0[1-9]|1[0-2])$/.exec(accrualMonth);
-
-    if (!match) {
-      throw new BadRequestException(
-        'Le mois d’acquisition doit respecter le format AAAA-MM.',
-      );
-    }
-
-    const year = Number(match[1]);
-    const month = Number(match[2]);
-    const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
-    const effectiveDate = `${year}-${String(month).padStart(
-      2,
-      '0',
-    )}-${String(lastDay).padStart(2, '0')}`;
-    const referencePeriod =
-      month >= 6
-        ? `${year}-${year + 1}`
-        : `${year - 1}-${year}`;
-    const monthLabels = [
-      'janvier',
-      'février',
-      'mars',
-      'avril',
-      'mai',
-      'juin',
-      'juillet',
-      'août',
-      'septembre',
-      'octobre',
-      'novembre',
-      'décembre',
-    ];
-
-    return {
-      effectiveDate,
-      referencePeriod,
-      monthLabel: monthLabels[month - 1],
-    };
-  }
-
-  private buildMonthlyAccrualReason(
-    monthLabel: string,
-    days: number,
-  ): string {
-    const usesElision = ['avril', 'août', 'octobre'].includes(
-      monthLabel,
-    );
-    const monthPart = usesElision
-      ? `d’${monthLabel}`
-      : `de ${monthLabel}`;
-    const daysLabel = days
-      .toFixed(2)
-      .replace(/0+$/, '')
-      .replace(/\.$/, '')
-      .replace('.', ',');
-
-    return `Acquisition mensuelle ${monthPart} : +${daysLabel} jours`;
-  }
-
-  private getMartiniqueDateString(date: Date): string {
-    const formatter = new Intl.DateTimeFormat('en-CA', {
-      timeZone: 'America/Martinique',
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    });
-    const parts = formatter.formatToParts(date);
-    const values = new Map(
-      parts.map((part) => [part.type, part.value]),
-    );
-
-    return `${values.get('year')}-${values.get('month')}-${values.get(
-      'day',
-    )}`;
   }
 
   private round(value: number): number {
