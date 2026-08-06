@@ -603,12 +603,12 @@ export class AbsenceDeclarationsService {
     leaveType: LeaveType;
     startDate: string;
     endDate: string;
-    startPeriod: DayPeriod;
-    endPeriod: DayPeriod;
+    startPeriod: DayPeriod | null;
+    endPeriod: DayPeriod | null;
     durationHours?: number;
   }): {
-    startPeriod: DayPeriod;
-    endPeriod: DayPeriod;
+    startPeriod: DayPeriod | null;
+    endPeriod: DayPeriod | null;
     durationDays: number | null;
     durationHours: number | null;
   } {
@@ -635,12 +635,15 @@ export class AbsenceDeclarationsService {
       }
 
       return {
-        startPeriod: DayPeriod.MATIN,
-        endPeriod: DayPeriod.APRES_MIDI,
+        startPeriod: null,
+        endPeriod: null,
         durationDays: null,
         durationHours: this.round(input.durationHours),
       };
     }
+
+    const startPeriod = input.startPeriod ?? DayPeriod.MATIN;
+    const endPeriod = input.endPeriod ?? DayPeriod.APRES_MIDI;
 
     if (
       !input.leaveType.allowsDays &&
@@ -653,8 +656,8 @@ export class AbsenceDeclarationsService {
 
     if (
       !input.leaveType.allowsHalfDays &&
-      (input.startPeriod !== DayPeriod.MATIN ||
-        input.endPeriod !== DayPeriod.APRES_MIDI)
+      (startPeriod !== DayPeriod.MATIN ||
+        endPeriod !== DayPeriod.APRES_MIDI)
     ) {
       throw new BadRequestException(
         'Le type sélectionné n’autorise pas les demi-journées.',
@@ -663,8 +666,8 @@ export class AbsenceDeclarationsService {
 
     if (
       startDate.getTime() === endDate.getTime() &&
-      input.startPeriod === DayPeriod.APRES_MIDI &&
-      input.endPeriod === DayPeriod.MATIN
+      startPeriod === DayPeriod.APRES_MIDI &&
+      endPeriod === DayPeriod.MATIN
     ) {
       throw new BadRequestException(
         'La période de fin ne peut pas précéder la période de début.',
@@ -678,17 +681,17 @@ export class AbsenceDeclarationsService {
           millisecondsPerDay,
       ) + 1;
 
-    if (input.startPeriod === DayPeriod.APRES_MIDI) {
+    if (startPeriod === DayPeriod.APRES_MIDI) {
       durationDays -= 0.5;
     }
 
-    if (input.endPeriod === DayPeriod.MATIN) {
+    if (endPeriod === DayPeriod.MATIN) {
       durationDays -= 0.5;
     }
 
     return {
-      startPeriod: input.startPeriod,
-      endPeriod: input.endPeriod,
+      startPeriod,
+      endPeriod,
       durationDays: this.round(Math.max(durationDays, 0)),
       durationHours: null,
     };

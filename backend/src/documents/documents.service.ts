@@ -51,9 +51,9 @@ export interface DocumentMetadataResponse {
   leaveRequestId: number | null;
   absenceDeclarationId: number | null;
   documentKind: DocumentKind;
-  originalName: string;
-  mimeType: string;
-  fileSize: number;
+  originalName: string | null;
+  mimeType: string | null;
+  fileSize: number | null;
   status: DocumentStatus;
   uploadedById: number;
   verifiedByRhId: number | null;
