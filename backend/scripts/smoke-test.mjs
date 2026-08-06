@@ -169,6 +169,36 @@ async function main() {
     path: '/leave-types',
     expectedStatus: 200,
   });
+  await check({
+    label: 'Tous les rôles consultent les paramètres publics',
+    token: tokens.collaborateur,
+    path: '/settings/public',
+    expectedStatus: 200,
+  });
+  await check({
+    label: 'RH consulte tous les paramètres',
+    token: tokens.rh,
+    path: '/settings',
+    expectedStatus: 200,
+  });
+  await check({
+    label: 'Collaborateur ne gère pas les paramètres',
+    token: tokens.collaborateur,
+    path: '/settings',
+    expectedStatus: 403,
+  });
+  await check({
+    label: 'Admin consulte les journaux techniques',
+    token: tokens.admin,
+    path: '/audit-logs?limit=10',
+    expectedStatus: 200,
+  });
+  await check({
+    label: 'Collaborateur ne consulte pas les journaux',
+    token: tokens.collaborateur,
+    path: '/audit-logs',
+    expectedStatus: 403,
+  });
 
   console.log('');
   console.log('Fonctionnalités métier déjà présentes');
@@ -256,6 +286,20 @@ async function main() {
     path: '/leave-balances/my',
     expectedStatus: 403,
   });
+  for (const [name, token] of Object.entries(tokens)) {
+    await check({
+      label: `Notifications de ${name}`,
+      token,
+      path: '/notifications/my',
+      expectedStatus: 200,
+    });
+    await check({
+      label: `Compteur de notifications de ${name}`,
+      token,
+      path: '/notifications/my/unread-count',
+      expectedStatus: 200,
+    });
+  }
 
   const failed = results.filter((result) => !result.ok);
   console.log('');

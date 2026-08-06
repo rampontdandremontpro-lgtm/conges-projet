@@ -31,6 +31,7 @@ import { SubmitLeaveRequestDto } from './dto/submit-leave-request.dto';
 import { UpdateLeaveRequestDto } from './dto/update-leave-request.dto';
 import { ValidateLeaveRequestDto } from './dto/validate-leave-request.dto';
 import { LeaveRequestsService } from './leave-requests.service';
+import { LeaveRequestSchedulerService } from './leave-request-scheduler.service';
 
 type AuthenticatedRequest = Request & {
   user: AuthenticatedUser;
@@ -47,6 +48,7 @@ export class LeaveRequestsController {
   constructor(
     private readonly leaveRequestsService: LeaveRequestsService,
     private readonly documentPdfService: DocumentPdfService,
+    private readonly leaveRequestSchedulerService: LeaveRequestSchedulerService,
   ) {}
 
   @Post()
@@ -89,6 +91,29 @@ export class LeaveRequestsController {
     @Req() request: AuthenticatedRequest,
   ) {
     return this.leaveRequestsService.findPendingForDecision(
+      request.user,
+    );
+  }
+
+  @Post('maintenance/run')
+  @HttpCode(HttpStatus.OK)
+  @Roles(UserRole.ADMIN, UserRole.RH)
+  runMaintenance() {
+    return this.leaveRequestSchedulerService.runMaintenance();
+  }
+
+  @Get('management/:id/alerts')
+  @Roles(
+    UserRole.RESPONSABLE_SERVICE,
+    UserRole.RH,
+    UserRole.DIRECTEUR,
+  )
+  getServiceAvailability(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    return this.leaveRequestsService.getServiceAvailability(
+      id,
       request.user,
     );
   }

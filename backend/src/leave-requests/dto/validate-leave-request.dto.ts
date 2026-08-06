@@ -30,4 +30,9 @@ export class ValidateLeaveRequestDto {
   @IsString()
   @MaxLength(1000)
   takeoverReason?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(1500)
+  minimumPresenceJustification?: string;
 }

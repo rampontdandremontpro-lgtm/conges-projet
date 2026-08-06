@@ -47,6 +47,8 @@ import {
   UserRole,
 } from '../users/user.entity';
 import { UsersService } from '../users/users.service';
+import { SettingsService } from '../settings/settings.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { CancelLeaveRequestDto } from './dto/cancel-leave-request.dto';
 import { CreateLeaveRequestDto } from './dto/create-leave-request.dto';
 import { RefuseLeaveRequestDto } from './dto/refuse-leave-request.dto';
@@ -60,6 +62,7 @@ import {
   type SubmissionNoticeInfo,
 } from './leave-request-notice.util';
 import { AuditAction, AuditLog } from '../audit/audit-log.entity';
+import { ServiceAvailabilityService } from './service-availability.service';
 import {
   DayPeriod,
   LeaveRequest,
@@ -99,6 +102,9 @@ export class LeaveRequestsService {
     private readonly derogationsService: DerogationsService,
     private readonly leaveBalancesService: LeaveBalancesService,
     private readonly documentPdfService: DocumentPdfService,
+    private readonly settingsService: SettingsService,
+    private readonly notificationsService: NotificationsService,
+    private readonly serviceAvailabilityService: ServiceAvailabilityService,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -162,7 +168,7 @@ export class LeaveRequestsService {
       status: LeaveRequestStatus.BROUILLON,
       comment: createLeaveRequestDto.comment?.trim() || null,
       submittedAt: null,
-      modificationDeadline: this.calculateModificationDeadline(
+      modificationDeadline: await this.calculateModificationDeadline(
         createLeaveRequestDto.startDate,
       ),
       realBalanceBefore: null,
@@ -268,7 +274,7 @@ export class LeaveRequestsService {
       }
 
       if (isSubmittedRequest) {
-        this.ensureModificationAllowed(leaveRequest.startDate);
+        await this.ensureModificationAllowed(leaveRequest.startDate);
       }
 
       const oldLeaveType = leaveRequest.leaveType;
@@ -325,7 +331,7 @@ export class LeaveRequestsService {
          * Le départ éventuellement modifié doit lui aussi
          * rester au minimum à J-7.
          */
-        this.ensureModificationAllowed(startDate);
+        await this.ensureModificationAllowed(startDate);
       }
 
       const dates = await this.validateAndCalculateDates(
@@ -337,7 +343,7 @@ export class LeaveRequestsService {
       );
 
       if (isSubmittedRequest) {
-        const notice = evaluateSubmissionNotice(
+        const notice = await this.evaluateSubmissionNoticeWithSettings(
           startDate,
           endDate,
           dates.calendarDuration,
@@ -355,7 +361,7 @@ export class LeaveRequestsService {
       leaveRequest.calendarDuration = dates.calendarDuration;
       leaveRequest.deductedDays = dates.deductedDays;
       leaveRequest.modificationDeadline =
-        this.calculateModificationDeadline(startDate);
+        await this.calculateModificationDeadline(startDate);
 
       if (updateLeaveRequestDto.comment !== undefined) {
         leaveRequest.comment =
@@ -532,7 +538,7 @@ export class LeaveRequestsService {
       leaveRequest.calendarDuration = dates.calendarDuration;
       leaveRequest.deductedDays = dates.deductedDays;
 
-      const notice = evaluateSubmissionNotice(
+      const notice = await this.evaluateSubmissionNoticeWithSettings(
         leaveRequest.startDate,
         leaveRequest.endDate,
         dates.calendarDuration,
@@ -631,7 +637,15 @@ export class LeaveRequestsService {
       );
     });
 
-    return this.findOwnedRequest(id, authenticatedUser.id);
+    const submittedRequest = await this.findOwnedRequest(
+      id,
+      authenticatedUser.id,
+    );
+    await this.notificationsService.notifyLeaveRequestSubmitted(
+      submittedRequest,
+    );
+
+    return submittedRequest;
   }
 
   async findPendingForDecision(
@@ -733,6 +747,20 @@ export class LeaveRequestsService {
     );
   }
 
+  async getServiceAvailability(
+    id: number,
+    authenticatedUser: AuthenticatedUser,
+  ) {
+    const leaveRequest = await this.findRequestForDecision(
+      id,
+      authenticatedUser,
+    );
+
+    return this.serviceAvailabilityService.analyzeLeaveRequest(
+      leaveRequest,
+    );
+  }
+
   async validateRequest(
     id: number,
     authenticatedUser: AuthenticatedUser,
@@ -755,6 +783,23 @@ export class LeaveRequestsService {
         dto.emergencyTakeover ?? false,
         dto.takeoverReason,
       );
+
+      const availability =
+        await this.serviceAvailabilityService.analyzeLeaveRequest(
+          leaveRequest,
+          manager,
+        );
+      const minimumPresenceJustification =
+        dto.minimumPresenceJustification?.trim() || null;
+
+      if (
+        availability.minimumPresenceBreached &&
+        !minimumPresenceJustification
+      ) {
+        throw new BadRequestException(
+          `La validation ferait passer la présence du service sous le minimum de ${availability.minimumPresence} personne(s). Une justification est obligatoire.`,
+        );
+      }
 
       if (
         authenticatedUser.role === UserRole.RH &&
@@ -839,10 +884,22 @@ export class LeaveRequestsService {
             realBalanceAfter,
             rhConfirmedDirectorAgreement:
               leaveRequest.rhConfirmedDirectorAgreement,
+            serviceAvailability: availability,
+            minimumPresenceJustification,
           },
         }),
       );
     });
+
+    const validatedRequest = await this.findRequestForDecision(
+      id,
+      authenticatedUser,
+    );
+    await this.notificationsService.notifyLeaveRequestDecision(
+      validatedRequest,
+      'VALIDEE',
+      authenticatedUser.id,
+    );
 
     try {
       await this.documentPdfService.ensureValidationPdf(
@@ -856,7 +913,7 @@ export class LeaveRequestsService {
       );
     }
 
-    return this.findRequestForDecision(id, authenticatedUser);
+    return validatedRequest;
   }
 
   async refuseRequest(
@@ -949,7 +1006,17 @@ export class LeaveRequestsService {
       );
     });
 
-    return this.findRequestForDecision(id, authenticatedUser);
+    const refusedRequest = await this.findRequestForDecision(
+      id,
+      authenticatedUser,
+    );
+    await this.notificationsService.notifyLeaveRequestDecision(
+      refusedRequest,
+      'REFUSEE',
+      authenticatedUser.id,
+    );
+
+    return refusedRequest;
   }
 
   async cancelBeforeDecision(
@@ -2065,19 +2132,21 @@ export class LeaveRequestsService {
     }
   }
 
-  private ensureModificationAllowed(
+  private async ensureModificationAllowed(
     startDateValue: string,
-  ): void {
+  ): Promise<void> {
     const today = new Date();
     today.setUTCHours(0, 0, 0, 0);
+    const deadlineDays =
+      await this.settingsService.getModificationDeadlineDays();
 
     const modificationDeadline = this.parseDate(
-      this.calculateModificationDeadline(startDateValue),
+      await this.calculateModificationDeadline(startDateValue),
     );
 
     if (today.getTime() > modificationDeadline.getTime()) {
       throw new BadRequestException(
-        'Cette demande ne peut plus être modifiée : la limite de J-7 calendaires avant le départ est dépassée.',
+        `Cette demande ne peut plus être modifiée : la limite de J-${deadlineDays} calendaires avant le départ est dépassée.`,
       );
     }
   }
@@ -2094,13 +2163,30 @@ export class LeaveRequestsService {
       .digest('hex');
   }
 
-  private calculateModificationDeadline(
+  private async calculateModificationDeadline(
     startDateValue: string,
-  ): string {
+  ): Promise<string> {
+    const deadlineDays =
+      await this.settingsService.getModificationDeadlineDays();
     const startDate = this.parseDate(startDateValue);
-    startDate.setUTCDate(startDate.getUTCDate() - 7);
+    startDate.setUTCDate(startDate.getUTCDate() - deadlineDays);
 
     return startDate.toISOString().slice(0, 10);
+  }
+
+  private async evaluateSubmissionNoticeWithSettings(
+    startDate: string,
+    endDate: string,
+    calendarDuration: number,
+  ): Promise<SubmissionNoticeInfo> {
+    const rules = await this.settingsService.getSubmissionRules();
+    return evaluateSubmissionNotice(
+      startDate,
+      endDate,
+      calendarDuration,
+      new Date(),
+      rules,
+    );
   }
 
   private parseDate(value: string): Date {

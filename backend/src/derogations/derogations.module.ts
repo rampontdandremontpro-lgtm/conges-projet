@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { AuditLog } from '../audit/audit-log.entity';
 import { LeaveRequest } from '../leave-requests/leave-request.entity';
+import { SettingsModule } from '../settings/settings.module';
 import { Derogation } from './derogation.entity';
 import { DerogationsController } from './derogations.controller';
 import { DerogationsService } from './derogations.service';
@@ -14,6 +15,7 @@ import { DerogationsService } from './derogations.service';
       LeaveRequest,
       AuditLog,
     ]),
+    SettingsModule,
   ],
   controllers: [DerogationsController],
   providers: [DerogationsService],

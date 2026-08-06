@@ -13,6 +13,7 @@ import {
 
 import type { AuthenticatedUser } from '../auth/jwt-payload.interface';
 import { AuditAction, AuditLog } from '../audit/audit-log.entity';
+import { SettingsService } from '../settings/settings.service';
 import {
   calculateDerogationExpiry,
   evaluateSubmissionNotice,
@@ -46,6 +47,7 @@ export class DerogationsService {
     private readonly derogationRepository: Repository<Derogation>,
 
     private readonly dataSource: DataSource,
+    private readonly settingsService: SettingsService,
   ) {}
 
   async createDraft(
@@ -62,7 +64,7 @@ export class DerogationsService {
 
         this.ensureLeaveRequestIsDraft(leaveRequest);
 
-        const notice = evaluateSubmissionNotice(
+        const notice = await this.evaluateSubmissionNoticeWithSettings(
           leaveRequest.startDate,
           leaveRequest.endDate,
           leaveRequest.calendarDuration,
@@ -95,7 +97,7 @@ export class DerogationsService {
           decidedByRhId: null,
           decisionComment: null,
           decidedAt: null,
-          expiresAt: calculateDerogationExpiry(
+          expiresAt: await this.calculateDerogationExpiryWithSettings(
             leaveRequest.startDate,
           ),
           usedAt: null,
@@ -138,7 +140,7 @@ export class DerogationsService {
 
       this.ensureLeaveRequestIsDraft(leaveRequest);
 
-      const notice = evaluateSubmissionNotice(
+      const notice = await this.evaluateSubmissionNoticeWithSettings(
         leaveRequest.startDate,
         leaveRequest.endDate,
         leaveRequest.calendarDuration,
@@ -150,7 +152,7 @@ export class DerogationsService {
       derogation.requestedStartDate = leaveRequest.startDate;
       derogation.requestedEndDate = leaveRequest.endDate;
       derogation.reason = dto.reason.trim();
-      derogation.expiresAt = calculateDerogationExpiry(
+      derogation.expiresAt = await this.calculateDerogationExpiryWithSettings(
         leaveRequest.startDate,
       );
 
@@ -187,7 +189,7 @@ export class DerogationsService {
 
       this.ensureLeaveRequestIsDraft(leaveRequest);
 
-      const notice = evaluateSubmissionNotice(
+      const notice = await this.evaluateSubmissionNoticeWithSettings(
         leaveRequest.startDate,
         leaveRequest.endDate,
         leaveRequest.calendarDuration,
@@ -202,7 +204,7 @@ export class DerogationsService {
       derogation.requestedEndDate = leaveRequest.endDate;
       derogation.status = DerogationStatus.EN_ATTENTE_RH;
       derogation.requestedAt = requestedAt;
-      derogation.expiresAt = calculateDerogationExpiry(
+      derogation.expiresAt = await this.calculateDerogationExpiryWithSettings(
         leaveRequest.startDate,
       );
 
@@ -528,7 +530,7 @@ export class DerogationsService {
     status: DerogationStatus;
     requiresRhDecision: boolean;
   } | null> {
-    const notice = evaluateSubmissionNotice(
+    const notice = await this.evaluateSubmissionNoticeWithSettings(
       data.leaveRequest.startDate,
       data.leaveRequest.endDate,
       data.leaveRequest.calendarDuration,
@@ -567,7 +569,7 @@ export class DerogationsService {
       data.leaveRequest.startDate;
     derogation.requestedEndDate =
       data.leaveRequest.endDate;
-    derogation.expiresAt = calculateDerogationExpiry(
+    derogation.expiresAt = await this.calculateDerogationExpiryWithSettings(
       data.leaveRequest.startDate,
     );
     derogation.usedAt = null;
@@ -659,6 +661,31 @@ export class DerogationsService {
       previousStatus,
       newStatus: derogation.status,
     };
+  }
+
+  private async evaluateSubmissionNoticeWithSettings(
+    startDate: string,
+    endDate: string,
+    calendarDuration: number,
+  ): Promise<ReturnType<typeof evaluateSubmissionNotice>> {
+    const rules = await this.settingsService.getSubmissionRules();
+    return evaluateSubmissionNotice(
+      startDate,
+      endDate,
+      calendarDuration,
+      new Date(),
+      rules,
+    );
+  }
+
+  private async calculateDerogationExpiryWithSettings(
+    startDate: string,
+  ): Promise<Date> {
+    const rules = await this.settingsService.getSubmissionRules();
+    return calculateDerogationExpiry(
+      startDate,
+      rules.derogationLastAllowedDay,
+    );
   }
 
   private validateDerogationWindow(

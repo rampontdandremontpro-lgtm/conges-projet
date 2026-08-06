@@ -8,11 +8,15 @@ import { DocumentsModule } from '../documents/documents.module';
 import { HolidaysModule } from '../holidays/holidays.module';
 import { LeaveBalancesModule } from '../leave-balances/leave-balances.module';
 import { LeaveTypesModule } from '../leave-types/leave-types.module';
+import { NotificationsModule } from '../notifications/notifications.module';
+import { SettingsModule } from '../settings/settings.module';
 import { UsersModule } from '../users/users.module';
 import { AuditLog } from '../audit/audit-log.entity';
 import { LeaveRequest } from './leave-request.entity';
 import { LeaveRequestsController } from './leave-requests.controller';
 import { LeaveRequestsService } from './leave-requests.service';
+import { ServiceAvailabilityService } from './service-availability.service';
+import { LeaveRequestSchedulerService } from './leave-request-scheduler.service';
 
 @Module({
   imports: [
@@ -28,9 +32,15 @@ import { LeaveRequestsService } from './leave-requests.service';
     LeaveTypesModule,
     HolidaysModule,
     LeaveBalancesModule,
+    NotificationsModule,
+    SettingsModule,
   ],
   controllers: [LeaveRequestsController],
-  providers: [LeaveRequestsService],
+  providers: [
+    LeaveRequestsService,
+    ServiceAvailabilityService,
+    LeaveRequestSchedulerService,
+  ],
   exports: [LeaveRequestsService, TypeOrmModule],
 })
 export class LeaveRequestsModule {}
