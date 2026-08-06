@@ -771,12 +771,47 @@ async function main() {
     new Blob([Buffer.from('%PDF-1.4\n% Remplacement E2E\n%%EOF\n')], { type: 'application/pdf' }),
     'justificatif-remplace.pdf',
   );
-  await expectStatus('Collaborateur remplace le justificatif rejeté', 200, `/documents/${documentId}/replace`, {
-    token: tokens.collabB, method: 'PATCH', form: replaceForm,
-  });
-  await expectStatus('RH accepte le justificatif', 200, `/documents/${documentId}/accept`, {
-    token: tokens.rh, method: 'POST',
-  });
+  const replacementDocument = await expectStatus(
+    'Collaborateur remplace le justificatif rejeté',
+    200,
+    `/documents/${documentId}/replace`,
+    {
+      token: tokens.collabB,
+      method: 'PATCH',
+      form: replaceForm,
+    },
+  );
+
+  const replacementDocumentId = Number(replacementDocument.body?.id);
+
+  invariant(
+    Number.isInteger(replacementDocumentId) && replacementDocumentId > 0,
+    `Identifiant du justificatif de remplacement invalide : ${summarize(replacementDocument.body)}`,
+  );
+  invariant(
+    replacementDocumentId !== documentId,
+    'Le remplacement doit archiver l’ancien justificatif et créer un nouveau document.',
+  );
+
+  await expectStatus(
+    'L’ancien justificatif archivé n’est plus traitable',
+    404,
+    `/documents/${documentId}/accept`,
+    {
+      token: tokens.rh,
+      method: 'POST',
+    },
+  );
+
+  await expectStatus(
+    'RH accepte le justificatif de remplacement',
+    200,
+    `/documents/${replacementDocumentId}/accept`,
+    {
+      token: tokens.rh,
+      method: 'POST',
+    },
+  );
   await expectStatus('RH enregistre définitivement l’absence', 200, `/absence-declarations/${absenceBId}/register`, {
     token: tokens.rh, method: 'POST',
   }, (body) => {
