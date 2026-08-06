@@ -47,6 +47,7 @@ import {
   UserRole,
 } from '../users/user.entity';
 import { UsersService } from '../users/users.service';
+import { CancelLeaveRequestDto } from './dto/cancel-leave-request.dto';
 import { CreateLeaveRequestDto } from './dto/create-leave-request.dto';
 import { RefuseLeaveRequestDto } from './dto/refuse-leave-request.dto';
 import { SubmitLeaveRequestDto } from './dto/submit-leave-request.dto';
@@ -927,6 +928,104 @@ export class LeaveRequestsService {
     });
 
     return this.findRequestForDecision(id, authenticatedUser);
+  }
+
+  async cancelBeforeDecision(
+    id: number,
+    authenticatedUser: AuthenticatedUser,
+    dto: CancelLeaveRequestDto,
+  ): Promise<LeaveRequest> {
+    await this.dataSource.transaction(async (manager) => {
+      const leaveRequest = await this.findOwnedRequestForUpdate(
+        manager,
+        id,
+        authenticatedUser.id,
+      );
+
+      if (
+        ![
+          LeaveRequestStatus.BROUILLON,
+          LeaveRequestStatus.EN_ATTENTE_VALIDATION,
+        ].includes(leaveRequest.status)
+      ) {
+        throw new BadRequestException(
+          'Seule une demande en brouillon ou en attente de validation peut être annulée avant décision.',
+        );
+      }
+
+      const oldStatus = leaveRequest.status;
+      const reason = dto.reason?.trim() || null;
+      let releasedReservation: Awaited<
+        ReturnType<
+          LeaveBalancesService['releasePaidLeaveReservationForRequest']
+        >
+      > | null = null;
+
+      if (
+        oldStatus === LeaveRequestStatus.EN_ATTENTE_VALIDATION &&
+        leaveRequest.leaveType.deductsPaidLeaveBalance
+      ) {
+        releasedReservation =
+          await this.leaveBalancesService.releasePaidLeaveReservationForRequest(
+            manager,
+            {
+              employeeId: leaveRequest.employeeId,
+              leaveRequestId: leaveRequest.id,
+              actorId: authenticatedUser.id,
+              reason:
+                'Libération de la réservation après annulation de la demande avant décision.',
+            },
+          );
+
+        if (
+          releasedReservation.releasedDays !==
+          leaveRequest.deductedDays
+        ) {
+          throw new ConflictException(
+            'La réservation active du solde ne correspond pas au nombre de jours de la demande.',
+          );
+        }
+      }
+
+      const derogation =
+        await this.derogationsService.expireForCancelledRequest(
+          manager,
+          leaveRequest.id,
+        );
+
+      const cancelledAt = new Date();
+
+      leaveRequest.status = LeaveRequestStatus.ANNULEE;
+      leaveRequest.lockedAt = cancelledAt;
+      leaveRequest.version += 1;
+
+      await manager.getRepository(LeaveRequest).save(leaveRequest);
+
+      await manager.getRepository(LeaveRequestHistory).save(
+        manager.getRepository(LeaveRequestHistory).create({
+          leaveRequestId: leaveRequest.id,
+          leaveRequest,
+          action: LeaveRequestHistoryAction.DEMANDE_ANNULEE,
+          actorId: authenticatedUser.id,
+          oldStatus,
+          newStatus: LeaveRequestStatus.ANNULEE,
+          comment: reason,
+          metadata: {
+            cancelledAt,
+            submittedRequest:
+              oldStatus ===
+              LeaveRequestStatus.EN_ATTENTE_VALIDATION,
+            releasedReservationDays:
+              releasedReservation?.releasedDays ?? 0,
+            releasedReservations:
+              releasedReservation?.releases ?? [],
+            derogation,
+          },
+        }),
+      );
+    });
+
+    return this.findOwnedRequest(id, authenticatedUser.id);
   }
 
   async deleteDraft(

@@ -615,6 +615,55 @@ export class DerogationsService {
     };
   }
 
+  async expireForCancelledRequest(
+    manager: EntityManager,
+    leaveRequestId: number,
+  ): Promise<{
+    derogationId: number;
+    previousStatus: DerogationStatus;
+    newStatus: DerogationStatus;
+  } | null> {
+    const repository = manager.getRepository(Derogation);
+    const derogation = await repository
+      .createQueryBuilder('derogation')
+      .setLock('pessimistic_write')
+      .where('derogation.leaveRequestId = :leaveRequestId', {
+        leaveRequestId,
+      })
+      .getOne();
+
+    if (!derogation) {
+      return null;
+    }
+
+    if (
+      ![
+        DerogationStatus.BROUILLON,
+        DerogationStatus.EN_ATTENTE_RH,
+        DerogationStatus.ACCORDEE,
+      ].includes(derogation.status)
+    ) {
+      return {
+        derogationId: derogation.id,
+        previousStatus: derogation.status,
+        newStatus: derogation.status,
+      };
+    }
+
+    const previousStatus = derogation.status;
+
+    derogation.status = DerogationStatus.EXPIREE;
+    derogation.usedAt = null;
+
+    await repository.save(derogation);
+
+    return {
+      derogationId: derogation.id,
+      previousStatus,
+      newStatus: derogation.status,
+    };
+  }
+
   private validateDerogationWindow(
     notice: ReturnType<typeof evaluateSubmissionNotice>,
   ): void {
