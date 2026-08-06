@@ -25,7 +25,7 @@ import {
   DocumentStatus,
 } from '../documents/document.entity';
 import { DerogationsService } from '../derogations/derogations.service';
-import { GeneratedDocumentsService } from '../generated-documents/generated-documents.service';
+import { DocumentPdfService } from '../documents/document-pdf.service';
 import type { Holiday } from '../holidays/holiday.entity';
 import { HolidaysService } from '../holidays/holidays.service';
 import {
@@ -98,7 +98,7 @@ export class LeaveRequestsService {
     private readonly holidaysService: HolidaysService,
     private readonly derogationsService: DerogationsService,
     private readonly leaveBalancesService: LeaveBalancesService,
-    private readonly generatedDocumentsService: GeneratedDocumentsService,
+    private readonly documentPdfService: DocumentPdfService,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -113,6 +113,15 @@ export class LeaveRequestsService {
     if (!employee.isActive) {
       throw new ForbiddenException(
         'Le compte utilisateur est désactivé.',
+      );
+    }
+
+    const employeeServiceId = employee.serviceId;
+    const employeeService = employee.service;
+
+    if (!employeeServiceId || !employeeService) {
+      throw new BadRequestException(
+        'Un service actif doit être affecté à l’utilisateur avant de créer une demande de congé.',
       );
     }
 
@@ -142,8 +151,8 @@ export class LeaveRequestsService {
       createdBy: employee,
       leaveTypeId: leaveType.id,
       leaveType,
-      serviceId: employee.serviceId,
-      service: employee.service,
+      serviceId: employeeServiceId,
+      service: employeeService,
       startDate: createLeaveRequestDto.startDate,
       endDate: createLeaveRequestDto.endDate,
       startPeriod,
@@ -836,7 +845,7 @@ export class LeaveRequestsService {
     });
 
     try {
-      await this.generatedDocumentsService.ensureValidationPdf(
+      await this.documentPdfService.ensureValidationPdf(
         id,
         authenticatedUser.id,
       );
@@ -1249,7 +1258,7 @@ export class LeaveRequestsService {
     });
 
     try {
-      await this.generatedDocumentsService.ensureCancellationPdf(
+      await this.documentPdfService.ensureCancellationPdf(
         id,
         authenticatedUser.id,
       );

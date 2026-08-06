@@ -56,7 +56,6 @@ export class Service {
     name: 'validation_mode',
     type: 'enum',
     enum: ValidationMode,
-    default: ValidationMode.DIRECTEUR_ET_RH,
   })
   validationMode!: ValidationMode;
 

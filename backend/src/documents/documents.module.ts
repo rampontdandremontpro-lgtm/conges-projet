@@ -5,6 +5,7 @@ import { AbsenceDeclaration } from '../absence-declarations/absence-declaration.
 import { AbsenceDeclarationsModule } from '../absence-declarations/absence-declarations.module';
 import { LeaveRequest } from '../leave-requests/leave-request.entity';
 import { Document } from './document.entity';
+import { DocumentPdfService } from './document-pdf.service';
 import { DocumentsController } from './documents.controller';
 import { DocumentsService } from './documents.service';
 
@@ -18,7 +19,7 @@ import { DocumentsService } from './documents.service';
     AbsenceDeclarationsModule,
   ],
   controllers: [DocumentsController],
-  providers: [DocumentsService],
-  exports: [DocumentsService, TypeOrmModule],
+  providers: [DocumentsService, DocumentPdfService],
+  exports: [DocumentsService, DocumentPdfService, TypeOrmModule],
 })
 export class DocumentsModule {}

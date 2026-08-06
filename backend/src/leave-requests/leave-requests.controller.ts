@@ -17,7 +17,7 @@ import {
 import type { Request, Response } from 'express';
 
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { GeneratedDocumentsService } from '../generated-documents/generated-documents.service';
+import { DocumentPdfService } from '../documents/document-pdf.service';
 import type { AuthenticatedUser } from '../auth/jwt-payload.interface';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
@@ -46,7 +46,7 @@ type AuthenticatedRequest = Request & {
 export class LeaveRequestsController {
   constructor(
     private readonly leaveRequestsService: LeaveRequestsService,
-    private readonly generatedDocumentsService: GeneratedDocumentsService,
+    private readonly documentPdfService: DocumentPdfService,
   ) {}
 
   @Post()
@@ -220,7 +220,7 @@ export class LeaveRequestsController {
     @Res({ passthrough: true }) response: Response,
   ): Promise<StreamableFile> {
     const file =
-      await this.generatedDocumentsService.getCancellationPdf(
+      await this.documentPdfService.getCancellationPdf(
         id,
         request.user,
       );
@@ -253,7 +253,7 @@ export class LeaveRequestsController {
     @Res({ passthrough: true }) response: Response,
   ): Promise<StreamableFile> {
     const file =
-      await this.generatedDocumentsService.getValidationPdf(
+      await this.documentPdfService.getValidationPdf(
         id,
         request.user,
       );

@@ -7,7 +7,10 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Not, Repository } from 'typeorm';
 
-import { ServiceType } from '../services/service.entity';
+import {
+  Service,
+  ServiceType,
+} from '../services/service.entity';
 import { ServicesService } from '../services/services.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -15,6 +18,7 @@ import {
   EmploymentType,
   PresenceStatus,
   User,
+  UserRole,
 } from './user.entity';
 
 @Injectable()
@@ -35,20 +39,7 @@ export class UsersService {
       );
     }
 
-    const service = await this.servicesService.findOne(
-      createUserDto.serviceId,
-    );
-
-    if (!service.isActive) {
-      throw new BadRequestException(
-        'Le service sélectionné est désactivé.',
-      );
-    }
-
-    this.validateEmploymentType(
-      createUserDto.employmentType,
-      service.serviceType,
-    );
+    const service = await this.resolveServiceForCreation(createUserDto);
 
     const user = this.userRepository.create({
       nom: createUserDto.nom.trim(),
@@ -58,10 +49,10 @@ export class UsersService {
       microsoftId: createUserDto.microsoftId?.trim() || null,
       role: createUserDto.role,
       employmentType: createUserDto.employmentType,
-      hireDate: createUserDto.hireDate,
+      hireDate: createUserDto.hireDate ?? null,
       presenceStatus: PresenceStatus.PRESENT,
       isActive: true,
-      serviceId: service.id,
+      serviceId: service?.id ?? null,
       service,
       signatureType: null,
       signatureData: null,
@@ -145,7 +136,7 @@ export class UsersService {
       );
     }
 
-    let service = user.service;
+    let service: Service | null = user.service;
 
     if (
       updateUserDto.serviceId !== undefined &&
@@ -162,18 +153,26 @@ export class UsersService {
       }
     }
 
+    const role = updateUserDto.role ?? user.role;
     const employmentType =
       updateUserDto.employmentType ?? user.employmentType;
 
-    this.validateEmploymentType(employmentType, service.serviceType);
+    this.validateServiceRequirement(role, service);
+
+    if (service) {
+      this.validateEmploymentType(
+        employmentType,
+        service.serviceType,
+      );
+    }
 
     user.nom = updateUserDto.nom?.trim() ?? user.nom;
     user.prenom = updateUserDto.prenom?.trim() ?? user.prenom;
     user.email = email;
-    user.role = updateUserDto.role ?? user.role;
+    user.role = role;
     user.employmentType = employmentType;
     user.hireDate = updateUserDto.hireDate ?? user.hireDate;
-    user.serviceId = service.id;
+    user.serviceId = service?.id ?? null;
     user.service = service;
 
     if (updateUserDto.microsoftId !== undefined) {
@@ -200,6 +199,43 @@ export class UsersService {
     user.isActive = true;
     await this.userRepository.save(user);
     return this.findOne(id);
+  }
+
+  private async resolveServiceForCreation(
+    createUserDto: CreateUserDto,
+  ): Promise<Service | null> {
+    if (createUserDto.serviceId === undefined) {
+      this.validateServiceRequirement(createUserDto.role, null);
+      return null;
+    }
+
+    const service = await this.servicesService.findOne(
+      createUserDto.serviceId,
+    );
+
+    if (!service.isActive) {
+      throw new BadRequestException(
+        'Le service sélectionné est désactivé.',
+      );
+    }
+
+    this.validateEmploymentType(
+      createUserDto.employmentType,
+      service.serviceType,
+    );
+
+    return service;
+  }
+
+  private validateServiceRequirement(
+    role: UserRole,
+    service: Service | null,
+  ): void {
+    if (role !== UserRole.ADMIN && !service) {
+      throw new BadRequestException(
+        'Un service est obligatoire pour tous les rôles sauf ADMIN.',
+      );
+    }
   }
 
   private validateEmploymentType(

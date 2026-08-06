@@ -33,12 +33,14 @@ export class CreateUserDto {
   @IsEnum(EmploymentType)
   employmentType!: EmploymentType;
 
+  @IsOptional()
   @IsDateString()
-  hireDate!: string;
+  hireDate?: string;
 
+  @IsOptional()
   @IsInt()
   @Min(1)
-  serviceId!: number;
+  serviceId?: number;
 
   @IsOptional()
   @IsString()

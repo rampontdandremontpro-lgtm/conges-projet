@@ -13,5 +13,5 @@ export interface AuthenticatedUser {
   prenom: string;
   email: string;
   role: UserRole;
-  serviceId: number;
+  serviceId: number | null;
 }

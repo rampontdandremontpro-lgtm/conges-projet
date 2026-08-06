@@ -57,6 +57,15 @@ export class AbsenceDeclarationsService {
       authenticatedUser,
       dto.employeeId,
     );
+    const employeeServiceId = employee.serviceId;
+    const employeeService = employee.service;
+
+    if (!employeeServiceId || !employeeService) {
+      throw new BadRequestException(
+        'Un service actif doit être affecté au collaborateur avant de déclarer une absence.',
+      );
+    }
+
     const creator = await this.usersService.findOne(
       authenticatedUser.id,
     );
@@ -89,8 +98,8 @@ export class AbsenceDeclarationsService {
       createdBy: creator,
       leaveTypeId: leaveType.id,
       leaveType,
-      serviceId: employee.serviceId,
-      service: employee.service,
+      serviceId: employeeServiceId,
+      service: employeeService,
       startDate: dto.startDate,
       endDate: dto.endDate,
       startPeriod: duration.startPeriod,

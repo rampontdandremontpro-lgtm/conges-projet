@@ -25,7 +25,7 @@ import {
   Document,
   DocumentKind,
   DocumentStatus,
-} from '../documents/document.entity';
+} from './document.entity';
 import {
   DayPeriod,
   LeaveRequest,
@@ -42,7 +42,7 @@ export interface ValidationPdfFile {
 }
 
 @Injectable()
-export class GeneratedDocumentsService {
+export class DocumentPdfService {
   private readonly privateStorageRoot = resolve(
     process.cwd(),
     'storage',
@@ -226,7 +226,7 @@ export class GeneratedDocumentsService {
     const storageKey =
       storedDocument?.storageKey ??
       [
-        'generated-documents',
+        'official-pdfs',
         'cancellation',
         String(generatedAt.getFullYear()),
         `${referenceNumber}.pdf`,
@@ -556,7 +556,7 @@ export class GeneratedDocumentsService {
     generatedAt: Date,
   ): string {
     return [
-      'generated-documents',
+      'official-pdfs',
       'validation',
       String(generatedAt.getFullYear()),
       `${referenceNumber}.pdf`,

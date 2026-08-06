@@ -73,17 +73,17 @@ export class User {
   employmentType!: EmploymentType;
 
   @Column({ name: 'service_id', type: 'bigint', nullable: true })
-  serviceId!: number;
+  serviceId!: number | null;
 
   @ManyToOne(() => Service, {
     nullable: true,
     onDelete: 'SET NULL',
   })
   @JoinColumn({ name: 'service_id' })
-  service!: Service;
+  service!: Service | null;
 
   @Column({ name: 'hire_date', type: 'date', nullable: true })
-  hireDate!: string;
+  hireDate!: string | null;
 
   @Column({
     name: 'presence_status',

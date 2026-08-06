@@ -4,7 +4,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AbsenceDeclaration } from '../absence-declarations/absence-declaration.entity';
 import { Document } from '../documents/document.entity';
 import { DerogationsModule } from '../derogations/derogations.module';
-import { GeneratedDocumentsModule } from '../generated-documents/generated-documents.module';
+import { DocumentsModule } from '../documents/documents.module';
 import { HolidaysModule } from '../holidays/holidays.module';
 import { LeaveBalancesModule } from '../leave-balances/leave-balances.module';
 import { LeaveTypesModule } from '../leave-types/leave-types.module';
@@ -24,7 +24,7 @@ import { LeaveRequestsService } from './leave-requests.service';
     ]),
     UsersModule,
     DerogationsModule,
-    GeneratedDocumentsModule,
+    DocumentsModule,
     LeaveTypesModule,
     HolidaysModule,
     LeaveBalancesModule,

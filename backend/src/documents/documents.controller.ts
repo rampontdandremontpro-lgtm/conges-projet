@@ -134,18 +134,20 @@ export class DocumentsController {
     @Res() response: Response,
   ): Promise<void> {
     const result = await this.documentsService.openForRh(id);
-    const encodedName = encodeURIComponent(
-      result.document.originalName,
-    );
+    const originalName =
+      result.document.originalName ?? `justificatif-${result.document.id}`;
+    const mimeType =
+      result.document.mimeType ?? 'application/octet-stream';
+    const encodedName = encodeURIComponent(originalName);
 
-    response.setHeader(
-      'Content-Type',
-      result.document.mimeType,
-    );
-    response.setHeader(
-      'Content-Length',
-      result.document.fileSize.toString(),
-    );
+    response.setHeader('Content-Type', mimeType);
+
+    if (result.document.fileSize !== null) {
+      response.setHeader(
+        'Content-Length',
+        result.document.fileSize.toString(),
+      );
+    }
     response.setHeader(
       'Content-Disposition',
       `attachment; filename="justificatif"; filename*=UTF-8''${encodedName}`,

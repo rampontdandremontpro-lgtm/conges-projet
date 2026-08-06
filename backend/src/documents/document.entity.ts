@@ -43,7 +43,7 @@ export class Document {
   @Column({ name: 'leave_request_id', type: 'bigint', nullable: true })
   leaveRequestId!: number | null;
 
-  @ManyToOne(() => LeaveRequest, { nullable: true, onDelete: 'RESTRICT' })
+  @ManyToOne(() => LeaveRequest, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'leave_request_id' })
   leaveRequest!: LeaveRequest | null;
 
@@ -56,7 +56,7 @@ export class Document {
 
   @ManyToOne(() => AbsenceDeclaration, {
     nullable: true,
-    onDelete: 'RESTRICT',
+    onDelete: 'SET NULL',
   })
   @JoinColumn({ name: 'absence_declaration_id' })
   absenceDeclaration!: AbsenceDeclaration | null;

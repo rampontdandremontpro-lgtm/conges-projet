@@ -136,7 +136,7 @@ export class MonthlyAccrualService
     };
 
     for (const employee of employees) {
-      if (employee.hireDate > monthInformation.firstDate) {
+      if (!employee.hireDate || employee.hireDate > monthInformation.firstDate) {
         result.manualReviewRequired.push({
           employeeId: employee.id,
           nom: employee.nom,
