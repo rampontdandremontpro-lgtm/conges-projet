@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { DataSource } from 'typeorm';
 
 import { AuditService } from '../audit/audit.service';
+import { BalanceReminderService } from '../leave-balances/balance-reminder.service';
 import { LeaveBalancesService } from '../leave-balances/leave-balances.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PresenceService } from '../presence/presence.service';
@@ -33,6 +34,7 @@ describe('LeaveRequestSchedulerService — maintenance à la bascule de période
     onAfternoonStartHourChange: jest.Mock;
     removeAfternoonStartHourChangeListener: jest.Mock;
   };
+  let balanceReminderService: { runIfDue: jest.Mock };
   let capturedSettingChangeListener: (() => void) | undefined;
 
   beforeEach(async () => {
@@ -52,6 +54,20 @@ describe('LeaveRequestSchedulerService — maintenance à la bascule de période
       }),
       removeAfternoonStartHourChangeListener: jest.fn(),
     };
+    balanceReminderService = {
+      runIfDue: jest.fn().mockResolvedValue({
+        runAt: '',
+        referencePeriod: null,
+        deadline: null,
+        afterPeriodEnd: false,
+        periodClosed: false,
+        eligibleEmployees: [],
+        remindersCreated: 0,
+        recapRecipients: 0,
+        recapNotificationsCreated: 0,
+        errors: [],
+      }),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -62,6 +78,7 @@ describe('LeaveRequestSchedulerService — maintenance à la bascule de période
         { provide: LeaveBalancesService, useValue: {} },
         { provide: PresenceService, useValue: presenceService },
         { provide: SettingsService, useValue: settingsService },
+        { provide: BalanceReminderService, useValue: balanceReminderService },
       ],
     }).compile();
 
@@ -129,6 +146,7 @@ describe('LeaveRequestSchedulerService — maintenance à la bascule de période
           expiredRequests: 0,
           notificationsReevaluated: 0,
           presenceStatusesRefreshed: 0,
+          balanceReminders: null,
           errors: [],
         });
       const setTimeoutSpy = jest.spyOn(global, 'setTimeout');

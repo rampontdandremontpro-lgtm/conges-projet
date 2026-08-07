@@ -8,6 +8,7 @@ import { DataSource } from 'typeorm';
 
 import { AuditAction } from '../audit/audit-log.entity';
 import { AuditService } from '../audit/audit.service';
+import { BalanceReminderService, type BalanceReminderRunResult } from '../leave-balances/balance-reminder.service';
 import { LeaveBalancesService } from '../leave-balances/leave-balances.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PresenceService } from '../presence/presence.service';
@@ -28,6 +29,7 @@ export interface MaintenanceRunResult {
   expiredRequests: number;
   notificationsReevaluated: number;
   presenceStatusesRefreshed: number;
+  balanceReminders: BalanceReminderRunResult | null;
   errors: string[];
 }
 
@@ -61,6 +63,7 @@ export class LeaveRequestSchedulerService
     private readonly leaveBalancesService: LeaveBalancesService,
     private readonly presenceService: PresenceService,
     private readonly settingsService: SettingsService,
+    private readonly balanceReminderService: BalanceReminderService,
   ) {}
 
   onApplicationBootstrap(): void {
@@ -180,6 +183,7 @@ export class LeaveRequestSchedulerService
       expiredRequests: 0,
       notificationsReevaluated: 0,
       presenceStatusesRefreshed: 0,
+      balanceReminders: null,
       errors: [],
     };
   }
@@ -287,7 +291,34 @@ export class LeaveRequestSchedulerService
 
     await this.refreshPresenceStatuses(result);
 
+    await this.runBalanceReminders(result);
+
     return result;
+  }
+
+  /**
+   * E4 — Rappels de fin de période de référence : un seul appel
+   * d'orchestration léger vers BalanceReminderService (aucune logique
+   * métier E4 ici, aucun nouveau scheduler). Les échéances, soldes,
+   * éligibilité, anti-doublon et récapitulatif RH vivent dans
+   * BalanceReminderService.
+   */
+  private async runBalanceReminders(
+    result: MaintenanceRunResult,
+  ): Promise<void> {
+    try {
+      result.balanceReminders = await this.balanceReminderService.runIfDue();
+    } catch (error) {
+      this.logger.error(
+        'Le rappel de solde de fin de période a échoué.',
+        error instanceof Error ? error.stack : undefined,
+      );
+      result.errors.push(
+        `Rappels de solde : ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+    }
   }
 
   private async sendReminder(

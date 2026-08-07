@@ -143,6 +143,38 @@ export class NotificationsService {
     return { updated: result.affected ?? 0 };
   }
 
+  /**
+   * Vérifie l'existence EXACTE d'une notification (utilisateur + type +
+   * leaveRequestId), indépendamment de sa date de création.
+   *
+   * Utilisée par E4 (rappels de fin de période) : un rappel envoyé en
+   * retard (rattrapage) ne doit jamais être recréé les jours suivants,
+   * alors que alreadyExistsSince() (borné à « aujourd'hui ») ne suffit
+   * pas à le savoir.
+   */
+  async alreadyExists(data: {
+    userId: number;
+    type: string;
+    leaveRequestId?: number | null;
+  }): Promise<boolean> {
+    const qb = this.notificationRepository
+      .createQueryBuilder('notification')
+      .where('notification.userId = :userId', {
+        userId: data.userId,
+      })
+      .andWhere('notification.type = :type', { type: data.type });
+
+    if (data.leaveRequestId === null || data.leaveRequestId === undefined) {
+      qb.andWhere('notification.leaveRequestId IS NULL');
+    } else {
+      qb.andWhere('notification.leaveRequestId = :leaveRequestId', {
+        leaveRequestId: data.leaveRequestId,
+      });
+    }
+
+    return (await qb.getCount()) > 0;
+  }
+
   async alreadyExistsSince(data: {
     userId: number;
     type: string;

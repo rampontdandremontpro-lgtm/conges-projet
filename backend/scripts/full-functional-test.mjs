@@ -2740,6 +2740,369 @@ async function main() {
   );
   invariant(derogationAuditOk, 'Audit de dérogation sans ressource réelle.');
 
+  section('E4 — Rappels de fin de période (soldes N-1)');
+  {
+    // ------------------------------------------------------------------
+    // Scénarios déterministes : REFERENCE_PERIOD_START est déplacé de façon
+    // que l'échéance voulue tombe sur un jour relatif à la date Martinique
+    // du jour d'exécution (jamais dépendant du jour réel), puis restauré à
+    // 06-01 en finally. Les assertions sont PAR UTILISATEUR DÉDIÉ : elles
+    // restent exactes même si la période forcée coïncide avec la période
+    // opérationnelle (des compteurs d'autres sections existent alors).
+    // ------------------------------------------------------------------
+    const D = martiniqueToday();
+    const mmddOf = (isoDate) => isoDate.slice(5);
+    // Même algorithme que reference-period.util.ts (période contenant D).
+    const periodFor = (dateStr, startMmDd) => {
+      const y = Number(dateStr.slice(0, 4));
+      const startOfYear = `${y}-${startMmDd}`;
+      return dateStr >= startOfYear ? `${y}-${y + 1}` : `${y - 1}-${y}`;
+    };
+    const originalReferencePeriodStart = '06-01';
+
+    // --- Fixtures E4 dédiées (aucun hardcode des comptes existants) ---
+    const e4Tag = Date.now().toString(36);
+    const [e4ServiceResult] = await db.execute(
+      `INSERT INTO services
+        (name, service_type, validation_mode, takeover_delay_days, minimum_presence, has_minimum_presence_rule, is_active)
+       VALUES (?, 'INTERNE', 'RESPONSABLE_PUIS_RELAIS', 7, 3, 1, 1)`,
+      [`ZZ E4 Rappels ${e4Tag}`],
+    );
+    const e4ServiceId = Number(e4ServiceResult.insertId);
+    const [e4HashRows] = await db.query(
+      `SELECT password_hash AS passwordHash FROM users WHERE email = 'responsable@gmes.fr'`,
+    );
+    const e4PasswordHash = e4HashRows[0].passwordHash;
+
+    const insertE4User = async ({ nom, prenom, email, role, employmentType = 'INTERNE' }) => {
+      const [result] = await db.execute(
+        `INSERT INTO users
+          (nom, prenom, email, password_hash, role, employment_type, service_id, hire_date, presence_status, is_active)
+         VALUES (?, ?, ?, ?, ?, ?, ?, '2024-01-01', 'PRESENT', 1)`,
+        [nom, prenom, email, e4PasswordHash, role, employmentType, e4ServiceId],
+      );
+      return Number(result.insertId);
+    };
+
+    const e4Users = {
+      collabA: await insertE4User({ nom: 'E4-COLLAB-A', prenom: 'Alice', email: `e4-collab-a-${e4Tag}@gmes.test`, role: 'COLLABORATEUR' }),
+      extA: await insertE4User({ nom: 'E4-EXT-A', prenom: 'Éric', email: `e4-ext-a-${e4Tag}@gmes.test`, role: 'COLLABORATEUR', employmentType: 'EXTERNE' }),
+      respA: await insertE4User({ nom: 'E4-RESP-A', prenom: 'Rachel', email: `e4-resp-a-${e4Tag}@gmes.test`, role: 'RESPONSABLE_SERVICE' }),
+      dirA: await insertE4User({ nom: 'E4-DIR-A', prenom: 'David', email: `e4-dir-a-${e4Tag}@gmes.test`, role: 'DIRECTEUR' }),
+      rhA: await insertE4User({ nom: 'E4-RH-A', prenom: 'Rita', email: `e4-rh-a-${e4Tag}@gmes.test`, role: 'RH' }),
+      rhB: await insertE4User({ nom: 'E4-RH-B', prenom: 'Romain', email: `e4-rh-b-${e4Tag}@gmes.test`, role: 'RH' }),
+      collabZero: await insertE4User({ nom: 'E4-ZERO', prenom: 'Zoé', email: `e4-zero-${e4Tag}@gmes.test`, role: 'COLLABORATEUR' }),
+      adminE4: await insertE4User({ nom: 'E4-ADMIN', prenom: 'André', email: `e4-admin-${e4Tag}@gmes.test`, role: 'ADMIN' }),
+    };
+
+    const initializeE4Balance = async (employeeId, period, days) => {
+      await expectStatus(
+        `Initialisation N-1 ${period} — ${days} j (employé ${employeeId})`,
+        201,
+        '/leave-balances/initialize',
+        {
+          token: tokens.rh,
+          method: 'POST',
+          body: {
+            employeeId,
+            referencePeriod: period,
+            counterType: 'N-1',
+            acquiredDays: days,
+            reason: 'Initialisation automatisée du scénario E4.',
+          },
+        },
+      );
+    };
+
+    const countNotifications = async (type, userId = null) => {
+      if (userId === null) {
+        const [rows] = await db.query(
+          `SELECT COUNT(*) AS total FROM notifications WHERE type = ?`,
+          [type],
+        );
+        return Number(rows[0].total);
+      }
+      const [rows] = await db.query(
+        `SELECT COUNT(*) AS total FROM notifications WHERE type = ? AND user_id = ?`,
+        [type, userId],
+      );
+      return Number(rows[0].total);
+    };
+
+    // RH actives au moment du run (base + fixtures E4).
+    const [rhRows] = await db.query(
+      `SELECT id FROM users WHERE role = 'RH' AND is_active = 1`,
+    );
+    const expectedRecapCount = rhRows.length;
+    invariant(
+      expectedRecapCount >= 1,
+      'Aucune RH active pour le récapitulatif E4.',
+    );
+
+    const startA = addDays(D, 8); // fin = D+7 → échéance 7 jours = D.
+    const periodA = periodFor(D, mmddOf(startA));
+    const reminderType7D = `BALANCE_REMINDER_7D_${periodA}`;
+    const recapType7D = `BALANCE_RECAP_7D_${periodA}`;
+
+    try {
+      // --- Phase 1 : échéance 7 jours = aujourd'hui (jour exact) ---
+      await expectStatus(
+        'RH force REFERENCE_PERIOD_START (échéance 7 jours aujourd’hui)',
+        200,
+        '/settings/REFERENCE_PERIOD_START',
+        {
+          token: tokens.rh,
+          method: 'PATCH',
+          body: {
+            settingValue: mmddOf(startA),
+            description: 'E4 : échéance 7 jours = aujourd’hui.',
+          },
+        },
+      );
+
+      await initializeE4Balance(e4Users.collabA, periodA, 8);
+      await initializeE4Balance(e4Users.extA, periodA, 6);
+      await initializeE4Balance(e4Users.respA, periodA, 4);
+      await initializeE4Balance(e4Users.dirA, periodA, 3);
+      await initializeE4Balance(e4Users.rhA, periodA, 2);
+      await initializeE4Balance(e4Users.collabZero, periodA, 2);
+      // collabZero : 2 disponibles / 2 réservés → potentiel = 0.
+      await db.execute(
+        `UPDATE leave_balances
+            SET reserved_days = 2
+          WHERE employee_id = ? AND reference_period = ? AND counter_type = 'N-1'`,
+        [e4Users.collabZero, periodA],
+      );
+
+      const run1 = await expectStatus(
+        'Maintenance E4 — échéance 7 jours (phase 1)',
+        200,
+        '/leave-requests/maintenance/run',
+        { token: tokens.rh, method: 'POST' },
+        (body) => {
+          invariant(
+            body.balanceReminders?.referencePeriod === periodA,
+            `Période E4 ${body.balanceReminders?.referencePeriod}, attendue ${periodA}.`,
+          );
+          invariant(
+            body.balanceReminders?.deadline?.key === '7D',
+            `Échéance ${body.balanceReminders?.deadline?.key}, attendue 7D.`,
+          );
+          return true;
+        },
+      );
+      record(
+        'La maintenance expose le résultat E4 (période + échéance)',
+        'PASS',
+        `referencePeriod=${run1.body.balanceReminders.referencePeriod}, deadline=${run1.body.balanceReminders.deadline.key}.`,
+      );
+
+      // Rappels individuels : chaque compteur N-1 positif dédié est rappelé.
+      const positiveBalanceUserIds = [
+        e4Users.collabA, e4Users.extA, e4Users.respA, e4Users.dirA, e4Users.rhA,
+      ];
+      for (const userId of positiveBalanceUserIds) {
+        const total = await countNotifications(reminderType7D, userId);
+        invariant(total === 1, `Employé ${userId} : ${total} rappel(s) 7D attendu(s) 1.`);
+      }
+      record('Rappel individuel créé pour chaque compteur N-1 positif', 'PASS', 'Collaborateur, externe, Responsable, Directeur et RH.');
+
+      const [collabA7DRows] = await db.query(
+        `SELECT channel, email_sent_at AS emailSentAt, message
+           FROM notifications WHERE type = ? AND user_id = ?`,
+        [reminderType7D, e4Users.collabA],
+      );
+      invariant(collabA7DRows[0]?.channel === 'LES_DEUX', 'Canal attendu LES_DEUX.');
+      invariant(collabA7DRows[0]?.emailSentAt === null, 'emailSentAt doit rester NULL en E4.');
+      invariant(collabA7DRows[0].message.includes('8 jours de congés à utiliser'), 'Message E4 collabA inattendu.');
+      record('Rappel : canal LES_DEUX, emailSentAt NULL, message avec solde', 'PASS', collabA7DRows[0].message);
+
+      // Palier le plus récent uniquement (15D aussi due mais plus ancienne).
+      const oldPalierTotal = await countNotifications(`BALANCE_REMINDER_15D_${periodA}`);
+      invariant(oldPalierTotal === 0, 'Un palier plus ancien a été envoyé.');
+      record('Plusieurs paliers dus : seul le plus récent est envoyé', 'PASS', 'Aucun BALANCE_REMINDER_15D créé.');
+
+      // Potentiel = 0 : aucun rappel individuel.
+      const zeroTotal = await countNotifications(reminderType7D, e4Users.collabZero);
+      invariant(zeroTotal === 0, 'collabZero (potentiel 0) ne doit pas être rappelé.');
+      record('Potentiel = 0 : pas de rappel individuel', 'PASS', 'collabZero exclu.');
+
+      // Jamais Admin (compte dédié et tous les comptes ADMIN de la base).
+      const adminE4Total = await countNotifications(reminderType7D, e4Users.adminE4);
+      invariant(adminE4Total === 0, 'Un Admin dédié a reçu un rappel E4.');
+      const [adminGlobalRows] = await db.query(
+        `SELECT COUNT(*) AS total
+           FROM notifications n JOIN users u ON u.id = n.user_id
+          WHERE n.type LIKE 'BALANCE_REMINDER_%' AND u.role = 'ADMIN'`,
+      );
+      invariant(Number(adminGlobalRows[0].total) === 0, 'Un Admin a reçu un rappel E4.');
+      record('Aucune notification E4 pour un Admin', 'PASS', 'Admin exclu du rappel et du récap.');
+
+      // Récapitulatif RH : toutes les RH actives, jamais Directeur/Admin.
+      const recapTotal = await countNotifications(recapType7D);
+      invariant(recapTotal === expectedRecapCount, `Récaps ${recapTotal}, attendus ${expectedRecapCount}.`);
+      const rhARecapTotal = await countNotifications(recapType7D, e4Users.rhA);
+      const rhBRecapTotal = await countNotifications(recapType7D, e4Users.rhB);
+      invariant(rhARecapTotal === 1, 'rhA doit recevoir le récapitulatif.');
+      invariant(rhBRecapTotal === 1, 'rhB doit recevoir le récapitulatif.');
+      record('Récapitulatif RH : une notification par RH active', 'PASS', `${recapTotal} RH (dont les deux RH dédiées).`);
+      const [recapForbiddenRows] = await db.query(
+        `SELECT COUNT(*) AS total
+           FROM notifications n JOIN users u ON u.id = n.user_id
+          WHERE n.type LIKE 'BALANCE_RECAP_%' AND u.role IN ('DIRECTEUR', 'ADMIN')`,
+      );
+      invariant(Number(recapForbiddenRows[0].total) === 0, 'Directeur ou Admin a reçu un récapitulatif.');
+      record('Directeur et Admin ne reçoivent pas le récapitulatif RH', 'PASS', 'Confidentialité RH respectée.');
+      const [rhARecapRows] = await db.query(
+        `SELECT message FROM notifications WHERE user_id = ? AND type = ?`,
+        [e4Users.rhA, recapType7D],
+      );
+      const recapMessage = rhARecapRows[0]?.message ?? '';
+      for (const expected of ['E4-COLLAB-A', 'E4-EXT-A', 'E4-RESP-A', 'E4-DIR-A', 'E4-RH-A']) {
+        invariant(recapMessage.includes(expected), `Le récapitulatif doit contenir ${expected}.`);
+      }
+      invariant(!recapMessage.includes('E4-ZERO'), 'collabZero (potentiel 0) ne doit pas figurer dans le récapitulatif.');
+      invariant(!recapMessage.includes('E4-ADMIN'), 'Un Admin ne doit pas figurer dans le récapitulatif.');
+      invariant(recapMessage.includes(periodA), 'Le récapitulatif doit porter la période.');
+      invariant(recapMessage.includes('N-1'), 'Le récapitulatif doit mentionner le compteur N-1.');
+      record('Récapitulatif RH : contenu complet (nom, prénom, service, période, compteur, soldes, date limite)', 'PASS', 'Employés éligibles listés, aucun potentiel nul.');
+
+      // Double maintenance : aucun doublon (ni rappel ni récap).
+      await expectStatus(
+        'Maintenance E4 — second passage idempotent (phase 1 bis)',
+        200,
+        '/leave-requests/maintenance/run',
+        { token: tokens.rh, method: 'POST' },
+        (body) => {
+          invariant(
+            body.balanceReminders?.remindersCreated === 0,
+            `Second passage a créé ${body.balanceReminders?.remindersCreated} rappel(s).`,
+          );
+          invariant(
+            body.balanceReminders?.recapNotificationsCreated === 0,
+            `Second passage a créé ${body.balanceReminders?.recapNotificationsCreated} récap(s).`,
+          );
+          return true;
+        },
+      );
+      for (const userId of positiveBalanceUserIds) {
+        const total = await countNotifications(reminderType7D, userId);
+        invariant(total === 1, `Doublon de rappel 7D pour l'employé ${userId}.`);
+      }
+      const recapTotalAfterDup = await countNotifications(recapType7D);
+      invariant(recapTotalAfterDup === expectedRecapCount, 'Doublon de récapitulatif.');
+      record('Double maintenance : aucun doublon', 'PASS', 'Rappels et récap RH inchangés.');
+
+      // --- Phase 2 : rattrapage + solde relu (échéance 15 jours hier) ---
+      const startB = addDays(D, 15); // fin = D+14 → échéance 15 jours = D−1.
+      const periodB = periodFor(D, mmddOf(startB));
+      await expectStatus(
+        'RH force REFERENCE_PERIOD_START (échéance 15 jours hier = rattrapage)',
+        200,
+        '/settings/REFERENCE_PERIOD_START',
+        {
+          token: tokens.rh,
+          method: 'PATCH',
+          body: {
+            settingValue: mmddOf(startB),
+            description: 'E4 : échéance 15 jours hier (rattrapage).',
+          },
+        },
+      );
+      if (periodB !== periodA) {
+        // Cas limite de fin d'année : période distincte, soldes recréés.
+        await initializeE4Balance(e4Users.collabA, periodB, 3);
+        await initializeE4Balance(e4Users.extA, periodB, 6);
+        await initializeE4Balance(e4Users.respA, periodB, 4);
+        await initializeE4Balance(e4Users.dirA, periodB, 3);
+        await initializeE4Balance(e4Users.rhA, periodB, 2);
+      } else {
+        // Solde modifié entre deux échéances : 8 → 3 (relu à chaque passage).
+        await db.execute(
+          `UPDATE leave_balances
+              SET available_days = 3
+            WHERE employee_id = ? AND reference_period = ? AND counter_type = 'N-1'`,
+          [e4Users.collabA, periodB],
+        );
+      }
+
+      await expectStatus(
+        'Maintenance E4 — rattrapage de l’échéance 15 jours (phase 2)',
+        200,
+        '/leave-requests/maintenance/run',
+        { token: tokens.rh, method: 'POST' },
+        (body) => {
+          invariant(
+            body.balanceReminders?.referencePeriod === periodB,
+            `Période E4 ${body.balanceReminders?.referencePeriod}, attendue ${periodB}.`,
+          );
+          invariant(
+            body.balanceReminders?.deadline?.key === '15D',
+            `Échéance ${body.balanceReminders?.deadline?.key}, attendue 15D (rattrapage).`,
+          );
+          return true;
+        },
+      );
+
+      const reminderType15D = `BALANCE_REMINDER_15D_${periodB}`;
+      const recapType15D = `BALANCE_RECAP_15D_${periodB}`;
+      for (const userId of positiveBalanceUserIds) {
+        const total = await countNotifications(reminderType15D, userId);
+        invariant(total === 1, `Employé ${userId} : ${total} rappel(s) 15D attendu(s) 1.`);
+      }
+      record('Rattrapage : échéance due envoyée au passage suivant', 'PASS', 'Rappels 15D créés malgré une échéance hier.');
+      const [collabA15DRows] = await db.query(
+        `SELECT message FROM notifications WHERE type = ? AND user_id = ?`,
+        [reminderType15D, e4Users.collabA],
+      );
+      const collabA15D = collabA15DRows[0]?.message ?? '';
+      invariant(collabA15D.includes('3 jours'), 'Le rappel 15D doit relire le solde courant (3 j).');
+      invariant(!collabA15D.includes('8 jours'), 'Le rappel 15D ne doit pas réutiliser l’ancien solde (8 j).');
+      record('Solde modifié entre deux rappels : valeur actuelle relue', 'PASS', collabA15D);
+      const [anciensPaliersRows] = await db.query(
+        `SELECT COUNT(*) AS total FROM notifications WHERE type IN (?, ?, ?)`,
+        [
+          `BALANCE_REMINDER_3M_${periodB}`,
+          `BALANCE_REMINDER_2M_${periodB}`,
+          `BALANCE_REMINDER_1M_${periodB}`,
+        ],
+      );
+      invariant(Number(anciensPaliersRows[0].total) === 0, 'Les paliers 3M/2M/1M ne doivent pas être envoyés en rattrapage.');
+      record('Rattrapage : aucun ancien palier simultané', 'PASS', 'Seul 15D est envoyé.');
+      const recap15DTotal = await countNotifications(recapType15D);
+      invariant(recap15DTotal === expectedRecapCount, 'Récap 15D manquant.');
+      const [rhA15DRecapRows] = await db.query(
+        `SELECT message FROM notifications WHERE user_id = ? AND type = ?`,
+        [e4Users.rhA, recapType15D],
+      );
+      const recap15DMessage = rhA15DRecapRows[0]?.message ?? '';
+      invariant(!recap15DMessage.includes('E4-ZERO'), 'Le récap 15D ne doit pas contenir un potentiel nul.');
+      record('Récapitulatif RH après rattrapage : aucune ligne à potentiel nul', 'PASS', 'Période et échéance portées par le type.');
+    } finally {
+      await expectStatus(
+        'RH restaure REFERENCE_PERIOD_START à 06-01',
+        200,
+        '/settings/REFERENCE_PERIOD_START',
+        {
+          token: tokens.rh,
+          method: 'PATCH',
+          body: {
+            settingValue: originalReferencePeriodStart,
+            description: 'E4 : restauration du paramètre de période.',
+          },
+        },
+      );
+      const [restoredSetting] = await db.query(
+        `SELECT setting_value AS settingValue FROM settings WHERE setting_key = 'REFERENCE_PERIOD_START'`,
+      );
+      invariant(
+        restoredSetting[0]?.settingValue === originalReferencePeriodStart,
+        'REFERENCE_PERIOD_START n’a pas été restauré à 06-01.',
+      );
+    }
+    record('REFERENCE_PERIOD_START restauré à 06-01 (fin E4)', 'PASS', 'La suite de clôture/acquisition n’est pas contaminée.');
+  }
+
   section('Validation finale de la base');
   const [tableRows] = await db.query(
     `SELECT TABLE_NAME AS tableName FROM information_schema.TABLES

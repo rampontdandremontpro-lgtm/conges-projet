@@ -6,6 +6,8 @@ import { NotificationsModule } from '../notifications/notifications.module';
 
 import { SettingsModule } from '../settings/settings.module';
 import { UsersModule } from '../users/users.module';
+import { User } from '../users/user.entity';
+import { BalanceReminderService } from './balance-reminder.service';
 import { BalanceMovement } from './balance-movement.entity';
 import { LeaveBalance } from './leave-balance.entity';
 import { LeaveBalancesController } from './leave-balances.controller';
@@ -18,6 +20,7 @@ import { ReferencePeriodService } from './reference-period.service';
     TypeOrmModule.forFeature([
       LeaveBalance,
       BalanceMovement,
+      User,
     ]),
     UsersModule,
     SettingsModule,
@@ -29,11 +32,13 @@ import { ReferencePeriodService } from './reference-period.service';
     LeaveBalancesService,
     MonthlyAccrualService,
     ReferencePeriodService,
+    BalanceReminderService,
   ],
   exports: [
     LeaveBalancesService,
     MonthlyAccrualService,
     ReferencePeriodService,
+    BalanceReminderService,
     TypeOrmModule,
   ],
 })
