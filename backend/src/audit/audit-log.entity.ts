@@ -1,5 +1,4 @@
 import {
-  BeforeInsert,
   Column,
   CreateDateColumn,
   Entity,
@@ -9,7 +8,6 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 
-import { LeaveRequestStatus } from '../leave-requests/leave-request.entity';
 import { User } from '../users/user.entity';
 
 export enum AuditAction {
@@ -67,43 +65,4 @@ export class AuditLog {
 
   @CreateDateColumn({ name: 'created_at', type: 'datetime' })
   createdAt!: Date;
-
-  // Champs de compatibilité conservés uniquement comme filet de sécurité :
-  // plus aucun appelant production ne les utilise (toutes les écritures
-  // métier passent par AuditService.record / recordStatusChange avec des
-  // colonnes explicites — voir anomalie AUD-1 corrigée).
-  leaveRequestId?: number;
-  leaveRequest?: unknown;
-  oldStatus?: LeaveRequestStatus | null;
-  newStatus?: LeaveRequestStatus | null;
-  comment?: string | null;
-  metadata?: Record<string, unknown> | null;
-
-  @BeforeInsert()
-  normalizeLegacyPayload(): void {
-    if (this.leaveRequestId !== undefined) {
-      this.resourceType = 'LEAVE_REQUEST';
-      this.resourceId = this.leaveRequestId;
-    }
-
-    this.resourceType ??= 'APPLICATION';
-    this.resourceId ??= null;
-    this.actorId ??= null;
-    this.ipAddress ??= null;
-
-    if (this.oldValue === undefined) {
-      this.oldValue =
-        this.oldStatus === undefined
-          ? null
-          : { status: this.oldStatus ?? null };
-    }
-
-    if (this.newValue === undefined) {
-      this.newValue = {
-        status: this.newStatus ?? null,
-        comment: this.comment ?? null,
-        metadata: this.metadata ?? null,
-      };
-    }
-  }
 }
