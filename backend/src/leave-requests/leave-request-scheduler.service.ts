@@ -44,6 +44,16 @@ export class LeaveRequestSchedulerService
   private switchTimer?: NodeJS.Timeout;
   private running = false;
 
+  /**
+   * Handler stable (propriété liée) pour le désabonnement propre au
+   * shutdown. Replanifie la maintenance de bascule après modification
+   * réussie de AFTERNOON_START_HOUR pendant que l'application tourne :
+   * l'ancien timer est annulé puis recalculé sur la nouvelle valeur.
+   */
+  private readonly handleAfternoonStartHourChange = (): void => {
+    void this.scheduleNextSwitchMaintenance();
+  };
+
   constructor(
     private readonly dataSource: DataSource,
     private readonly auditService: AuditService,
@@ -60,6 +70,9 @@ export class LeaveRequestSchedulerService
     }, this.intervalMilliseconds);
     this.scheduler.unref();
     void this.scheduleNextSwitchMaintenance();
+    this.settingsService.onAfternoonStartHourChange(
+      this.handleAfternoonStartHourChange,
+    );
   }
 
   onApplicationShutdown(): void {
@@ -69,6 +82,9 @@ export class LeaveRequestSchedulerService
     if (this.switchTimer) {
       clearTimeout(this.switchTimer);
     }
+    this.settingsService.removeAfternoonStartHourChangeListener(
+      this.handleAfternoonStartHourChange,
+    );
   }
 
   /**

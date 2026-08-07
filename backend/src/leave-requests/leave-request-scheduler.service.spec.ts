@@ -28,9 +28,15 @@ describe('LeaveRequestSchedulerService — maintenance à la bascule de période
     reevaluateRecipientsForRequest: jest.Mock;
   };
   let presenceService: { refreshAllStatuses: jest.Mock };
-  let settingsService: { getString: jest.Mock };
+  let settingsService: {
+    getString: jest.Mock;
+    onAfternoonStartHourChange: jest.Mock;
+    removeAfternoonStartHourChangeListener: jest.Mock;
+  };
+  let capturedSettingChangeListener: (() => void) | undefined;
 
   beforeEach(async () => {
+    capturedSettingChangeListener = undefined;
     leaveRepository = { find: jest.fn() };
     dataSource = {
       getRepository: jest.fn().mockReturnValue(leaveRepository),
@@ -41,6 +47,10 @@ describe('LeaveRequestSchedulerService — maintenance à la bascule de période
     presenceService = { refreshAllStatuses: jest.fn() };
     settingsService = {
       getString: jest.fn().mockResolvedValue('12:00'),
+      onAfternoonStartHourChange: jest.fn((listener: () => void) => {
+        capturedSettingChangeListener = listener;
+      }),
+      removeAfternoonStartHourChangeListener: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -174,6 +184,112 @@ describe('LeaveRequestSchedulerService — maintenance à la bascule de période
         'AFTERNOON_START_HOUR',
         '12:00',
       );
+    });
+  });
+
+  describe('replanification après modification de AFTERNOON_START_HOUR', () => {
+    const bootstrapWithTimer = async () => {
+      leaveRepository.find.mockResolvedValue([]);
+      presenceService.refreshAllStatuses.mockResolvedValue({ updated: 0 });
+      service.onApplicationBootstrap();
+      // Laisse runMaintenance() et la première planification s'achever.
+      await jest.advanceTimersByTimeAsync(0);
+    };
+
+    it('A — 10:30 Martinique : 12:00 → 11:00 annule l’ancien timer et reprogramme à 11:00', async () => {
+      jest.useFakeTimers();
+      // 10:30 America/Martinique = 14:30 UTC (UTC−4).
+      jest.setSystemTime(new Date('2026-08-07T14:30:00.000Z'));
+      settingsService.getString.mockResolvedValue('12:00');
+      const setTimeoutSpy = jest.spyOn(global, 'setTimeout');
+      const clearTimeoutSpy = jest.spyOn(global, 'clearTimeout');
+
+      await bootstrapWithTimer();
+
+      // Bascule initiale : 12:00 Martinique = 16:00 UTC, dans 90 min.
+      const firstTimer = setTimeoutSpy.mock.results[0].value;
+      expect(setTimeoutSpy).toHaveBeenCalledTimes(1);
+      expect(setTimeoutSpy.mock.calls[0][1]).toBe(90 * 60 * 1000);
+      expect(capturedSettingChangeListener).toBeDefined();
+
+      // La RH modifie AFTERNOON_START_HOUR = 11:00 : l'écouteur
+      // replanifie immédiatement sur la nouvelle valeur.
+      settingsService.getString.mockResolvedValue('11:00');
+      capturedSettingChangeListener?.();
+      await jest.advanceTimersByTimeAsync(0);
+
+      // Ancien timer annulé, nouveau timer à 11:00 (30 min).
+      expect(clearTimeoutSpy).toHaveBeenCalledWith(firstTimer);
+      expect(setTimeoutSpy).toHaveBeenCalledTimes(2);
+      expect(setTimeoutSpy.mock.calls[1][1]).toBe(30 * 60 * 1000);
+      // Intervalle horaire + un seul switchTimer actif (pas d'accumulation).
+      expect(jest.getTimerCount()).toBe(2);
+    });
+
+    it('B — 10:30 Martinique : 12:00 → 13:00 reprogramme à 13:00', async () => {
+      jest.useFakeTimers();
+      jest.setSystemTime(new Date('2026-08-07T14:30:00.000Z'));
+      settingsService.getString.mockResolvedValue('12:00');
+      const setTimeoutSpy = jest.spyOn(global, 'setTimeout');
+      const clearTimeoutSpy = jest.spyOn(global, 'clearTimeout');
+
+      await bootstrapWithTimer();
+      const firstTimer = setTimeoutSpy.mock.results[0].value;
+      expect(setTimeoutSpy.mock.calls[0][1]).toBe(90 * 60 * 1000);
+
+      settingsService.getString.mockResolvedValue('13:00');
+      capturedSettingChangeListener?.();
+      await jest.advanceTimersByTimeAsync(0);
+
+      // 13:00 Martinique = 17:00 UTC, dans 150 min.
+      expect(clearTimeoutSpy).toHaveBeenCalledWith(firstTimer);
+      expect(setTimeoutSpy).toHaveBeenCalledTimes(2);
+      expect(setTimeoutSpy.mock.calls[1][1]).toBe(150 * 60 * 1000);
+      expect(jest.getTimerCount()).toBe(2);
+    });
+
+    it('D — modifications successives : un seul switchTimer actif', async () => {
+      jest.useFakeTimers();
+      jest.setSystemTime(new Date('2026-08-07T14:30:00.000Z'));
+      settingsService.getString.mockResolvedValue('12:00');
+      const setTimeoutSpy = jest.spyOn(global, 'setTimeout');
+      const clearTimeoutSpy = jest.spyOn(global, 'clearTimeout');
+
+      await bootstrapWithTimer();
+      const firstTimer = setTimeoutSpy.mock.results[0].value;
+
+      settingsService.getString.mockResolvedValue('11:00');
+      capturedSettingChangeListener?.();
+      await jest.advanceTimersByTimeAsync(0);
+      const secondTimer = setTimeoutSpy.mock.results[1].value;
+
+      settingsService.getString.mockResolvedValue('13:00');
+      capturedSettingChangeListener?.();
+      await jest.advanceTimersByTimeAsync(0);
+
+      // Chaque replanification annule le timer précédent : seul le
+      // dernier (13:00) reste actif.
+      expect(clearTimeoutSpy).toHaveBeenCalledWith(firstTimer);
+      expect(clearTimeoutSpy).toHaveBeenCalledWith(secondTimer);
+      expect(setTimeoutSpy).toHaveBeenCalledTimes(3);
+      expect(setTimeoutSpy.mock.calls[2][1]).toBe(150 * 60 * 1000);
+      expect(jest.getTimerCount()).toBe(2);
+    });
+
+    it('E — onApplicationShutdown désabonne l’écouteur et annule le switchTimer', async () => {
+      jest.useFakeTimers();
+      jest.setSystemTime(new Date('2026-08-07T14:30:00.000Z'));
+      settingsService.getString.mockResolvedValue('12:00');
+
+      await bootstrapWithTimer();
+      expect(jest.getTimerCount()).toBe(2);
+
+      service.onApplicationShutdown();
+
+      expect(
+        settingsService.removeAfternoonStartHourChangeListener,
+      ).toHaveBeenCalledWith(capturedSettingChangeListener);
+      expect(jest.getTimerCount()).toBe(0);
     });
   });
 });

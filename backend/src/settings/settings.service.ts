@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -20,6 +21,9 @@ export interface SubmissionRules {
   summerPeriodEnd: string;
 }
 
+/** Écouteur interne notifié après une modification réussie de AFTERNOON_START_HOUR. */
+export type AfternoonStartHourChangeListener = () => void;
+
 const PUBLIC_SETTING_KEYS = [
   'NORMAL_REQUEST_DEADLINE_DAYS',
   'SPECIAL_REQUEST_DEADLINE_DAYS',
@@ -34,10 +38,50 @@ const PUBLIC_SETTING_KEYS = [
 
 @Injectable()
 export class SettingsService {
+  private readonly logger = new Logger(SettingsService.name);
+  private readonly afternoonStartHourChangeListeners: AfternoonStartHourChangeListener[] =
+    [];
+
   constructor(
     @InjectRepository(Setting)
     private readonly settingRepository: Repository<Setting>,
   ) {}
+
+  /**
+   * Abonne un écouteur au changement de AFTERNOON_START_HOUR (après
+   * sauvegarde réussie uniquement). Mécanisme léger interne au module
+   * Settings : il évite toute dépendance circulaire avec LeaveRequestsModule
+   * (le scheduler consomme déjà SettingsService, jamais l'inverse).
+   */
+  onAfternoonStartHourChange(
+    listener: AfternoonStartHourChangeListener,
+  ): void {
+    if (!this.afternoonStartHourChangeListeners.includes(listener)) {
+      this.afternoonStartHourChangeListeners.push(listener);
+    }
+  }
+
+  removeAfternoonStartHourChangeListener(
+    listener: AfternoonStartHourChangeListener,
+  ): void {
+    const index = this.afternoonStartHourChangeListeners.indexOf(listener);
+    if (index >= 0) {
+      this.afternoonStartHourChangeListeners.splice(index, 1);
+    }
+  }
+
+  private notifyAfternoonStartHourChanged(): void {
+    for (const listener of [...this.afternoonStartHourChangeListeners]) {
+      try {
+        listener();
+      } catch (error) {
+        this.logger.error(
+          'Un écouteur de changement de AFTERNOON_START_HOUR a échoué.',
+          error instanceof Error ? error.stack : undefined,
+        );
+      }
+    }
+  }
 
   async findAll(): Promise<Setting[]> {
     return this.settingRepository.find({
@@ -206,6 +250,11 @@ export class SettingsService {
     }
 
     await this.settingRepository.save(setting);
+
+    if (setting.settingKey === 'AFTERNOON_START_HOUR') {
+      this.notifyAfternoonStartHourChanged();
+    }
+
     return this.findOne(setting.settingKey);
   }
 
