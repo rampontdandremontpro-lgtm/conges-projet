@@ -11,6 +11,11 @@ import {
 import { DayPeriod } from '../leave-request.entity';
 
 export class CreateLeaveRequestDto {
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  employeeId?: number;
+
   @IsInt()
   @Min(1)
   leaveTypeId!: number;

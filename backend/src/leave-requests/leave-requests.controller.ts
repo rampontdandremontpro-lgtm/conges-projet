@@ -62,6 +62,22 @@ export class LeaveRequestsController {
     );
   }
 
+  /**
+   * Le Directeur enregistre directement ses propres congés : sans
+   * validation, sans signature et sans circuit de validation.
+   */
+  @Post('director')
+  @Roles(UserRole.DIRECTEUR)
+  createDirectorRequest(
+    @Req() request: AuthenticatedRequest,
+    @Body() createLeaveRequestDto: CreateLeaveRequestDto,
+  ) {
+    return this.leaveRequestsService.createDirectorRequest(
+      request.user,
+      createLeaveRequestDto,
+    );
+  }
+
   @Get('my')
   findMyRequests(@Req() request: AuthenticatedRequest) {
     return this.leaveRequestsService.findMyRequests(request.user);

@@ -22,6 +22,7 @@ import {
   LeaveTypeCategory,
 } from '../leave-types/leave-type.entity';
 import { LeaveTypesService } from '../leave-types/leave-types.service';
+import { PresenceService } from '../presence/presence.service';
 import { User, UserRole } from '../users/user.entity';
 import { UsersService } from '../users/users.service';
 import {
@@ -47,6 +48,7 @@ export class AbsenceDeclarationsService {
 
     private readonly usersService: UsersService,
     private readonly leaveTypesService: LeaveTypesService,
+    private readonly presenceService: PresenceService,
   ) {}
 
   async createDraft(
@@ -360,6 +362,10 @@ export class AbsenceDeclarationsService {
 
     await this.absenceDeclarationRepository.save(declaration);
 
+    await this.presenceService.refreshUserStatus(
+      declaration.employeeId,
+    );
+
     return this.findAccessibleOne(id, authenticatedUser);
   }
 
@@ -387,6 +393,10 @@ export class AbsenceDeclarationsService {
     declaration.verifiedAt = new Date();
 
     await this.absenceDeclarationRepository.save(declaration);
+
+    await this.presenceService.refreshUserStatus(
+      declaration.employeeId,
+    );
 
     return this.findOneWithRelations(id);
   }
@@ -418,6 +428,10 @@ export class AbsenceDeclarationsService {
     declaration.status = AbsenceDeclarationStatus.ANNULEE;
 
     await this.absenceDeclarationRepository.save(declaration);
+
+    await this.presenceService.refreshUserStatus(
+      declaration.employeeId,
+    );
 
     return this.findAccessibleOne(id, authenticatedUser);
   }

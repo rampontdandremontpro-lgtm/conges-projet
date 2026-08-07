@@ -17,6 +17,7 @@ import { LeaveBalancesModule } from './leave-balances/leave-balances.module';
 import { LeaveRequestsModule } from './leave-requests/leave-requests.module';
 import { LeaveTypesModule } from './leave-types/leave-types.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { PresenceModule } from './presence/presence.module';
 import { ReportsModule } from './reports/reports.module';
 import { SettingsModule } from './settings/settings.module';
 import { ServicesModule } from './services/services.module';
@@ -50,6 +51,7 @@ import { UsersModule } from './users/users.module';
     }),
 
     AuditModule,
+    PresenceModule,
     SettingsModule,
     NotificationsModule,
     ReportsModule,

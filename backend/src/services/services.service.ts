@@ -14,6 +14,7 @@ import {
 } from '../users/user.entity';
 import { CreateServiceDto } from './dto/create-service.dto';
 import { UpdateServiceDto } from './dto/update-service.dto';
+import { PresenceService } from '../presence/presence.service';
 import {
   Service,
   ServiceType,
@@ -28,6 +29,8 @@ export class ServicesService {
 
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+
+    private readonly presenceService: PresenceService,
   ) {}
 
   async create(
@@ -279,7 +282,8 @@ export class ServicesService {
         manager.isActive &&
         manager.role === UserRole.RESPONSABLE_SERVICE &&
         manager.serviceId === service.id &&
-        manager.presenceStatus === PresenceStatus.PRESENT,
+        (await this.presenceService.computeStatus(manager.id)) ===
+          PresenceStatus.PRESENT,
     );
   }
 

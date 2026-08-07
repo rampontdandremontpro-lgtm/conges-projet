@@ -9,6 +9,7 @@ import { DataSource } from 'typeorm';
 import { AuditAction, AuditLog } from '../audit/audit-log.entity';
 import { LeaveBalancesService } from '../leave-balances/leave-balances.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { PresenceService } from '../presence/presence.service';
 import { User, UserRole } from '../users/user.entity';
 import {
   LeaveRequest,
@@ -19,6 +20,7 @@ export interface MaintenanceRunResult {
   runAt: string;
   remindersCreated: number;
   expiredRequests: number;
+  presenceStatusesRefreshed: number;
   errors: string[];
 }
 
@@ -37,6 +39,7 @@ export class LeaveRequestSchedulerService
     private readonly dataSource: DataSource,
     private readonly notificationsService: NotificationsService,
     private readonly leaveBalancesService: LeaveBalancesService,
+    private readonly presenceService: PresenceService,
   ) {}
 
   onApplicationBootstrap(): void {
@@ -59,6 +62,7 @@ export class LeaveRequestSchedulerService
         runAt: new Date().toISOString(),
         remindersCreated: 0,
         expiredRequests: 0,
+        presenceStatusesRefreshed: 0,
         errors: ['Une exécution est déjà en cours.'],
       };
     }
@@ -68,6 +72,7 @@ export class LeaveRequestSchedulerService
       runAt: new Date().toISOString(),
       remindersCreated: 0,
       expiredRequests: 0,
+      presenceStatusesRefreshed: 0,
       errors: [],
     };
 
@@ -122,6 +127,23 @@ export class LeaveRequestSchedulerService
     if (result.errors.length > 0) {
       this.logger.warn(
         `Maintenance terminée avec ${result.errors.length} erreur(s).`,
+      );
+    }
+
+    try {
+      const presenceResult =
+        await this.presenceService.refreshAllStatuses();
+      result.presenceStatusesRefreshed =
+        presenceResult.updated;
+    } catch (error) {
+      this.logger.error(
+        'Le recalcule des statuts de présence a échoué.',
+        error instanceof Error ? error.stack : undefined,
+      );
+      result.errors.push(
+        `Statuts de présence : ${
+          error instanceof Error ? error.message : String(error)
+        }`,
       );
     }
 

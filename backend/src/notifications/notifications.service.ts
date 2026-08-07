@@ -11,6 +11,7 @@ import {
 } from 'typeorm';
 
 import { LeaveRequest } from '../leave-requests/leave-request.entity';
+import { PresenceService } from '../presence/presence.service';
 import { Service, ValidationMode } from '../services/service.entity';
 import { PresenceStatus, User, UserRole } from '../users/user.entity';
 import {
@@ -38,6 +39,8 @@ export class NotificationsService {
 
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+
+    private readonly presenceService: PresenceService,
   ) {}
 
   async create(
@@ -202,7 +205,11 @@ export class NotificationsService {
         primaryManager &&
           primaryManager.isActive &&
           primaryManager.role === UserRole.RESPONSABLE_SERVICE &&
-          primaryManager.presenceStatus === PresenceStatus.PRESENT &&
+          (await this.presenceService.computeStatus(
+            primaryManager.id,
+            undefined,
+            manager,
+          )) === PresenceStatus.PRESENT &&
           Date.now() < takeoverAt.getTime(),
       );
 

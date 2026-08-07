@@ -47,6 +47,7 @@ import {
   UserRole,
 } from '../users/user.entity';
 import { UsersService } from '../users/users.service';
+import { PresenceService } from '../presence/presence.service';
 import { SettingsService } from '../settings/settings.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { CancelLeaveRequestDto } from './dto/cancel-leave-request.dto';
@@ -105,6 +106,7 @@ export class LeaveRequestsService {
     private readonly settingsService: SettingsService,
     private readonly notificationsService: NotificationsService,
     private readonly serviceAvailabilityService: ServiceAvailabilityService,
+    private readonly presenceService: PresenceService,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -112,15 +114,10 @@ export class LeaveRequestsService {
     authenticatedUser: AuthenticatedUser,
     createLeaveRequestDto: CreateLeaveRequestDto,
   ): Promise<LeaveRequest> {
-    const employee = await this.usersService.findOne(
-      authenticatedUser.id,
+    const employee = await this.resolveEmployee(
+      authenticatedUser,
+      createLeaveRequestDto.employeeId,
     );
-
-    if (!employee.isActive) {
-      throw new ForbiddenException(
-        'Le compte utilisateur est désactivé.',
-      );
-    }
 
     const employeeServiceId = employee.serviceId;
     const employeeService = employee.service;
@@ -224,6 +221,227 @@ export class LeaveRequestsService {
     return this.findOwnedRequest(savedRequest.id, employee.id);
   }
 
+  /**
+   * Le Directeur enregistre directement ses propres congés :
+   *  - statut immédiat VALIDEE, sans validation ni signature ;
+   *  - aucun circuit de validation, aucune notification aux valideurs ;
+   *  - contrôles de dates et de chevauchement identiques aux autres demandes ;
+   *  - solde réservé puis déduit immédiatement (jamais négatif) ;
+   *  - historique d'audit dédié et statut de présence recalculé.
+   */
+  async createDirectorRequest(
+    authenticatedUser: AuthenticatedUser,
+    createLeaveRequestDto: CreateLeaveRequestDto,
+  ): Promise<LeaveRequest> {
+    const employee = await this.usersService.findOne(
+      authenticatedUser.id,
+    );
+
+    if (employee.role !== UserRole.DIRECTEUR) {
+      throw new ForbiddenException(
+        'Seul le Directeur peut enregistrer directement ses congés.',
+      );
+    }
+
+    if (!employee.isActive) {
+      throw new ForbiddenException(
+        'Le compte utilisateur est désactivé.',
+      );
+    }
+
+    const employeeServiceId = employee.serviceId;
+    const employeeService = employee.service;
+
+    if (!employeeServiceId || !employeeService) {
+      throw new BadRequestException(
+        'Un service actif doit être affecté au Directeur avant d’enregistrer un congé.',
+      );
+    }
+
+    const leaveType = await this.leaveTypesService.findOne(
+      createLeaveRequestDto.leaveTypeId,
+    );
+
+    this.validateLeaveType(leaveType);
+
+    const startPeriod =
+      createLeaveRequestDto.startPeriod ?? DayPeriod.MATIN;
+    const endPeriod =
+      createLeaveRequestDto.endPeriod ?? DayPeriod.APRES_MIDI;
+
+    const dates = await this.validateAndCalculateDates(
+      createLeaveRequestDto.startDate,
+      createLeaveRequestDto.endDate,
+      startPeriod,
+      endPeriod,
+      leaveType.allowsHalfDays,
+    );
+
+    let requestId = 0;
+    let requestEmployeeId = employee.id;
+
+    await this.dataSource.transaction(async (manager) => {
+      const savedRequest = await manager
+        .getRepository(LeaveRequest)
+        .save(
+          this.leaveRequestRepository.create({
+            employeeId: employee.id,
+            employee,
+            createdById: employee.id,
+            createdBy: employee,
+            leaveTypeId: leaveType.id,
+            leaveType,
+            serviceId: employeeServiceId,
+            service: employeeService,
+            startDate: createLeaveRequestDto.startDate,
+            endDate: createLeaveRequestDto.endDate,
+            startPeriod,
+            endPeriod,
+            calendarDuration: dates.calendarDuration,
+            deductedDays: dates.deductedDays,
+            status: LeaveRequestStatus.VALIDEE,
+            comment: createLeaveRequestDto.comment?.trim() || null,
+            submittedAt: new Date(),
+            modificationDeadline: null,
+            realBalanceBefore: null,
+            potentialBalanceBefore: null,
+            realBalanceAfter: null,
+            finalDeciderId: authenticatedUser.id,
+            finalDecider: employee,
+            finalDeciderRole: UserRole.DIRECTEUR,
+            decisionAt: new Date(),
+            refusalComment: null,
+            employeeSignatureType: null,
+            employeeSignatureData: null,
+            employeeSignedAt: null,
+            validatorSignatureType: null,
+            validatorSignatureData: null,
+            validatorSignedAt: null,
+            rhConfirmedDirectorAgreement: false,
+            rhDirectorAgreementConfirmedAt: null,
+            isUrgent: false,
+            urgentReason: null,
+            version: 1,
+            lockedAt: new Date(),
+            cancellationRequestedById: null,
+            cancellationReason: null,
+            employeeCancellationConsent: null,
+            employeeCancellationResponseAt: null,
+            cancelledAt: null,
+          }),
+        );
+
+      await this.ensureNoPersonalOverlap(manager, savedRequest);
+
+      if (leaveType.deductsPaidLeaveBalance) {
+        const reservation =
+          await this.leaveBalancesService.reservePaidLeaveForRequest(
+            manager,
+            {
+              employeeId: employee.id,
+              leaveRequestId: savedRequest.id,
+              days: dates.deductedDays,
+              actorId: authenticatedUser.id,
+              reason:
+                'Réservation et déduction immédiates pour un congé enregistré par le Directeur.',
+            },
+          );
+        const balanceResult =
+          await this.leaveBalancesService.finalizePaidLeaveReservation(
+            manager,
+            {
+              employeeId: employee.id,
+              leaveRequestId: savedRequest.id,
+              actorId: authenticatedUser.id,
+              expectedDays: dates.deductedDays,
+              decision: 'VALIDATE',
+            },
+          );
+
+        savedRequest.realBalanceBefore =
+          reservation.realBalanceBefore;
+        savedRequest.potentialBalanceBefore =
+          reservation.potentialBalanceBefore;
+        savedRequest.realBalanceAfter =
+          balanceResult.realBalanceAfter;
+
+        await manager.getRepository(LeaveRequest).save(
+          savedRequest,
+        );
+      }
+
+      await manager.getRepository(AuditLog).save(
+        manager.getRepository(AuditLog).create({
+          leaveRequestId: savedRequest.id,
+          leaveRequest: savedRequest,
+          action: AuditAction.CONGE_DIRECTEUR_ENREGISTRE,
+          actorId: authenticatedUser.id,
+          oldStatus: null,
+          newStatus: LeaveRequestStatus.VALIDEE,
+          comment: null,
+          metadata: {
+            startDate: savedRequest.startDate,
+            endDate: savedRequest.endDate,
+            deductedDays: savedRequest.deductedDays,
+            realBalanceBefore: savedRequest.realBalanceBefore,
+            realBalanceAfter: savedRequest.realBalanceAfter,
+            signature: 'NON_REQUISE',
+          },
+        }),
+      );
+
+      await this.notificationsService.create(
+        {
+          userId: employee.id,
+          type: 'CONGE_DIRECTEUR_ENREGISTRE',
+          title: 'Congé enregistré',
+          message: `Votre congé du ${savedRequest.startDate} au ${savedRequest.endDate} a été enregistré.`,
+          leaveRequestId: savedRequest.id,
+        },
+        manager,
+      );
+
+      requestId = savedRequest.id;
+      requestEmployeeId = savedRequest.employeeId;
+    });
+
+    await this.presenceService.refreshUserStatus(employee.id);
+
+    return this.findOwnedRequest(requestId, requestEmployeeId);
+  }
+
+  /**
+   * Résout le collaborateur concerné par une demande. La RH seule peut
+   * créer une demande pour un autre collaborateur ; l'identité est
+   * transmise explicitement et contrôlée côté backend.
+   */
+  private async resolveEmployee(
+    authenticatedUser: AuthenticatedUser,
+    requestedEmployeeId?: number,
+  ): Promise<User> {
+    const employeeId = requestedEmployeeId ?? authenticatedUser.id;
+
+    if (
+      requestedEmployeeId !== undefined &&
+      requestedEmployeeId !== authenticatedUser.id &&
+      authenticatedUser.role !== UserRole.RH
+    ) {
+      throw new ForbiddenException(
+        'Seule la RH peut créer une demande pour un autre collaborateur.',
+      );
+    }
+
+    const employee = await this.usersService.findOne(employeeId);
+
+    if (!employee.isActive) {
+      throw new ForbiddenException(
+        'Le compte utilisateur est désactivé.',
+      );
+    }
+
+    return employee;
+  }
+
   async findMyRequests(
     authenticatedUser: AuthenticatedUser,
   ): Promise<LeaveRequest[]> {
@@ -245,7 +463,34 @@ export class LeaveRequestsService {
     id: number,
     authenticatedUser: AuthenticatedUser,
   ): Promise<LeaveRequest> {
-    return this.findOwnedRequest(id, authenticatedUser.id);
+    const leaveRequest = await this.leaveRequestRepository.findOne({
+      where: { id },
+      relations: {
+        employee: true,
+        createdBy: true,
+        leaveType: true,
+        service: true,
+      },
+    });
+
+    if (!leaveRequest) {
+      throw new NotFoundException(
+        `La demande de congé ${id} est introuvable.`,
+      );
+    }
+
+    const canRead =
+      leaveRequest.employeeId === authenticatedUser.id ||
+      leaveRequest.createdById === authenticatedUser.id ||
+      authenticatedUser.role === UserRole.RH;
+
+    if (!canRead) {
+      throw new ForbiddenException(
+        'Vous ne pouvez consulter que vos propres demandes de congé.',
+      );
+    }
+
+    return leaveRequest;
   }
 
   async updateRequest(
@@ -253,13 +498,16 @@ export class LeaveRequestsService {
     authenticatedUser: AuthenticatedUser,
     updateLeaveRequestDto: UpdateLeaveRequestDto,
   ): Promise<LeaveRequest> {
+    let requestEmployeeId = authenticatedUser.id;
+
     await this.dataSource.transaction(async (manager) => {
       const leaveRequest = await this.findOwnedRequestForUpdate(
         manager,
         id,
-        authenticatedUser.id,
+        authenticatedUser,
       );
 
+      requestEmployeeId = leaveRequest.employeeId;
       const oldStatus = leaveRequest.status;
       const isSubmittedRequest =
         oldStatus === LeaveRequestStatus.EN_ATTENTE_VALIDATION;
@@ -481,7 +729,7 @@ export class LeaveRequestsService {
       );
     });
 
-    return this.findOwnedRequest(id, authenticatedUser.id);
+    return this.findOwnedRequest(id, requestEmployeeId);
   }
 
   async submit(
@@ -489,13 +737,16 @@ export class LeaveRequestsService {
     authenticatedUser: AuthenticatedUser,
     submitLeaveRequestDto: SubmitLeaveRequestDto,
   ): Promise<LeaveRequest> {
+    let requestEmployeeId = authenticatedUser.id;
+
     await this.dataSource.transaction(async (manager) => {
       const leaveRequest = await this.findOwnedRequestForUpdate(
         manager,
         id,
-        authenticatedUser.id,
+        authenticatedUser,
       );
 
+      requestEmployeeId = leaveRequest.employeeId;
       this.ensureDraft(leaveRequest);
 
       const leaveType = await manager
@@ -639,7 +890,7 @@ export class LeaveRequestsService {
 
     const submittedRequest = await this.findOwnedRequest(
       id,
-      authenticatedUser.id,
+      requestEmployeeId,
     );
     await this.notificationsService.notifyLeaveRequestSubmitted(
       submittedRequest,
@@ -901,6 +1152,10 @@ export class LeaveRequestsService {
       authenticatedUser.id,
     );
 
+    await this.presenceService.refreshUserStatus(
+      validatedRequest.employeeId,
+    );
+
     try {
       await this.documentPdfService.ensureValidationPdf(
         id,
@@ -1024,12 +1279,16 @@ export class LeaveRequestsService {
     authenticatedUser: AuthenticatedUser,
     dto: CancelLeaveRequestDto,
   ): Promise<LeaveRequest> {
+    let requestEmployeeId = authenticatedUser.id;
+
     await this.dataSource.transaction(async (manager) => {
       const leaveRequest = await this.findOwnedRequestForUpdate(
         manager,
         id,
-        authenticatedUser.id,
+        authenticatedUser,
       );
+
+      requestEmployeeId = leaveRequest.employeeId;
 
       if (
         ![
@@ -1114,7 +1373,7 @@ export class LeaveRequestsService {
       );
     });
 
-    return this.findOwnedRequest(id, authenticatedUser.id);
+    return this.findOwnedRequest(id, requestEmployeeId);
   }
 
   async requestCancellationAfterValidation(
@@ -1257,9 +1516,13 @@ export class LeaveRequestsService {
       );
     }
 
+    let requestEmployeeId = authenticatedUser.id;
+
     await this.dataSource.transaction(async (manager) => {
       const leaveRequest =
         await this.findRequestForDecisionUpdate(manager, id);
+
+      requestEmployeeId = leaveRequest.employeeId;
 
       if (
         leaveRequest.status !==
@@ -1335,6 +1598,8 @@ export class LeaveRequestsService {
         error instanceof Error ? error.stack : undefined,
       );
     }
+
+    await this.presenceService.refreshUserStatus(requestEmployeeId);
 
     return this.findCancellationRequest(id, authenticatedUser);
   }
@@ -1644,7 +1909,11 @@ export class LeaveRequestsService {
       !primaryManager.isActive ||
       primaryManager.role !== UserRole.RESPONSABLE_SERVICE ||
       primaryManager.serviceId !== leaveRequest.serviceId ||
-      primaryManager.presenceStatus !== PresenceStatus.PRESENT;
+      (await this.presenceService.computeStatus(
+        primaryManager.id,
+        undefined,
+        manager,
+      )) !== PresenceStatus.PRESENT;
 
     if (managerUnavailable) {
       return {
@@ -1752,7 +2021,7 @@ export class LeaveRequestsService {
   private async findOwnedRequestForUpdate(
     manager: EntityManager,
     id: number,
-    employeeId: number,
+    authenticatedUser: AuthenticatedUser,
   ): Promise<LeaveRequest> {
     const leaveRequest = await manager
       .getRepository(LeaveRequest)
@@ -1776,14 +2045,24 @@ export class LeaveRequestsService {
       )
       .addSelect('leaveRequest.employeeSignatureData')
       .where('leaveRequest.id = :id', { id })
-      .andWhere('leaveRequest.employeeId = :employeeId', {
-        employeeId,
-      })
       .getOne();
 
     if (!leaveRequest) {
       throw new NotFoundException(
         `La demande de congé ${id} est introuvable.`,
+      );
+    }
+
+    // Propriétaire de la demande, créateur (cas RH pour un collaborateur)
+    // ou RH gestionnaire.
+    const canModify =
+      leaveRequest.employeeId === authenticatedUser.id ||
+      leaveRequest.createdById === authenticatedUser.id ||
+      authenticatedUser.role === UserRole.RH;
+
+    if (!canModify) {
+      throw new ForbiddenException(
+        'Vous ne pouvez pas modifier cette demande.',
       );
     }
 
