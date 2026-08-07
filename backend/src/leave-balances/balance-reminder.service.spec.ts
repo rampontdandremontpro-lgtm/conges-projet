@@ -162,37 +162,37 @@ describe('BalanceReminderService — E4 rappels de fin de période', () => {
   });
 
   describe('K — available=8 reserved=3 → potential=5', () => {
-    it('message principal avec réservation', async () => {
+    it('message principal avec réservation — la date affichée est la fin de période (31/05), pas le déclenchement (28/02)', async () => {
       balanceRepository.find.mockResolvedValue([
         balance(1, { availableDays: 8, reservedDays: 3 }),
       ]);
       await run('2027-02-28');
       const args = createdArgs('BALANCE_REMINDER_3M_2026-2027');
       expect(args.message).toBe(
-        'Il vous reste 5 jours encore utilisables sur un solde de 8 jours, dont 3 jours déjà réservés, à utiliser avant le 28 février 2027.',
+        'Il vous reste 5 jours encore utilisables sur un solde de 8 jours, dont 3 jours déjà réservés, à utiliser avant le 31 mai 2027.',
       );
-      expect(args.title).toBe('Congés à utiliser avant le 28 février 2027');
+      expect(args.title).toBe('Congés à utiliser avant le 31 mai 2027');
     });
 
-    it('reserved=0 : formulation simple sans lourdeur', async () => {
+    it('reserved=0 : formulation simple sans lourdeur — date affichée = 31/05', async () => {
       balanceRepository.find.mockResolvedValue([
         balance(1, { availableDays: 8, reservedDays: 0 }),
       ]);
       await run('2027-02-28');
       const args = createdArgs('BALANCE_REMINDER_3M_2026-2027');
       expect(args.message).toBe(
-        'Il vous reste 8 jours de congés à utiliser avant le 28 février 2027.',
+        'Il vous reste 8 jours de congés à utiliser avant le 31 mai 2027.',
       );
     });
 
-    it('singulier : 1 jour disponible', async () => {
+    it('singulier : 1 jour disponible — date affichée = 31/05', async () => {
       balanceRepository.find.mockResolvedValue([
         balance(1, { availableDays: 1, reservedDays: 0 }),
       ]);
       await run('2027-02-28');
       const args = createdArgs('BALANCE_REMINDER_3M_2026-2027');
       expect(args.message).toBe(
-        'Il vous reste 1 jour de congés à utiliser avant le 28 février 2027.',
+        'Il vous reste 1 jour de congés à utiliser avant le 31 mai 2027.',
       );
     });
   });
@@ -377,6 +377,53 @@ describe('BalanceReminderService — E4 rappels de fin de période', () => {
     });
   });
 
+  describe('E4.1 — 31 mai : date de déclenchement ≠ date limite d’utilisation', () => {
+    // Période normale 2026-2027 (REFERENCE_PERIOD_START = 06-01) :
+    // fin de période = 31/05/2027. Chaque palier se déclenche plus tôt,
+    // mais le titre/message doivent TOUJOURS afficher la fin de période.
+    it.each([
+      ['3M', '2027-02-28', '28 février 2027'],
+      ['2M', '2027-03-31', '31 mars 2027'],
+      ['1M', '2027-04-30', '30 avril 2027'],
+      ['15D', '2027-05-16', '16 mai 2027'],
+      ['7D', '2027-05-24', '24 mai 2027'],
+    ])(
+      '%s déclenché le %s → titre et message indiquent le 31 mai 2027, jamais le %s',
+      async (key, reminderDate, frenchReminderDate) => {
+        balanceRepository.find.mockResolvedValue([
+          balance(1, { availableDays: 8, reservedDays: 0 }),
+        ]);
+        const result = await run(reminderDate);
+        // reminderDate : date de déclenchement (palier).
+        expect(result.deadline?.key).toBe(key);
+        expect(result.deadline?.date).toBe(reminderDate);
+        const args = createdArgs(`BALANCE_REMINDER_${key}_2026-2027`);
+        // usageDeadline : fin de période affichée dans le titre.
+        expect(args.title).toBe('Congés à utiliser avant le 31 mai 2027');
+        // … et dans le message.
+        expect(args.message).toContain('à utiliser avant le 31 mai 2027.');
+        // La date de déclenchement ne doit JAMAIS apparaître comme limite.
+        expect(args.message).not.toContain(
+          `à utiliser avant le ${frenchReminderDate}`,
+        );
+      },
+    );
+
+    it('récapitulatif RH : le palier déclenché et la date limite réelle sont distincts', async () => {
+      balanceRepository.find.mockResolvedValue([balance(1)]);
+      userRepository.find.mockResolvedValue([{ id: 10 }]);
+      await run('2027-05-16'); // 15D déclenché.
+      const recap = createdArgs('BALANCE_RECAP_15D_2026-2027');
+      expect(recap.title).toBe(
+        'Récapitulatif des congés à utiliser avant le 31 mai 2027',
+      );
+      expect(recap.message).toContain(
+        'Rappel 15 jours — période 2026-2027 (compteur N-1), congés à utiliser avant le 31 mai 2027.',
+      );
+      expect(recap.message).not.toContain('16 mai 2027');
+    });
+  });
+
   describe('cas transverses', () => {
     it('une RH avec compteur positif reçoit son rappel individuel ET le récapitulatif', async () => {
       balanceRepository.find.mockResolvedValue([
@@ -401,7 +448,7 @@ describe('BalanceReminderService — E4 rappels de fin de période', () => {
       expect(result.errors).toEqual([]);
     });
 
-    it('le récapitulatif contient nom, prénom, service, période, compteur et date limite', async () => {
+    it('le récapitulatif contient nom, prénom, service, période, compteur et date limite (fin de période)', async () => {
       balanceRepository.find.mockResolvedValue([
         balance(1, {
           employee: user(1, {
@@ -417,13 +464,18 @@ describe('BalanceReminderService — E4 rappels de fin de période', () => {
       await run('2027-02-28');
       const recap = createdArgs('BALANCE_RECAP_3M_2026-2027');
       expect(recap.title).toBe(
-        'Récapitulatif des congés à utiliser avant le 28 février 2027',
+        'Récapitulatif des congés à utiliser avant le 31 mai 2027',
       );
       expect(recap.message).toContain('Marie DUPONT');
       expect(recap.message).toContain('Équipe RH');
       expect(recap.message).toContain('2026-2027');
       expect(recap.message).toContain('N-1');
-      expect(recap.message).toContain('28 février 2027');
+      // Palier déclenché et date limite réelle sont distincts.
+      expect(recap.message).toContain('Rappel 3 mois');
+      expect(recap.message).toContain(
+        'congés à utiliser avant le 31 mai 2027.',
+      );
+      expect(recap.message).not.toContain('28 février 2027');
       expect(recap.message).toContain('8');
       expect(recap.message).toContain('3');
       expect(recap.message).toContain('5');

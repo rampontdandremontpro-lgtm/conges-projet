@@ -2758,6 +2758,15 @@ async function main() {
       const startOfYear = `${y}-${startMmDd}`;
       return dateStr >= startOfYear ? `${y}-${y + 1}` : `${y - 1}-${y}`;
     };
+    const e4FrenchMonths = [
+      'janvier', 'février', 'mars', 'avril', 'mai', 'juin',
+      'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre',
+    ];
+    // Même format que formatFrenchDate (référence-period.util.ts).
+    const frenchDate = (isoDate) => {
+      const [y, m, d] = isoDate.split('-').map(Number);
+      return `${d} ${e4FrenchMonths[m - 1]} ${y}`;
+    };
     const originalReferencePeriodStart = '06-01';
 
     // --- Fixtures E4 dédiées (aucun hardcode des comptes existants) ---
@@ -2840,6 +2849,7 @@ async function main() {
     );
 
     const startA = addDays(D, 8); // fin = D+7 → échéance 7 jours = D.
+    const endA = addDays(D, 7); // date limite réelle = fin de période.
     const periodA = periodFor(D, mmddOf(startA));
     const reminderType7D = `BALANCE_REMINDER_7D_${periodA}`;
     const recapType7D = `BALANCE_RECAP_7D_${periodA}`;
@@ -2908,14 +2918,28 @@ async function main() {
       record('Rappel individuel créé pour chaque compteur N-1 positif', 'PASS', 'Collaborateur, externe, Responsable, Directeur et RH.');
 
       const [collabA7DRows] = await db.query(
-        `SELECT channel, email_sent_at AS emailSentAt, message
+        `SELECT channel, email_sent_at AS emailSentAt, title, message
            FROM notifications WHERE type = ? AND user_id = ?`,
         [reminderType7D, e4Users.collabA],
       );
       invariant(collabA7DRows[0]?.channel === 'LES_DEUX', 'Canal attendu LES_DEUX.');
       invariant(collabA7DRows[0]?.emailSentAt === null, 'emailSentAt doit rester NULL en E4.');
       invariant(collabA7DRows[0].message.includes('8 jours de congés à utiliser'), 'Message E4 collabA inattendu.');
-      record('Rappel : canal LES_DEUX, emailSentAt NULL, message avec solde', 'PASS', collabA7DRows[0].message);
+      // E4.1 : la date affichée est la FIN DE PÉRIODE (D+7), jamais la date
+      // de déclenchement du palier 7D (aujourd'hui).
+      invariant(
+        collabA7DRows[0].message.includes(`à utiliser avant le ${frenchDate(endA)}`),
+        `Le message doit indiquer la fin de période ${frenchDate(endA)}.`,
+      );
+      invariant(
+        !collabA7DRows[0].message.includes(`avant le ${frenchDate(D)}`),
+        'Le message ne doit pas afficher la date de déclenchement du palier (aujourd’hui).',
+      );
+      invariant(
+        collabA7DRows[0].title === `Congés à utiliser avant le ${frenchDate(endA)}`,
+        `Titre attendu « Congés à utiliser avant le ${frenchDate(endA)} ».`,
+      );
+      record('Rappel : titre et message affichent la fin de période (D+7), jamais la date du palier', 'PASS', collabA7DRows[0].message);
 
       // Palier le plus récent uniquement (15D aussi due mais plus ancienne).
       const oldPalierTotal = await countNotifications(`BALANCE_REMINDER_15D_${periodA}`);
@@ -2965,7 +2989,17 @@ async function main() {
       invariant(!recapMessage.includes('E4-ADMIN'), 'Un Admin ne doit pas figurer dans le récapitulatif.');
       invariant(recapMessage.includes(periodA), 'Le récapitulatif doit porter la période.');
       invariant(recapMessage.includes('N-1'), 'Le récapitulatif doit mentionner le compteur N-1.');
-      record('Récapitulatif RH : contenu complet (nom, prénom, service, période, compteur, soldes, date limite)', 'PASS', 'Employés éligibles listés, aucun potentiel nul.');
+      // E4.1 : « Rappel 7 jours » = palier déclenché ; la date limite affichée
+      // est la fin de période (D+7), jamais la date de déclenchement (D).
+      invariant(
+        recapMessage.includes(`Rappel 7 jours — période ${periodA} (compteur N-1), congés à utiliser avant le ${frenchDate(endA)}`),
+        `Le récapitulatif doit indiquer « Rappel 7 jours » et la limite ${frenchDate(endA)}.`,
+      );
+      invariant(
+        !recapMessage.includes(`avant le ${frenchDate(D)}`),
+        'Le récapitulatif ne doit pas afficher la date de déclenchement du palier.',
+      );
+      record('Récapitulatif RH : palier déclenché distinct de la date limite (fin de période)', 'PASS', `Rappel 7 jours → avant le ${frenchDate(endA)}.`);
 
       // Double maintenance : aucun doublon (ni rappel ni récap).
       await expectStatus(
@@ -2995,6 +3029,7 @@ async function main() {
 
       // --- Phase 2 : rattrapage + solde relu (échéance 15 jours hier) ---
       const startB = addDays(D, 15); // fin = D+14 → échéance 15 jours = D−1.
+      const endB = addDays(D, 14); // date limite réelle = fin de période.
       const periodB = periodFor(D, mmddOf(startB));
       await expectStatus(
         'RH force REFERENCE_PERIOD_START (échéance 15 jours hier = rattrapage)',
@@ -3058,7 +3093,17 @@ async function main() {
       const collabA15D = collabA15DRows[0]?.message ?? '';
       invariant(collabA15D.includes('3 jours'), 'Le rappel 15D doit relire le solde courant (3 j).');
       invariant(!collabA15D.includes('8 jours'), 'Le rappel 15D ne doit pas réutiliser l’ancien solde (8 j).');
-      record('Solde modifié entre deux rappels : valeur actuelle relue', 'PASS', collabA15D);
+      // E4.1 : rattrapage 15D — la date affichée est la fin de période réelle
+      // (D+14), jamais la date historique du palier 15D (D−1).
+      invariant(
+        collabA15D.includes(`à utiliser avant le ${frenchDate(endB)}`),
+        `Le rappel 15D doit indiquer la fin de période ${frenchDate(endB)}.`,
+      );
+      invariant(
+        !collabA15D.includes(`avant le ${frenchDate(addDays(D, -1))}`),
+        'Le rappel 15D ne doit pas afficher la date historique du palier (D−1).',
+      );
+      record('Solde modifié entre deux rappels : valeur actuelle relue, date limite = fin de période réelle', 'PASS', collabA15D);
       const [anciensPaliersRows] = await db.query(
         `SELECT COUNT(*) AS total FROM notifications WHERE type IN (?, ?, ?)`,
         [
@@ -3077,7 +3122,11 @@ async function main() {
       );
       const recap15DMessage = rhA15DRecapRows[0]?.message ?? '';
       invariant(!recap15DMessage.includes('E4-ZERO'), 'Le récap 15D ne doit pas contenir un potentiel nul.');
-      record('Récapitulatif RH après rattrapage : aucune ligne à potentiel nul', 'PASS', 'Période et échéance portées par le type.');
+      invariant(
+        recap15DMessage.includes(`congés à utiliser avant le ${frenchDate(endB)}`),
+        `Le récap 15D doit indiquer la fin de période ${frenchDate(endB)}.`,
+      );
+      record('Récapitulatif RH après rattrapage : aucune ligne à potentiel nul, date limite = fin de période réelle', 'PASS', `Rappel 15 jours → avant le ${frenchDate(endB)}.`);
     } finally {
       await expectStatus(
         'RH restaure REFERENCE_PERIOD_START à 06-01',

@@ -26,11 +26,19 @@ import {
  * exactement ces informations (elles sont aussi portées par le titre et le
  * message de la notification, `notifications` ne possédant pas de payload
  * JSON).
+ *
+ * E4.1 — distinction explicite entre :
+ * - reminderDate  : date de DÉCLENCHEMENT du rappel (3M/2M/1M/15D/7D) ;
+ * - usageDeadline : date LIMITE réelle d'utilisation des congés (fin de
+ *   période). C'est la seule date affichée aux utilisateurs.
  */
 export interface BalanceReminderPayload {
   reminderKey: string;
   referencePeriod: string;
-  deadline: string;
+  /** Date de déclenchement du rappel (palier), YYYY-MM-DD. */
+  reminderDate: string;
+  /** Date limite réelle d'utilisation = fin de période, YYYY-MM-DD. */
+  usageDeadline: string;
   availableDays: number;
   reservedDays: number;
   potentialDays: number;
@@ -47,7 +55,10 @@ export interface BalanceRecapRow {
   availableDays: number;
   reservedDays: number;
   potentialDays: number;
-  deadline: string;
+  /** Date de déclenchement du rappel (palier), YYYY-MM-DD. */
+  reminderDate: string;
+  /** Date limite réelle d'utilisation = fin de période, YYYY-MM-DD. */
+  usageDeadline: string;
 }
 
 export interface BalanceReminderRunResult {
@@ -84,7 +95,10 @@ export interface BalanceReminderRunResult {
  *   `NotificationsService.alreadyExists()` ;
  * - Canal LES_DEUX, emailSentAt = NULL (préparation E5) ;
  * - Récapitulatif RH : toutes les RH actives (aucun hardcode), jamais
- *   Admin, jamais Directeur ; aucun récap vide.
+ *   Admin, jamais Directeur ; aucun récap vide ;
+ * - E4.1 : la date affichée (titre, message, récap) est TOUJOURS la fin
+ *   de période (usageDeadline), jamais la date de déclenchement du palier
+ *   (reminderDate).
  */
 @Injectable()
 export class BalanceReminderService {
@@ -209,7 +223,8 @@ export class BalanceReminderService {
           const payload: BalanceReminderPayload = {
             reminderKey: selected.key,
             referencePeriod: period,
-            deadline: selected.date,
+            reminderDate: selected.date,
+            usageDeadline: endDate,
             availableDays: entry.availableDays,
             reservedDays: entry.reservedDays,
             potentialDays: entry.potentialDays,
@@ -219,7 +234,7 @@ export class BalanceReminderService {
             userId: entry.user.id,
             channel: NotificationChannel.LES_DEUX,
             type,
-            title: this.reminderTitle(selected.date),
+            title: this.reminderTitle(endDate),
             message: this.reminderMessage(payload),
           });
           result.remindersCreated += 1;
@@ -257,9 +272,10 @@ export class BalanceReminderService {
         availableDays: entry.availableDays,
         reservedDays: entry.reservedDays,
         potentialDays: entry.potentialDays,
-        deadline: selected.date,
+        reminderDate: selected.date,
+        usageDeadline: endDate,
       }));
-      const recapMessage = this.recapMessage(rows, selected, period);
+      const recapMessage = this.recapMessage(rows, selected, period, endDate);
 
       for (const rh of rhUsers) {
         try {
@@ -276,7 +292,7 @@ export class BalanceReminderService {
             userId: rh.id,
             channel: NotificationChannel.LES_DEUX,
             type: recapType,
-            title: `Récapitulatif des congés à utiliser avant le ${formatFrenchDate(selected.date)}`,
+            title: `Récapitulatif des congés à utiliser avant le ${formatFrenchDate(endDate)}`,
             message: recapMessage,
           });
           result.recapNotificationsCreated += 1;
@@ -292,12 +308,12 @@ export class BalanceReminderService {
     }
   }
 
-  private reminderTitle(deadline: string): string {
-    return `Congés à utiliser avant le ${formatFrenchDate(deadline)}`;
+  private reminderTitle(usageDeadline: string): string {
+    return `Congés à utiliser avant le ${formatFrenchDate(usageDeadline)}`;
   }
 
   private reminderMessage(payload: BalanceReminderPayload): string {
-    const date = formatFrenchDate(payload.deadline);
+    const date = formatFrenchDate(payload.usageDeadline);
     if (payload.reservedDays <= 0) {
       return `Il vous reste ${payload.availableDays} ${this.plural(payload.availableDays, 'jour')} de congés à utiliser avant le ${date}.`;
     }
@@ -313,8 +329,9 @@ export class BalanceReminderService {
     rows: BalanceRecapRow[],
     deadline: ReminderDeadline,
     period: string,
+    usageDeadline: string,
   ): string {
-    const date = formatFrenchDate(deadline.date);
+    const date = formatFrenchDate(usageDeadline);
     const lines = rows.map((row) => {
       const reserved =
         row.reservedDays === 0
