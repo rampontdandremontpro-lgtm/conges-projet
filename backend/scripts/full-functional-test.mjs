@@ -1952,6 +1952,200 @@ async function main() {
   );
   invariant(auditSafe, 'Les journaux d’audit exposent une donnée sensible.');
 
+  // ---------------------------------------------------------------------
+  // AUD-1 — Traçabilité métier des audits (resource_type / resource_id)
+  // ---------------------------------------------------------------------
+  section('AUD-1 — Traçabilité métier des audits (resource_type/resource_id)');
+  // Les audits métier doivent référencer une ressource réelle (LEAVE_REQUESTS,
+  // ABSENCE_DECLARATIONS, DEROGATIONS) et jamais retomber sur APPLICATION/null.
+  const businessAuditActions = [
+    'BROUILLON_CREE', 'BROUILLON_MODIFIE', 'DEMANDE_MODIFIEE_AVANT_DECISION',
+    'DEMANDE_SOUMISE', 'DEMANDE_VALIDEE', 'DEMANDE_REFUSEE', 'DEMANDE_ANNULEE',
+    'CONGE_DIRECTEUR_ENREGISTRE', 'REPRISE_PAR_RELAIS', 'INTERVENTION_URGENCE',
+    'ANNULATION_APRES_VALIDATION_DEMANDEE', 'ANNULATION_ACCEPTEE_PAR_COLLABORATEUR',
+    'ANNULATION_REFUSEE_PAR_COLLABORATEUR', 'ANNULATION_APRES_VALIDATION_TERMINEE',
+    'DEMANDE_EXPIREE_NON_VALIDEE',
+  ];
+  const businessPlaceholders = businessAuditActions.map(() => '?').join(',');
+
+  // 1) Plus aucun audit métier sur APPLICATION / LEAVE_REQUEST (singulier) / resource_id null.
+  const [misMappedRows] = await db.execute(
+    `SELECT COUNT(*) AS misMapped
+     FROM audit_logs
+     WHERE action IN (${businessPlaceholders})
+       AND (resource_type <> 'LEAVE_REQUESTS' OR resource_id IS NULL)`,
+    businessAuditActions,
+  );
+  const noMisMapped = Number(misMappedRows[0]?.misMapped) === 0;
+  record(
+    'Tous les audits métier portent LEAVE_REQUESTS avec un resource_id non nul',
+    noMisMapped ? 'PASS' : 'FAIL',
+    noMisMapped
+      ? 'Aucun audit sur APPLICATION/null.'
+      : `${misMappedRows[0]?.misMapped} audit(s) mal mappé(s) (APPLICATION/LEAVE_REQUEST/null).`,
+  );
+  invariant(noMisMapped, 'La correction AUD-1 n’est pas appliquée.');
+
+  // 2) Existence réelle : les actions post-brouillon référencent une demande encore en base.
+  //    (BROUILLON_CREE/MODIFIE exclus : les brouillons supprimés laissent des audits
+  //    légitimes dont la demande n'existe plus.)
+  const persistedActions = [
+    'DEMANDE_SOUMISE', 'DEMANDE_VALIDEE', 'DEMANDE_REFUSEE', 'DEMANDE_ANNULEE',
+    'CONGE_DIRECTEUR_ENREGISTRE', 'REPRISE_PAR_RELAIS', 'INTERVENTION_URGENCE',
+    'ANNULATION_APRES_VALIDATION_DEMANDEE', 'ANNULATION_ACCEPTEE_PAR_COLLABORATEUR',
+    'ANNULATION_REFUSEE_PAR_COLLABORATEUR', 'ANNULATION_APRES_VALIDATION_TERMINEE',
+    'DEMANDE_EXPIREE_NON_VALIDEE',
+  ];
+  const persistedPlaceholders = persistedActions.map(() => '?').join(',');
+  const [orphanRows] = await db.execute(
+    `SELECT COUNT(*) AS orphanCount
+     FROM audit_logs a
+     LEFT JOIN leave_requests l ON a.resource_id = l.id
+     WHERE a.action IN (${persistedPlaceholders})
+       AND (a.resource_type <> 'LEAVE_REQUESTS' OR a.resource_id IS NULL OR l.id IS NULL)`,
+    persistedActions,
+  );
+  const noOrphan = Number(orphanRows[0]?.orphanCount) === 0;
+  record(
+    'Chaque audit post-brouillon pointe vers une demande existante en base',
+    noOrphan ? 'PASS' : 'FAIL',
+    noOrphan ? 'Aucun audit orphelin.' : `${orphanRows[0]?.orphanCount} audit(s) orphelin(s).`,
+  );
+  invariant(noOrphan, 'Des audits métier pointent vers une ressource inexistante.');
+
+  // 3) A — BROUILLON_CREE : resource_id réel + actor_id réel.
+  const [draftAuditRows] = await db.execute(
+    `SELECT resource_id AS resourceId, actor_id AS actorId
+     FROM audit_logs
+     WHERE action = 'BROUILLON_CREE'
+     ORDER BY id DESC LIMIT 1`,
+  );
+  const draftAuditOk =
+    draftAuditRows.length === 1 &&
+    Number(draftAuditRows[0].resourceId) > 0 &&
+    Number(draftAuditRows[0].actorId) > 0;
+  record(
+    'A — BROUILLON_CREE porte un resource_id et un actor_id réels',
+    draftAuditOk ? 'PASS' : 'FAIL',
+    draftAuditOk
+      ? `resource_id = ${draftAuditRows[0].resourceId}, actor_id = ${draftAuditRows[0].actorId}.`
+      : `Valeurs obtenues : ${JSON.stringify(draftAuditRows[0])}.`,
+  );
+  invariant(draftAuditOk, 'Audit BROUILLON_CREE sans ressource réelle.');
+
+  // 4) B/C/D/F — la même demande trace BROUILLON_CREE, SOUMISE, VALIDEE et RELAIS
+  //    sur un seul et même resource_id (scénario E3 relais).
+  const [chainRows] = await db.execute(
+    `SELECT resource_id AS resourceId, COUNT(DISTINCT action) AS nbActions
+     FROM audit_logs
+     WHERE action IN ('BROUILLON_CREE', 'DEMANDE_SOUMISE', 'DEMANDE_VALIDEE', 'REPRISE_PAR_RELAIS')
+     GROUP BY resource_id
+     HAVING nbActions = 4
+     ORDER BY resource_id DESC LIMIT 1`,
+  );
+  const chainOk = chainRows.length === 1 && Number(chainRows[0].resourceId) > 0;
+  record(
+    'B/C/D/F — la même demande trace CREE, SOUMISE, VALIDEE et RELAIS sur un resource_id partagé',
+    chainOk ? 'PASS' : 'FAIL',
+    chainOk
+      ? `resource_id partagé : ${chainRows[0].resourceId}.`
+      : 'Aucune chaîne d’audit complète trouvée.',
+  );
+  invariant(chainOk, 'La chaîne d’audit partagée est introuvable.');
+
+  if (chainOk) {
+    const [validatedByRows] = await db.execute(
+      `SELECT actor_id AS actorId FROM audit_logs
+       WHERE action = 'DEMANDE_VALIDEE' AND resource_id = ?`,
+      [Number(chainRows[0].resourceId)],
+    );
+    const validateActorOk =
+      validatedByRows.length === 1 &&
+      Number(validatedByRows[0].actorId) === rhUserId;
+    record(
+      'C — DEMANDE_VALIDEE est attribuée au valideur réel (RH du relais E3)',
+      validateActorOk ? 'PASS' : 'FAIL',
+      validateActorOk
+        ? `actor_id = ${validatedByRows[0].actorId}.`
+        : `actor_id obtenu : ${validatedByRows[0]?.actorId}.`,
+    );
+    invariant(validateActorOk, 'Le valideur tracé n’est pas l’auteur réel.');
+  }
+
+  // 5) E — CONGE_DIRECTEUR_ENREGISTRE : LEAVE_REQUESTS + resource_id + actor_id = Directeur.
+  const [directeurAuditRows] = await db.execute(
+    `SELECT resource_type AS resourceType, resource_id AS resourceId, actor_id AS actorId
+     FROM audit_logs
+     WHERE action = 'CONGE_DIRECTEUR_ENREGISTRE'
+     ORDER BY id DESC LIMIT 1`,
+  );
+  const directeurAuditOk =
+    directeurAuditRows.length === 1 &&
+    directeurAuditRows[0].resourceType === 'LEAVE_REQUESTS' &&
+    Number(directeurAuditRows[0].resourceId) > 0 &&
+    Number(directeurAuditRows[0].actorId) === directeurUserId;
+  record(
+    'E — CONGE_DIRECTEUR_ENREGISTRE trace la demande du Directeur (LEAVE_REQUESTS, actor Directeur)',
+    directeurAuditOk ? 'PASS' : 'FAIL',
+    directeurAuditOk
+      ? `resource_id = ${directeurAuditRows[0].resourceId}, actor_id = ${directeurAuditRows[0].actorId}.`
+      : `Valeurs obtenues : ${JSON.stringify(directeurAuditRows[0])}.`,
+  );
+  invariant(directeurAuditOk, 'Audit Directeur non conforme.');
+
+  // 6) G — Absence : un audit technique (intercepteur HTTP) référence une absence réelle.
+  //    L'intercepteur écrit en asynchrone : petite attente bornée pour laisser la trace arriver.
+  let absenceAuditRows = [];
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    [absenceAuditRows] = await db.execute(
+      `SELECT action, resource_id AS resourceId
+       FROM audit_logs
+       WHERE resource_type = 'ABSENCE_DECLARATIONS' AND resource_id IS NOT NULL
+       ORDER BY id DESC LIMIT 1`,
+    );
+    if (absenceAuditRows.length === 1) {
+      break;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  }
+  const [absenceTargetRows] =
+    absenceAuditRows.length === 1
+      ? await db.execute(
+          `SELECT id FROM absence_declarations WHERE id = ?`,
+          [Number(absenceAuditRows[0].resourceId)],
+        )
+      : [[]];
+  const absenceAuditOk =
+    absenceAuditRows.length === 1 && absenceTargetRows.length === 1;
+  record(
+    'G — un audit d’absence porte ABSENCE_DECLARATIONS avec un resource_id réel',
+    absenceAuditOk ? 'PASS' : 'FAIL',
+    absenceAuditOk
+      ? `action ${absenceAuditRows[0].action}, resource_id = ${absenceAuditRows[0].resourceId}.`
+      : 'Aucun audit ABSENCE_DECLARATIONS avec resource_id réel.',
+  );
+  invariant(absenceAuditOk, 'L’audit d’absence ne référence pas sa ressource.');
+
+  // 7) Dérogations : DEROGATIONS + resource_id réel.
+  const [derogationAuditRows] = await db.execute(
+    `SELECT resource_type AS resourceType, resource_id AS resourceId
+     FROM audit_logs
+     WHERE action LIKE 'DEROGATION_%'
+     ORDER BY id DESC LIMIT 1`,
+  );
+  const derogationAuditOk =
+    derogationAuditRows.length === 1 &&
+    derogationAuditRows[0].resourceType === 'DEROGATIONS' &&
+    Number(derogationAuditRows[0].resourceId) > 0;
+  record(
+    'Les audits de dérogation portent DEROGATIONS avec un resource_id réel',
+    derogationAuditOk ? 'PASS' : 'FAIL',
+    derogationAuditOk
+      ? `resource_id = ${derogationAuditRows[0].resourceId}.`
+      : 'Aucun audit DEROGATIONS conforme.',
+  );
+  invariant(derogationAuditOk, 'Audit de dérogation sans ressource réelle.');
+
   section('Validation finale de la base');
   const [tableRows] = await db.query(
     `SELECT TABLE_NAME AS tableName FROM information_schema.TABLES

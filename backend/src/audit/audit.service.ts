@@ -15,6 +15,18 @@ export interface AuditRecordInput {
   ipAddress?: string | null;
 }
 
+export interface AuditStatusChangeInput {
+  actorId?: number | null;
+  action: string;
+  resourceType: string;
+  resourceId?: number | null;
+  oldStatus?: string | null;
+  newStatus?: string | null;
+  comment?: string | null;
+  metadata?: Record<string, unknown> | null;
+  ipAddress?: string | null;
+}
+
 @Injectable()
 export class AuditService {
   constructor(
@@ -41,6 +53,40 @@ export class AuditService {
     });
 
     return repository.save(log);
+  }
+
+  /**
+   * Enregistre un audit métier de changement d'état avec des colonnes
+   * explicites (resourceType, resourceId, oldValue, newValue).
+   *
+   * Les champs oldStatus/newStatus/comment/metadata ne sont que des
+   * paramètres de fonction : ils sont convertis immédiatement en JSON
+   * oldValue/newValue avant toute écriture TypeORM, sans dépendre de
+   * propriétés d'entité non persistées (cause de l'anomalie AUD-1).
+   */
+  async recordStatusChange(
+    input: AuditStatusChangeInput,
+    manager?: EntityManager,
+  ): Promise<AuditLog> {
+    return this.record(
+      {
+        actorId: input.actorId,
+        action: input.action,
+        resourceType: input.resourceType,
+        resourceId: input.resourceId,
+        oldValue:
+          input.oldStatus === undefined
+            ? null
+            : { status: input.oldStatus ?? null },
+        newValue: {
+          status: input.newStatus ?? null,
+          comment: input.comment ?? null,
+          metadata: input.metadata ?? null,
+        },
+        ipAddress: input.ipAddress,
+      },
+      manager,
+    );
   }
 
   async findAll(query: AuditQueryDto): Promise<AuditLog[]> {

@@ -12,7 +12,8 @@ import {
 } from 'typeorm';
 
 import type { AuthenticatedUser } from '../auth/jwt-payload.interface';
-import { AuditAction, AuditLog } from '../audit/audit-log.entity';
+import { AuditAction } from '../audit/audit-log.entity';
+import { AuditService } from '../audit/audit.service';
 import { SettingsService } from '../settings/settings.service';
 import {
   calculateDerogationExpiry,
@@ -46,6 +47,7 @@ export class DerogationsService {
     @InjectRepository(Derogation)
     private readonly derogationRepository: Repository<Derogation>,
 
+    private readonly auditService: AuditService,
     private readonly dataSource: DataSource,
     private readonly settingsService: SettingsService,
   ) {}
@@ -831,19 +833,18 @@ export class DerogationsService {
       metadata: Record<string, unknown> | null;
     },
   ): Promise<void> {
-    const repository = manager.getRepository(AuditLog);
-
-    await repository.save(
-      repository.create({
-        leaveRequestId: data.leaveRequest.id,
-        leaveRequest: data.leaveRequest,
-        action: data.action,
+    await this.auditService.recordStatusChange(
+      {
         actorId: data.actorId,
+        action: data.action,
+        resourceType: 'DEROGATIONS',
+        resourceId: data.leaveRequest.id,
         oldStatus: data.leaveRequest.status,
         newStatus: data.leaveRequest.status,
         comment: data.comment,
         metadata: data.metadata,
-      }),
+      },
+      manager,
     );
   }
 }

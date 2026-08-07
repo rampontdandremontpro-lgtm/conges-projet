@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
-import { AuditLog } from '../audit/audit-log.entity';
+import { AuditModule } from '../audit/audit.module';
 import { LeaveRequest } from '../leave-requests/leave-request.entity';
 import { SettingsModule } from '../settings/settings.module';
 import { Derogation } from './derogation.entity';
@@ -13,8 +13,8 @@ import { DerogationsService } from './derogations.service';
     TypeOrmModule.forFeature([
       Derogation,
       LeaveRequest,
-      AuditLog,
     ]),
+    AuditModule,
     SettingsModule,
   ],
   controllers: [DerogationsController],

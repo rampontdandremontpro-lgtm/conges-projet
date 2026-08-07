@@ -6,7 +6,8 @@ import {
 } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 
-import { AuditAction, AuditLog } from '../audit/audit-log.entity';
+import { AuditAction } from '../audit/audit-log.entity';
+import { AuditService } from '../audit/audit.service';
 import { LeaveBalancesService } from '../leave-balances/leave-balances.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PresenceService } from '../presence/presence.service';
@@ -37,6 +38,7 @@ export class LeaveRequestSchedulerService
 
   constructor(
     private readonly dataSource: DataSource,
+    private readonly auditService: AuditService,
     private readonly notificationsService: NotificationsService,
     private readonly leaveBalancesService: LeaveBalancesService,
     private readonly presenceService: PresenceService,
@@ -228,18 +230,19 @@ export class LeaveRequestSchedulerService
       request.version += 1;
       await repository.save(request);
 
-      await manager.getRepository(AuditLog).save(
-        manager.getRepository(AuditLog).create({
-          leaveRequestId: request.id,
-          leaveRequest: request,
-          action: 'DEMANDE_EXPIREE_NON_VALIDEE',
+      await this.auditService.recordStatusChange(
+        {
           actorId: null,
+          action: 'DEMANDE_EXPIREE_NON_VALIDEE',
+          resourceType: 'LEAVE_REQUESTS',
+          resourceId: request.id,
           oldStatus,
           newStatus: LeaveRequestStatus.EXPIREE_NON_VALIDEE,
           comment:
             'La date de départ a été atteinte sans décision.',
           metadata: { expiredAt: now },
-        }),
+        },
+        manager,
       );
 
       await this.notificationsService.create(

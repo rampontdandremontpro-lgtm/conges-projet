@@ -68,7 +68,10 @@ export class AuditLog {
   @CreateDateColumn({ name: 'created_at', type: 'datetime' })
   createdAt!: Date;
 
-  // Champs de compatibilité utilisés par le workflow actuel.
+  // Champs de compatibilité conservés uniquement comme filet de sécurité :
+  // plus aucun appelant production ne les utilise (toutes les écritures
+  // métier passent par AuditService.record / recordStatusChange avec des
+  // colonnes explicites — voir anomalie AUD-1 corrigée).
   leaveRequestId?: number;
   leaveRequest?: unknown;
   oldStatus?: LeaveRequestStatus | null;

@@ -62,7 +62,8 @@ import {
   evaluateSubmissionNotice,
   type SubmissionNoticeInfo,
 } from './leave-request-notice.util';
-import { AuditAction, AuditLog } from '../audit/audit-log.entity';
+import { AuditAction } from '../audit/audit-log.entity';
+import { AuditService } from '../audit/audit.service';
 import { ServiceAvailabilityService } from './service-availability.service';
 import {
   DayPeriod,
@@ -94,8 +95,7 @@ export class LeaveRequestsService {
     @InjectRepository(LeaveRequest)
     private readonly leaveRequestRepository: Repository<LeaveRequest>,
 
-    @InjectRepository(AuditLog)
-    private readonly historyRepository: Repository<AuditLog>,
+    private readonly auditService: AuditService,
 
     private readonly usersService: UsersService,
     private readonly leaveTypesService: LeaveTypesService,
@@ -206,23 +206,20 @@ export class LeaveRequestsService {
       leaveRequest,
     );
 
-    await this.historyRepository.save(
-      this.historyRepository.create({
-        leaveRequestId: savedRequest.id,
-        leaveRequest: savedRequest,
-        action: AuditAction.BROUILLON_CREE,
-        actorId: authenticatedUser.id,
-        actor: { id: authenticatedUser.id } as User,
-        oldStatus: null,
-        newStatus: LeaveRequestStatus.BROUILLON,
-        comment: null,
-        metadata: {
-          startDate: savedRequest.startDate,
-          endDate: savedRequest.endDate,
-          deductedDays: savedRequest.deductedDays,
-        },
-      }),
-    );
+    await this.auditService.recordStatusChange({
+      actorId: authenticatedUser.id,
+      action: AuditAction.BROUILLON_CREE,
+      resourceType: 'LEAVE_REQUESTS',
+      resourceId: savedRequest.id,
+      oldStatus: null,
+      newStatus: LeaveRequestStatus.BROUILLON,
+      comment: null,
+      metadata: {
+        startDate: savedRequest.startDate,
+        endDate: savedRequest.endDate,
+        deductedDays: savedRequest.deductedDays,
+      },
+    });
 
     return this.findOwnedRequest(savedRequest.id, employee.id);
   }
@@ -382,12 +379,12 @@ export class LeaveRequestsService {
         );
       }
 
-      await manager.getRepository(AuditLog).save(
-        manager.getRepository(AuditLog).create({
-          leaveRequestId: savedRequest.id,
-          leaveRequest: savedRequest,
-          action: AuditAction.CONGE_DIRECTEUR_ENREGISTRE,
+      await this.auditService.recordStatusChange(
+        {
           actorId: authenticatedUser.id,
+          action: AuditAction.CONGE_DIRECTEUR_ENREGISTRE,
+          resourceType: 'LEAVE_REQUESTS',
+          resourceId: savedRequest.id,
           oldStatus: null,
           newStatus: LeaveRequestStatus.VALIDEE,
           comment: null,
@@ -399,7 +396,8 @@ export class LeaveRequestsService {
             realBalanceAfter: savedRequest.realBalanceAfter,
             signature: 'NON_REQUISE',
           },
-        }),
+        },
+        manager,
       );
 
       await this.notificationsService.create(
@@ -715,14 +713,14 @@ export class LeaveRequestsService {
         leaveRequest,
       );
 
-      await manager.getRepository(AuditLog).save(
-        manager.getRepository(AuditLog).create({
-          leaveRequestId: leaveRequest.id,
-          leaveRequest,
+      await this.auditService.recordStatusChange(
+        {
+          actorId: authenticatedUser.id,
           action: isSubmittedRequest
             ? AuditAction.DEMANDE_MODIFIEE_AVANT_DECISION
             : AuditAction.BROUILLON_MODIFIE,
-          actorId: authenticatedUser.id,
+          resourceType: 'LEAVE_REQUESTS',
+          resourceId: leaveRequest.id,
           oldStatus,
           newStatus: leaveRequest.status,
           comment: null,
@@ -749,7 +747,8 @@ export class LeaveRequestsService {
             derogationPreparation,
             requiresNewSignature: isSubmittedRequest,
           },
-        }),
+        },
+        manager,
       );
     });
 
@@ -894,12 +893,12 @@ export class LeaveRequestsService {
 
       await manager.getRepository(LeaveRequest).save(leaveRequest);
 
-      await manager.getRepository(AuditLog).save(
-        manager.getRepository(AuditLog).create({
-          leaveRequestId: leaveRequest.id,
-          leaveRequest,
-          action: AuditAction.DEMANDE_SOUMISE,
+      await this.auditService.recordStatusChange(
+        {
           actorId: authenticatedUser.id,
+          action: AuditAction.DEMANDE_SOUMISE,
+          resourceType: 'LEAVE_REQUESTS',
+          resourceId: leaveRequest.id,
           oldStatus,
           newStatus: LeaveRequestStatus.EN_ATTENTE_VALIDATION,
           comment: null,
@@ -914,7 +913,8 @@ export class LeaveRequestsService {
               reservation?.potentialBalanceAfter ?? null,
             reservations: reservation?.reservations ?? [],
           },
-        }),
+        },
+        manager,
       );
     });
 
@@ -1149,12 +1149,12 @@ export class LeaveRequestsService {
         access,
       );
 
-      await manager.getRepository(AuditLog).save(
-        manager.getRepository(AuditLog).create({
-          leaveRequestId: leaveRequest.id,
-          leaveRequest,
-          action: AuditAction.DEMANDE_VALIDEE,
+      await this.auditService.recordStatusChange(
+        {
           actorId: authenticatedUser.id,
+          action: AuditAction.DEMANDE_VALIDEE,
+          resourceType: 'LEAVE_REQUESTS',
+          resourceId: leaveRequest.id,
           oldStatus,
           newStatus: LeaveRequestStatus.VALIDEE,
           comment: null,
@@ -1168,7 +1168,8 @@ export class LeaveRequestsService {
             serviceAvailability: availability,
             minimumPresenceJustification,
           },
-        }),
+        },
+        manager,
       );
     });
 
@@ -1272,12 +1273,12 @@ export class LeaveRequestsService {
         access,
       );
 
-      await manager.getRepository(AuditLog).save(
-        manager.getRepository(AuditLog).create({
-          leaveRequestId: leaveRequest.id,
-          leaveRequest,
-          action: AuditAction.DEMANDE_REFUSEE,
+      await this.auditService.recordStatusChange(
+        {
           actorId: authenticatedUser.id,
+          action: AuditAction.DEMANDE_REFUSEE,
+          resourceType: 'LEAVE_REQUESTS',
+          resourceId: leaveRequest.id,
           oldStatus,
           newStatus: LeaveRequestStatus.REFUSEE,
           comment: refusalComment,
@@ -1287,7 +1288,8 @@ export class LeaveRequestsService {
             realBalanceBefore: leaveRequest.realBalanceBefore,
             realBalanceAfter,
           },
-        }),
+        },
+        manager,
       );
     });
 
@@ -1384,12 +1386,12 @@ export class LeaveRequestsService {
 
       await manager.getRepository(LeaveRequest).save(leaveRequest);
 
-      await manager.getRepository(AuditLog).save(
-        manager.getRepository(AuditLog).create({
-          leaveRequestId: leaveRequest.id,
-          leaveRequest,
-          action: AuditAction.DEMANDE_ANNULEE,
+      await this.auditService.recordStatusChange(
+        {
           actorId: authenticatedUser.id,
+          action: AuditAction.DEMANDE_ANNULEE,
+          resourceType: 'LEAVE_REQUESTS',
+          resourceId: leaveRequest.id,
           oldStatus,
           newStatus: LeaveRequestStatus.ANNULEE,
           comment: reason,
@@ -1404,7 +1406,8 @@ export class LeaveRequestsService {
               releasedReservation?.releases ?? [],
             derogation,
           },
-        }),
+        },
+        manager,
       );
     });
 
@@ -1455,12 +1458,13 @@ export class LeaveRequestsService {
 
       await manager.getRepository(LeaveRequest).save(leaveRequest);
 
-      await manager.getRepository(AuditLog).save(
-        manager.getRepository(AuditLog).create({
-          leaveRequestId: leaveRequest.id,
+      await this.auditService.recordStatusChange(
+        {
+          actorId: authenticatedUser.id,
           action:
             AuditAction.ANNULATION_APRES_VALIDATION_DEMANDEE,
-          actorId: authenticatedUser.id,
+          resourceType: 'LEAVE_REQUESTS',
+          resourceId: leaveRequest.id,
           oldStatus: LeaveRequestStatus.VALIDEE,
           newStatus:
             LeaveRequestStatus.ANNULATION_EN_ATTENTE_ACCORD,
@@ -1469,7 +1473,8 @@ export class LeaveRequestsService {
             initiatedByRole: authenticatedUser.role,
             employeeConsent: isOwner ? true : null,
           },
-        }),
+        },
+        manager,
       );
     });
 
@@ -1517,13 +1522,14 @@ export class LeaveRequestsService {
       leaveRequest.version += 1;
       await manager.getRepository(LeaveRequest).save(leaveRequest);
 
-      await manager.getRepository(AuditLog).save(
-        manager.getRepository(AuditLog).create({
-          leaveRequestId: leaveRequest.id,
+      await this.auditService.recordStatusChange(
+        {
+          actorId: authenticatedUser.id,
           action: dto.consent
             ? AuditAction.ANNULATION_ACCEPTEE_PAR_COLLABORATEUR
             : AuditAction.ANNULATION_REFUSEE_PAR_COLLABORATEUR,
-          actorId: authenticatedUser.id,
+          resourceType: 'LEAVE_REQUESTS',
+          resourceId: leaveRequest.id,
           oldStatus:
             LeaveRequestStatus.ANNULATION_EN_ATTENTE_ACCORD,
           newStatus: dto.consent
@@ -1534,7 +1540,8 @@ export class LeaveRequestsService {
             consent: dto.consent,
             respondedAt,
           },
-        }),
+        },
+        manager,
       );
     });
 
@@ -1602,12 +1609,13 @@ export class LeaveRequestsService {
 
       await manager.getRepository(LeaveRequest).save(leaveRequest);
 
-      await manager.getRepository(AuditLog).save(
-        manager.getRepository(AuditLog).create({
-          leaveRequestId: leaveRequest.id,
+      await this.auditService.recordStatusChange(
+        {
+          actorId: authenticatedUser.id,
           action:
             AuditAction.ANNULATION_APRES_VALIDATION_TERMINEE,
-          actorId: authenticatedUser.id,
+          resourceType: 'LEAVE_REQUESTS',
+          resourceId: leaveRequest.id,
           oldStatus:
             LeaveRequestStatus.ANNULATION_EN_ATTENTE_ACCORD,
           newStatus:
@@ -1618,7 +1626,8 @@ export class LeaveRequestsService {
             recreditedDays,
             realBalanceAfter,
           },
-        }),
+        },
+        manager,
       );
     });
 
@@ -2023,15 +2032,15 @@ export class LeaveRequestsService {
       return;
     }
 
-    await manager.getRepository(AuditLog).save(
-      manager.getRepository(AuditLog).create({
-        leaveRequestId: leaveRequest.id,
-        leaveRequest,
+    await this.auditService.recordStatusChange(
+      {
+        actorId: authenticatedUser.id,
         action:
           access.kind === 'RELAIS'
             ? AuditAction.REPRISE_PAR_RELAIS
             : AuditAction.INTERVENTION_URGENCE,
-        actorId: authenticatedUser.id,
+        resourceType: 'LEAVE_REQUESTS',
+        resourceId: leaveRequest.id,
         oldStatus: LeaveRequestStatus.EN_ATTENTE_VALIDATION,
         newStatus: LeaveRequestStatus.EN_ATTENTE_VALIDATION,
         comment: access.reason,
@@ -2042,7 +2051,8 @@ export class LeaveRequestsService {
           takeoverDelayDays:
             leaveRequest.service.takeoverDelayDays,
         },
-      }),
+      },
+      manager,
     );
   }
 

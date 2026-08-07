@@ -11,7 +11,7 @@ import { LeaveTypesModule } from '../leave-types/leave-types.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { SettingsModule } from '../settings/settings.module';
 import { UsersModule } from '../users/users.module';
-import { AuditLog } from '../audit/audit-log.entity';
+import { AuditModule } from '../audit/audit.module';
 import { LeaveRequest } from './leave-request.entity';
 import { LeaveRequestsController } from './leave-requests.controller';
 import { LeaveRequestsService } from './leave-requests.service';
@@ -22,10 +22,10 @@ import { LeaveRequestSchedulerService } from './leave-request-scheduler.service'
   imports: [
     TypeOrmModule.forFeature([
       LeaveRequest,
-      AuditLog,
       AbsenceDeclaration,
       Document,
     ]),
+    AuditModule,
     UsersModule,
     DerogationsModule,
     DocumentsModule,
