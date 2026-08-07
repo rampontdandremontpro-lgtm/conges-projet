@@ -16,7 +16,8 @@ INSERT INTO `settings` (`setting_key`, `setting_value`, `description`) VALUES
   ('SUMMER_PERIOD_START', '05-01', 'Début de la période estivale, au format MM-JJ.'),
   ('SUMMER_PERIOD_END', '10-31', 'Fin de la période estivale, au format MM-JJ.'),
   ('MONTHLY_ACCRUAL_RATE', '2.5', 'Nombre de jours ouvrables acquis pour un mois complet travaillé.'),
-  ('REFERENCE_PERIOD_START', '06-01', 'Début de la période de référence, au format MM-JJ.');
+  ('REFERENCE_PERIOD_START', '06-01', 'Début de la période de référence, au format MM-JJ.'),
+  ('AFTERNOON_START_HOUR', '12:00', 'Heure de début de la période APRES_MIDI, fuseau America/Martinique. Format HH:MM. Avant cette heure : MATIN ; à partir de cette heure (inclus) : APRES_MIDI.');
 
 -- Services internes.
 INSERT INTO `services`

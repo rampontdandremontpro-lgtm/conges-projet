@@ -13,6 +13,7 @@ import {
   LeaveRequest,
   LeaveRequestStatus,
 } from './leave-request.entity';
+import { occupiesSlot } from './leave-request-period.util';
 
 export interface ServiceOverlapItem {
   employeeId: number;
@@ -198,7 +199,7 @@ export class ServiceAvailabilityService {
 
       if (current.getUTCDay() !== 0 && !nonWorkingDates.has(date)) {
         for (const period of [DayPeriod.MATIN, DayPeriod.APRES_MIDI]) {
-          if (!this.occupiesSlot(leaveRequest, date, period)) {
+          if (!occupiesSlot(leaveRequest, date, period)) {
             continue;
           }
 
@@ -207,13 +208,13 @@ export class ServiceAvailabilityService {
           ]);
 
           for (const request of requests) {
-            if (this.occupiesSlot(request, date, period)) {
+            if (occupiesSlot(request, date, period)) {
               absentEmployeeIds.add(request.employeeId);
             }
           }
 
           for (const absence of absences) {
-            if (this.occupiesSlot(absence, date, period)) {
+            if (occupiesSlot(absence, date, period)) {
               absentEmployeeIds.add(absence.employeeId);
             }
           }
@@ -266,58 +267,6 @@ export class ServiceAvailabilityService {
       overlaps,
       slots,
     };
-  }
-
-  private occupiesSlot(
-    item: {
-      startDate: string;
-      endDate: string;
-      startPeriod: DayPeriod | null;
-      endPeriod: DayPeriod | null;
-    },
-    date: string,
-    period: DayPeriod,
-  ): boolean {
-    if (date < item.startDate || date > item.endDate) {
-      return false;
-    }
-
-    const startPeriod = item.startPeriod ?? DayPeriod.MATIN;
-    const endPeriod = item.endPeriod ?? DayPeriod.APRES_MIDI;
-
-    if (item.startDate === item.endDate) {
-      if (
-        startPeriod === DayPeriod.APRES_MIDI &&
-        endPeriod === DayPeriod.APRES_MIDI
-      ) {
-        return period === DayPeriod.APRES_MIDI;
-      }
-
-      if (
-        startPeriod === DayPeriod.MATIN &&
-        endPeriod === DayPeriod.MATIN
-      ) {
-        return period === DayPeriod.MATIN;
-      }
-
-      return true;
-    }
-
-    if (date === item.startDate) {
-      return (
-        startPeriod === DayPeriod.MATIN ||
-        period === DayPeriod.APRES_MIDI
-      );
-    }
-
-    if (date === item.endDate) {
-      return (
-        endPeriod === DayPeriod.APRES_MIDI ||
-        period === DayPeriod.MATIN
-      );
-    }
-
-    return true;
   }
 
   private parseDate(value: string): Date {

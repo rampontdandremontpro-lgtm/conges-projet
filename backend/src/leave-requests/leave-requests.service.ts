@@ -1972,6 +1972,11 @@ export class LeaveRequestsService {
       !primaryManager.isActive ||
       primaryManager.role !== UserRole.RESPONSABLE_SERVICE ||
       primaryManager.serviceId !== leaveRequest.serviceId ||
+      // Option demi-journées : computeStatus() évalue le SLOT COURANT
+      // (AFTERNOON_START_HOUR, 12:00 inclus → APRES_MIDI). Le relais est
+      // donc décidé à l'instant de la décision, slot par slot : un
+      // Responsable absent seulement le matin laisse la priorité au
+      // Responsable dès l'après-midi, sans aucune donnée stockée.
       (await this.presenceService.computeStatus(
         primaryManager.id,
         undefined,

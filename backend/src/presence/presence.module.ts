@@ -7,6 +7,7 @@ import {
 import {
   LeaveRequest,
 } from '../leave-requests/leave-request.entity';
+import { SettingsModule } from '../settings/settings.module';
 import { User } from '../users/user.entity';
 import { PresenceService } from './presence.service';
 
@@ -18,6 +19,7 @@ import { PresenceService } from './presence.service';
 @Global()
 @Module({
   imports: [
+    SettingsModule,
     TypeOrmModule.forFeature([
       User,
       LeaveRequest,

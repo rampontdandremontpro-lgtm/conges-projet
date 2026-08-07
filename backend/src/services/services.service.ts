@@ -282,6 +282,9 @@ export class ServicesService {
         manager.isActive &&
         manager.role === UserRole.RESPONSABLE_SERVICE &&
         manager.serviceId === service.id &&
+        // Option demi-journées : computeStatus() évalue le SLOT COURANT —
+        // même définition que le relais des congés et les destinataires
+        // des notifications.
         (await this.presenceService.computeStatus(manager.id)) ===
           PresenceStatus.PRESENT,
     );

@@ -205,6 +205,9 @@ export class NotificationsService {
         primaryManager &&
           primaryManager.isActive &&
           primaryManager.role === UserRole.RESPONSABLE_SERVICE &&
+          // Option demi-journées : computeStatus() évalue le SLOT COURANT
+          // — les destinataires reflètent la disponibilité réelle à
+          // l'instant de la décision (même définition que le relais).
           (await this.presenceService.computeStatus(
             primaryManager.id,
             undefined,
@@ -256,6 +259,56 @@ export class NotificationsService {
       },
       manager,
     );
+  }
+
+  /**
+   * Réévalue les destinataires d'une demande EN_ATTENTE_VALIDATION et
+   * notifie ceux qui ont été ajoutés depuis la soumission (par exemple si
+   * le slot courant a changé : Responsable indisponible le matin, de
+   * nouveau disponible l'après-midi — demi-journées, OPTION D).
+   *
+   * Idempotent : une notification LEAVE_REQUEST_SUBMITTED existante après
+   * la soumission bloque la création d'un doublon. Ne crée que les
+   * manquantes ; renvoie le nombre de notifications créées.
+   */
+  async reevaluateRecipientsForRequest(
+    leaveRequest: LeaveRequest,
+    manager?: EntityManager,
+  ): Promise<number> {
+    const recipientIds = await this.getDecisionRecipientIds(
+      leaveRequest,
+      manager,
+    );
+
+    const since = leaveRequest.submittedAt ?? leaveRequest.createdAt;
+    let created = 0;
+
+    for (const userId of recipientIds) {
+      const exists = await this.alreadyExistsSince({
+        userId,
+        type: 'LEAVE_REQUEST_SUBMITTED',
+        leaveRequestId: leaveRequest.id,
+        since,
+      });
+
+      if (exists) {
+        continue;
+      }
+
+      await this.create(
+        {
+          userId,
+          type: 'LEAVE_REQUEST_SUBMITTED',
+          title: 'Nouvelle demande de congé',
+          message: `${leaveRequest.employee.prenom} ${leaveRequest.employee.nom} a soumis une demande du ${leaveRequest.startDate} au ${leaveRequest.endDate}.`,
+          leaveRequestId: leaveRequest.id,
+        },
+        manager,
+      );
+      created += 1;
+    }
+
+    return created;
   }
 
   async notifyLeaveRequestDecision(

@@ -12,6 +12,7 @@ import { LeaveBalancesService } from '../leave-balances/leave-balances.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PresenceService } from '../presence/presence.service';
 import { User, UserRole } from '../users/user.entity';
+import { getMartiniqueDateString } from './leave-request-period.util';
 import {
   LeaveRequest,
   LeaveRequestStatus,
@@ -21,6 +22,7 @@ export interface MaintenanceRunResult {
   runAt: string;
   remindersCreated: number;
   expiredRequests: number;
+  notificationsReevaluated: number;
   presenceStatusesRefreshed: number;
   errors: string[];
 }
@@ -64,6 +66,7 @@ export class LeaveRequestSchedulerService
         runAt: new Date().toISOString(),
         remindersCreated: 0,
         expiredRequests: 0,
+        notificationsReevaluated: 0,
         presenceStatusesRefreshed: 0,
         errors: ['Une exécution est déjà en cours.'],
       };
@@ -74,6 +77,7 @@ export class LeaveRequestSchedulerService
       runAt: new Date().toISOString(),
       remindersCreated: 0,
       expiredRequests: 0,
+      notificationsReevaluated: 0,
       presenceStatusesRefreshed: 0,
       errors: [],
     };
@@ -93,7 +97,7 @@ export class LeaveRequestSchedulerService
           order: { startDate: 'ASC' },
         });
 
-      const today = this.getMartiniqueDateString(new Date());
+      const today = getMartiniqueDateString(new Date());
 
       for (const request of requests) {
         try {
@@ -114,6 +118,16 @@ export class LeaveRequestSchedulerService
               daysBeforeStart,
             );
           }
+
+          // Option demi-journées : les destinataires d'une demande en
+          // attente peuvent changer quand le slot courant change
+          // (Responsable indisponible le matin, disponible l'après-midi).
+          // Réévaluation idempotente à chaque maintenance : les
+          // destinataires déjà notifiés depuis la soumission ne sont pas
+          // re-notifiés, seuls les nouveaux le sont.
+          result.notificationsReevaluated +=
+            await this.notificationsService
+              .reevaluateRecipientsForRequest(request);
         } catch (error) {
           result.errors.push(
             `Demande ${request.id} : ${
@@ -285,16 +299,5 @@ export class LeaveRequestSchedulerService
       (toDate.getTime() - fromDate.getTime()) /
         (24 * 60 * 60 * 1000),
     );
-  }
-
-  private getMartiniqueDateString(date: Date): string {
-    const formatter = new Intl.DateTimeFormat('en-CA', {
-      timeZone: 'America/Martinique',
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    });
-
-    return formatter.format(date);
   }
 }

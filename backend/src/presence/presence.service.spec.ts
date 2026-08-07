@@ -7,17 +7,53 @@ import {
   AbsenceDeclarationStatus,
 } from '../absence-declarations/absence-declaration.entity';
 import {
+  DayPeriod,
   LeaveRequest,
   LeaveRequestStatus,
 } from '../leave-requests/leave-request.entity';
+import { SettingsService } from '../settings/settings.service';
 import { PresenceStatus, User } from '../users/user.entity';
 import { PresenceService } from './presence.service';
 
+/**
+ * Construit un instant absolu dont l'horloge America/Martinique affiche
+ * `date` à `time`. La Martinique est en UTC-4 sans heure d'été :
+ * UTC = heure Martinique + 4 h.
+ */
+function martiniqueClock(date: string, time: string): Date {
+  const [hour, minute] = time.split(':').map((part) => Number(part));
+  const utc = new Date(`${date}T00:00:00.000Z`);
+  utc.setUTCHours(hour + 4, minute, 0, 0);
+  return utc;
+}
+
+const absenceMatinOnly = {
+  startDate: '2025-06-15',
+  endDate: '2025-06-15',
+  startPeriod: DayPeriod.MATIN,
+  endPeriod: DayPeriod.MATIN,
+};
+
+const absenceApresMidiOnly = {
+  startDate: '2025-06-15',
+  endDate: '2025-06-15',
+  startPeriod: DayPeriod.APRES_MIDI,
+  endPeriod: DayPeriod.APRES_MIDI,
+};
+
+const leaveFullDay = {
+  startDate: '2025-06-15',
+  endDate: '2025-06-15',
+  startPeriod: DayPeriod.MATIN,
+  endPeriod: DayPeriod.APRES_MIDI,
+};
+
 describe('PresenceService', () => {
   let service: PresenceService;
-  let leaveRepository: { count: jest.Mock };
-  let absenceRepository: { count: jest.Mock };
+  let leaveRepository: { find: jest.Mock };
+  let absenceRepository: { find: jest.Mock };
   let userRepository: { find: jest.Mock; update: jest.Mock };
+  let settingsService: { getString: jest.Mock };
   let dataSource: { transaction: jest.Mock };
 
   const today = new Intl.DateTimeFormat('en-CA', {
@@ -27,18 +63,37 @@ describe('PresenceService', () => {
     day: '2-digit',
   }).format(new Date());
 
+  // Absence couvrant les DEUX slots du jour courant : statut ABSENT quel
+  // que soit le slot courant (déterminisme des tests sans heure simulée).
+  const absenceFullDay = {
+    startDate: today,
+    endDate: today,
+    startPeriod: DayPeriod.MATIN,
+    endPeriod: DayPeriod.APRES_MIDI,
+  };
+
   beforeEach(async () => {
-    leaveRepository = { count: jest.fn() };
-    absenceRepository = { count: jest.fn() };
+    leaveRepository = { find: jest.fn() };
+    absenceRepository = { find: jest.fn() };
     userRepository = { find: jest.fn(), update: jest.fn() };
+    settingsService = {
+      getString: jest.fn().mockResolvedValue('12:00'),
+    };
     dataSource = { transaction: jest.fn() };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         PresenceService,
-        { provide: getRepositoryToken(LeaveRequest), useValue: leaveRepository },
-        { provide: getRepositoryToken(AbsenceDeclaration), useValue: absenceRepository },
+        {
+          provide: getRepositoryToken(LeaveRequest),
+          useValue: leaveRepository,
+        },
+        {
+          provide: getRepositoryToken(AbsenceDeclaration),
+          useValue: absenceRepository,
+        },
         { provide: getRepositoryToken(User), useValue: userRepository },
+        { provide: SettingsService, useValue: settingsService },
         { provide: DataSource, useValue: dataSource },
       ],
     }).compile();
@@ -48,71 +103,144 @@ describe('PresenceService', () => {
 
   afterEach(() => jest.clearAllMocks());
 
-  describe('computeStatus', () => {
-    it('PRESENT lorsqu’aucun congé validé ni absence enregistrée ne couvre la date', async () => {
-      absenceRepository.count.mockResolvedValueOnce(0);
-      leaveRepository.count.mockResolvedValueOnce(0);
-
-      await expect(service.computeStatus(1, '2025-06-15')).resolves.toBe(
-        PresenceStatus.PRESENT,
-      );
-
-      expect(absenceRepository.count).toHaveBeenCalledWith({
-        where: {
-          employeeId: 1,
-          startDate: expect.anything(),
-          endDate: expect.anything(),
-          status: AbsenceDeclarationStatus.ENREGISTREE,
-        },
-      });
+  describe('getCurrentSlot', () => {
+    it('avant 12:00 → MATIN (11:59)', async () => {
+      await expect(
+        service.getCurrentSlot(martiniqueClock('2025-06-15', '11:59')),
+      ).resolves.toBe(DayPeriod.MATIN);
     });
 
-    it('ABSENT lorsqu’une déclaration d’absence ENREGISTREE couvre la date', async () => {
-      absenceRepository.count.mockResolvedValueOnce(1);
-
-      await expect(service.computeStatus(1, '2025-06-15')).resolves.toBe(
-        PresenceStatus.ABSENT,
-      );
-
-      // Les congés ne sont même pas consultés : l'absence prime.
-      expect(leaveRepository.count).not.toHaveBeenCalled();
+    it('à 12:00 inclus → APRES_MIDI', async () => {
+      await expect(
+        service.getCurrentSlot(martiniqueClock('2025-06-15', '12:00')),
+      ).resolves.toBe(DayPeriod.APRES_MIDI);
     });
 
-    it('EN_VACANCES lorsqu’un congé VALIDEE couvre la date', async () => {
-      absenceRepository.count.mockResolvedValueOnce(0);
-      leaveRepository.count.mockResolvedValueOnce(1);
-
-      await expect(service.computeStatus(1, '2025-06-15')).resolves.toBe(
-        PresenceStatus.EN_VACANCES,
-      );
+    it('après 12:00 → APRES_MIDI (12:01)', async () => {
+      await expect(
+        service.getCurrentSlot(martiniqueClock('2025-06-15', '12:01')),
+      ).resolves.toBe(DayPeriod.APRES_MIDI);
     });
 
-    it('EN_VACANCES pour un congé en cours d’annulation après validation', async () => {
-      absenceRepository.count.mockResolvedValueOnce(0);
-      leaveRepository.count.mockResolvedValueOnce(1);
+    it('utilise la valeur configurée AFTERNOON_START_HOUR', async () => {
+      settingsService.getString.mockResolvedValue('08:30');
 
-      await expect(service.computeStatus(1, '2025-06-15')).resolves.toBe(
-        PresenceStatus.EN_VACANCES,
+      await expect(
+        service.getCurrentSlot(martiniqueClock('2025-06-15', '08:29')),
+      ).resolves.toBe(DayPeriod.MATIN);
+      await expect(
+        service.getCurrentSlot(martiniqueClock('2025-06-15', '08:30')),
+      ).resolves.toBe(DayPeriod.APRES_MIDI);
+
+      expect(settingsService.getString).toHaveBeenCalledWith(
+        'AFTERNOON_START_HOUR',
+        '12:00',
+      );
+    });
+  });
+
+  describe('computeStatusForPeriod', () => {
+    it('PRESENT lorsqu’aucun congé ni absence ne couvre le slot', async () => {
+      absenceRepository.find.mockResolvedValueOnce([]);
+      leaveRepository.find.mockResolvedValueOnce([]);
+
+      await expect(
+        service.computeStatusForPeriod(
+          1,
+          '2025-06-15',
+          DayPeriod.MATIN,
+        ),
+      ).resolves.toBe(PresenceStatus.PRESENT);
+    });
+
+    it('ABSENT pour le slot MATIN couvert par une absence MATIN seulement', async () => {
+      absenceRepository.find.mockResolvedValueOnce([absenceMatinOnly]);
+
+      await expect(
+        service.computeStatusForPeriod(
+          1,
+          '2025-06-15',
+          DayPeriod.MATIN,
+        ),
+      ).resolves.toBe(PresenceStatus.ABSENT);
+
+      // L'absence prime : les congés ne sont pas consultés.
+      expect(leaveRepository.find).not.toHaveBeenCalled();
+    });
+
+    it('PRESENT pour le slot APRES_MIDI non couvert par une absence MATIN seulement', async () => {
+      absenceRepository.find.mockResolvedValueOnce([absenceMatinOnly]);
+      leaveRepository.find.mockResolvedValueOnce([]);
+
+      await expect(
+        service.computeStatusForPeriod(
+          1,
+          '2025-06-15',
+          DayPeriod.APRES_MIDI,
+        ),
+      ).resolves.toBe(PresenceStatus.PRESENT);
+    });
+
+    it('ABSENT pour le slot APRES_MIDI couvert par une absence APRES_MIDI seulement', async () => {
+      absenceRepository.find.mockResolvedValueOnce([absenceApresMidiOnly]);
+
+      await expect(
+        service.computeStatusForPeriod(
+          1,
+          '2025-06-15',
+          DayPeriod.APRES_MIDI,
+        ),
+      ).resolves.toBe(PresenceStatus.ABSENT);
+    });
+
+    it('EN_VACANCES pour un congé validé couvrant le slot', async () => {
+      absenceRepository.find.mockResolvedValueOnce([]);
+      leaveRepository.find.mockResolvedValueOnce([leaveFullDay]);
+
+      await expect(
+        service.computeStatusForPeriod(
+          1,
+          '2025-06-15',
+          DayPeriod.APRES_MIDI,
+        ),
+      ).resolves.toBe(PresenceStatus.EN_VACANCES);
+    });
+
+    it('ABSENT prioritaire sur EN_VACANCES pour le même slot', async () => {
+      absenceRepository.find.mockResolvedValueOnce([absenceMatinOnly]);
+
+      await expect(
+        service.computeStatusForPeriod(
+          1,
+          '2025-06-15',
+          DayPeriod.MATIN,
+        ),
+      ).resolves.toBe(PresenceStatus.ABSENT);
+    });
+
+    it('ne filtre que les absences ENREGISTREE et les congés VALIDEE / ANNULATION_EN_ATTENTE_ACCORD', async () => {
+      absenceRepository.find.mockResolvedValueOnce([]);
+      leaveRepository.find.mockResolvedValueOnce([]);
+
+      await service.computeStatusForPeriod(
+        1,
+        '2025-06-15',
+        DayPeriod.MATIN,
       );
 
-      const leaveWhere = leaveRepository.count.mock.calls[0][0].where;
+      const absenceWhere =
+        absenceRepository.find.mock.calls[0][0].where;
+      expect(absenceWhere.status).toBe(
+        AbsenceDeclarationStatus.ENREGISTREE,
+      );
+
+      const leaveWhere = leaveRepository.find.mock.calls[0][0].where;
       expect(leaveWhere.status._value).toEqual(
         expect.arrayContaining([
           LeaveRequestStatus.VALIDEE,
           LeaveRequestStatus.ANNULATION_EN_ATTENTE_ACCORD,
         ]),
       );
-    });
-
-    it('PRESENT lorsque seuls des congés REFUSEE/ANNULEE/EXPIREE existent (statuts exclus)', async () => {
-      absenceRepository.count.mockResolvedValueOnce(0);
-      leaveRepository.count.mockResolvedValueOnce(0);
-
-      await expect(service.computeStatus(1, '2025-06-15')).resolves.toBe(
-        PresenceStatus.PRESENT,
-      );
-
-      const leaveWhere = leaveRepository.count.mock.calls[0][0].where;
       expect(leaveWhere.status._value).not.toEqual(
         expect.arrayContaining([
           LeaveRequestStatus.REFUSEE,
@@ -123,45 +251,126 @@ describe('PresenceService', () => {
       );
     });
 
-    it('calcule par défaut sur la date du jour dans le fuseau America/Martinique', async () => {
-      absenceRepository.count.mockResolvedValueOnce(0);
-      leaveRepository.count.mockResolvedValueOnce(0);
-
-      await service.computeStatus(1);
-
-      const absenceWhere = absenceRepository.count.mock.calls[0][0].where;
-      expect(absenceWhere.startDate._value).toEqual(today);
-      expect(absenceWhere.endDate._value).toEqual(today);
-    });
-
     it('utilise les repositories du manager lorsqu’il est fourni (cohérence transactionnelle)', async () => {
-      const managerAbsenceCount = jest.fn().mockResolvedValueOnce(0);
-      const managerLeaveCount = jest.fn().mockResolvedValueOnce(0);
+      const managerAbsenceFind = jest.fn().mockResolvedValueOnce([]);
+      const managerLeaveFind = jest.fn().mockResolvedValueOnce([]);
       const manager = {
         getRepository: jest.fn((entity: unknown) => {
           if (entity === AbsenceDeclaration) {
-            return { count: managerAbsenceCount };
+            return { find: managerAbsenceFind };
           }
           if (entity === LeaveRequest) {
-            return { count: managerLeaveCount };
+            return { find: managerLeaveFind };
           }
           return {};
         }),
       } as unknown as EntityManager;
 
       await expect(
-        service.computeStatus(1, '2025-06-15', manager),
+        service.computeStatusForPeriod(
+          1,
+          '2025-06-15',
+          DayPeriod.MATIN,
+          manager,
+        ),
       ).resolves.toBe(PresenceStatus.PRESENT);
 
-      expect(managerAbsenceCount).toHaveBeenCalledTimes(1);
-      expect(managerLeaveCount).toHaveBeenCalledTimes(1);
-      expect(absenceRepository.count).not.toHaveBeenCalled();
+      expect(managerAbsenceFind).toHaveBeenCalledTimes(1);
+      expect(managerLeaveFind).toHaveBeenCalledTimes(1);
+      expect(absenceRepository.find).not.toHaveBeenCalled();
+      expect(leaveRepository.find).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('computeDailyAvailability', () => {
+    it('détaille les deux slots avec statut et disponibilité', async () => {
+      absenceRepository.find
+        .mockResolvedValueOnce([absenceMatinOnly]) // MATIN
+        .mockResolvedValueOnce([]); // APRES_MIDI
+      leaveRepository.find.mockResolvedValueOnce([]);
+
+      await expect(
+        service.computeDailyAvailability(1, '2025-06-15'),
+      ).resolves.toEqual({
+        date: '2025-06-15',
+        morning: {
+          status: PresenceStatus.ABSENT,
+          available: false,
+        },
+        afternoon: {
+          status: PresenceStatus.PRESENT,
+          available: true,
+        },
+      });
+    });
+
+    it('calcule par défaut sur la date du jour America/Martinique', async () => {
+      absenceRepository.find.mockResolvedValueOnce([]).mockResolvedValueOnce([]);
+      leaveRepository.find.mockResolvedValueOnce([]).mockResolvedValueOnce([]);
+
+      const result = await service.computeDailyAvailability(1);
+
+      expect(result.date).toEqual(today);
+    });
+  });
+
+  describe('computeStatus (slot courant)', () => {
+    it('PRESENT lorsqu’aucun congé ni absence ne couvre le slot courant', async () => {
+      absenceRepository.find.mockResolvedValueOnce([]);
+      leaveRepository.find.mockResolvedValueOnce([]);
+
+      await expect(
+        service.computeStatus(1, '2025-06-15', undefined, martiniqueClock('2025-06-15', '11:59')),
+      ).resolves.toBe(PresenceStatus.PRESENT);
+    });
+
+    it('ABSENT le matin (11:59) pour une absence MATIN seulement', async () => {
+      absenceRepository.find.mockResolvedValueOnce([absenceMatinOnly]);
+
+      await expect(
+        service.computeStatus(1, '2025-06-15', undefined, martiniqueClock('2025-06-15', '11:59')),
+      ).resolves.toBe(PresenceStatus.ABSENT);
+    });
+
+    it('PRESENT l’après-midi (12:01) pour la même absence MATIN seulement', async () => {
+      absenceRepository.find.mockResolvedValueOnce([absenceMatinOnly]);
+      leaveRepository.find.mockResolvedValueOnce([]);
+
+      await expect(
+        service.computeStatus(1, '2025-06-15', undefined, martiniqueClock('2025-06-15', '12:01')),
+      ).resolves.toBe(PresenceStatus.PRESENT);
+    });
+
+    it('ABSENT à 12:00 inclus pour une absence APRES_MIDI seulement', async () => {
+      absenceRepository.find.mockResolvedValueOnce([absenceApresMidiOnly]);
+
+      await expect(
+        service.computeStatus(1, '2025-06-15', undefined, martiniqueClock('2025-06-15', '12:00')),
+      ).resolves.toBe(PresenceStatus.ABSENT);
+    });
+
+    it('calcule par défaut sur la date du jour et le slot courant', async () => {
+      absenceRepository.find.mockResolvedValueOnce([]);
+      leaveRepository.find.mockResolvedValueOnce([]);
+
+      await service.computeStatus(1);
+
+      const absenceWhere =
+        absenceRepository.find.mock.calls[0][0].where;
+      expect(absenceWhere.startDate._value).toEqual(today);
+      expect(absenceWhere.endDate._value).toEqual(today);
+      expect(settingsService.getString).toHaveBeenCalledWith(
+        'AFTERNOON_START_HOUR',
+        '12:00',
+      );
     });
   });
 
   describe('refreshUserStatus', () => {
-    it('recalcule le statut puis met à jour le champ stocké', async () => {
-      absenceRepository.count.mockResolvedValueOnce(1);
+    it('recalcule le statut du slot courant puis met à jour le champ stocké', async () => {
+      // Absence JOURNALIÈRE : ABSENT quel que soit le slot courant
+      // (déterminisme du test, indépendant de l'heure réelle).
+      absenceRepository.find.mockResolvedValueOnce([absenceFullDay]);
       userRepository.update.mockResolvedValueOnce(undefined);
 
       await expect(service.refreshUserStatus(42)).resolves.toBe(
@@ -182,13 +391,13 @@ describe('PresenceService', () => {
         { id: 2, presenceStatus: PresenceStatus.EN_VACANCES },
       ]);
 
-      // Utilisateur 1 : congé validé → EN_VACANCES (changement).
-      absenceRepository.count.mockResolvedValueOnce(0);
-      leaveRepository.count.mockResolvedValueOnce(1);
+      // Utilisateur 1 : absence JOURNALIÈRE → ABSENT (quel que soit le
+      // slot courant — déterminisme du test).
+      absenceRepository.find.mockResolvedValueOnce([absenceFullDay]);
 
-      // Utilisateur 2 : rien → PRESENT (changement).
-      absenceRepository.count.mockResolvedValueOnce(0);
-      leaveRepository.count.mockResolvedValueOnce(0);
+      // Utilisateur 2 : rien → PRESENT.
+      absenceRepository.find.mockResolvedValueOnce([]);
+      leaveRepository.find.mockResolvedValueOnce([]);
 
       await expect(service.refreshAllStatuses()).resolves.toEqual({
         updated: 2,
@@ -197,7 +406,7 @@ describe('PresenceService', () => {
       expect(userRepository.update).toHaveBeenCalledTimes(2);
       expect(userRepository.update).toHaveBeenCalledWith(
         { id: 1 },
-        { presenceStatus: PresenceStatus.EN_VACANCES },
+        { presenceStatus: PresenceStatus.ABSENT },
       );
       expect(userRepository.update).toHaveBeenCalledWith(
         { id: 2 },
@@ -210,8 +419,8 @@ describe('PresenceService', () => {
         { id: 1, presenceStatus: PresenceStatus.PRESENT },
       ]);
 
-      absenceRepository.count.mockResolvedValueOnce(0);
-      leaveRepository.count.mockResolvedValueOnce(0);
+      absenceRepository.find.mockResolvedValueOnce([]);
+      leaveRepository.find.mockResolvedValueOnce([]);
 
       await expect(service.refreshAllStatuses()).resolves.toEqual({
         updated: 0,

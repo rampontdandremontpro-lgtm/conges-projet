@@ -271,6 +271,23 @@ export class SettingsService {
     ) {
       this.validateMonthDay(value, key);
     }
+
+    if (key === 'AFTERNOON_START_HOUR') {
+      this.validateHourMinute(value, key);
+    }
+  }
+
+  /**
+   * Valide une valeur horaire au format HH:MM (00:00 à 23:59).
+   * Exemples valides : 00:00, 08:30, 12:00, 17:45, 23:59.
+   * Exemples refusés : 25:00, 12:60, 12h00, midi, abc.
+   */
+  private validateHourMinute(value: string, key: string): void {
+    if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(value)) {
+      throw new BadRequestException(
+        `Le paramètre ${key} doit être une heure au format HH:MM (exemples valides : 00:00, 08:30, 12:00, 23:59).`,
+      );
+    }
   }
 
   private validateMonthDay(value: string, key: string): void {
