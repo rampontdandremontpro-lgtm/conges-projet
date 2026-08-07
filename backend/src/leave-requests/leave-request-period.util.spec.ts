@@ -3,6 +3,7 @@ import {
   getCurrentDayPeriod,
   getMartiniqueDateString,
   getMartiniqueTimeString,
+  getNextPeriodSwitch,
   occupiesSlot,
 } from './leave-request-period.util';
 
@@ -166,5 +167,55 @@ describe('helpers de date/heure America/Martinique', () => {
     expect(getMartiniqueDateString(martiniqueTime('12:00'))).toBe(
       '2025-06-15',
     );
+  });
+});
+
+describe('getNextPeriodSwitch — prochaine bascule de période en America/Martinique', () => {
+  it('11:59 → bascule le même jour à 12:00 (heure Martinique = UTC−4)', () => {
+    const next = getNextPeriodSwitch(martiniqueTime('11:59'), '12:00');
+    // 12:00 Martinique = 16:00 UTC (UTC−4 fixe, sans heure d'été).
+    expect(next.toISOString()).toBe('2025-06-15T16:00:00.000Z');
+  });
+
+  it('12:00 (inclus) → déjà APRES_MIDI : prochaine bascule demain à 00:00', () => {
+    const next = getNextPeriodSwitch(martiniqueTime('12:00'), '12:00');
+    expect(next.toISOString()).toBe('2025-06-16T04:00:00.000Z');
+  });
+
+  it('12:01 → prochaine bascule demain à 00:00', () => {
+    const next = getNextPeriodSwitch(martiniqueTime('12:01'), '12:00');
+    expect(next.toISOString()).toBe('2025-06-16T04:00:00.000Z');
+  });
+
+  it('23:59 → prochaine bascule demain à 00:00', () => {
+    const next = getNextPeriodSwitch(martiniqueTime('23:59'), '12:00');
+    expect(next.toISOString()).toBe('2025-06-16T04:00:00.000Z');
+  });
+
+  it('00:00 → bascule le même jour à 12:00', () => {
+    const next = getNextPeriodSwitch(martiniqueTime('00:00'), '12:00');
+    expect(next.toISOString()).toBe('2025-06-15T16:00:00.000Z');
+  });
+
+  it('respecte une heure de bascule configurée différente (08:30)', () => {
+    expect(
+      getNextPeriodSwitch(martiniqueTime('07:00'), '08:30').toISOString(),
+    ).toBe('2025-06-15T12:30:00.000Z');
+    expect(
+      getNextPeriodSwitch(martiniqueTime('09:00'), '08:30').toISOString(),
+    ).toBe('2025-06-16T04:00:00.000Z');
+  });
+
+  it('rejette tout fuseau autre qu\'America/Martinique (fuseau imposé)', () => {
+    expect(() =>
+      getNextPeriodSwitch(martiniqueTime('11:59'), '12:00', 'Europe/Paris'),
+    ).toThrow(/America\/Martinique/);
+  });
+
+  it('retourne un instant exprimé avec le décalage UTC−4 (pas d\'heure d\'été)', () => {
+    const next = getNextPeriodSwitch(martiniqueTime('11:59'), '12:00');
+    // Heure locale Martinique de l'instant retourné : 12:00 → UTC 16:00.
+    expect(getMartiniqueTimeString(next)).toBe('12:00');
+    expect(next.getUTCHours()).toBe(16);
   });
 });

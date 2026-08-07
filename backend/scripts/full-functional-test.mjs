@@ -183,6 +183,62 @@ function martiniqueToday() {
   return `${get('year')}-${get('month')}-${get('day')}`;
 }
 
+/** Heure courante America/Martinique en HH:MM:SS (zéro-paddée). */
+function martiniqueTimeNow() {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'America/Martinique',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(new Date());
+  const get = (type) =>
+    parts.find((part) => part.type === type)?.value ?? '00';
+  return `${get('hour')}:${get('minute')}:${get('second')}`;
+}
+
+function sleep(milliseconds) {
+  return new Promise((resolve) => setTimeout(resolve, milliseconds));
+}
+
+/**
+ * Force le slot courant via le paramètre AFTERNOON_START_HOUR.
+ *
+ * - '23:59' → MATIN, SAUF pendant la dernière minute du jour Martinique
+ *   (23:59:00–23:59:59) où aucun réglage HH:MM ne peut forcer MATIN : on
+ *   attend alors le passage à minuit (borné ≤ 65 s), après quoi le slot
+ *   MATIN est garanti pour toute la journée restante.
+ * - '00:00' → APRES_MIDI en permanence.
+ *
+ * Les scénarios créent ensuite leurs absences/journées sur
+ * `martiniqueToday()` fraîchement relu : quel que soit le moment réel
+ * d'exécution, le statut (slot courant) est déterministe.
+ */
+async function forceSlot(tokens, label, settingValue) {
+  await expectStatus(label, 200, '/settings/AFTERNOON_START_HOUR', {
+    token: tokens.rh,
+    method: 'PATCH',
+    body: {
+      settingValue,
+      description: `Slot forcé : ${settingValue} (tests demi-journées).`,
+    },
+  });
+  if (settingValue === '23:59') {
+    const now = martiniqueTimeNow();
+    if (now >= '23:59:00') {
+      const [h, m, s] = now.split(':').map(Number);
+      const elapsedToday = h * 3600 + m * 60 + s;
+      const waitSeconds = 86400 - elapsedToday + 5;
+      record(
+        `Fenêtre critique 23:59 détectée (${now}) : attente de ${waitSeconds} s vers minuit Martinique`,
+        'PASS',
+        'Déterminisme préservé : le slot MATIN sera garanti au réveil.',
+      );
+      await sleep(waitSeconds * 1000);
+    }
+  }
+}
+
 function addDays(dateValue, days) {
   const date = new Date(`${dateValue}T00:00:00.000Z`);
   date.setUTCDate(date.getUTCDate() + days);
@@ -1729,15 +1785,15 @@ async function main() {
     // OPTION D : le statut reflète le SLOT COURANT. Pour un test
     // déterministe, le slot est forcé via AFTERNOON_START_HOUR (23:59 →
     // MATIN sauf la dernière minute, 00:00 → APRES_MIDI en permanence).
-    await expectStatus('RH force le slot MATIN (AFTERNOON_START_HOUR=23:59)', 200, '/settings/AFTERNOON_START_HOUR', {
-      token: tokens.rh, method: 'PATCH',
-      body: { settingValue: '23:59', description: 'Force le slot MATIN (test demi-journées E3).' },
-    });
+    // OPTION D : le slot est forcé AVANT la création de l'absence : le
+    // statut (slot courant) de la journée forcée est déterministe quelle
+    // que soit l'heure réelle d'exécution (garde 23:59 dans forceSlot).
+    await forceSlot(tokens, 'RH force le slot MATIN (AFTERNOON_START_HOUR=23:59)', '23:59');
     const e3HalfAbsence = await expectStatus('RH crée une absence autorisée demi-journée', 201, '/absence-declarations', {
       token: tokens.rh, method: 'POST',
       body: {
         employeeId: fixtures.collaborators.c.id, leaveTypeId: rhOnlyAbsenceType.id,
-        startDate: e3Today, endDate: e3Today, startPeriod: 'MATIN', endPeriod: 'MATIN',
+        startDate: martiniqueToday(), endDate: martiniqueToday(), startPeriod: 'MATIN', endPeriod: 'MATIN',
         comment: 'Demi-journée E3.',
       },
     });
@@ -1757,10 +1813,7 @@ async function main() {
     invariant(e3HalfOk, 'Le statut devrait être ABSENT sur le slot MATIN.');
 
     // Même absence, slot APRES_MIDI : la demi-journée MATIN ne couvre plus.
-    await expectStatus('RH force le slot APRES_MIDI (AFTERNOON_START_HOUR=00:00)', 200, '/settings/AFTERNOON_START_HOUR', {
-      token: tokens.rh, method: 'PATCH',
-      body: { settingValue: '00:00', description: 'Force le slot APRES_MIDI (test demi-journées E3).' },
-    });
+    await forceSlot(tokens, 'RH force le slot APRES_MIDI (AFTERNOON_START_HOUR=00:00)', '00:00');
     await expectStatus('Maintenance : recalcule les statuts sur le slot courant', 200, '/leave-requests/maintenance/run', {
       token: tokens.rh, method: 'POST',
     }, (body) => {
@@ -1823,11 +1876,15 @@ async function main() {
     await expectStatus('La RH annule l’absence du Responsable', 200, `/absence-declarations/${e3ManagerAbsence.body.id}/cancel`, {
       token: tokens.rh, method: 'POST',
     });
+    // OPTION D : le slot MATIN est forcé AVANT la création de l'absence :
+    // le statut (slot courant) est déterministe quelle que soit l'heure
+    // réelle d'exécution (garde 23:59 dans forceSlot).
+    await forceSlot(tokens, 'RH force le slot MATIN (AFTERNOON_START_HOUR=23:59)', '23:59');
     const e3ManagerHalfAbsence = await expectStatus('RH crée une absence demi-journée pour le Responsable', 201, '/absence-declarations', {
       token: tokens.rh, method: 'POST',
       body: {
         employeeId: fixtures.manager.id, leaveTypeId: rhOnlyAbsenceType.id,
-        startDate: e3Today, endDate: e3Today, startPeriod: 'MATIN', endPeriod: 'MATIN',
+        startDate: martiniqueToday(), endDate: martiniqueToday(), startPeriod: 'MATIN', endPeriod: 'MATIN',
         comment: 'Demi-journée du Responsable E3.',
       },
     });
@@ -1853,10 +1910,7 @@ async function main() {
 
     // Slot APRES_MIDI forcé (00:00) : Responsable présent → priorité
     // Responsable, la RH reste refusée.
-    await expectStatus('RH force le slot APRES_MIDI (AFTERNOON_START_HOUR=00:00)', 200, '/settings/AFTERNOON_START_HOUR', {
-      token: tokens.rh, method: 'PATCH',
-      body: { settingValue: '00:00', description: 'Force le slot APRES_MIDI (relais demi-journée E3).' },
-    });
+    await forceSlot(tokens, 'RH force le slot APRES_MIDI (AFTERNOON_START_HOUR=00:00)', '00:00');
     const e3HalfRelaisPmRequest = await createRequest(tokens.collabA, unpaidType.id, e3HalfRelaisAfternoonDate, 'Relais Responsable demi-journée (après-midi)');
     await submitRequest(tokens.collabA, e3HalfRelaisPmRequest.id);
     await expectStatus('Absence MATIN du Responsable : priorité Responsable l’après-midi', 403, `/leave-requests/${e3HalfRelaisPmRequest.id}/validate`, {
@@ -1905,12 +1959,6 @@ async function main() {
   // ======================================================================
   section('Demi-journées — OPTION D (slots MATIN / APRES_MIDI)');
 
-  const forceSlot = async (label, settingValue) => {
-    await expectStatus(label, 200, '/settings/AFTERNOON_START_HOUR', {
-      token: tokens.rh, method: 'PATCH',
-      body: { settingValue, description: `Slot forcé : ${settingValue} (tests demi-journées).` },
-    });
-  };
   const restoreAfternoonStartHour = async () => {
     await expectStatus('RH restaure AFTERNOON_START_HOUR à 12:00', 200, '/settings/AFTERNOON_START_HOUR', {
       token: tokens.rh, method: 'PATCH',
@@ -1955,19 +2003,182 @@ async function main() {
     token: tokens.collabA, method: 'DELETE',
   });
 
+  // --- Un seul mode par absence : heures OU jours/demi-journées ---
+  // Chaque création utilise une date distincte : les absences annulées
+  // restent prises en compte par le contrôle de chevauchement.
+  const mixedDate = await nextOpenDate(addDays(scenarioDate, 70));
+  const mixedDateH = await nextOpenDate(addDays(scenarioDate, 73));
+  const mixedDateHd = await nextOpenDate(addDays(scenarioDate, 76));
+  const mixedDateHrD = await nextOpenDate(addDays(scenarioDate, 79));
+  const mixedDateHdD = await nextOpenDate(addDays(scenarioDate, 82));
+  const MIXED_MODE_MESSAGE =
+    'Une absence doit être saisie soit en jours/demi-journées, soit en heures, mais pas dans les deux modes simultanément.';
+  const readAbsence = async (id) => {
+    const [rows] = await db.execute(
+      `SELECT start_period AS startPeriod, end_period AS endPeriod,
+              duration_days AS durationDays, duration_hours AS durationHours
+       FROM absence_declarations WHERE id = ?`,
+      [id],
+    );
+    return rows[0];
+  };
+
+  await expectStatus('Absence durationHours + startPeriod refusée (mélange de modes)', 400, '/absence-declarations', {
+    token: tokens.rh, method: 'POST',
+    body: {
+      employeeId: fixtures.collaborators.a.id, leaveTypeId: rhOnlyAbsenceType.id,
+      startDate: mixedDate, endDate: mixedDate, startPeriod: 'MATIN', durationHours: 3,
+      comment: 'Mélange interdit.',
+    },
+  }, (body) => {
+    invariant(body.message === MIXED_MODE_MESSAGE, `Message obtenu : ${JSON.stringify(body.message)}.`);
+    return true;
+  });
+  await expectStatus('Absence durationHours + endPeriod refusée (mélange de modes)', 400, '/absence-declarations', {
+    token: tokens.rh, method: 'POST',
+    body: {
+      employeeId: fixtures.collaborators.a.id, leaveTypeId: rhOnlyAbsenceType.id,
+      startDate: mixedDate, endDate: mixedDate, endPeriod: 'MATIN', durationHours: 3,
+      comment: 'Mélange interdit.',
+    },
+  });
+
+  // Mode heures seul : accepté, périodes nulles.
+  const mixedHoursAbsence = await expectStatus('Absence en heures seule acceptée (durationHours=4)', 201, '/absence-declarations', {
+    token: tokens.rh, method: 'POST',
+    body: {
+      employeeId: fixtures.collaborators.a.id, leaveTypeId: rhOnlyAbsenceType.id,
+      startDate: mixedDateH, endDate: mixedDateH, durationHours: 4, comment: 'Mode heures pur.',
+    },
+  });
+  const mixedHoursStored = await readAbsence(mixedHoursAbsence.body.id);
+  const mixedHoursOk =
+    mixedHoursStored.startPeriod === null &&
+    mixedHoursStored.endPeriod === null &&
+    mixedHoursStored.durationDays === null &&
+    Number(mixedHoursStored.durationHours) === 4;
+  record(
+    'Absence en heures : startPeriod/endPeriod/durationDays nuls, durationHours=4',
+    mixedHoursOk ? 'PASS' : 'FAIL',
+    mixedHoursOk ? 'Mode heures appliqué.' : `Stockage obtenu : ${JSON.stringify(mixedHoursStored)}.`,
+  );
+  invariant(mixedHoursOk, 'Le mode heures doit nuler périodes et jours.');
+  await expectStatus('La RH annule l’absence en heures', 200, `/absence-declarations/${mixedHoursAbsence.body.id}/cancel`, {
+    token: tokens.rh, method: 'POST',
+  });
+
+  // Demi-journée seule : acceptée, sans durée en heures.
+  const mixedHalfAbsence = await expectStatus('Absence demi-journée seule acceptée (MATIN/MATIN)', 201, '/absence-declarations', {
+    token: tokens.rh, method: 'POST',
+    body: {
+      employeeId: fixtures.collaborators.a.id, leaveTypeId: rhOnlyAbsenceType.id,
+      startDate: mixedDateHd, endDate: mixedDateHd, startPeriod: 'MATIN', endPeriod: 'MATIN',
+      comment: 'Mode demi-journée pur.',
+    },
+  });
+  const mixedHalfStored = await readAbsence(mixedHalfAbsence.body.id);
+  const mixedHalfOk =
+    mixedHalfStored.startPeriod === 'MATIN' &&
+    mixedHalfStored.endPeriod === 'MATIN' &&
+    Number(mixedHalfStored.durationDays) === 0.5 &&
+    mixedHalfStored.durationHours === null;
+  record(
+    'Absence demi-journée : périodes conservées, durationHours nul',
+    mixedHalfOk ? 'PASS' : 'FAIL',
+    mixedHalfOk ? 'Mode demi-journée appliqué.' : `Stockage obtenu : ${JSON.stringify(mixedHalfStored)}.`,
+  );
+  invariant(mixedHalfOk, 'Le mode demi-journée doit conserver les périodes.');
+  await expectStatus('La RH annule l’absence demi-journée', 200, `/absence-declarations/${mixedHalfAbsence.body.id}/cancel`, {
+    token: tokens.rh, method: 'POST',
+  });
+
+  // PATCH : refus d'un mélange explicite (heures + périodes dans la même requête).
+  const mixedHoursDraft = await expectStatus('Brouillon en heures créé', 201, '/absence-declarations', {
+    token: tokens.rh, method: 'POST',
+    body: {
+      employeeId: fixtures.collaborators.a.id, leaveTypeId: rhOnlyAbsenceType.id,
+      startDate: mixedDateHrD, endDate: mixedDateHrD, durationHours: 4, comment: 'Brouillon heures (PATCH).',
+    },
+  });
+  await expectStatus('PATCH brouillon heures + startPeriod refusé', 400, `/absence-declarations/${mixedHoursDraft.body.id}`, {
+    token: tokens.rh, method: 'PATCH', body: { startPeriod: 'MATIN', durationHours: 3 },
+  });
+  const mixedHalfDraft = await expectStatus('Brouillon demi-journée créé', 201, '/absence-declarations', {
+    token: tokens.rh, method: 'POST',
+    body: {
+      employeeId: fixtures.collaborators.a.id, leaveTypeId: rhOnlyAbsenceType.id,
+      startDate: mixedDateHdD, endDate: mixedDateHdD, startPeriod: 'MATIN', endPeriod: 'MATIN',
+      comment: 'Brouillon demi-journée (PATCH).',
+    },
+  });
+  await expectStatus('PATCH brouillon demi-journée + durationHours refusé', 400, `/absence-declarations/${mixedHalfDraft.body.id}`, {
+    token: tokens.rh, method: 'PATCH', body: { startPeriod: 'MATIN', durationHours: 3 },
+  });
+
+  // Changement de mode via PATCH — comportement documenté, aucune
+  // convention arbitraire inventée :
+  // - HEURES → DEMI-JOURNÉE : le DTO partiel ne permet pas de RETIRER
+  //   durationHours → le brouillon reste en mode heures (périodes ignorées).
+  await expectStatus('PATCH heures → demi-journée : périodes seules ne basculent pas le mode', 200, `/absence-declarations/${mixedHoursDraft.body.id}`, {
+    token: tokens.rh, method: 'PATCH', body: { startPeriod: 'MATIN', endPeriod: 'MATIN' },
+  });
+  const mixedHoursAfterPatch = await readAbsence(mixedHoursDraft.body.id);
+  const stillHoursOk =
+    Number(mixedHoursAfterPatch.durationHours) === 4 &&
+    mixedHoursAfterPatch.startPeriod === null &&
+    mixedHoursAfterPatch.endPeriod === null;
+  record(
+    'HEURES → DEMI-JOURNÉE : resté en heures (contrat partiel, pas de remise à zéro inventée)',
+    stillHoursOk ? 'PASS' : 'FAIL',
+    stillHoursOk ? 'durationHours=4 conservé, périodes nulles.' : `Stockage obtenu : ${JSON.stringify(mixedHoursAfterPatch)}.`,
+  );
+  invariant(stillHoursOk, 'Le mode heures ne doit pas basculer sans retrait de durationHours.');
+
+  // - DEMI-JOURNÉE → HEURES : PATCH { durationHours } → le calcul
+  //   réinitialise les périodes ; le brouillon devient un mode heures.
+  await expectStatus('PATCH demi-journée → heures : durationHours appliqué', 200, `/absence-declarations/${mixedHalfDraft.body.id}`, {
+    token: tokens.rh, method: 'PATCH', body: { durationHours: 3 },
+  });
+  const mixedHalfAfterPatch = await readAbsence(mixedHalfDraft.body.id);
+  const switchedToHoursOk =
+    Number(mixedHalfAfterPatch.durationHours) === 3 &&
+    mixedHalfAfterPatch.startPeriod === null &&
+    mixedHalfAfterPatch.endPeriod === null;
+  record(
+    'DEMI-JOURNÉE → HEURES : bascule effective en mode heures',
+    switchedToHoursOk ? 'PASS' : 'FAIL',
+    switchedToHoursOk ? 'durationHours=3, périodes nulles.' : `Stockage obtenu : ${JSON.stringify(mixedHalfAfterPatch)}.`,
+  );
+  invariant(switchedToHoursOk, 'Le PATCH durationHours doit basculer en mode heures.');
+
+  // Nettoyage : soumission puis annulation des deux brouillons modifiés.
+  await expectStatus('Soumission du brouillon en heures', 200, `/absence-declarations/${mixedHoursDraft.body.id}/submit`, {
+    token: tokens.rh, method: 'POST', body: { certifiedAccurate: true },
+  });
+  await expectStatus('Annulation de l’absence en heures (nettoyage)', 200, `/absence-declarations/${mixedHoursDraft.body.id}/cancel`, {
+    token: tokens.rh, method: 'POST',
+  });
+  await expectStatus('Soumission du brouillon basculé en heures', 200, `/absence-declarations/${mixedHalfDraft.body.id}/submit`, {
+    token: tokens.rh, method: 'POST', body: { certifiedAccurate: true },
+  });
+  await expectStatus('Annulation de l’absence basculée (nettoyage)', 200, `/absence-declarations/${mixedHalfDraft.body.id}/cancel`, {
+    token: tokens.rh, method: 'POST',
+  });
+
   // --- Relais du Responsable par slot (la disponibilité est évaluée à
   // l'instant de la décision sur le slot courant) ---
-  const halfToday = martiniqueToday();
   const halfD1 = await nextOpenDate(addDays(scenarioDate, 44));
   const halfD2 = await nextOpenDate(addDays(scenarioDate, 47));
   const halfD3 = await nextOpenDate(addDays(scenarioDate, 50));
 
-  // S2 — Responsable absent APRES_MIDI seulement
+  // S2 — Responsable absent APRES_MIDI seulement (slot MATIN forcé AVANT
+  // la création : le statut de la journée forcée est déterministe).
+  await forceSlot(tokens, 'RH force le slot MATIN (23:59)', '23:59');
   const halfS2Absence = await expectStatus('RH crée une absence APRES_MIDI pour le Responsable', 201, '/absence-declarations', {
     token: tokens.rh, method: 'POST',
     body: {
       employeeId: fixtures.manager.id, leaveTypeId: rhOnlyAbsenceType.id,
-      startDate: halfToday, endDate: halfToday, startPeriod: 'APRES_MIDI', endPeriod: 'APRES_MIDI',
+      startDate: martiniqueToday(), endDate: martiniqueToday(), startPeriod: 'APRES_MIDI', endPeriod: 'APRES_MIDI',
       comment: 'Absence APRES_MIDI du Responsable (Option D).',
     },
   });
@@ -1975,7 +2186,6 @@ async function main() {
     token: tokens.rh, method: 'POST', body: { certifiedAccurate: true },
   });
 
-  await forceSlot('RH force le slot MATIN (23:59)', '23:59');
   const halfS2Morning = await createRequest(tokens.collabA, unpaidType.id, halfD1, 'Responsable présent le matin');
   await submitRequest(tokens.collabA, halfS2Morning.id);
   await expectStatus('Responsable absent APRES_MIDI seulement : priorité Responsable le matin', 403, `/leave-requests/${halfS2Morning.id}/validate`, {
@@ -1990,7 +2200,7 @@ async function main() {
     return true;
   });
 
-  await forceSlot('RH force le slot APRES_MIDI (00:00)', '00:00');
+  await forceSlot(tokens, 'RH force le slot APRES_MIDI (00:00)', '00:00');
   const halfS2Afternoon = await createRequest(tokens.collabA, unpaidType.id, halfD2, 'Responsable absent l’après-midi');
   await submitRequest(tokens.collabA, halfS2Afternoon.id);
   await expectStatus('Responsable absent APRES_MIDI seulement : relais autorisé l’après-midi', 200, `/leave-requests/${halfS2Afternoon.id}/validate`, {
@@ -2005,11 +2215,12 @@ async function main() {
   await expectStatus('La RH annule l’absence APRES_MIDI du Responsable', 200, `/absence-declarations/${halfS2Absence.body.id}/cancel`, {
     token: tokens.rh, method: 'POST',
   });
+  await forceSlot(tokens, 'RH force le slot MATIN (23:59)', '23:59');
   const halfS3Absence = await expectStatus('RH crée une absence journée entière pour le Responsable', 201, '/absence-declarations', {
     token: tokens.rh, method: 'POST',
     body: {
       employeeId: fixtures.manager.id, leaveTypeId: rhOnlyAbsenceType.id,
-      startDate: halfToday, endDate: halfToday,
+      startDate: martiniqueToday(), endDate: martiniqueToday(),
       durationHours: 7, comment: 'Absence journée entière du Responsable (Option D).',
     },
   });
@@ -2017,7 +2228,6 @@ async function main() {
     token: tokens.rh, method: 'POST', body: { certifiedAccurate: true },
   });
 
-  await forceSlot('RH force le slot MATIN (23:59)', '23:59');
   const halfS3Morning = await createRequest(tokens.collabA, unpaidType.id, halfD3, 'Relais journée entière — matin');
   await submitRequest(tokens.collabA, halfS3Morning.id);
   await expectStatus('Absence journée entière : relais autorisé le matin', 200, `/leave-requests/${halfS3Morning.id}/validate`, {
@@ -2027,7 +2237,7 @@ async function main() {
     invariant(body.status === 'VALIDEE', `Statut obtenu ${body.status}.`);
     return true;
   });
-  await forceSlot('RH force le slot APRES_MIDI (00:00)', '00:00');
+  await forceSlot(tokens, 'RH force le slot APRES_MIDI (00:00)', '00:00');
   const halfS3Afternoon = await createRequest(tokens.collabA, unpaidType.id, await nextOpenDate(addDays(scenarioDate, 53)), 'Relais journée entière — après-midi');
   await submitRequest(tokens.collabA, halfS3Afternoon.id);
   await expectStatus('Absence journée entière : relais autorisé l’après-midi', 200, `/leave-requests/${halfS3Afternoon.id}/validate`, {
@@ -2056,12 +2266,14 @@ async function main() {
     return true;
   });
 
-  // S5 — destinataires des notifications au slot courant
+  // S5 — destinataires des notifications au slot courant (slot MATIN forcé
+  // AVANT la création de l'absence : déterminisme).
+  await forceSlot(tokens, 'RH force le slot MATIN (23:59)', '23:59');
   const halfS5Absence = await expectStatus('RH crée une absence MATIN pour le Responsable', 201, '/absence-declarations', {
     token: tokens.rh, method: 'POST',
     body: {
       employeeId: fixtures.manager.id, leaveTypeId: rhOnlyAbsenceType.id,
-      startDate: halfToday, endDate: halfToday, startPeriod: 'MATIN', endPeriod: 'MATIN',
+      startDate: martiniqueToday(), endDate: martiniqueToday(), startPeriod: 'MATIN', endPeriod: 'MATIN',
       comment: 'Absence MATIN du Responsable (Option D).',
     },
   });
@@ -2069,7 +2281,6 @@ async function main() {
     token: tokens.rh, method: 'POST', body: { certifiedAccurate: true },
   });
 
-  await forceSlot('RH force le slot MATIN (23:59)', '23:59');
   const halfS5Request = await createRequest(tokens.collabA, unpaidType.id, await nextOpenDate(addDays(scenarioDate, 59)), 'Notification au slot MATIN');
   await submitRequest(tokens.collabA, halfS5Request.id);
 
@@ -2100,7 +2311,7 @@ async function main() {
   invariant(rhNotifiedMorning, 'La RH devrait être destinataire le matin.');
 
   // S6 — réévaluation des destinataires quand le slot change (maintenance)
-  await forceSlot('RH force le slot APRES_MIDI (00:00)', '00:00');
+  await forceSlot(tokens, 'RH force le slot APRES_MIDI (00:00)', '00:00');
   await expectStatus('Maintenance : réévalue les destinataires sur le slot courant', 200, '/leave-requests/maintenance/run', {
     token: tokens.rh, method: 'POST',
   }, (body) => {
@@ -2147,7 +2358,7 @@ async function main() {
     `UPDATE leave_requests SET submitted_at = DATE_SUB(NOW(), INTERVAL 10 DAY) WHERE id = ?`,
     [halfS4Request.id],
   );
-  await forceSlot('RH force le slot MATIN (23:59)', '23:59');
+  await forceSlot(tokens, 'RH force le slot MATIN (23:59)', '23:59');
   await expectStatus('Délai de relais expiré : relais autorisé le matin', 200, `/leave-requests/${halfS4Request.id}/validate`, {
     token: tokens.rh, method: 'POST',
     body: { signatureType: 'INITIALS', signatureData: 'RH', rhConfirmedDirectorAgreement: true, minimumPresenceJustification: 'Délai de relais expiré (matin).' },
@@ -2155,7 +2366,7 @@ async function main() {
     invariant(body.status === 'VALIDEE', `Statut obtenu ${body.status}.`);
     return true;
   });
-  await forceSlot('RH force le slot APRES_MIDI (00:00)', '00:00');
+  await forceSlot(tokens, 'RH force le slot APRES_MIDI (00:00)', '00:00');
   const halfS4Request2 = await createRequest(tokens.collabA, unpaidType.id, await nextOpenDate(addDays(scenarioDate, 65)), 'Délai de relais expiré (après-midi)');
   await submitRequest(tokens.collabA, halfS4Request2.id);
   await db.execute(

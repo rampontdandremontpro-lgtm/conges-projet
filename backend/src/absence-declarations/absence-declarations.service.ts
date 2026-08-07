@@ -83,6 +83,8 @@ export class AbsenceDeclarationsService {
 
     this.validateLeaveType(leaveType, authenticatedUser.role);
 
+    this.ensureSingleMode(dto);
+
     const duration = this.validateAndCalculateDuration({
       leaveType,
       startDate: dto.startDate,
@@ -241,6 +243,8 @@ export class AbsenceDeclarationsService {
         : declaration.leaveType;
 
     this.validateLeaveType(leaveType, authenticatedUser.role);
+
+    this.ensureSingleMode(dto);
 
     const startDate = dto.startDate ?? declaration.startDate;
     const endDate = dto.endDate ?? declaration.endDate;
@@ -597,6 +601,27 @@ export class AbsenceDeclarationsService {
     }
 
     return employee;
+  }
+
+  /**
+   * Une absence s'exprime soit en jours/demi-journées (périodes), soit en
+   * heures, mais jamais dans les deux modes simultanément. Refuse donc
+   * toute requête (création ou mise à jour) envoyant explicitement
+   * `durationHours` en même temps que `startPeriod`/`endPeriod`.
+   */
+  private ensureSingleMode(dto: {
+    startPeriod?: DayPeriod;
+    endPeriod?: DayPeriod;
+    durationHours?: number;
+  }): void {
+    if (
+      dto.durationHours !== undefined &&
+      (dto.startPeriod !== undefined || dto.endPeriod !== undefined)
+    ) {
+      throw new BadRequestException(
+        'Une absence doit être saisie soit en jours/demi-journées, soit en heures, mais pas dans les deux modes simultanément.',
+      );
+    }
   }
 
   private validateLeaveType(

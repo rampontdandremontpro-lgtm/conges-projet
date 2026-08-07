@@ -124,6 +124,46 @@ export function getMartiniqueDateString(date: Date): string {
   }).format(date);
 }
 
+/**
+ * Prochaine bascule de période (MATIN ↔ APRES_MIDI) en America/Martinique.
+ *
+ * La planification de la maintenance de bascule utilise la valeur du
+ * paramètre AFTERNOON_START_HOUR (jamais de cron hardcodé) :
+ *  - slot courant MATIN       → prochaine bascule aujourd'hui à
+ *                                AFTERNOON_START_HOUR (passage APRES_MIDI) ;
+ *  - slot courant APRES_MIDI  → prochaine bascule demain à 00:00 (retour
+ *                                MATIN) — même mécanisme, par symétrie.
+ *
+ * America/Martinique = UTC−4 fixe (pas d'heure d'été) : l'instant retourné
+ * est exprimé avec le décalage -04:00. Ne dépend jamais du fuseau local
+ * du serveur ni de l'heure réelle d'exécution (le paramètre `now` est
+ * injectable).
+ */
+export function getNextPeriodSwitch(
+  now: Date,
+  afternoonStartHour: string,
+  timeZone = 'America/Martinique',
+): Date {
+  if (timeZone !== 'America/Martinique') {
+    throw new Error(
+      'Seul le fuseau America/Martinique (UTC−4 fixe) est pris en charge.',
+    );
+  }
+
+  const currentDate = getMartiniqueDateString(now);
+  const period = getCurrentDayPeriod(now, afternoonStartHour);
+
+  if (period === DayPeriod.APRES_MIDI) {
+    const nextDay = new Date(`${currentDate}T00:00:00.000Z`);
+    nextDay.setUTCDate(nextDay.getUTCDate() + 1);
+    return new Date(
+      `${nextDay.toISOString().slice(0, 10)}T00:00:00.000-04:00`,
+    );
+  }
+
+  return new Date(`${currentDate}T${afternoonStartHour}:00.000-04:00`);
+}
+
 /** Heure 'HH:MM' courante en America/Martinique pour un instant donné. */
 export function getMartiniqueTimeString(date: Date): string {
   const parts = new Intl.DateTimeFormat('en-GB', {
@@ -138,4 +178,26 @@ export function getMartiniqueTimeString(date: Date): string {
     parts.find((part) => part.type === 'minute')?.value ?? '00';
 
   return `${hour}:${minute}`;
+}
+
+/**
+ * Heure 'HH:MM:SS' courante en America/Martinique pour un instant donné.
+ * Utilisée par les tests pour détecter la fenêtre de fin de journée.
+ */
+export function getMartiniqueTimeWithSeconds(date: Date): string {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'America/Martinique',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(date);
+
+  const hour = parts.find((part) => part.type === 'hour')?.value ?? '00';
+  const minute =
+    parts.find((part) => part.type === 'minute')?.value ?? '00';
+  const second =
+    parts.find((part) => part.type === 'second')?.value ?? '00';
+
+  return `${hour}:${minute}:${second}`;
 }

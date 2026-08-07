@@ -11,8 +11,12 @@ import { AuditService } from '../audit/audit.service';
 import { LeaveBalancesService } from '../leave-balances/leave-balances.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PresenceService } from '../presence/presence.service';
+import { SettingsService } from '../settings/settings.service';
 import { User, UserRole } from '../users/user.entity';
-import { getMartiniqueDateString } from './leave-request-period.util';
+import {
+  getMartiniqueDateString,
+  getNextPeriodSwitch,
+} from './leave-request-period.util';
 import {
   LeaveRequest,
   LeaveRequestStatus,
@@ -35,7 +39,9 @@ export class LeaveRequestSchedulerService
     LeaveRequestSchedulerService.name,
   );
   private readonly intervalMilliseconds = 60 * 60 * 1000;
+  private readonly afternoonStartHourKey = 'AFTERNOON_START_HOUR';
   private scheduler?: NodeJS.Timeout;
+  private switchTimer?: NodeJS.Timeout;
   private running = false;
 
   constructor(
@@ -44,6 +50,7 @@ export class LeaveRequestSchedulerService
     private readonly notificationsService: NotificationsService,
     private readonly leaveBalancesService: LeaveBalancesService,
     private readonly presenceService: PresenceService,
+    private readonly settingsService: SettingsService,
   ) {}
 
   onApplicationBootstrap(): void {
@@ -52,28 +59,106 @@ export class LeaveRequestSchedulerService
       void this.runMaintenance();
     }, this.intervalMilliseconds);
     this.scheduler.unref();
+    void this.scheduleNextSwitchMaintenance();
   }
 
   onApplicationShutdown(): void {
     if (this.scheduler) {
       clearInterval(this.scheduler);
     }
+    if (this.switchTimer) {
+      clearTimeout(this.switchTimer);
+    }
   }
 
-  async runMaintenance(): Promise<MaintenanceRunResult> {
+  /**
+   * Planifie une maintenance au moment de la prochaine bascule de période
+   * (MATIN ↔ APRES_MIDI) en America/Martinique.
+   *
+   * La bascule est calculée à partir du paramètre AFTERNOON_START_HOUR
+   * (configurable, jamais de cron hardcodé) : la maintenance garantit que
+   * `users.presence_status` et les destinataires des notifications sont
+   * réévalués exactement à la bascule — sans attendre la maintenance
+   * horaire suivante (décalage possible de 60 min). Après exécution, la
+   * prochaine bascule est reprogrammée.
+   */
+  async scheduleNextSwitchMaintenance(): Promise<void> {
+    try {
+      const afternoonStartHour = await this.settingsService.getString(
+        this.afternoonStartHourKey,
+        '12:00',
+      );
+      const now = new Date();
+      const nextSwitch = getNextPeriodSwitch(
+        now,
+        afternoonStartHour,
+      );
+      const delay = Math.max(0, nextSwitch.getTime() - now.getTime());
+
+      if (this.switchTimer) {
+        clearTimeout(this.switchTimer);
+      }
+
+      this.switchTimer = setTimeout(() => {
+        this.switchTimer = undefined;
+        void this.runSwitchMaintenance().finally(() => {
+          void this.scheduleNextSwitchMaintenance();
+        });
+      }, delay);
+      this.switchTimer.unref();
+
+      this.logger.log(
+        `Maintenance de bascule planifiée pour ${nextSwitch.toISOString()} ` +
+          `(dans ${Math.round(delay / 60000)} min, AFTERNOON_START_HOUR=${afternoonStartHour}).`,
+      );
+    } catch (error) {
+      this.logger.error(
+        'Impossible de planifier la maintenance de bascule de période.',
+        error instanceof Error ? error.stack : undefined,
+      );
+    }
+  }
+
+  /**
+   * Maintenance légère déclenchée à la bascule de période : réévaluation
+   * idempotente des destinataires des demandes EN_ATTENTE_VALIDATION et
+   * recalcule des statuts de présence. Les rappels et l'expiration restent
+   * du ressort de la maintenance horaire.
+   */
+  async runSwitchMaintenance(): Promise<MaintenanceRunResult> {
     if (this.running) {
-      return {
-        runAt: new Date().toISOString(),
-        remindersCreated: 0,
-        expiredRequests: 0,
-        notificationsReevaluated: 0,
-        presenceStatusesRefreshed: 0,
-        errors: ['Une exécution est déjà en cours.'],
-      };
+      return this.busyResult();
     }
 
     this.running = true;
-    const result: MaintenanceRunResult = {
+    const result = this.emptyResult();
+
+    try {
+      const requests = await this.findPendingRequests();
+
+      for (const request of requests) {
+        try {
+          result.notificationsReevaluated +=
+            await this.notificationsService
+              .reevaluateRecipientsForRequest(request);
+        } catch (error) {
+          result.errors.push(
+            `Demande ${request.id} : ${
+              error instanceof Error ? error.message : String(error)
+            }`,
+          );
+        }
+      }
+    } finally {
+      this.running = false;
+    }
+
+    await this.refreshPresenceStatuses(result);
+    return result;
+  }
+
+  private emptyResult(): MaintenanceRunResult {
+    return {
       runAt: new Date().toISOString(),
       remindersCreated: 0,
       expiredRequests: 0,
@@ -81,21 +166,59 @@ export class LeaveRequestSchedulerService
       presenceStatusesRefreshed: 0,
       errors: [],
     };
+  }
+
+  private busyResult(): MaintenanceRunResult {
+    return {
+      ...this.emptyResult(),
+      errors: ['Une exécution est déjà en cours.'],
+    };
+  }
+
+  private async findPendingRequests(): Promise<LeaveRequest[]> {
+    return this.dataSource.getRepository(LeaveRequest).find({
+      where: {
+        status: LeaveRequestStatus.EN_ATTENTE_VALIDATION,
+      },
+      relations: {
+        employee: true,
+        leaveType: true,
+        service: true,
+      },
+      order: { startDate: 'ASC' },
+    });
+  }
+
+  private async refreshPresenceStatuses(
+    result: MaintenanceRunResult,
+  ): Promise<void> {
+    try {
+      const presenceResult =
+        await this.presenceService.refreshAllStatuses();
+      result.presenceStatusesRefreshed = presenceResult.updated;
+    } catch (error) {
+      this.logger.error(
+        'Le recalcule des statuts de présence a échoué.',
+        error instanceof Error ? error.stack : undefined,
+      );
+      result.errors.push(
+        `Statuts de présence : ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+    }
+  }
+
+  async runMaintenance(): Promise<MaintenanceRunResult> {
+    if (this.running) {
+      return this.busyResult();
+    }
+
+    this.running = true;
+    const result = this.emptyResult();
 
     try {
-      const requests = await this.dataSource
-        .getRepository(LeaveRequest)
-        .find({
-          where: {
-            status: LeaveRequestStatus.EN_ATTENTE_VALIDATION,
-          },
-          relations: {
-            employee: true,
-            leaveType: true,
-            service: true,
-          },
-          order: { startDate: 'ASC' },
-        });
+      const requests = await this.findPendingRequests();
 
       const today = getMartiniqueDateString(new Date());
 
@@ -146,22 +269,7 @@ export class LeaveRequestSchedulerService
       );
     }
 
-    try {
-      const presenceResult =
-        await this.presenceService.refreshAllStatuses();
-      result.presenceStatusesRefreshed =
-        presenceResult.updated;
-    } catch (error) {
-      this.logger.error(
-        'Le recalcule des statuts de présence a échoué.',
-        error instanceof Error ? error.stack : undefined,
-      );
-      result.errors.push(
-        `Statuts de présence : ${
-          error instanceof Error ? error.message : String(error)
-        }`,
-      );
-    }
+    await this.refreshPresenceStatuses(result);
 
     return result;
   }
