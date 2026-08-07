@@ -68,6 +68,12 @@ export class AbsenceDeclarationsService {
       );
     }
 
+    if (!employeeService.isActive) {
+      throw new BadRequestException(
+        'Le service du collaborateur est inactif : aucune absence ne peut être déclarée.',
+      );
+    }
+
     const creator = await this.usersService.findOne(
       authenticatedUser.id,
     );

@@ -128,6 +128,12 @@ export class LeaveRequestsService {
       );
     }
 
+    if (!employeeService.isActive) {
+      throw new BadRequestException(
+        'Le service du collaborateur est inactif : aucune demande de congé ne peut être créée.',
+      );
+    }
+
     const leaveType = await this.leaveTypesService.findOne(
       createLeaveRequestDto.leaveTypeId,
     );
@@ -150,8 +156,8 @@ export class LeaveRequestsService {
     const leaveRequest = this.leaveRequestRepository.create({
       employeeId: employee.id,
       employee,
-      createdById: employee.id,
-      createdBy: employee,
+      createdById: authenticatedUser.id,
+      createdBy: { id: authenticatedUser.id } as User,
       leaveTypeId: leaveType.id,
       leaveType,
       serviceId: employeeServiceId,
@@ -205,8 +211,8 @@ export class LeaveRequestsService {
         leaveRequestId: savedRequest.id,
         leaveRequest: savedRequest,
         action: AuditAction.BROUILLON_CREE,
-        actorId: employee.id,
-        actor: employee,
+        actorId: authenticatedUser.id,
+        actor: { id: authenticatedUser.id } as User,
         oldStatus: null,
         newStatus: LeaveRequestStatus.BROUILLON,
         comment: null,
@@ -255,6 +261,12 @@ export class LeaveRequestsService {
     if (!employeeServiceId || !employeeService) {
       throw new BadRequestException(
         'Un service actif doit être affecté au Directeur avant d’enregistrer un congé.',
+      );
+    }
+
+    if (!employeeService.isActive) {
+      throw new BadRequestException(
+        'Le service du Directeur est inactif : aucun congé ne peut être enregistré.',
       );
     }
 
@@ -501,16 +513,28 @@ export class LeaveRequestsService {
     let requestEmployeeId = authenticatedUser.id;
 
     await this.dataSource.transaction(async (manager) => {
-      const leaveRequest = await this.findOwnedRequestForUpdate(
+      const leaveRequest = await this.findRequestForUpdateLocked(
         manager,
         id,
-        authenticatedUser,
       );
 
       requestEmployeeId = leaveRequest.employeeId;
       const oldStatus = leaveRequest.status;
       const isSubmittedRequest =
         oldStatus === LeaveRequestStatus.EN_ATTENTE_VALIDATION;
+
+      const isOwner = leaveRequest.employeeId === authenticatedUser.id;
+      const isCreator = leaveRequest.createdById === authenticatedUser.id;
+      if (!isOwner && !isCreator) {
+        throw new ForbiddenException(
+          'Vous ne pouvez pas modifier cette demande.',
+        );
+      }
+      if (isSubmittedRequest && !isOwner) {
+        throw new ForbiddenException(
+          'Seul le collaborateur concerné peut modifier une demande soumise.',
+        );
+      }
 
       if (
         oldStatus !== LeaveRequestStatus.BROUILLON &&
@@ -740,13 +764,19 @@ export class LeaveRequestsService {
     let requestEmployeeId = authenticatedUser.id;
 
     await this.dataSource.transaction(async (manager) => {
-      const leaveRequest = await this.findOwnedRequestForUpdate(
+      const leaveRequest = await this.findRequestForUpdateLocked(
         manager,
         id,
-        authenticatedUser,
       );
 
       requestEmployeeId = leaveRequest.employeeId;
+
+      if (leaveRequest.employeeId !== authenticatedUser.id) {
+        throw new ForbiddenException(
+          'Seul le collaborateur concerné peut soumettre et signer sa demande de congé.',
+        );
+      }
+
       this.ensureDraft(leaveRequest);
 
       const leaveType = await manager
@@ -1282,13 +1312,18 @@ export class LeaveRequestsService {
     let requestEmployeeId = authenticatedUser.id;
 
     await this.dataSource.transaction(async (manager) => {
-      const leaveRequest = await this.findOwnedRequestForUpdate(
+      const leaveRequest = await this.findRequestForUpdateLocked(
         manager,
         id,
-        authenticatedUser,
       );
 
       requestEmployeeId = leaveRequest.employeeId;
+
+      if (leaveRequest.employeeId !== authenticatedUser.id) {
+        throw new ForbiddenException(
+          'Seul le collaborateur concerné peut annuler sa demande avant décision.',
+        );
+      }
 
       if (
         ![
@@ -1647,10 +1682,29 @@ export class LeaveRequestsService {
     id: number,
     authenticatedUser: AuthenticatedUser,
   ): Promise<void> {
-    const leaveRequest = await this.findOwnedRequest(
-      id,
-      authenticatedUser.id,
-    );
+    const leaveRequest = await this.leaveRequestRepository.findOne({
+      where: { id },
+      relations: {
+        employee: true,
+        createdBy: true,
+        leaveType: true,
+        service: true,
+      },
+    });
+
+    if (!leaveRequest) {
+      throw new NotFoundException(
+        `La demande de congé ${id} est introuvable.`,
+      );
+    }
+
+    const isOwner = leaveRequest.employeeId === authenticatedUser.id;
+    const isCreator = leaveRequest.createdById === authenticatedUser.id;
+    if (!isOwner && !isCreator) {
+      throw new ForbiddenException(
+        'Vous ne pouvez pas supprimer ce brouillon.',
+      );
+    }
 
     this.ensureDraft(leaveRequest);
 
@@ -2018,10 +2072,9 @@ export class LeaveRequestsService {
     return leaveRequest;
   }
 
-  private async findOwnedRequestForUpdate(
+  private async findRequestForUpdateLocked(
     manager: EntityManager,
     id: number,
-    authenticatedUser: AuthenticatedUser,
   ): Promise<LeaveRequest> {
     const leaveRequest = await manager
       .getRepository(LeaveRequest)
@@ -2050,19 +2103,6 @@ export class LeaveRequestsService {
     if (!leaveRequest) {
       throw new NotFoundException(
         `La demande de congé ${id} est introuvable.`,
-      );
-    }
-
-    // Propriétaire de la demande, créateur (cas RH pour un collaborateur)
-    // ou RH gestionnaire.
-    const canModify =
-      leaveRequest.employeeId === authenticatedUser.id ||
-      leaveRequest.createdById === authenticatedUser.id ||
-      authenticatedUser.role === UserRole.RH;
-
-    if (!canModify) {
-      throw new ForbiddenException(
-        'Vous ne pouvez pas modifier cette demande.',
       );
     }
 

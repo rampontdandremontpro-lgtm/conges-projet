@@ -1071,6 +1071,769 @@ async function main() {
     token: tokens.collabC, method: 'PATCH',
   });
 
+  // ======================================================================
+  // E2 — La RH agit pour un collaborateur (demandes de congé)
+  // ======================================================================
+  section('E2 — RH agit pour un collaborateur (demandes de congé)');
+
+  const rhProfile = await expectStatus('Identité de la RH lue pour les scénarios E2', 200, '/auth/me', {
+    token: tokens.rh,
+  });
+  const rhUserId = Number(rhProfile.body.id);
+  const directeurProfile = await expectStatus('Identité du Directeur lue pour les scénarios E1/E2', 200, '/auth/me', {
+    token: tokens.directeur,
+  });
+  const directeurUserId = Number(directeurProfile.body.id);
+
+  const e2DateA = await nextOpenDate(addDays(scenarioDate, 40));
+  const e2DateB = await nextOpenDate(addDays(scenarioDate, 41));
+  const e2DateC = await nextOpenDate(addDays(scenarioDate, 42));
+
+  const e2RhDraft = await expectStatus(
+    'RH crée un brouillon de congé pour un collaborateur',
+    201,
+    '/leave-requests',
+    {
+      token: tokens.rh, method: 'POST',
+      body: {
+        employeeId: fixtures.collaborators.a.id, leaveTypeId: paidType.id,
+        startDate: e2DateA, endDate: e2DateA,
+        comment: 'Brouillon créé par la RH pour le collaborateur A.',
+      },
+    },
+    (body) => {
+      invariant(Number(body.employeeId) === fixtures.collaborators.a.id, `employeeId obtenu ${body.employeeId}, attendu ${fixtures.collaborators.a.id}.`);
+      return true;
+    },
+  );
+  const e2RhDraftId = Number(e2RhDraft.body.id);
+
+  const createdByOk =
+    Number(e2RhDraft.body.createdById) === rhUserId &&
+    Number(e2RhDraft.body.createdBy?.id) === rhUserId;
+  record(
+    'La création par la RH est tracée (createdById = RH)',
+    createdByOk ? 'PASS' : 'FAIL',
+    createdByOk
+      ? `createdById = ${rhUserId}.`
+      : `createdById = ${e2RhDraft.body.createdById} — la trace désigne le collaborateur au lieu de la RH (${rhUserId}).`,
+  );
+  invariant(createdByOk, 'La traçabilité de la création RH est incorrecte.');
+
+  const [e2AuditRows] = await db.execute(
+    `SELECT actor_id AS actorId FROM audit_logs WHERE action = 'BROUILLON_CREE' ORDER BY id DESC LIMIT 1`,
+  );
+  const e2AuditOk = Number(e2AuditRows[0]?.actorId) === rhUserId;
+  record(
+    'L’audit BROUILLON_CREE est attribué à la RH créatrice',
+    e2AuditOk ? 'PASS' : 'FAIL',
+    e2AuditOk ? `actorId = ${rhUserId}.` : `actorId obtenu : ${e2AuditRows[0]?.actorId}.`,
+  );
+  invariant(e2AuditOk, 'L’audit BROUILLON_CREE n’est pas attribué à la RH.');
+
+  await expectStatus('Le collaborateur cible consulte la demande créée par la RH', 200, `/leave-requests/${e2RhDraftId}`, {
+    token: tokens.collabA,
+  }, (body) => {
+    invariant(Number(body.employeeId) === fixtures.collaborators.a.id, 'Demande non rattachée au collaborateur cible.');
+    invariant(body.status === 'BROUILLON', `Statut obtenu ${body.status}.`);
+    return true;
+  });
+  await expectStatus('Un collaborateur ne crée pas une demande pour un collègue', 403, '/leave-requests', {
+    token: tokens.collabA, method: 'POST',
+    body: { employeeId: fixtures.collaborators.b.id, leaveTypeId: paidType.id, startDate: e2DateB, endDate: e2DateB },
+  });
+  await expectStatus('Un Responsable ne crée pas une demande pour un collaborateur', 403, '/leave-requests', {
+    token: tokens.manager, method: 'POST',
+    body: { employeeId: fixtures.collaborators.a.id, leaveTypeId: paidType.id, startDate: e2DateB, endDate: e2DateB },
+  });
+  await expectStatus('Le Directeur n’utilise pas le mécanisme RH', 403, '/leave-requests', {
+    token: tokens.directeur, method: 'POST',
+    body: { employeeId: fixtures.collaborators.a.id, leaveTypeId: paidType.id, startDate: e2DateB, endDate: e2DateB },
+  });
+  await expectStatus('Un administrateur ne crée pas de demande métier', 403, '/leave-requests', {
+    token: tokens.admin, method: 'POST',
+    body: { leaveTypeId: paidType.id, startDate: e2DateB, endDate: e2DateB },
+  });
+  await expectStatus('Utilisateur cible inexistant', 404, '/leave-requests', {
+    token: tokens.rh, method: 'POST',
+    body: { employeeId: 99999999, leaveTypeId: paidType.id, startDate: e2DateB, endDate: e2DateB },
+  });
+
+  const e2DisabledUser = await expectStatus('Admin crée un utilisateur cible (scénario E2)', 201, '/users', {
+    token: tokens.admin, method: 'POST',
+    body: {
+      nom: 'TEST-E2', prenom: 'Désactivé', email: `e2-disabled-${fixtures.tag}@gmes.test`,
+      role: 'COLLABORATEUR', employmentType: 'INTERNE', hireDate: '2025-01-01',
+      serviceId: fixtures.serviceId,
+    },
+  });
+  await expectStatus('Admin désactive l’utilisateur cible E2', 200, `/users/${e2DisabledUser.body.id}/disable`, {
+    token: tokens.admin, method: 'PATCH',
+  });
+  await expectStatus('Utilisateur cible désactivé → erreur', 403, '/leave-requests', {
+    token: tokens.rh, method: 'POST',
+    body: { employeeId: e2DisabledUser.body.id, leaveTypeId: paidType.id, startDate: e2DateB, endDate: e2DateB },
+  });
+
+  const [e2HashRows] = await db.query(
+    `SELECT password_hash AS passwordHash FROM users WHERE email = 'collaborateur@gmes.fr'`,
+  );
+  const e2PasswordHash = e2HashRows[0]?.passwordHash;
+  invariant(typeof e2PasswordHash === 'string', 'Hash du collaborateur introuvable pour le scénario E2.');
+  const [e2NoServiceResult] = await db.execute(
+    `INSERT INTO users
+      (nom, prenom, email, password_hash, role, employment_type, service_id, hire_date, presence_status, is_active)
+     VALUES ('TEST-E2', 'SansService', ?, ?, 'COLLABORATEUR', 'INTERNE', NULL, '2024-01-01', 'PRESENT', 1)`,
+    [`e2-noservice-${fixtures.tag}@gmes.test`, e2PasswordHash],
+  );
+  const e2NoServiceUserId = Number(e2NoServiceResult.insertId);
+
+  const e2InactiveService = await expectStatus('Admin crée un service inactif pour le scénario E2', 201, '/services', {
+    token: tokens.admin, method: 'POST',
+    body: {
+      name: `ZZ Service E2 ${fixtures.tag}`, serviceType: 'INTERNE',
+      validationMode: 'DIRECTEUR_SEUL', takeoverDelayDays: 5,
+      minimumPresence: 1, hasMinimumPresenceRule: false,
+    },
+  });
+  await expectStatus('Admin désactive le service du scénario E2', 200, `/services/${e2InactiveService.body.id}/disable`, {
+    token: tokens.admin, method: 'PATCH',
+  });
+  const [e2InactiveServiceUserResult] = await db.execute(
+    `INSERT INTO users
+      (nom, prenom, email, password_hash, role, employment_type, service_id, hire_date, presence_status, is_active)
+     VALUES ('TEST-E2', 'ServiceInactif', ?, ?, 'COLLABORATEUR', 'INTERNE', ?, '2024-01-01', 'PRESENT', 1)`,
+    [`e2-inactiveservice-${fixtures.tag}@gmes.test`, e2PasswordHash, e2InactiveService.body.id],
+  );
+  const e2InactiveServiceUserId = Number(e2InactiveServiceUserResult.insertId);
+
+  await expectStatus('Utilisateur cible sans service → erreur', 400, '/leave-requests', {
+    token: tokens.rh, method: 'POST',
+    body: { employeeId: e2NoServiceUserId, leaveTypeId: paidType.id, startDate: e2DateB, endDate: e2DateB },
+  });
+
+  const e2InactiveServiceResult = await request('/leave-requests', {
+    token: tokens.rh, method: 'POST',
+    body: { employeeId: e2InactiveServiceUserId, leaveTypeId: paidType.id, startDate: e2DateB, endDate: e2DateB },
+  });
+  const inactiveServiceRejected = e2InactiveServiceResult.response.status === 400;
+  record(
+    'Utilisateur cible dans un service inactif → erreur',
+    inactiveServiceRejected ? 'PASS' : 'FAIL',
+    inactiveServiceRejected
+      ? 'HTTP 400.'
+      : `HTTP ${e2InactiveServiceResult.response.status} — le service inactif n'est pas contrôlé à la création.`,
+  );
+  if (!inactiveServiceRejected && e2InactiveServiceResult.body?.id) {
+    await db.execute('DELETE FROM leave_requests WHERE id = ?', [e2InactiveServiceResult.body.id]);
+  }
+
+  await expectStatus('Type réservé à la RH refusé dans une demande de congé', [400, 403], '/leave-requests', {
+    token: tokens.rh, method: 'POST',
+    body: { employeeId: fixtures.collaborators.a.id, leaveTypeId: rhOnlyAbsenceType.id, startDate: e2DateC, endDate: e2DateC },
+  });
+
+  await expectStatus('Le collaborateur cible modifie le brouillon créé par la RH', 200, `/leave-requests/${e2RhDraftId}`, {
+    token: tokens.collabA, method: 'PATCH', body: { comment: 'Modification par le collaborateur cible.' },
+  });
+  await expectStatus('La RH modifie le brouillon qu’elle a créé', 200, `/leave-requests/${e2RhDraftId}`, {
+    token: tokens.rh, method: 'PATCH', body: { comment: 'Modification par la RH créatrice.' },
+  });
+  // ---------------------------------------------------------------------
+  // E2-5 : la RH ne signe ni ne soumet à la place du collaborateur
+  // ---------------------------------------------------------------------
+  await expectStatus('La RH créatrice ne soumet pas la demande du collaborateur', 403, `/leave-requests/${e2RhDraftId}/submit`, {
+    token: tokens.rh, method: 'POST',
+    body: { signatureType: 'INITIALS', signatureData: 'RH' },
+  });
+
+  // Deuxième RH pour les scénarios de séparation des droits
+  const e2OtherRh = await expectStatus('Admin crée une seconde RH (scénario E2)', 201, '/users', {
+    token: tokens.admin, method: 'POST',
+    body: {
+      nom: 'TEST-E2', prenom: 'AutreRH', email: `e2-other-rh-${fixtures.tag}@gmes.test`,
+      role: 'RH', employmentType: 'INTERNE', hireDate: '2025-01-01',
+      serviceId: fixtures.serviceId,
+    },
+  });
+  const e2OtherRhResetToken = signPasswordResetToken({
+    userId: e2OtherRh.body.id,
+    email: e2OtherRh.body.email,
+    passwordHash: null,
+    secret: jwtSecret,
+  });
+  await expectStatus('La seconde RH définit son mot de passe', 200, '/auth/define-password', {
+    method: 'POST', body: { token: e2OtherRhResetToken, password: 'AutreRhGMES@2026!' },
+  });
+  tokens.rh2 = await login('seconde RH E2', [e2OtherRh.body.email, 'AutreRhGMES@2026!', 'RH']);
+
+  // Autre RH : consultation uniquement pour ces opérations de propriétaire
+  await expectStatus('Une autre RH ne modifie pas le brouillon créé par la RH', 403, `/leave-requests/${e2RhDraftId}`, {
+    token: tokens.rh2, method: 'PATCH', body: { comment: 'Tentative par une autre RH.' },
+  });
+  await expectStatus('Une autre RH ne soumet pas la demande du collaborateur', 403, `/leave-requests/${e2RhDraftId}/submit`, {
+    token: tokens.rh2, method: 'POST',
+    body: { signatureType: 'INITIALS', signatureData: 'RH' },
+  });
+
+  // Le collaborateur propriétaire soumet et signe lui-même
+  await expectStatus('Le collaborateur propriétaire soumet avec sa propre signature', 200, `/leave-requests/${e2RhDraftId}/submit`, {
+    token: tokens.collabA, method: 'POST',
+    body: { signatureType: 'INITIALS', signatureData: 'CA' },
+  }, (body) => {
+    invariant(body.status === 'EN_ATTENTE_VALIDATION', `Statut obtenu ${body.status}.`);
+    invariant(body.employeeSignatureType === 'INITIALS' && body.employeeSignedAt !== null, 'La signature du collaborateur doit être horodatée.');
+    return true;
+  });
+  const [e2SubmitDbRows] = await db.execute(
+    `SELECT employee_signature_data AS employeeSignatureData FROM leave_requests WHERE id = ?`,
+    [e2RhDraftId],
+  );
+  const e2SubmitDbOk = e2SubmitDbRows[0]?.employeeSignatureData === 'CA';
+  record(
+    'Seule la signature du collaborateur est enregistrée à la soumission',
+    e2SubmitDbOk ? 'PASS' : 'FAIL',
+    e2SubmitDbOk ? "employeeSignatureData = 'CA'." : `Valeur obtenue : ${e2SubmitDbRows[0]?.employeeSignatureData}.`,
+  );
+  invariant(e2SubmitDbOk, 'La signature enregistrée n’est pas celle du collaborateur.');
+
+  // Une fois EN_ATTENTE_VALIDATION, la RH créatrice n'a plus de droit de propriétaire
+  await expectStatus('La RH créatrice ne modifie pas la demande soumise', 403, `/leave-requests/${e2RhDraftId}`, {
+    token: tokens.rh, method: 'PATCH', body: { comment: 'Tentative après soumission.' },
+  });
+  await expectStatus('Une autre RH ne modifie pas la demande soumise', 403, `/leave-requests/${e2RhDraftId}`, {
+    token: tokens.rh2, method: 'PATCH', body: { comment: 'Tentative après soumission.' },
+  });
+  await expectStatus('La RH ne peut pas annuler avant décision à la place du collaborateur', 403, `/leave-requests/${e2RhDraftId}/cancel`, {
+    token: tokens.rh, method: 'POST', body: { reason: 'Tentative RH.' },
+  });
+
+  // Le collaborateur propriétaire annule
+  await expectStatus('Le collaborateur propriétaire annule sa demande', 200, `/leave-requests/${e2RhDraftId}/cancel`, {
+    token: tokens.collabA, method: 'POST', body: { reason: 'Fin du scénario E2.' },
+  }, (body) => {
+    invariant(body.status === 'ANNULEE', `Statut obtenu ${body.status}.`);
+    return true;
+  });
+
+  const e2CreatorDraft = await expectStatus(
+    'La RH crée un second brouillon pour le collaborateur',
+    201,
+    '/leave-requests',
+    {
+      token: tokens.rh, method: 'POST',
+      body: {
+        employeeId: fixtures.collaborators.a.id, leaveTypeId: paidType.id,
+        startDate: e2DateC, endDate: e2DateC,
+        comment: 'Brouillon RH à supprimer (scénario E2).',
+      },
+    },
+  );
+  await expectStatus('Une autre RH ne supprime pas le brouillon créé par la RH', 403, `/leave-requests/${e2CreatorDraft.body.id}`, {
+    token: tokens.rh2, method: 'DELETE',
+  });
+  await expectStatus('La RH créatrice supprime son brouillon', 204, `/leave-requests/${e2CreatorDraft.body.id}`, {
+    token: tokens.rh, method: 'DELETE',
+  });
+
+  const e2OwnDraft = await expectStatus(
+    'Un collaborateur crée son propre brouillon (contrôle E2)',
+    201,
+    '/leave-requests',
+    {
+      token: tokens.collabB, method: 'POST',
+      body: { leaveTypeId: paidType.id, startDate: e2DateB, endDate: e2DateB, comment: 'Brouillon personnel de contrôle.' },
+    },
+  );
+  const e2OverbroadResult = await request(`/leave-requests/${e2OwnDraft.body.id}`, {
+    token: tokens.rh, method: 'PATCH', body: { comment: 'Tentative de modification par une RH non impliquée.' },
+  });
+  const overbroadRejected = [403, 404].includes(e2OverbroadResult.response.status);
+  record(
+    'Une RH ne modifie pas une demande personnelle d’un collaborateur',
+    overbroadRejected ? 'PASS' : 'FAIL',
+    overbroadRejected
+      ? `HTTP ${e2OverbroadResult.response.status}.`
+      : `HTTP ${e2OverbroadResult.response.status} — droit d'écriture trop large accordé à toute RH.`,
+  );
+  await expectStatus('Le collaborateur supprime son brouillon personnel', 204, `/leave-requests/${e2OwnDraft.body.id}`, {
+    token: tokens.collabB, method: 'DELETE',
+  });
+
+  // ---------------------------------------------------------------------
+  // E2-4 : services inactifs (cas A à E)
+  // ---------------------------------------------------------------------
+  // A + C : service du collaborateur A désactivé → leave-request et absence refusés
+  await expectStatus('Admin désactive le service du collaborateur A (scénario E2-4)', 200, `/services/${fixtures.serviceId}/disable`, {
+    token: tokens.admin, method: 'PATCH',
+  });
+  await expectStatus('Le collaborateur ne crée pas de demande dans un service inactif', 400, '/leave-requests', {
+    token: tokens.collabA, method: 'POST',
+    body: { leaveTypeId: paidType.id, startDate: e2DateC, endDate: e2DateC },
+  });
+  await expectStatus('La RH ne crée pas d’absence pour un collaborateur d’un service inactif', 400, '/absence-declarations', {
+    token: tokens.rh, method: 'POST',
+    body: {
+      employeeId: fixtures.collaborators.a.id, leaveTypeId: rhOnlyAbsenceType.id,
+      startDate: e2DateB, endDate: e2DateB, durationHours: 7,
+    },
+  });
+  await expectStatus('Admin réactive le service du collaborateur A', 200, `/services/${fixtures.serviceId}/enable`, {
+    token: tokens.admin, method: 'PATCH',
+  });
+  const e2RestoreDraft = await expectStatus(
+    'Le collaborateur peut à nouveau créer après réactivation du service',
+    201,
+    '/leave-requests',
+    {
+      token: tokens.collabA, method: 'POST',
+      body: { leaveTypeId: paidType.id, startDate: e2DateC, endDate: e2DateC, comment: 'Vérification restauration du service.' },
+    },
+  );
+  await expectStatus('Le collaborateur supprime le brouillon de vérification', 204, `/leave-requests/${e2RestoreDraft.body.id}`, {
+    token: tokens.collabA, method: 'DELETE',
+  });
+
+  // D : absence créée par la RH pour un collaborateur d'un service inactif
+  await expectStatus('La RH ne crée pas d’absence pour un collaborateur d’un service inactif (cible dédiée)', 400, '/absence-declarations', {
+    token: tokens.rh, method: 'POST',
+    body: {
+      employeeId: e2InactiveServiceUserId, leaveTypeId: rhOnlyAbsenceType.id,
+      startDate: e2DateB, endDate: e2DateB, durationHours: 7,
+    },
+  });
+
+  // E : route Directeur avec service inactif
+  const [e2DirectorServiceRows] = await db.execute(
+    `SELECT service_id AS serviceId FROM users WHERE id = ?`,
+    [directeurUserId],
+  );
+  const e2DirectorServiceId = e2DirectorServiceRows[0]?.serviceId
+    ? Number(e2DirectorServiceRows[0].serviceId)
+    : null;
+  if (e2DirectorServiceId === null) {
+    record('Route Directeur avec service inactif', 'SKIP', 'Le Directeur n’est affecté à aucun service dans cette base.');
+  } else {
+    await expectStatus('Admin désactive le service du Directeur (scénario E2-4)', 200, `/services/${e2DirectorServiceId}/disable`, {
+      token: tokens.admin, method: 'PATCH',
+    });
+    await expectStatus('Le Directeur ne peut pas enregistrer de congé dans un service inactif', 400, '/leave-requests/director', {
+      token: tokens.directeur, method: 'POST',
+      body: { leaveTypeId: paidType.id, startDate: e2DateB, endDate: e2DateB },
+    });
+    await expectStatus('Admin réactive le service du Directeur', 200, `/services/${e2DirectorServiceId}/enable`, {
+      token: tokens.admin, method: 'PATCH',
+    });
+  }
+
+  // ======================================================================
+  // E1 — Directeur : enregistrement direct des congés
+  // ======================================================================
+  section('E1 — Directeur : enregistrement direct des congés');
+
+  await expectStatus('Un collaborateur ne peut pas utiliser la route Directeur', 403, '/leave-requests/director', {
+    token: tokens.collabA, method: 'POST',
+    body: { leaveTypeId: paidType.id, startDate: e2DateC, endDate: e2DateC },
+  });
+  await expectStatus('Un Responsable ne peut pas utiliser la route Directeur', 403, '/leave-requests/director', {
+    token: tokens.manager, method: 'POST',
+    body: { leaveTypeId: paidType.id, startDate: e2DateC, endDate: e2DateC },
+  });
+  await expectStatus('Une RH ne peut pas utiliser la route Directeur', 403, '/leave-requests/director', {
+    token: tokens.rh, method: 'POST',
+    body: { leaveTypeId: paidType.id, startDate: e2DateC, endDate: e2DateC },
+  });
+  await expectStatus('Un administrateur ne peut pas utiliser la route Directeur', 403, '/leave-requests/director', {
+    token: tokens.admin, method: 'POST',
+    body: { leaveTypeId: paidType.id, startDate: e2DateC, endDate: e2DateC },
+  });
+
+  const e1Date = await nextOpenDate(addDays(scenarioDate, 50));
+  let e1HolidayDate = nonSunday(await nextOpenDate(addDays(scenarioDate, 55)));
+  let e1FermetureDate = nonSunday(await nextOpenDate(addDays(scenarioDate, 56)));
+  while (e1FermetureDate === e1HolidayDate) {
+    e1FermetureDate = nonSunday(addDays(e1FermetureDate, 1));
+  }
+  let e1Sunday = addDays(e1Date, ((7 - new Date(`${e1Date}T00:00:00.000Z`).getUTCDay()) % 7) || 7);
+  while (e1Sunday === e1Date || e1Sunday === e1HolidayDate || e1Sunday === e1FermetureDate) {
+    e1Sunday = addDays(e1Sunday, 7);
+  }
+  let e1InsufficientDate = await nextOpenDate(addDays(scenarioDate, 57));
+  while (new Date(`${addDays(e1InsufficientDate, 1)}T00:00:00.000Z`).getUTCDay() === 0) {
+    e1InsufficientDate = await nextOpenDate(addDays(e1InsufficientDate, 1));
+  }
+  let e1Saturday = addDays(e1Date, 1);
+  while (new Date(`${e1Saturday}T00:00:00.000Z`).getUTCDay() !== 6) {
+    e1Saturday = addDays(e1Saturday, 1);
+  }
+  while (e1Saturday === e1HolidayDate || e1Saturday === e1FermetureDate || e1Saturday === e1InsufficientDate) {
+    e1Saturday = addDays(e1Saturday, 7);
+  }
+  let e1HalfDate = await nextOpenDate(addDays(scenarioDate, 51));
+  while (e1HalfDate === e1Date || e1HalfDate === e1Saturday) {
+    e1HalfDate = await nextOpenDate(addDays(e1HalfDate, 1));
+  }
+
+  const dirBalance = await initializeBalance(directeurUserId, operationalPeriod, 'N-1', 100);
+  const dirBalanceId = Number(dirBalance.id);
+
+  await expectStatus('RH réduit le solde du Directeur pour le scénario de solde insuffisant', 201, `/leave-balances/${dirBalanceId}/correction`, {
+    token: tokens.rh, method: 'POST', body: { days: -99, reason: 'Scénario E2E solde insuffisant.' },
+  });
+  await expectStatus('Solde insuffisant du Directeur → 400', 400, '/leave-requests/director', {
+    token: tokens.directeur, method: 'POST',
+    body: { leaveTypeId: paidType.id, startDate: e1InsufficientDate, endDate: addDays(e1InsufficientDate, 1) },
+  });
+  const [e1InsufficientRows] = await db.execute(
+    `SELECT COUNT(*) AS total FROM leave_requests WHERE employee_id = ? AND start_date = ?`,
+    [directeurUserId, e1InsufficientDate],
+  );
+  const e1NoRow = Number(e1InsufficientRows[0]?.total ?? 1) === 0;
+  record(
+    'La transaction du Directeur est cohérente : aucune demande sans solde',
+    e1NoRow ? 'PASS' : 'FAIL',
+    e1NoRow ? 'Aucun enregistrement en base.' : 'Une demande fantôme existe malgré le 400.',
+  );
+  invariant(e1NoRow, 'La demande du Directeur a été persistée malgré le solde insuffisant.');
+  const [e1BalanceAfterFail] = await db.execute(
+    `SELECT available_days AS availableDays FROM leave_balances WHERE employee_id = ? AND reference_period = ? AND counter_type = 'N-1'`,
+    [directeurUserId, operationalPeriod],
+  );
+  invariant(Number(e1BalanceAfterFail[0]?.availableDays) === 1, `Solde après échec : ${e1BalanceAfterFail[0]?.availableDays}.`);
+  await expectStatus('RH restaure le solde du Directeur', 201, `/leave-balances/${dirBalanceId}/correction`, {
+    token: tokens.rh, method: 'POST', body: { days: 99, reason: 'Restauration du scénario E2E.' },
+  });
+
+  const e1Request = await expectStatus(
+    'Directeur enregistre un congé payé sans circuit de validation',
+    201,
+    '/leave-requests/director',
+    {
+      token: tokens.directeur, method: 'POST',
+      body: { leaveTypeId: paidType.id, startDate: e1Date, endDate: e1Date, comment: 'Congé Directeur E2E.' },
+    },
+    (body) => {
+      invariant(body.status === 'VALIDEE', `Statut obtenu ${body.status}.`);
+      invariant(Number(body.deductedDays) === 1, `deductedDays obtenu ${body.deductedDays}.`);
+      invariant(body.employeeSignatureType === null && body.employeeSignedAt === null && body.validatorSignatureType === null && body.validatorSignedAt === null, 'Des signatures sont présentes alors qu’aucune n’est requise.');
+      invariant(body.finalDeciderRole === 'DIRECTEUR', `finalDeciderRole obtenu ${body.finalDeciderRole}.`);
+      invariant(Number(body.finalDeciderId) === directeurUserId, 'Le décideur final n’est pas le Directeur.');
+      invariant(body.modificationDeadline === null, 'Une demande Directeur ne doit pas avoir de date limite de modification.');
+      invariant(body.submittedAt !== null && body.decisionAt !== null, 'Horodatage incomplet.');
+      invariant(Number(body.createdBy?.id) === directeurUserId, 'createdBy différent du Directeur.');
+      return true;
+    },
+  );
+  const e1RequestId = Number(e1Request.body.id);
+
+  const [e1SignatureRows] = await db.execute(
+    `SELECT employee_signature_data AS esd, validator_signature_data AS vsd FROM leave_requests WHERE id = ?`,
+    [e1RequestId],
+  );
+  const e1NoSignatureOk = e1SignatureRows[0]?.esd === null && e1SignatureRows[0]?.vsd === null;
+  record(
+    'Aucune signature en base pour la demande Directeur',
+    e1NoSignatureOk ? 'PASS' : 'FAIL',
+    e1NoSignatureOk ? 'Signature collaborateur et valideur absentes.' : 'Une signature est présente en base.',
+  );
+  invariant(e1NoSignatureOk, 'La demande Directeur contient une signature.');
+
+  const [e1AuditRows] = await db.execute(
+    `SELECT action FROM audit_logs WHERE actor_id = ? AND action IN ('CONGE_DIRECTEUR_ENREGISTRE','DEMANDE_SOUMISE','DEMANDE_VALIDEE')`,
+    [directeurUserId],
+  );
+  const e1AuditActions = e1AuditRows.map((row) => row.action);
+  const e1AuditOk =
+    e1AuditActions.includes('CONGE_DIRECTEUR_ENREGISTRE') &&
+    !e1AuditActions.includes('DEMANDE_SOUMISE') &&
+    !e1AuditActions.includes('DEMANDE_VALIDEE');
+  record(
+    'L’audit trace l’enregistrement Directeur sans passage par le circuit',
+    e1AuditOk ? 'PASS' : 'FAIL',
+    e1AuditOk ? `Actions : ${e1AuditActions.join(', ')}.` : `Actions obtenues : ${e1AuditActions.join(', ')}.`,
+  );
+  invariant(e1AuditOk, 'L’audit de la demande Directeur est incohérent.');
+
+  const [e1NotificationRows] = await db.execute(
+    `SELECT type FROM notifications WHERE leave_request_id = ?`,
+    [e1RequestId],
+  );
+  const e1NotificationTypes = e1NotificationRows.map((row) => row.type);
+  const e1NotificationOk =
+    e1NotificationTypes.includes('CONGE_DIRECTEUR_ENREGISTRE') &&
+    !e1NotificationTypes.includes('LEAVE_REQUEST_SUBMITTED');
+  record(
+    'La notification interne confirme l’enregistrement Directeur',
+    e1NotificationOk ? 'PASS' : 'FAIL',
+    e1NotificationOk ? `Types : ${e1NotificationTypes.join(', ')}.` : `Types obtenus : ${e1NotificationTypes.join(', ')}.`,
+  );
+  invariant(e1NotificationOk, 'Notifications incohérentes pour la demande Directeur.');
+
+  const [e1BalanceRows] = await db.execute(
+    `SELECT available_days AS availableDays FROM leave_balances WHERE employee_id = ? AND reference_period = ? AND counter_type = 'N-1'`,
+    [directeurUserId, operationalPeriod],
+  );
+  const e1BalanceOk = Number(e1BalanceRows[0]?.availableDays) === 99;
+  record(
+    'Le solde N-1 du Directeur est déduit d’un jour',
+    e1BalanceOk ? 'PASS' : 'FAIL',
+    e1BalanceOk ? 'Solde = 99.' : `Solde obtenu : ${e1BalanceRows[0]?.availableDays}.`,
+  );
+  invariant(e1BalanceOk, 'La déduction du solde Directeur est incorrecte.');
+
+  const e1Today = martiniqueToday();
+  const e1TodayUsable = new Date(`${e1Today}T00:00:00.000Z`).getUTCDay() !== 0;
+  if (e1TodayUsable) {
+    await expectStatus('Directeur enregistre un congé le jour même', 201, '/leave-requests/director', {
+      token: tokens.directeur, method: 'POST',
+      body: { leaveTypeId: paidType.id, startDate: e1Today, endDate: e1Today, comment: 'Congé jour même Directeur.' },
+    });
+    const [e1PresenceRows] = await db.execute(
+      `SELECT presence_status AS presenceStatus FROM users WHERE id = ?`,
+      [directeurUserId],
+    );
+    const e1PresenceOk = e1PresenceRows[0]?.presenceStatus === 'EN_VACANCES';
+    record(
+      'Le statut de présence du Directeur passe à EN_VACANCES',
+      e1PresenceOk ? 'PASS' : 'FAIL',
+      e1PresenceOk ? 'EN_VACANCES.' : `Statut obtenu : ${e1PresenceRows[0]?.presenceStatus}.`,
+    );
+    invariant(e1PresenceOk, 'Statut de présence Directeur incorrect après congé du jour.');
+  } else {
+    record('Présence du Directeur au jour courant', 'SKIP', 'Journée dominicale : aucun congé ne peut commencer un dimanche.');
+  }
+
+  await expectStatus('Chevauchement personnel du Directeur refusé', 400, '/leave-requests/director', {
+    token: tokens.directeur, method: 'POST',
+    body: { leaveTypeId: paidType.id, startDate: e1Date, endDate: e1Date },
+  });
+  await expectStatus('Un dimanche est refusé pour le Directeur', 400, '/leave-requests/director', {
+    token: tokens.directeur, method: 'POST',
+    body: { leaveTypeId: paidType.id, startDate: e1Sunday, endDate: e1Sunday },
+  });
+
+  const e1Holiday = await expectStatus('RH crée un jour férié Martinique pour le scénario E1', 201, '/holidays', {
+    token: tokens.rh, method: 'POST',
+    body: { date: e1HolidayDate, name: `Férié E1 ${fixtures.tag}`, holidayType: 'MARTINIQUE', deductible: false, source: 'TEST_E2E' },
+  });
+  await expectStatus('Un jour férié Martinique est refusé au Directeur', 400, '/leave-requests/director', {
+    token: tokens.directeur, method: 'POST',
+    body: { leaveTypeId: paidType.id, startDate: e1HolidayDate, endDate: e1HolidayDate },
+  });
+  await expectStatus('RH désactive le jour férié du scénario E1', 200, `/holidays/${e1Holiday.body.id}/disable`, {
+    token: tokens.rh, method: 'PATCH',
+  });
+
+  const e1Fermeture = await expectStatus('RH crée une fermeture GMES pour le scénario E1', 201, '/holidays', {
+    token: tokens.rh, method: 'POST',
+    body: { date: e1FermetureDate, name: `Fermeture E1 ${fixtures.tag}`, holidayType: 'FERMETURE_GMES', deductible: false, source: 'TEST_E2E' },
+  });
+  await expectStatus('Une fermeture GMES est refusée au Directeur', 400, '/leave-requests/director', {
+    token: tokens.directeur, method: 'POST',
+    body: { leaveTypeId: paidType.id, startDate: e1FermetureDate, endDate: e1FermetureDate },
+  });
+  await expectStatus('RH désactive la fermeture du scénario E1', 200, `/holidays/${e1Fermeture.body.id}/disable`, {
+    token: tokens.rh, method: 'PATCH',
+  });
+
+  await expectStatus('Le Directeur peut enregistrer un samedi', 201, '/leave-requests/director', {
+    token: tokens.directeur, method: 'POST',
+    body: { leaveTypeId: paidType.id, startDate: e1Saturday, endDate: e1Saturday },
+  });
+  await expectStatus('Le Directeur enregistre une demi-journée', 201, '/leave-requests/director', {
+    token: tokens.directeur, method: 'POST',
+    body: { leaveTypeId: paidType.id, startDate: e1HalfDate, endDate: e1HalfDate, startPeriod: 'MATIN', endPeriod: 'MATIN' },
+  }, (body) => {
+    invariant(Number(body.deductedDays) === 0.5, `deductedDays obtenu ${body.deductedDays}.`);
+    return true;
+  });
+
+  // ======================================================================
+  // E3 — Statut de présence calculé et relais du Responsable
+  // ======================================================================
+  section('E3 — Présence calculée et relais du Responsable');
+
+  const e3Today = martiniqueToday();
+  const e3TodayOpen = new Date(`${e3Today}T00:00:00.000Z`).getUTCDay() !== 0;
+  const e3RelaisDate1 = await nextOpenDate(addDays(scenarioDate, 30));
+  const e3RelaisDate2 = await nextOpenDate(addDays(scenarioDate, 31));
+  const e3RelaisDate3 = await nextOpenDate(addDays(scenarioDate, 32));
+  const e3CollabLeaveDate = await nextOpenDate(addDays(scenarioDate, 33));
+
+  if (!e3TodayOpen) {
+    record('E3 — Présence calculée et relais du Responsable', 'SKIP', 'Journée dominicale : congés et absences ne peuvent pas commencer un dimanche.');
+  } else {
+    await initializeBalance(fixtures.collaborators.b.id, operationalPeriod, 'N-1', 100);
+    const e3CollabLeave = await createRequest(tokens.collabB, paidType.id, e3CollabLeaveDate, 'Congé futur (scénario E3)');
+    await submitRequest(tokens.collabB, e3CollabLeave.id);
+    await expectStatus('Le Responsable valide le congé futur du collaborateur', 200, `/leave-requests/${e3CollabLeave.id}/validate`, {
+      token: tokens.manager, method: 'POST',
+      body: { signatureType: 'INITIALS', signatureData: 'MG', minimumPresenceJustification: 'Continuité assurée.' },
+    }, (body) => {
+      invariant(body.status === 'VALIDEE', `Statut obtenu ${body.status}.`);
+      return true;
+    });
+    const [e3PresentRows] = await db.execute(
+      `SELECT presence_status AS presenceStatus FROM users WHERE id = ?`,
+      [fixtures.collaborators.b.id],
+    );
+    const e3PresentOk = e3PresentRows[0]?.presenceStatus === 'PRESENT';
+    record(
+      'Un congé validé futur ne modifie pas le statut du jour (PRESENT)',
+      e3PresentOk ? 'PASS' : 'FAIL',
+      e3PresentOk ? 'PRESENT.' : `Statut obtenu : ${e3PresentRows[0]?.presenceStatus}.`,
+    );
+    invariant(e3PresentOk, 'Le statut du jour ne doit pas dépendre d’un congé futur.');
+
+    const e3Absence = await expectStatus('RH crée une absence autorisée pour le jour même', 201, '/absence-declarations', {
+      token: tokens.rh, method: 'POST',
+      body: {
+        employeeId: fixtures.collaborators.b.id, leaveTypeId: rhOnlyAbsenceType.id,
+        startDate: e3Today, endDate: e3Today,
+        durationHours: 7, comment: 'Absence autorisée E3.',
+      },
+    });
+    await expectStatus('La RH soumet l’absence enregistrée', 200, `/absence-declarations/${e3Absence.body.id}/submit`, {
+      token: tokens.rh, method: 'POST', body: { certifiedAccurate: true },
+    }, (body) => {
+      invariant(body.status === 'ENREGISTREE', `Statut obtenu ${body.status}.`);
+      return true;
+    });
+    const [e3AbsentRows] = await db.execute(
+      `SELECT presence_status AS presenceStatus FROM users WHERE id = ?`,
+      [fixtures.collaborators.b.id],
+    );
+    const e3AbsentOk = e3AbsentRows[0]?.presenceStatus === 'ABSENT';
+    record(
+      'Une absence enregistrée le jour même rend le collaborateur ABSENT',
+      e3AbsentOk ? 'PASS' : 'FAIL',
+      e3AbsentOk ? 'ABSENT.' : `Statut obtenu : ${e3AbsentRows[0]?.presenceStatus}.`,
+    );
+    invariant(e3AbsentOk, 'Le statut ABSENT n’est pas appliqué.');
+
+    await expectStatus('La RH annule l’absence enregistrée', 200, `/absence-declarations/${e3Absence.body.id}/cancel`, {
+      token: tokens.rh, method: 'POST',
+    });
+    const [e3ReturnRows] = await db.execute(
+      `SELECT presence_status AS presenceStatus FROM users WHERE id = ?`,
+      [fixtures.collaborators.b.id],
+    );
+    const e3ReturnOk = e3ReturnRows[0]?.presenceStatus === 'PRESENT';
+    record(
+      'L’annulation d’une absence ramène le statut à PRESENT',
+      e3ReturnOk ? 'PASS' : 'FAIL',
+      e3ReturnOk ? 'PRESENT.' : `Statut obtenu : ${e3ReturnRows[0]?.presenceStatus}.`,
+    );
+    invariant(e3ReturnOk, 'Le retour à PRESENT échoue après annulation.');
+
+    const e3HalfAbsence = await expectStatus('RH crée une absence autorisée demi-journée', 201, '/absence-declarations', {
+      token: tokens.rh, method: 'POST',
+      body: {
+        employeeId: fixtures.collaborators.c.id, leaveTypeId: rhOnlyAbsenceType.id,
+        startDate: e3Today, endDate: e3Today, startPeriod: 'MATIN', endPeriod: 'MATIN',
+        durationHours: 3, comment: 'Demi-journée E3.',
+      },
+    });
+    await expectStatus('La RH soumet l’absence demi-journée', 200, `/absence-declarations/${e3HalfAbsence.body.id}/submit`, {
+      token: tokens.rh, method: 'POST', body: { certifiedAccurate: true },
+    });
+    const [e3HalfRows] = await db.execute(
+      `SELECT presence_status AS presenceStatus FROM users WHERE id = ?`,
+      [fixtures.collaborators.c.id],
+    );
+    const e3HalfOk = e3HalfRows[0]?.presenceStatus === 'ABSENT';
+    record(
+      'Une absence demi-journée rend le statut ABSENT pour la journée entière (comportement actuel)',
+      e3HalfOk ? 'PASS' : 'FAIL',
+      e3HalfOk ? 'ABSENT à la journée.' : `Statut obtenu : ${e3HalfRows[0]?.presenceStatus}.`,
+    );
+    invariant(e3HalfOk, 'Comportement demi-journée différent de l’existant.');
+    await expectStatus('La RH annule l’absence demi-journée', 200, `/absence-declarations/${e3HalfAbsence.body.id}/cancel`, {
+      token: tokens.rh, method: 'POST',
+    });
+
+    await initializeBalance(fixtures.manager.id, operationalPeriod, 'N-1', 100);
+    const e3ManagerAbsence = await expectStatus('RH crée une absence autorisée pour le Responsable', 201, '/absence-declarations', {
+      token: tokens.rh, method: 'POST',
+      body: {
+        employeeId: fixtures.manager.id, leaveTypeId: rhOnlyAbsenceType.id,
+        startDate: e3Today, endDate: e3Today,
+        durationHours: 7, comment: 'Absence du Responsable pour le relais E3.',
+      },
+    });
+    await expectStatus('La RH soumet l’absence du Responsable', 200, `/absence-declarations/${e3ManagerAbsence.body.id}/submit`, {
+      token: tokens.rh, method: 'POST', body: { certifiedAccurate: true },
+    });
+
+    const e3RelaisRequest = await createRequest(tokens.collabA, paidType.id, e3RelaisDate1, 'Relais Responsable indisponible');
+    await submitRequest(tokens.collabA, e3RelaisRequest.id);
+    await expectStatus('La RH reprend la validation via le relais (Responsable ABSENT)', 200, `/leave-requests/${e3RelaisRequest.id}/validate`, {
+      token: tokens.rh, method: 'POST',
+      body: { signatureType: 'INITIALS', signatureData: 'RH', rhConfirmedDirectorAgreement: true, minimumPresenceJustification: 'Relais du Responsable indisponible.' },
+    }, (body) => {
+      invariant(body.status === 'VALIDEE', `Statut obtenu ${body.status}.`);
+      return true;
+    });
+    const [e3RelaisAuditRows] = await db.execute(
+      `SELECT action FROM audit_logs WHERE action = 'REPRISE_PAR_RELAIS' AND actor_id = ?`,
+      [rhUserId],
+    );
+    const e3RelaisAuditOk = e3RelaisAuditRows.length > 0;
+    record(
+      'Le relais est tracé dans l’audit (REPRISE_PAR_RELAIS)',
+      e3RelaisAuditOk ? 'PASS' : 'FAIL',
+      e3RelaisAuditOk ? 'Trace présente.' : 'Aucune trace REPRISE_PAR_RELAIS.',
+    );
+    invariant(e3RelaisAuditOk, 'L’audit du relais est absent.');
+
+    await expectStatus('La RH annule l’absence du Responsable', 200, `/absence-declarations/${e3ManagerAbsence.body.id}/cancel`, {
+      token: tokens.rh, method: 'POST',
+    });
+    const e3ManagerHalfAbsence = await expectStatus('RH crée une absence demi-journée pour le Responsable', 201, '/absence-declarations', {
+      token: tokens.rh, method: 'POST',
+      body: {
+        employeeId: fixtures.manager.id, leaveTypeId: rhOnlyAbsenceType.id,
+        startDate: e3Today, endDate: e3Today, startPeriod: 'MATIN', endPeriod: 'MATIN',
+        durationHours: 3, comment: 'Demi-journée du Responsable E3.',
+      },
+    });
+    await expectStatus('La RH soumet l’absence demi-journée du Responsable', 200, `/absence-declarations/${e3ManagerHalfAbsence.body.id}/submit`, {
+      token: tokens.rh, method: 'POST', body: { certifiedAccurate: true },
+    });
+    const e3HalfRelaisRequest = await createRequest(tokens.collabA, unpaidType.id, e3RelaisDate2, 'Relais Responsable demi-journée');
+    await submitRequest(tokens.collabA, e3HalfRelaisRequest.id);
+    const e3HalfRelaisResult = await request(`/leave-requests/${e3HalfRelaisRequest.id}/validate`, {
+      token: tokens.rh, method: 'POST',
+      body: { signatureType: 'INITIALS', signatureData: 'RH', rhConfirmedDirectorAgreement: true, minimumPresenceJustification: 'Relais du Responsable demi-journée.' },
+    });
+    const e3HalfRelaisOk = e3HalfRelaisResult.response.status === 200 && e3HalfRelaisResult.body?.status === 'VALIDEE';
+    record(
+      'Une demi-journée d’absence du Responsable déclenche le relais pour la journée entière (comportement actuel)',
+      e3HalfRelaisOk ? 'PASS' : 'FAIL',
+      e3HalfRelaisOk ? 'Validation RH 200 (RELAIS).' : `HTTP ${e3HalfRelaisResult.response.status} — ${summarize(e3HalfRelaisResult.body)}.`,
+    );
+    invariant(e3HalfRelaisOk, 'Le relais demi-journée ne fonctionne pas comme documenté.');
+
+    await expectStatus('La RH annule l’absence demi-journée du Responsable', 200, `/absence-declarations/${e3ManagerHalfAbsence.body.id}/cancel`, {
+      token: tokens.rh, method: 'POST',
+    });
+    const e3ReturnRelaisRequest = await createRequest(tokens.collabA, unpaidType.id, e3RelaisDate3, 'Retour du Responsable');
+    await submitRequest(tokens.collabA, e3ReturnRelaisRequest.id);
+    await expectStatus('Le retour à PRESENT du Responsable rétablit sa priorité', 403, `/leave-requests/${e3ReturnRelaisRequest.id}/validate`, {
+      token: tokens.rh, method: 'POST',
+      body: { signatureType: 'INITIALS', signatureData: 'RH', rhConfirmedDirectorAgreement: true },
+    });
+
+    await db.execute(`UPDATE users SET presence_status = 'EN_VACANCES' WHERE id = ?`, [fixtures.manager.id]);
+    const e3StaleRequest = await createRequest(tokens.collabA, unpaidType.id, await nextOpenDate(addDays(e3RelaisDate3, 1)), 'Champ stocké obsolète');
+    await submitRequest(tokens.collabA, e3StaleRequest.id);
+    await expectStatus('Un champ stocké obsolète ne déclenche pas le relais (présence recalculée)', 403, `/leave-requests/${e3StaleRequest.id}/validate`, {
+      token: tokens.rh, method: 'POST',
+      body: { signatureType: 'INITIALS', signatureData: 'RH', rhConfirmedDirectorAgreement: true },
+    });
+    await db.execute(`UPDATE users SET presence_status = 'PRESENT' WHERE id = ?`, [fixtures.manager.id]);
+  }
+
   section('Exports RH et statistiques agrégées Directeur');
   await expectStatus('RH exporte les demandes en CSV', 200, '/exports/leave-requests?format=csv', {
     token: tokens.rh, binary: true,
