@@ -3152,6 +3152,154 @@ async function main() {
     record('REFERENCE_PERIOD_START restauré à 06-01 (fin E4)', 'PASS', 'La suite de clôture/acquisition n’est pas contaminée.');
   }
 
+  section('REF-1 — acquisition mensuelle alignée sur REFERENCE_PERIOD_START');
+  {
+    const ref1Year = Number(martiniqueToday().slice(0, 4)) - 2;
+    const ref1Month = `${ref1Year}-04`;
+    const creditDate = `${ref1Year}-04-30`;
+    const expectedPeriod = `${ref1Year}-${ref1Year + 1}`;
+    const legacyPeriod = `${ref1Year - 1}-${ref1Year}`;
+
+    const ref1Tag = Date.now().toString(36);
+    const [ref1ServiceResult] = await db.execute(
+      `INSERT INTO services
+        (name, service_type, validation_mode, takeover_delay_days, minimum_presence, has_minimum_presence_rule, is_active)
+       VALUES (?, 'INTERNE', 'RESPONSABLE_PUIS_RELAIS', 7, 3, 1, 1)`,
+      [`ZZ REF-1 Acquisition ${ref1Tag}`],
+    );
+    const ref1ServiceId = Number(ref1ServiceResult.insertId);
+    const [ref1HashRows] = await db.query(
+      `SELECT password_hash AS passwordHash FROM users WHERE email = 'collaborateur@gmes.fr'`,
+    );
+    const ref1PasswordHash = ref1HashRows[0].passwordHash;
+    const [ref1UserResult] = await db.execute(
+      `INSERT INTO users
+        (nom, prenom, email, password_hash, role, employment_type, service_id, hire_date, presence_status, is_active)
+       VALUES (?, ?, ?, ?, 'COLLABORATEUR', 'INTERNE', ?, '2024-01-01', 'PRESENT', 1)`,
+      ['REF1-ACQUISITION', 'Rachel', `ref1-${ref1Tag}@gmes.test`, ref1PasswordHash, ref1ServiceId],
+    );
+    const ref1UserId = Number(ref1UserResult.insertId);
+
+    try {
+      await expectStatus(
+        'REF-1 — RH force REFERENCE_PERIOD_START à 04-15',
+        200,
+        '/settings/REFERENCE_PERIOD_START',
+        {
+          token: tokens.rh,
+          method: 'PATCH',
+          body: { settingValue: '04-15', description: 'REF-1 : acquisition d’avril en milieu de période.' },
+        },
+      );
+
+      const ref1Run = await expectStatus(
+        `REF-1 — acquisition contrôlée d’avril ${ref1Year}`,
+        201,
+        '/leave-balances/accrual/run',
+        { token: tokens.rh, method: 'POST', body: { accrualMonth: ref1Month } },
+        (body) => {
+          invariant(
+            body.accrualMonth === ref1Month,
+            `accrualMonth ${body.accrualMonth}, attendu ${ref1Month}.`,
+          );
+          invariant(
+            body.effectiveDate === creditDate,
+            `effectiveDate ${body.effectiveDate}, attendue ${creditDate} (30/04, jamais la date d’exécution).`,
+          );
+          invariant(
+            body.referencePeriod === expectedPeriod,
+            `referencePeriod ${body.referencePeriod}, attendu ${expectedPeriod}.`,
+          );
+          invariant(
+            body.creditedEmployees.some((row) => Number(row.employeeId) === ref1UserId),
+            'Le collaborateur dédié REF-1 n’a pas été crédité.',
+          );
+          return true;
+        },
+      );
+      record(
+        'REF-1 — le run expose la période attendue (30/04)',
+        'PASS',
+        `avril ${ref1Year} → ${ref1Run.body.referencePeriod}, date effective ${ref1Run.body.effectiveDate}.`,
+      );
+
+      const [ref1Balances] = await db.query(
+        `SELECT id, reference_period AS referencePeriod, counter_type AS counterType, acquired_days AS acquiredDays
+           FROM leave_balances
+          WHERE employee_id = ?`,
+        [ref1UserId],
+      );
+      const ref1Balance = ref1Balances.find((row) => row.counterType === 'N');
+      invariant(ref1Balance, 'Aucun compteur N créé pour le collaborateur REF-1.');
+      invariant(
+        ref1Balance.referencePeriod === expectedPeriod,
+        `Compteur N rattaché à ${ref1Balance.referencePeriod}, attendu ${expectedPeriod}.`,
+      );
+      invariant(
+        Number(ref1Balance.acquiredDays) === 2.5,
+        `acquiredDays ${ref1Balance.acquiredDays}, attendu 2.5.`,
+      );
+      const [ref1Movements] = await db.query(
+        `SELECT movement_type AS movementType, days, leave_balance_id AS leaveBalanceId
+           FROM balance_movements
+          WHERE employee_id = ?`,
+        [ref1UserId],
+      );
+      invariant(ref1Movements.length === 1, `Mouvements ${ref1Movements.length}, attendu 1.`);
+      invariant(
+        ref1Movements[0].movementType === 'ACQUISITION',
+        'Le mouvement créé doit être une acquisition mensuelle.',
+      );
+      invariant(
+        Number(ref1Movements[0].leaveBalanceId) === Number(ref1Balance.id),
+        'Le mouvement doit pointer vers le compteur de la période attendue.',
+      );
+      invariant(
+        Number(ref1Movements[0].days) === 2.5,
+        `Jours crédités ${ref1Movements[0].days}, attendu 2.5.`,
+      );
+      record(
+        'REF-1 — compteur N et mouvement rattachés à la période attendue',
+        'PASS',
+        `${expectedPeriod}, +2,5 jours.`,
+      );
+
+      const [legacyBalances] = await db.query(
+        `SELECT COUNT(*) AS total FROM leave_balances
+          WHERE employee_id = ? AND reference_period = ?`,
+        [ref1UserId, legacyPeriod],
+      );
+      invariant(
+        Number(legacyBalances[0].total) === 0,
+        `Un compteur existe sur l’ancienne période ${legacyPeriod} (règle mois >= 6).`,
+      );
+      record(
+        'REF-1 — aucun rattachement à l’ancienne période',
+        'PASS',
+        `Aucun compteur N sur ${legacyPeriod}.`,
+      );
+    } finally {
+      await expectStatus(
+        'REF-1 — RH restaure REFERENCE_PERIOD_START à 06-01',
+        200,
+        '/settings/REFERENCE_PERIOD_START',
+        {
+          token: tokens.rh,
+          method: 'PATCH',
+          body: { settingValue: '06-01', description: 'REF-1 : restauration du paramètre de période.' },
+        },
+      );
+      const [ref1Restored] = await db.query(
+        `SELECT setting_value AS settingValue FROM settings WHERE setting_key = 'REFERENCE_PERIOD_START'`,
+      );
+      invariant(
+        ref1Restored[0]?.settingValue === '06-01',
+        'REFERENCE_PERIOD_START n’a pas été restauré à 06-01.',
+      );
+    }
+    record('REFERENCE_PERIOD_START restauré à 06-01 (fin REF-1)', 'PASS', 'La suite de clôture/acquisition n’est pas contaminée.');
+  }
+
   section('Validation finale de la base');
   const [tableRows] = await db.query(
     `SELECT TABLE_NAME AS tableName FROM information_schema.TABLES

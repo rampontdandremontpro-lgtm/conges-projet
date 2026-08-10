@@ -74,32 +74,6 @@ export interface BalanceReminderRunResult {
   errors: string[];
 }
 
-/**
- * E4 — Rappels de fin de période de référence.
- *
- * Orchestré par un appel léger `runIfDue()` depuis la maintenance horaire
- * existante (LeaveRequestSchedulerService) : AUCUN nouveau scheduler.
- *
- * Règles métier (validées) :
- * - Compteur utilisé : N-1 de la période courante uniquement ;
- * - potentialDays = availableDays − reservedDays ; chiffre principal ;
- * - Éligibilité : isActive, rôle ≠ ADMIN, compteur N-1 de la période,
- *   potentialDays > 0. La présence (PRESENT/EN_VACANCES/ABSENT) n'a aucun
- *   impact. Les externes suivent la même règle ;
- * - Échéances : 3 mois, 2 mois, 1 mois (soustraction calendaire clampée),
- *   15 jours et 7 jours (jours calendaires) avant la fin de période ;
- * - Rattrapage : à chaque maintenance, uniquement l'échéance la PLUS
- *   RÉCENTE devenue due et pas encore notifiée au destinataire ;
- * - Anti-doublon : types BALANCE_REMINDER_<échéance>_<période> /
- *   BALANCE_RECAP_<échéance>_<période>, vérifiés sur toute la période via
- *   `NotificationsService.alreadyExists()` ;
- * - Canal LES_DEUX, emailSentAt = NULL (préparation E5) ;
- * - Récapitulatif RH : toutes les RH actives (aucun hardcode), jamais
- *   Admin, jamais Directeur ; aucun récap vide ;
- * - E4.1 : la date affichée (titre, message, récap) est TOUJOURS la fin
- *   de période (usageDeadline), jamais la date de déclenchement du palier
- *   (reminderDate).
- */
 @Injectable()
 export class BalanceReminderService {
   private readonly logger = new Logger(BalanceReminderService.name);
@@ -113,11 +87,6 @@ export class BalanceReminderService {
     private readonly notificationsService: NotificationsService,
   ) {}
 
-  /**
-   * Déclenche les rappels de fin de période si une échéance est due.
-   * `now` est injectable pour des tests déterministes (horloge
-   * America/Martinique calculée depuis la valeur fournie).
-   */
   async runIfDue(
     now: Date = new Date(),
   ): Promise<BalanceReminderRunResult> {

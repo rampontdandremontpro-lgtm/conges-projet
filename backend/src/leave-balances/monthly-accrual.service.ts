@@ -17,6 +17,7 @@ import {
   LeaveBalance,
   LeaveBalanceCounterType,
 } from './leave-balance.entity';
+import { currentReferencePeriod } from './reference-period.util';
 
 export interface MonthlyAccrualRunResult {
   accrualMonth: string;
@@ -101,7 +102,14 @@ export class MonthlyAccrualService
     accrualMonth: string,
     actorId: number | null,
   ): Promise<MonthlyAccrualRunResult> {
-    const monthInformation = this.getMonthInformation(accrualMonth);
+    const referencePeriodStart = await this.settingsService.getString(
+      'REFERENCE_PERIOD_START',
+      '06-01',
+    );
+    const monthInformation = this.getMonthInformation(
+      accrualMonth,
+      referencePeriodStart,
+    );
     const currentDate = this.getMartiniqueDateString(new Date());
 
     if (monthInformation.lastDate > currentDate) {
@@ -386,7 +394,10 @@ export class MonthlyAccrualService
     );
   }
 
-  private getMonthInformation(accrualMonth: string): MonthInformation {
+  private getMonthInformation(
+    accrualMonth: string,
+    referencePeriodStart: string,
+  ): MonthInformation {
     const match = /^(\d{4})-(0[1-9]|1[0-2])$/.exec(accrualMonth);
 
     if (!match) {
@@ -402,8 +413,10 @@ export class MonthlyAccrualService
     const lastDate = `${year}-${String(month).padStart(2, '0')}-${String(
       lastDay,
     ).padStart(2, '0')}`;
-    const referencePeriod =
-      month >= 6 ? `${year}-${year + 1}` : `${year - 1}-${year}`;
+    const referencePeriod = currentReferencePeriod(
+      lastDate,
+      referencePeriodStart,
+    );
     const labels = [
       'janvier',
       'février',
