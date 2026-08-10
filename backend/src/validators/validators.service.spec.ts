@@ -335,6 +335,10 @@ describe('ValidatorsService', () => {
         validatorId: 4,
         isActive: true,
       });
+      serviceRepository.findOneBy.mockResolvedValue(serviceEntity());
+      userRepository.findOneBy.mockResolvedValue(
+        validatorUser(4, UserRole.RESPONSABLE_SERVICE),
+      );
 
       const saved = await service.enableBackupValidator(10, 4, actor());
 
@@ -344,6 +348,95 @@ describe('ValidatorsService', () => {
           action: AuditAction.SERVICE_BACKUP_VALIDATOR_ENABLED,
         }),
       );
+    });
+
+    it('enable : service introuvable → 400', async () => {
+      backupRepository.findOne.mockResolvedValue({
+        id: 1,
+        serviceId: 10,
+        validatorId: 4,
+        isActive: false,
+      });
+      serviceRepository.findOneBy.mockResolvedValue(null);
+
+      await expect(
+        service.enableBackupValidator(10, 4, actor()),
+      ).rejects.toThrow(BadRequestException);
+      expect(backupRepository.save).not.toHaveBeenCalled();
+    });
+
+    it('enable : validationMode n’est plus RESPONSABLE_PUIS_RELAIS → 400', async () => {
+      backupRepository.findOne.mockResolvedValue({
+        id: 1,
+        serviceId: 10,
+        validatorId: 4,
+        isActive: false,
+      });
+      serviceRepository.findOneBy.mockResolvedValue(
+        serviceEntity({
+          validationMode: ValidationMode.DIRECTEUR_ET_RH,
+        }),
+      );
+
+      await expect(
+        service.enableBackupValidator(10, 4, actor()),
+      ).rejects.toThrow(BadRequestException);
+      expect(backupRepository.save).not.toHaveBeenCalled();
+    });
+
+    it('enable : utilisateur devenu inactif → 400', async () => {
+      backupRepository.findOne.mockResolvedValue({
+        id: 1,
+        serviceId: 10,
+        validatorId: 4,
+        isActive: false,
+      });
+      serviceRepository.findOneBy.mockResolvedValue(serviceEntity());
+      userRepository.findOneBy.mockResolvedValue(
+        validatorUser(4, UserRole.RESPONSABLE_SERVICE, {
+          isActive: false,
+        }),
+      );
+
+      await expect(
+        service.enableBackupValidator(10, 4, actor()),
+      ).rejects.toThrow(BadRequestException);
+      expect(backupRepository.save).not.toHaveBeenCalled();
+    });
+
+    it('enable : rôle devenu COLLABORATEUR → 400', async () => {
+      backupRepository.findOne.mockResolvedValue({
+        id: 1,
+        serviceId: 10,
+        validatorId: 4,
+        isActive: false,
+      });
+      serviceRepository.findOneBy.mockResolvedValue(serviceEntity());
+      userRepository.findOneBy.mockResolvedValue(
+        validatorUser(4, UserRole.COLLABORATEUR),
+      );
+
+      await expect(
+        service.enableBackupValidator(10, 4, actor()),
+      ).rejects.toThrow(BadRequestException);
+      expect(backupRepository.save).not.toHaveBeenCalled();
+    });
+
+    it('enable : utilisateur devenu Responsable principal → 400', async () => {
+      backupRepository.findOne.mockResolvedValue({
+        id: 1,
+        serviceId: 10,
+        validatorId: 4,
+        isActive: false,
+      });
+      serviceRepository.findOneBy.mockResolvedValue(
+        serviceEntity({ primaryManagerId: 4 }),
+      );
+
+      await expect(
+        service.enableBackupValidator(10, 4, actor()),
+      ).rejects.toThrow(BadRequestException);
+      expect(backupRepository.save).not.toHaveBeenCalled();
     });
 
     it('enable : idempotent si déjà actif', async () => {

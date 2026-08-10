@@ -66,14 +66,13 @@ const ELIGIBLE_VALIDATOR_ROLES = [
   UserRole.DIRECTEUR,
 ];
 
-function martiniqueDate(now: Date): Date {
-  const parts = new Intl.DateTimeFormat('en-CA', {
+function martiniqueDate(now: Date): string {
+  return new Intl.DateTimeFormat('en-CA', {
     timeZone: 'America/Martinique',
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
   }).format(now);
-  return new Date(`${parts}T00:00:00.000Z`);
 }
 
 @Injectable()
@@ -389,8 +388,7 @@ export class ValidatorResolutionService {
       if (resolution.firstLevelId === userId) {
         return (
           resolution.firstLevelEligible &&
-          resolution.firstLevelPresent &&
-          !resolution.delayExpired
+          resolution.firstLevelPresent
         );
       }
       const relayOpen =
@@ -428,21 +426,23 @@ export class ValidatorResolutionService {
       options,
     );
 
+    if (
+      resolution.replacement !== null &&
+      resolution.firstLevelId === authenticatedUser.id
+    ) {
+      if (
+        resolution.firstLevelEligible &&
+        resolution.firstLevelPresent
+      ) {
+        return {
+          kind: 'REMPLACEMENT',
+          reason: null,
+        };
+      }
+    }
+
     if (authenticatedUser.role === UserRole.RESPONSABLE_SERVICE) {
       if (resolution.replacement !== null) {
-        if (resolution.firstLevelId === authenticatedUser.id) {
-          if (
-            resolution.firstLevelEligible &&
-            resolution.firstLevelPresent &&
-            !resolution.delayExpired
-          ) {
-            return {
-              kind: 'REMPLACEMENT',
-              reason: null,
-            };
-          }
-        }
-
         if (
           leaveRequest.service.primaryManagerId ===
           authenticatedUser.id

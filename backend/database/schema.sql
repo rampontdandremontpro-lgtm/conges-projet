@@ -451,10 +451,10 @@ CREATE TABLE `service_backup_validators` (
   KEY `IDX_service_backup_validators_service_active` (`service_id`, `is_active`),
   CONSTRAINT `FK_service_backup_validators_service`
     FOREIGN KEY (`service_id`) REFERENCES `services` (`id`)
-    ON UPDATE CASCADE ON DELETE CASCADE,
+    ON UPDATE CASCADE ON DELETE RESTRICT,
   CONSTRAINT `FK_service_backup_validators_validator`
     FOREIGN KEY (`validator_id`) REFERENCES `users` (`id`)
-    ON UPDATE CASCADE ON DELETE CASCADE
+    ON UPDATE CASCADE ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `validator_replacements` (
@@ -474,13 +474,13 @@ CREATE TABLE `validator_replacements` (
   CONSTRAINT `CHK_validator_replacements_distinct` CHECK (`employee_id` <> `replacement_validator_id`),
   CONSTRAINT `FK_validator_replacements_employee`
     FOREIGN KEY (`employee_id`) REFERENCES `users` (`id`)
-    ON UPDATE CASCADE ON DELETE CASCADE,
+    ON UPDATE CASCADE ON DELETE RESTRICT,
   CONSTRAINT `FK_validator_replacements_validator`
     FOREIGN KEY (`replacement_validator_id`) REFERENCES `users` (`id`)
-    ON UPDATE CASCADE ON DELETE CASCADE,
+    ON UPDATE CASCADE ON DELETE RESTRICT,
   CONSTRAINT `FK_validator_replacements_created_by_rh`
     FOREIGN KEY (`created_by_rh_id`) REFERENCES `users` (`id`)
-    ON UPDATE CASCADE ON DELETE CASCADE
+    ON UPDATE CASCADE ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 SET FOREIGN_KEY_CHECKS = 1;

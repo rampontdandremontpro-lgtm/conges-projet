@@ -86,8 +86,8 @@ function replacement(overrides: Record<string, unknown> = {}) {
     id: 1,
     employeeId: 1,
     replacementValidatorId: 3,
-    startDate: new Date('2026-08-10T00:00:00.000Z'),
-    endDate: new Date('2026-08-25T00:00:00.000Z'),
+    startDate: '2026-08-10',
+    endDate: '2026-08-25',
     isActive: true,
     ...overrides,
   };
@@ -921,6 +921,93 @@ describe('ValidatorResolutionService', () => {
       expect(access).toEqual({ kind: 'REMPLACEMENT', reason: null });
     });
 
+    it('RH désignée comme remplaçante → REMPLACEMENT quel que soit son rôle', async () => {
+      replacementRepository.findOne.mockResolvedValue(
+        replacement({ replacementValidatorId: 8 }),
+      );
+      userRepository.findOneBy.mockResolvedValue(
+        user({ id: 8, role: UserRole.RH }),
+      );
+
+      const access = await service.resolveAccess(
+        leaveRequest(),
+        user({ id: 8, role: UserRole.RH }),
+        { now: nowWithinDelay },
+      );
+
+      expect(access).toEqual({ kind: 'REMPLACEMENT', reason: null });
+    });
+
+    it('Directeur désigné comme remplaçant → REMPLACEMENT quel que soit son rôle', async () => {
+      replacementRepository.findOne.mockResolvedValue(
+        replacement({ replacementValidatorId: 7 }),
+      );
+      userRepository.findOneBy.mockResolvedValue(
+        user({ id: 7, role: UserRole.DIRECTEUR }),
+      );
+
+      const access = await service.resolveAccess(
+        leaveRequest(),
+        user({ id: 7, role: UserRole.DIRECTEUR }),
+        { now: nowWithinDelay },
+      );
+
+      expect(access).toEqual({ kind: 'REMPLACEMENT', reason: null });
+    });
+
+    it('remplaçant présent avec délai expiré → conserve son droit de REMPLACEMENT', async () => {
+      replacementRepository.findOne.mockResolvedValue(replacement());
+      userRepository.findOneBy.mockResolvedValue(
+        user({ id: 3, role: UserRole.RESPONSABLE_SERVICE }),
+      );
+
+      const access = await service.resolveAccess(
+        leaveRequest(),
+        user({ id: 3, role: UserRole.RESPONSABLE_SERVICE }),
+        { now: nowAfterDelay },
+      );
+
+      expect(access).toEqual({ kind: 'REMPLACEMENT', reason: null });
+    });
+
+    it('délai expiré pendant le remplacement → secours également autorisé (SECOURS)', async () => {
+      replacementRepository.findOne.mockResolvedValue(replacement());
+      userRepository.findOneBy.mockResolvedValue(
+        user({ id: 3, role: UserRole.RESPONSABLE_SERVICE }),
+      );
+      backupRepository.find.mockResolvedValue([
+        {
+          id: 1,
+          isActive: true,
+          validatorId: 4,
+          validator: user({ id: 4, role: UserRole.RESPONSABLE_SERVICE }),
+        },
+      ]);
+
+      const access = await service.resolveAccess(
+        leaveRequest(),
+        user({ id: 4, role: UserRole.RESPONSABLE_SERVICE }),
+        { now: nowAfterDelay },
+      );
+
+      expect(access.kind).toBe('SECOURS');
+    });
+
+    it('délai expiré pendant le remplacement → Directeur/RH également autorisés (RELAIS)', async () => {
+      replacementRepository.findOne.mockResolvedValue(replacement());
+      userRepository.findOneBy.mockResolvedValue(
+        user({ id: 3, role: UserRole.RESPONSABLE_SERVICE }),
+      );
+
+      const access = await service.resolveAccess(
+        leaveRequest(),
+        user({ id: 7, role: UserRole.DIRECTEUR }),
+        { now: nowAfterDelay },
+      );
+
+      expect(access.kind).toBe('RELAIS');
+    });
+
     it('le Responsable principal remplacé → Forbidden pour les demandes du collaborateur', async () => {
       replacementRepository.findOne.mockResolvedValue(replacement());
       userRepository.findOneBy.mockResolvedValue(
@@ -1075,6 +1162,21 @@ describe('ValidatorResolutionService', () => {
           leaveRequest(),
           3,
           { now: nowWithinDelay },
+        ),
+      ).resolves.toBe(true);
+    });
+
+    it('remplaçant toujours autorisé après expiration du délai (liste d’attente)', async () => {
+      replacementRepository.findOne.mockResolvedValue(replacement());
+      userRepository.findOneBy.mockResolvedValue(
+        user({ id: 3, role: UserRole.RESPONSABLE_SERVICE }),
+      );
+
+      await expect(
+        service.isResponsableAuthorizedForRequest(
+          leaveRequest(),
+          3,
+          { now: nowAfterDelay },
         ),
       ).resolves.toBe(true);
     });

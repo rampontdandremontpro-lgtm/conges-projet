@@ -29,14 +29,14 @@ export class ServiceBackupValidator {
   @Column({ name: 'service_id', type: 'bigint' })
   serviceId!: number;
 
-  @ManyToOne(() => Service, { nullable: false, onDelete: 'CASCADE' })
+  @ManyToOne(() => Service, { nullable: false, onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'service_id' })
   service!: Service;
 
   @Column({ name: 'validator_id', type: 'bigint' })
   validatorId!: number;
 
-  @ManyToOne(() => User, { nullable: false, onDelete: 'CASCADE' })
+  @ManyToOne(() => User, { nullable: false, onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'validator_id' })
   validator!: User;
 

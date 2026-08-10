@@ -25,22 +25,22 @@ export class ValidatorReplacement {
   @Column({ name: 'employee_id', type: 'bigint' })
   employeeId!: number;
 
-  @ManyToOne(() => User, { nullable: false, onDelete: 'CASCADE' })
+  @ManyToOne(() => User, { nullable: false, onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'employee_id' })
   employee!: User;
 
   @Column({ name: 'replacement_validator_id', type: 'bigint' })
   replacementValidatorId!: number;
 
-  @ManyToOne(() => User, { nullable: false, onDelete: 'CASCADE' })
+  @ManyToOne(() => User, { nullable: false, onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'replacement_validator_id' })
   replacementValidator!: User;
 
   @Column({ name: 'start_date', type: 'date' })
-  startDate!: Date;
+  startDate!: string;
 
   @Column({ name: 'end_date', type: 'date' })
-  endDate!: Date;
+  endDate!: string;
 
   @Column({ type: 'text', nullable: true })
   reason!: string | null;
@@ -48,7 +48,7 @@ export class ValidatorReplacement {
   @Column({ name: 'created_by_rh_id', type: 'bigint' })
   createdByRhId!: number;
 
-  @ManyToOne(() => User, { nullable: false, onDelete: 'CASCADE' })
+  @ManyToOne(() => User, { nullable: false, onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'created_by_rh_id' })
   createdByRh!: User;
 

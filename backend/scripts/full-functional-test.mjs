@@ -3173,6 +3173,473 @@ async function main() {
     record('REFERENCE_PERIOD_START restauré à 06-01 (fin REF-1)', 'PASS', 'La suite de clôture/acquisition n’est pas contaminée.');
   }
 
+  section('E6 — Valideurs de secours et remplacements temporaires');
+
+  const e6Today = martiniqueToday();
+  const e6ServiceId = fixtures.serviceId;
+  const e6ManagerId = fixtures.manager.id;
+  const e6CollabA = fixtures.collaborators.a.id;
+  const e6CollabB = fixtures.collaborators.b.id;
+  const e6CollabC = fixtures.collaborators.c.id;
+  const e6Prorata = fixtures.prorataUser.id;
+
+  const [e6HashRows] = await db.query(
+    `SELECT password_hash AS passwordHash FROM users WHERE email = 'responsable@gmes.fr'`,
+  );
+  const e6PasswordHash = e6HashRows[0].passwordHash;
+  const e6Password = 'ResponsableGMES@2026!';
+  const e6InsertUser = async (nom, prenom, email, role, employmentType = 'INTERNE') => {
+    const [result] = await db.execute(
+      `INSERT INTO users
+        (nom, prenom, email, password_hash, role, employment_type, service_id, hire_date, presence_status, is_active)
+       VALUES (?, ?, ?, ?, ?, ?, ?, '2024-01-01', 'PRESENT', 1)`,
+      [nom, prenom, email, e6PasswordHash, role, employmentType, e6ServiceId],
+    );
+    return Number(result.insertId);
+  };
+
+  const e6Secours1 = {
+    id: await e6InsertUser('TEST-SECOURS1', 'Sacha', `e6-secours1-${fixtures.tag}@gmes.test`, 'RESPONSABLE_SERVICE'),
+    email: `e6-secours1-${fixtures.tag}@gmes.test`,
+    password: e6Password,
+  };
+  const e6Secours2 = {
+    id: await e6InsertUser('TEST-SECOURS2', 'Sonia', `e6-secours2-${fixtures.tag}@gmes.test`, 'RESPONSABLE_SERVICE'),
+    email: `e6-secours2-${fixtures.tag}@gmes.test`,
+    password: e6Password,
+  };
+  const e6Externe = {
+    id: await e6InsertUser('TEST-EXTERNE', 'Émile', `e6-externe-${fixtures.tag}@gmes.test`, 'COLLABORATEUR', 'EXTERNE'),
+    email: `e6-externe-${fixtures.tag}@gmes.test`,
+    password: e6Password,
+  };
+  tokens.secours1 = await login('secours E2E 1', [e6Secours1.email, e6Secours1.password, 'RESPONSABLE_SERVICE']);
+  tokens.secours2 = await login('secours E2E 2', [e6Secours2.email, e6Secours2.password, 'RESPONSABLE_SERVICE']);
+
+  await expectStatus('ADMIN consulte les valideurs du service', 200, `/services/${e6ServiceId}/validators`, {
+    token: tokens.admin,
+  }, (body) => {
+    invariant(Number(body.primaryManagerId) === e6ManagerId, 'Responsable principal incorrect.');
+    invariant(Array.isArray(body.backupValidators), 'backupValidators doit être un tableau.');
+    return true;
+  });
+  await expectStatus('ADMIN ajoute le premier valideur de secours', 201, `/services/${e6ServiceId}/validators`, {
+    token: tokens.admin, method: 'POST', body: { validatorId: e6Secours1.id },
+  });
+  await expectStatus('RH ajoute le second valideur de secours', 201, `/services/${e6ServiceId}/validators`, {
+    token: tokens.rh, method: 'POST', body: { validatorId: e6Secours2.id },
+  });
+  await expectStatus('Un Collaborateur ne gère pas les valideurs de secours', 403, `/services/${e6ServiceId}/validators`, {
+    token: tokens.collabA, method: 'POST', body: { validatorId: e6Secours1.id },
+  });
+  await expectStatus('Le Responsable principal ne peut pas être son propre secours', 400, `/services/${e6ServiceId}/validators`, {
+    token: tokens.rh, method: 'POST', body: { validatorId: e6ManagerId },
+  });
+  await expectStatus('Un Collaborateur ne peut pas être secours', 400, `/services/${e6ServiceId}/validators`, {
+    token: tokens.rh, method: 'POST', body: { validatorId: e6CollabA },
+  });
+  await expectStatus('Secours refusé hors circuit Responsable puis relais', 400, `/services/${adminServiceId}/validators`, {
+    token: tokens.rh, method: 'POST', body: { validatorId: e6Secours1.id },
+  });
+  await expectStatus('Un secours actif ne peut pas être doublonné', 409, `/services/${e6ServiceId}/validators`, {
+    token: tokens.rh, method: 'POST', body: { validatorId: e6Secours1.id },
+  });
+  await expectStatus('ADMIN désactive le secours 1', 200, `/services/${e6ServiceId}/validators/${e6Secours1.id}/disable`, {
+    token: tokens.admin, method: 'PATCH',
+  });
+  await expectStatus('ADMIN réactive le secours 1', 200, `/services/${e6ServiceId}/validators/${e6Secours1.id}/enable`, {
+    token: tokens.admin, method: 'PATCH',
+  }, (body) => {
+    invariant(body.isActive === true, 'Le secours doit être réactivé.');
+    return true;
+  });
+  await expectStatus('La liste des valideurs expose les deux secours', 200, `/services/${e6ServiceId}/validators`, {
+    token: tokens.rh,
+  }, (body) => {
+    invariant(body.backupValidators.length === 2, `Secours listés : ${body.backupValidators.length}.`);
+    return true;
+  });
+
+  const e6Signature = { signatureType: 'INITIALS', signatureData: 'MG', minimumPresenceJustification: 'Continuité assurée.' };
+
+  const e6PresentDate = await nextOpenDate(addDays(scenarioDate, 100));
+  const e6PresentRequest = await createRequest(tokens.collabA, unpaidType.id, e6PresentDate, 'E6 secours bloqué quand le Responsable est présent');
+  await submitRequest(tokens.collabA, e6PresentRequest.id);
+  await expectStatus('Secours refusé quand le Responsable est présent', 403, `/leave-requests/${e6PresentRequest.id}/validate`, {
+    token: tokens.secours1, method: 'POST',
+    body: { ...e6Signature, signatureData: 'SS' },
+  });
+  await expectStatus('Le Responsable principal valide la demande', 200, `/leave-requests/${e6PresentRequest.id}/validate`, {
+    token: tokens.manager, method: 'POST', body: e6Signature,
+  }, (body) => {
+    invariant(body.status === 'VALIDEE', `Statut obtenu ${body.status}.`);
+    return true;
+  });
+
+  const e6UrgenceDate = await nextOpenDate(addDays(scenarioDate, 103));
+  const e6UrgenceRequest = await createRequest(tokens.collabC, unpaidType.id, e6UrgenceDate, 'E6 urgence seule');
+  await submitRequest(tokens.collabC, e6UrgenceRequest.id);
+  await expectStatus('L’urgence seule n’ouvre pas le secours', 403, `/leave-requests/${e6UrgenceRequest.id}/validate`, {
+    token: tokens.secours2, method: 'POST',
+    body: { ...e6Signature, signatureData: 'SS', emergencyTakeover: true, takeoverReason: 'Urgence opérationnelle.' },
+  });
+  await expectStatus('Le Responsable traite la demande', 200, `/leave-requests/${e6UrgenceRequest.id}/validate`, {
+    token: tokens.manager, method: 'POST', body: e6Signature,
+  }, (body) => {
+    invariant(body.status === 'VALIDEE', `Statut obtenu ${body.status}.`);
+    return true;
+  });
+
+  const e6TodayOpen = new Date(`${e6Today}T00:00:00.000Z`).getUTCDay() !== 0;
+  if (!e6TodayOpen) {
+    record('E6 — Relais par présence du Responsable', 'SKIP', 'Journée dominicale : l’absence autorisée ne peut pas commencer un dimanche.');
+  } else {
+    const e6ManagerAbsence = await expectStatus('RH crée une absence autorisée pour le Responsable', 201, '/absence-declarations', {
+      token: tokens.rh, method: 'POST',
+      body: {
+        employeeId: e6ManagerId, leaveTypeId: rhOnlyAbsenceType.id,
+        startDate: e6Today, endDate: e6Today,
+        durationHours: 7, comment: 'Absence du Responsable pour le relais secours E6.',
+      },
+    });
+    await expectStatus('La RH soumet l’absence du Responsable', 200, `/absence-declarations/${e6ManagerAbsence.body.id}/submit`, {
+      token: tokens.rh, method: 'POST', body: { certifiedAccurate: true },
+    });
+
+    const e6AbsentDate = await nextOpenDate(addDays(scenarioDate, 106));
+    const e6AbsentRequest = await createRequest(tokens.collabA, unpaidType.id, e6AbsentDate, 'E6 secours autorisé Responsable absent');
+    await submitRequest(tokens.collabA, e6AbsentRequest.id);
+    await expectStatus('Le secours valide quand le Responsable est absent', 200, `/leave-requests/${e6AbsentRequest.id}/validate`, {
+      token: tokens.secours1, method: 'POST',
+      body: { ...e6Signature, signatureData: 'SS' },
+    }, (body) => {
+      invariant(body.status === 'VALIDEE', `Statut obtenu ${body.status}.`);
+      return true;
+    });
+
+    const e6LockDate = await nextOpenDate(addDays(scenarioDate, 109));
+    const e6LockRequest = await createRequest(tokens.collabB, unpaidType.id, e6LockDate, 'E6 premier décideur verrouille');
+    await submitRequest(tokens.collabB, e6LockRequest.id);
+    await expectStatus('Le second secours est bloqué sur une demande déjà décidée', 409, `/leave-requests/${e6AbsentRequest.id}/validate`, {
+      token: tokens.secours2, method: 'POST',
+      body: { ...e6Signature, signatureData: 'SS' },
+    });
+    await expectStatus('Le premier secours décide, le second ne peut plus', 200, `/leave-requests/${e6LockRequest.id}/validate`, {
+      token: tokens.secours1, method: 'POST',
+      body: { ...e6Signature, signatureData: 'SS' },
+    });
+    await expectStatus('La deuxième décision sur la même demande est refusée', 409, `/leave-requests/${e6LockRequest.id}/validate`, {
+      token: tokens.secours2, method: 'POST',
+      body: { ...e6Signature, signatureData: 'SS' },
+    });
+
+    await expectStatus('La RH annule l’absence du Responsable', 200, `/absence-declarations/${e6ManagerAbsence.body.id}/cancel`, {
+      token: tokens.rh, method: 'POST',
+    });
+  }
+
+  await expectStatus('Un Responsable ne crée pas les remplacements', 403, '/validator-replacements', {
+    token: tokens.manager, method: 'POST',
+    body: { employeeId: e6CollabB, replacementValidatorId: e6Secours1.id, startDate: e6Today, endDate: e6Today },
+  });
+  await expectStatus('Employee externe refusé', 400, '/validator-replacements', {
+    token: tokens.rh, method: 'POST',
+    body: { employeeId: e6Externe.id, replacementValidatorId: e6Secours1.id, startDate: e6Today, endDate: e6Today },
+  });
+  await expectStatus('Employee RH refusé', 400, '/validator-replacements', {
+    token: tokens.rh, method: 'POST',
+    body: { employeeId: rhUserId, replacementValidatorId: e6Secours1.id, startDate: e6Today, endDate: e6Today },
+  });
+  await expectStatus('Employee Responsable refusé', 400, '/validator-replacements', {
+    token: tokens.rh, method: 'POST',
+    body: { employeeId: e6Secours1.id, replacementValidatorId: e6Secours2.id, startDate: e6Today, endDate: e6Today },
+  });
+  await expectStatus('Employee Directeur refusé', 400, '/validator-replacements', {
+    token: tokens.rh, method: 'POST',
+    body: { employeeId: directeurUserId, replacementValidatorId: e6Secours1.id, startDate: e6Today, endDate: e6Today },
+  });
+  await expectStatus('Remplaçant Collaborateur refusé', 400, '/validator-replacements', {
+    token: tokens.rh, method: 'POST',
+    body: { employeeId: e6CollabB, replacementValidatorId: e6CollabA.id, startDate: e6Today, endDate: e6Today },
+  });
+  await expectStatus('Remplaçant Admin refusé', 400, '/validator-replacements', {
+    token: tokens.rh, method: 'POST',
+    body: { employeeId: e6CollabB, replacementValidatorId: adminUserId, startDate: e6Today, endDate: e6Today },
+  });
+  await expectStatus('Employee identique au remplaçant refusé', 400, '/validator-replacements', {
+    token: tokens.rh, method: 'POST',
+    body: { employeeId: e6CollabB, replacementValidatorId: e6CollabB, startDate: e6Today, endDate: e6Today },
+  });
+  await expectStatus('Période inversée refusée', 400, '/validator-replacements', {
+    token: tokens.rh, method: 'POST',
+    body: { employeeId: e6CollabA, replacementValidatorId: e6Secours1.id, startDate: addDays(e6Today, 2), endDate: e6Today },
+  });
+  const e6OverlapFirst = await expectStatus('RH crée un remplacement pour le collaborateur prorata', 201, '/validator-replacements', {
+    token: tokens.rh, method: 'POST',
+    body: { employeeId: e6Prorata, replacementValidatorId: e6Secours1.id, startDate: e6Today, endDate: e6Today, reason: 'Chevauchement E6.' },
+  });
+  await expectStatus('Un remplacement chevauchant est refusé', 400, '/validator-replacements', {
+    token: tokens.rh, method: 'POST',
+    body: { employeeId: e6Prorata, replacementValidatorId: e6Secours2.id, startDate: e6Today, endDate: e6Today },
+  });
+  await expectStatus('RH désactive le remplacement chevauchant', 200, `/validator-replacements/${e6OverlapFirst.body.id}/disable`, {
+    token: tokens.rh, method: 'PATCH',
+  });
+
+  const e6CollabAReplacement = await expectStatus('RH crée un remplacement actif pour le collaborateur A', 201, '/validator-replacements', {
+    token: tokens.rh, method: 'POST',
+    body: { employeeId: e6CollabA, replacementValidatorId: e6Secours1.id, startDate: e6Today, endDate: e6Today, reason: 'Remplacement E6 collaborateur A.' },
+  });
+
+  const e6BeforeReplacementDate = await nextOpenDate(addDays(scenarioDate, 112));
+  const e6BeforeReplacement = await createRequest(tokens.collabB, unpaidType.id, e6BeforeReplacementDate, 'E6 bascule dynamique vers le remplaçant');
+  await submitRequest(tokens.collabB, e6BeforeReplacement.id);
+  const e6CollabBReplacement = await expectStatus('RH crée le remplacement du collaborateur B', 201, '/validator-replacements', {
+    token: tokens.rh, method: 'POST',
+    body: { employeeId: e6CollabB, replacementValidatorId: e6Secours1.id, startDate: e6Today, endDate: e6Today, reason: 'Remplacement E6 collaborateur B.' },
+  });
+  await expectStatus('Le Responsable remplacé est refusé sur la demande du collaborateur B', 403, `/leave-requests/${e6BeforeReplacement.id}/validate`, {
+    token: tokens.manager, method: 'POST', body: e6Signature,
+  });
+  await expectStatus('Le remplaçant reprend la demande soumise avant sa désignation', 200, `/leave-requests/${e6BeforeReplacement.id}/validate`, {
+    token: tokens.secours1, method: 'POST',
+    body: { ...e6Signature, signatureData: 'SS' },
+  }, (body) => {
+    invariant(body.status === 'VALIDEE', `Statut obtenu ${body.status}.`);
+    return true;
+  });
+  record(
+    'Bornes de dates inclusives (début = fin = jour courant)',
+    'PASS',
+    'Le remplacement actif le jour courant couvre sa date de début et de fin.',
+  );
+
+  const e6OtherCollabDate = await nextOpenDate(addDays(scenarioDate, 115));
+  const e6OtherCollab = await createRequest(tokens.collabC, unpaidType.id, e6OtherCollabDate, 'E6 Responsable conserve ses autres collaborateurs');
+  await submitRequest(tokens.collabC, e6OtherCollab.id);
+  await expectStatus('Le Responsable remplacé reste autorisé sur un autre collaborateur', 200, `/leave-requests/${e6OtherCollab.id}/validate`, {
+    token: tokens.manager, method: 'POST', body: e6Signature,
+  }, (body) => {
+    invariant(body.status === 'VALIDEE', `Statut obtenu ${body.status}.`);
+    return true;
+  });
+
+  await expectStatus('RH consulte les remplacements avec filtres', 200, `/validator-replacements?employeeId=${e6CollabB}&isActive=true&activeAt=${e6Today}`, {
+    token: tokens.rh,
+  }, (body) => {
+    invariant(Array.isArray(body), 'La réponse doit être un tableau.');
+    return true;
+  });
+  await expectStatus('RH consulte un remplacement par identifiant', 200, `/validator-replacements/${e6CollabBReplacement.body.id}`, {
+    token: tokens.rh,
+  }, (body) => {
+    invariant(Number(body.id) === e6CollabBReplacement.body.id, 'Identifiant incorrect.');
+    return true;
+  });
+
+  const e6PendingDate = await nextOpenDate(addDays(scenarioDate, 118));
+  const e6PendingRequest = await createRequest(tokens.collabB, unpaidType.id, e6PendingDate, 'E6 liste d’attente du remplaçant');
+  await submitRequest(tokens.collabB, e6PendingRequest.id);
+  await expectStatus('Le remplaçant voit la demande dans sa liste d’attente', 200, '/leave-requests/pending', {
+    token: tokens.secours1,
+  }, (body) => {
+    invariant(Array.isArray(body), 'La liste doit être un tableau.');
+    invariant(body.some((item) => Number(item.id) === e6PendingRequest.id), 'La demande du collaborateur B manque pour le remplaçant.');
+    return true;
+  });
+  await expectStatus('Le Responsable remplacé ne voit plus la demande du collaborateur B', 200, '/leave-requests/pending', {
+    token: tokens.manager,
+  }, (body) => {
+    invariant(Array.isArray(body), 'La liste doit être un tableau.');
+    invariant(!body.some((item) => Number(item.id) === e6PendingRequest.id), 'La demande du collaborateur B ne doit pas apparaître pour le Responsable remplacé.');
+    return true;
+  });
+  await expectStatus('Le remplaçant valide la demande en attente', 200, `/leave-requests/${e6PendingRequest.id}/validate`, {
+    token: tokens.secours1, method: 'POST',
+    body: { ...e6Signature, signatureData: 'SS' },
+  }, (body) => {
+    invariant(body.status === 'VALIDEE', `Statut obtenu ${body.status}.`);
+    return true;
+  });
+
+  const e6NotificationDate = await nextOpenDate(addDays(scenarioDate, 121));
+  const e6NotificationRequest = await createRequest(tokens.collabB, unpaidType.id, e6NotificationDate, 'E6 notification du remplaçant');
+  await submitRequest(tokens.collabB, e6NotificationRequest.id);
+  const [e6NotifRows] = await db.execute(
+    `SELECT user_id AS userId FROM notifications WHERE leave_request_id = ? AND type = 'LEAVE_REQUEST_SUBMITTED'`,
+    [e6NotificationRequest.id],
+  );
+  const e6NotifUserIds = e6NotifRows.map((row) => Number(row.userId));
+  const e6NotifOk = e6NotifUserIds.includes(e6Secours1.id) && !e6NotifUserIds.includes(e6ManagerId);
+  record(
+    'La notification de soumission désigne le remplaçant, pas le Responsable remplacé',
+    e6NotifOk ? 'PASS' : 'FAIL',
+    e6NotifOk ? `Destinataires : ${e6NotifUserIds.join(', ')}.` : `Destinataires obtenus : ${e6NotifUserIds.join(', ')}.`,
+  );
+  invariant(e6NotifOk, 'Le destinataire de la notification est incorrect.');
+  await expectStatus('Le remplaçant valide la demande notifiée', 200, `/leave-requests/${e6NotificationRequest.id}/validate`, {
+    token: tokens.secours1, method: 'POST',
+    body: { ...e6Signature, signatureData: 'SS' },
+  }, (body) => {
+    invariant(body.status === 'VALIDEE', `Statut obtenu ${body.status}.`);
+    return true;
+  });
+
+  const e6DelayDate1 = await nextOpenDate(addDays(scenarioDate, 124));
+  const e6DelayReplacement = await createRequest(tokens.collabB, unpaidType.id, e6DelayDate1, 'E6 délai expiré : remplaçant conserve son droit');
+  await submitRequest(tokens.collabB, e6DelayReplacement.id);
+  await db.execute(
+    `UPDATE leave_requests SET submitted_at = DATE_SUB(NOW(), INTERVAL 8 DAY) WHERE id = ?`,
+    [e6DelayReplacement.id],
+  );
+  await expectStatus('Délai expiré : le remplaçant conserve son droit de décision', 200, `/leave-requests/${e6DelayReplacement.id}/validate`, {
+    token: tokens.secours1, method: 'POST',
+    body: { ...e6Signature, signatureData: 'SS' },
+  }, (body) => {
+    invariant(body.status === 'VALIDEE', `Statut obtenu ${body.status}.`);
+    return true;
+  });
+
+  const e6DelayDate2 = await nextOpenDate(addDays(scenarioDate, 127));
+  const e6DelaySecours = await createRequest(tokens.collabB, unpaidType.id, e6DelayDate2, 'E6 délai expiré : secours autorisé');
+  await submitRequest(tokens.collabB, e6DelaySecours.id);
+  await db.execute(
+    `UPDATE leave_requests SET submitted_at = DATE_SUB(NOW(), INTERVAL 8 DAY) WHERE id = ?`,
+    [e6DelaySecours.id],
+  );
+  await expectStatus('Délai expiré : le secours valide', 200, `/leave-requests/${e6DelaySecours.id}/validate`, {
+    token: tokens.secours2, method: 'POST',
+    body: { ...e6Signature, signatureData: 'SS' },
+  }, (body) => {
+    invariant(body.status === 'VALIDEE', `Statut obtenu ${body.status}.`);
+    return true;
+  });
+
+  const e6DelayDate3 = await nextOpenDate(addDays(scenarioDate, 130));
+  const e6DelayRelais = await createRequest(tokens.collabB, unpaidType.id, e6DelayDate3, 'E6 délai expiré : Directeur autorisé');
+  await submitRequest(tokens.collabB, e6DelayRelais.id);
+  await db.execute(
+    `UPDATE leave_requests SET submitted_at = DATE_SUB(NOW(), INTERVAL 8 DAY) WHERE id = ?`,
+    [e6DelayRelais.id],
+  );
+  await expectStatus('Délai expiré : le Directeur valide en relais', 200, `/leave-requests/${e6DelayRelais.id}/validate`, {
+    token: tokens.directeur, method: 'POST',
+    body: { ...e6Signature, signatureData: 'DR' },
+  }, (body) => {
+    invariant(body.status === 'VALIDEE', `Statut obtenu ${body.status}.`);
+    return true;
+  });
+
+  const e6DelayDate4 = await nextOpenDate(addDays(scenarioDate, 133));
+  const e6DelayManager = await createRequest(tokens.collabB, unpaidType.id, e6DelayDate4, 'E6 Responsable remplacé toujours exclu');
+  await submitRequest(tokens.collabB, e6DelayManager.id);
+  await expectStatus('Le Responsable remplacé reste exclu pendant le remplacement', 403, `/leave-requests/${e6DelayManager.id}/validate`, {
+    token: tokens.manager, method: 'POST', body: e6Signature,
+  });
+  await expectStatus('Le remplaçant traite la demande laissée par le Responsable', 200, `/leave-requests/${e6DelayManager.id}/validate`, {
+    token: tokens.secours1, method: 'POST',
+    body: { ...e6Signature, signatureData: 'SS' },
+  }, (body) => {
+    invariant(body.status === 'VALIDEE', `Statut obtenu ${body.status}.`);
+    return true;
+  });
+
+  await expectStatus('RH désactive le remplacement du collaborateur B', 200, `/validator-replacements/${e6CollabBReplacement.body.id}/disable`, {
+    token: tokens.rh, method: 'PATCH',
+  });
+  const e6EndDate = await nextOpenDate(addDays(scenarioDate, 136));
+  const e6EndRequest = await createRequest(tokens.collabB, unpaidType.id, e6EndDate, 'E6 retour du circuit normal');
+  await submitRequest(tokens.collabB, e6EndRequest.id);
+  await expectStatus('Fin du remplacement : le Responsable valide de nouveau', 200, `/leave-requests/${e6EndRequest.id}/validate`, {
+    token: tokens.manager, method: 'POST', body: e6Signature,
+  }, (body) => {
+    invariant(body.status === 'VALIDEE', `Statut obtenu ${body.status}.`);
+    return true;
+  });
+
+  const e6RhReplacement = await expectStatus('RH désigne la RH comme remplaçante', 201, '/validator-replacements', {
+    token: tokens.rh, method: 'POST',
+    body: { employeeId: e6CollabB, replacementValidatorId: rhUserId, startDate: e6Today, endDate: e6Today, reason: 'Remplacement par la RH E6.' },
+  });
+  const e6RhReplDate = await nextOpenDate(addDays(scenarioDate, 139));
+  const e6RhReplRequest = await createRequest(tokens.collabB, unpaidType.id, e6RhReplDate, 'E6 RH remplaçante');
+  await submitRequest(tokens.collabB, e6RhReplRequest.id);
+  await expectStatus('La RH désignée remplaçante valide en premier niveau', 200, `/leave-requests/${e6RhReplRequest.id}/validate`, {
+    token: tokens.rh, method: 'POST',
+    body: { ...e6Signature, signatureData: 'RH', rhConfirmedDirectorAgreement: true },
+  }, (body) => {
+    invariant(body.status === 'VALIDEE', `Statut obtenu ${body.status}.`);
+    return true;
+  });
+  await expectStatus('RH désactive son remplacement', 200, `/validator-replacements/${e6RhReplacement.body.id}/disable`, {
+    token: tokens.rh, method: 'PATCH',
+  });
+
+  const e6DirReplacement = await expectStatus('RH désigne le Directeur comme remplaçant', 201, '/validator-replacements', {
+    token: tokens.rh, method: 'POST',
+    body: { employeeId: e6CollabB, replacementValidatorId: directeurUserId, startDate: e6Today, endDate: e6Today, reason: 'Remplacement par le Directeur E6.' },
+  });
+  const e6DirReplDate = await nextOpenDate(addDays(scenarioDate, 142));
+  const e6DirReplRequest = await createRequest(tokens.collabB, unpaidType.id, e6DirReplDate, 'E6 Directeur remplaçant');
+  await submitRequest(tokens.collabB, e6DirReplRequest.id);
+  await expectStatus('Le Directeur désigné remplaçant valide en premier niveau', 200, `/leave-requests/${e6DirReplRequest.id}/validate`, {
+    token: tokens.directeur, method: 'POST',
+    body: { ...e6Signature, signatureData: 'DR' },
+  }, (body) => {
+    invariant(body.status === 'VALIDEE', `Statut obtenu ${body.status}.`);
+    return true;
+  });
+  await expectStatus('RH désactive le remplacement du Directeur', 200, `/validator-replacements/${e6DirReplacement.body.id}/disable`, {
+    token: tokens.rh, method: 'PATCH',
+  });
+
+  await db.execute(`UPDATE users SET is_active = 0 WHERE id = ?`, [e6Secours1.id]);
+  const e6DisabledReplDate = await nextOpenDate(addDays(scenarioDate, 145));
+  const e6DisabledReplRequest = await createRequest(tokens.collabA, unpaidType.id, e6DisabledReplDate, 'E6 remplaçant désactivé');
+  await submitRequest(tokens.collabA, e6DisabledReplRequest.id);
+  await expectStatus('Le Responsable remplacé reste exclu malgré le remplaçant inactif', 403, `/leave-requests/${e6DisabledReplRequest.id}/validate`, {
+    token: tokens.manager, method: 'POST', body: e6Signature,
+  });
+  await expectStatus('Le secours reprend la demande quand le remplaçant est inactif', 200, `/leave-requests/${e6DisabledReplRequest.id}/validate`, {
+    token: tokens.secours2, method: 'POST',
+    body: { ...e6Signature, signatureData: 'SS' },
+  }, (body) => {
+    invariant(body.status === 'VALIDEE', `Statut obtenu ${body.status}.`);
+    return true;
+  });
+  await db.execute(`UPDATE users SET is_active = 1 WHERE id = ?`, [e6Secours1.id]);
+  await expectStatus('RH désactive le remplacement du collaborateur A', 200, `/validator-replacements/${e6CollabAReplacement.body.id}/disable`, {
+    token: tokens.rh, method: 'PATCH',
+  });
+  const e6RestoredDate = await nextOpenDate(addDays(scenarioDate, 148));
+  const e6RestoredRequest = await createRequest(tokens.collabA, unpaidType.id, e6RestoredDate, 'E6 circuit normal restauré pour le collaborateur A');
+  await submitRequest(tokens.collabA, e6RestoredRequest.id);
+  await expectStatus('Le Responsable valide de nouveau après désactivation du remplacement', 200, `/leave-requests/${e6RestoredRequest.id}/validate`, {
+    token: tokens.manager, method: 'POST', body: e6Signature,
+  }, (body) => {
+    invariant(body.status === 'VALIDEE', `Statut obtenu ${body.status}.`);
+    return true;
+  });
+
+  const [e6AuditRows] = await db.execute(
+    `SELECT action, COUNT(*) AS total FROM audit_logs
+      WHERE action IN ('SERVICE_BACKUP_VALIDATOR_ASSIGNED', 'SERVICE_BACKUP_VALIDATOR_DISABLED', 'SERVICE_BACKUP_VALIDATOR_ENABLED', 'VALIDATOR_REPLACEMENT_CREATED', 'VALIDATOR_REPLACEMENT_DISABLED')
+      GROUP BY action`,
+  );
+  const e6AuditByAction = Object.fromEntries(e6AuditRows.map((row) => [row.action, Number(row.total)]));
+  const e6AuditOk =
+    e6AuditByAction['SERVICE_BACKUP_VALIDATOR_ASSIGNED'] >= 2 &&
+    e6AuditByAction['SERVICE_BACKUP_VALIDATOR_DISABLED'] >= 1 &&
+    e6AuditByAction['SERVICE_BACKUP_VALIDATOR_ENABLED'] >= 1 &&
+    e6AuditByAction['VALIDATOR_REPLACEMENT_CREATED'] >= 5 &&
+    e6AuditByAction['VALIDATOR_REPLACEMENT_DISABLED'] >= 5;
+  record(
+    'Les cinq actions d’audit E6 sont tracées',
+    e6AuditOk ? 'PASS' : 'FAIL',
+    e6AuditOk ? '5 actions présentes.' : JSON.stringify(e6AuditByAction),
+  );
+  invariant(e6AuditOk, 'L’audit E6 est incomplet.');
+
   section('Validation finale de la base');
   const [tableRows] = await db.query(
     `SELECT TABLE_NAME AS tableName FROM information_schema.TABLES
@@ -3182,14 +3649,15 @@ async function main() {
   const expectedTables = [
     'absence_declarations', 'audit_logs', 'balance_movements', 'derogations',
     'documents', 'holidays', 'leave_balances', 'leave_requests', 'leave_types',
-    'notifications', 'services', 'settings', 'users',
+    'notifications', 'service_backup_validators', 'services', 'settings', 'users',
+    'validator_replacements',
   ].sort();
   const actualTables = tableRows.map((row) => row.tableName).sort();
   const schemaOk = JSON.stringify(actualTables) === JSON.stringify(expectedTables);
   record(
-    'La base conserve exactement les 13 tables du diagramme',
+    'La base conserve exactement les 15 tables du diagramme',
     schemaOk ? 'PASS' : 'FAIL',
-    schemaOk ? '13 tables conformes.' : `Tables obtenues : ${actualTables.join(', ')}`,
+    schemaOk ? '15 tables conformes.' : `Tables obtenues : ${actualTables.join(', ')}`,
   );
   invariant(schemaOk, 'Le schéma a dérivé pendant les tests.');
 

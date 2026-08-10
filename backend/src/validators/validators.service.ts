@@ -32,6 +32,18 @@ const ELIGIBLE_VALIDATOR_ROLES = [
   UserRole.DIRECTEUR,
 ];
 
+const DATE_ONLY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+function dateOnly(value: string): string {
+  const normalized = value.slice(0, 10);
+  if (!DATE_ONLY_PATTERN.test(normalized)) {
+    throw new BadRequestException(
+      'Les dates doivent être au format YYYY-MM-DD.',
+    );
+  }
+  return normalized;
+}
+
 @Injectable()
 export class ValidatorsService {
   constructor(
@@ -254,6 +266,41 @@ export class ValidatorsService {
       return backup;
     }
 
+    const service = await this.serviceRepository.findOneBy({
+      id: serviceId,
+    });
+    if (!service) {
+      throw new BadRequestException(
+        'Le service est introuvable, la réactivation est impossible.',
+      );
+    }
+    if (
+      service.validationMode !==
+      ValidationMode.RESPONSABLE_PUIS_RELAIS
+    ) {
+      throw new BadRequestException(
+        'Les valideurs de secours ne sont disponibles que pour les services avec validation par Responsable puis relais.',
+      );
+    }
+    if (service.primaryManagerId === validatorId) {
+      throw new BadRequestException(
+        'Le Responsable principal du service ne peut pas être désigné comme son propre valideur de secours.',
+      );
+    }
+    const validator = await this.userRepository.findOneBy({
+      id: validatorId,
+    });
+    if (!validator || !validator.isActive) {
+      throw new BadRequestException(
+        'Le valideur de secours doit être un utilisateur actif.',
+      );
+    }
+    if (!ELIGIBLE_VALIDATOR_ROLES.includes(validator.role)) {
+      throw new BadRequestException(
+        'Le valideur de secours doit être un Responsable de service, un RH ou un Directeur.',
+      );
+    }
+
     backup.isActive = true;
     const saved = await this.backupRepository.save(backup);
     await this.auditService.record({
@@ -313,8 +360,8 @@ export class ValidatorsService {
       );
     }
 
-    const startDate = new Date(`${dto.startDate}T00:00:00.000Z`);
-    const endDate = new Date(`${dto.endDate}T00:00:00.000Z`);
+    const startDate = dateOnly(dto.startDate);
+    const endDate = dateOnly(dto.endDate);
     if (startDate > endDate) {
       throw new BadRequestException(
         'La date de début doit être antérieure ou égale à la date de fin.',
@@ -354,8 +401,8 @@ export class ValidatorsService {
       newValue: {
         employeeId: employee.id,
         replacementValidatorId: replacement.id,
-        startDate: dto.startDate,
-        endDate: dto.endDate,
+        startDate,
+        endDate,
         reason: entity.reason,
         actorRole: actor.role,
       },
@@ -378,9 +425,7 @@ export class ValidatorsService {
       where.isActive = query.isActive;
     }
     if (query.activeAt !== undefined) {
-      const activeDate = new Date(
-        `${query.activeAt}T00:00:00.000Z`,
-      );
+      const activeDate = dateOnly(query.activeAt);
       where.startDate = LessThanOrEqual(activeDate);
       where.endDate = MoreThanOrEqual(activeDate);
     }
