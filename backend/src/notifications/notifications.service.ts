@@ -14,6 +14,7 @@ import { LeaveRequest } from '../leave-requests/leave-request.entity';
 import { PresenceService } from '../presence/presence.service';
 import { Service, ValidationMode } from '../services/service.entity';
 import { PresenceStatus, User, UserRole } from '../users/user.entity';
+import { ValidatorResolutionService } from '../validators/validator-resolution.service';
 import {
   Notification,
   NotificationChannel,
@@ -41,6 +42,8 @@ export class NotificationsService {
     private readonly userRepository: Repository<User>,
 
     private readonly presenceService: PresenceService,
+
+    private readonly validatorResolutionService: ValidatorResolutionService,
   ) {}
 
   async create(
@@ -197,67 +200,10 @@ export class NotificationsService {
     leaveRequest: LeaveRequest,
     manager?: EntityManager,
   ): Promise<number[]> {
-    const userRepository = manager
-      ? manager.getRepository(User)
-      : this.userRepository;
-
-    if (leaveRequest.employee.role === UserRole.RH) {
-      const directors = await userRepository.find({
-        where: { role: UserRole.DIRECTEUR, isActive: true },
-        select: { id: true },
-      });
-      return directors.map((user) => user.id);
-    }
-
-    const service = leaveRequest.service as Service;
-
-    if (
-      service.validationMode === ValidationMode.RESPONSABLE_PUIS_RELAIS &&
-      service.primaryManagerId
-    ) {
-      const primaryManager = await userRepository.findOneBy({
-        id: service.primaryManagerId,
-      });
-      const submittedAt =
-        leaveRequest.submittedAt ?? leaveRequest.createdAt;
-      const takeoverAt = new Date(
-        submittedAt.getTime() +
-          service.takeoverDelayDays * 24 * 60 * 60 * 1000,
-      );
-      const managerAvailable = Boolean(
-        primaryManager &&
-          primaryManager.isActive &&
-          primaryManager.role === UserRole.RESPONSABLE_SERVICE &&
-          (await this.presenceService.computeStatus(
-            primaryManager.id,
-            undefined,
-            manager,
-          )) === PresenceStatus.PRESENT &&
-          Date.now() < takeoverAt.getTime(),
-      );
-
-      if (managerAvailable) {
-        return [service.primaryManagerId];
-      }
-    }
-
-    if (service.validationMode === ValidationMode.DIRECTEUR_SEUL) {
-      const directors = await userRepository.find({
-        where: { role: UserRole.DIRECTEUR, isActive: true },
-        select: { id: true },
-      });
-      return directors.map((user) => user.id);
-    }
-
-    const validators = await userRepository.find({
-      where: {
-        role: In([UserRole.RH, UserRole.DIRECTEUR]),
-        isActive: true,
-      },
-      select: { id: true },
-    });
-
-    return validators.map((user) => user.id);
+    return this.validatorResolutionService.getDecisionRecipientIds(
+      leaveRequest,
+      manager ? { manager } : {},
+    );
   }
 
   async notifyLeaveRequestSubmitted(

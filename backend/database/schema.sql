@@ -439,4 +439,48 @@ CREATE TABLE `audit_logs` (
     ON UPDATE CASCADE ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE `service_backup_validators` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT,
+  `service_id` BIGINT NOT NULL,
+  `validator_id` BIGINT NOT NULL,
+  `is_active` TINYINT(1) NOT NULL DEFAULT 1,
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `UQ_service_backup_validators_service_validator` (`service_id`, `validator_id`),
+  KEY `IDX_service_backup_validators_service_active` (`service_id`, `is_active`),
+  CONSTRAINT `FK_service_backup_validators_service`
+    FOREIGN KEY (`service_id`) REFERENCES `services` (`id`)
+    ON UPDATE CASCADE ON DELETE CASCADE,
+  CONSTRAINT `FK_service_backup_validators_validator`
+    FOREIGN KEY (`validator_id`) REFERENCES `users` (`id`)
+    ON UPDATE CASCADE ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE `validator_replacements` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT,
+  `employee_id` BIGINT NOT NULL,
+  `replacement_validator_id` BIGINT NOT NULL,
+  `start_date` DATE NOT NULL,
+  `end_date` DATE NOT NULL,
+  `reason` TEXT NULL,
+  `created_by_rh_id` BIGINT NOT NULL,
+  `is_active` TINYINT(1) NOT NULL DEFAULT 1,
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `IDX_validator_replacements_employee_active_dates` (`employee_id`, `is_active`, `start_date`, `end_date`),
+  CONSTRAINT `CHK_validator_replacements_dates` CHECK (`start_date` <= `end_date`),
+  CONSTRAINT `CHK_validator_replacements_distinct` CHECK (`employee_id` <> `replacement_validator_id`),
+  CONSTRAINT `FK_validator_replacements_employee`
+    FOREIGN KEY (`employee_id`) REFERENCES `users` (`id`)
+    ON UPDATE CASCADE ON DELETE CASCADE,
+  CONSTRAINT `FK_validator_replacements_validator`
+    FOREIGN KEY (`replacement_validator_id`) REFERENCES `users` (`id`)
+    ON UPDATE CASCADE ON DELETE CASCADE,
+  CONSTRAINT `FK_validator_replacements_created_by_rh`
+    FOREIGN KEY (`created_by_rh_id`) REFERENCES `users` (`id`)
+    ON UPDATE CASCADE ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 SET FOREIGN_KEY_CHECKS = 1;

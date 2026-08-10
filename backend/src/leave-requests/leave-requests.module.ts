@@ -12,6 +12,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
 import { SettingsModule } from '../settings/settings.module';
 import { UsersModule } from '../users/users.module';
 import { AuditModule } from '../audit/audit.module';
+import { ValidatorsModule } from '../validators/validators.module';
 import { LeaveRequest } from './leave-request.entity';
 import { LeaveRequestsController } from './leave-requests.controller';
 import { LeaveRequestsService } from './leave-requests.service';
@@ -34,6 +35,7 @@ import { LeaveRequestSchedulerService } from './leave-request-scheduler.service'
     LeaveBalancesModule,
     NotificationsModule,
     SettingsModule,
+    ValidatorsModule,
   ],
   controllers: [LeaveRequestsController],
   providers: [

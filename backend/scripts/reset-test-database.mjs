@@ -18,9 +18,11 @@ const EXPECTED_TABLES = [
   'leave_requests',
   'leave_types',
   'notifications',
+  'service_backup_validators',
   'services',
   'settings',
   'users',
+  'validator_replacements',
 ].sort();
 
 function parseDotEnv(content) {

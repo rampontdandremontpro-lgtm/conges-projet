@@ -22,6 +22,7 @@ import { ReportsModule } from './reports/reports.module';
 import { SettingsModule } from './settings/settings.module';
 import { ServicesModule } from './services/services.module';
 import { UsersModule } from './users/users.module';
+import { ValidatorsModule } from './validators/validators.module';
 
 @Module({
   imports: [
@@ -66,6 +67,7 @@ import { UsersModule } from './users/users.module';
     LeaveBalancesModule,
     LeaveRequestsModule,
     HolidaysModule,
+    ValidatorsModule,
   ],
   controllers: [AppController],
   providers: [

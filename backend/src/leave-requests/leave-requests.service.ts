@@ -71,19 +71,10 @@ import {
   LeaveRequestStatus,
   SignatureType,
 } from './leave-request.entity';
-
-
-type DecisionAccessKind =
-  | 'RESPONSABLE_PRINCIPAL'
-  | 'DIRECTEUR_RH'
-  | 'DIRECTEUR_SEUL'
-  | 'RELAIS'
-  | 'URGENCE';
-
-interface DecisionAccess {
-  kind: DecisionAccessKind;
-  reason: string | null;
-}
+import {
+  ValidatorResolutionService,
+  type DecisionAccess,
+} from '../validators/validator-resolution.service';
 
 @Injectable()
 export class LeaveRequestsService {
@@ -105,6 +96,7 @@ export class LeaveRequestsService {
     private readonly documentPdfService: DocumentPdfService,
     private readonly settingsService: SettingsService,
     private readonly notificationsService: NotificationsService,
+    private readonly validatorResolutionService: ValidatorResolutionService,
     private readonly serviceAvailabilityService: ServiceAvailabilityService,
     private readonly presenceService: PresenceService,
     private readonly dataSource: DataSource,
@@ -938,19 +930,31 @@ export class LeaveRequestsService {
       authenticatedUser.role ===
       UserRole.RESPONSABLE_SERVICE
     ) {
-      return requests.filter(
-        (leaveRequest) =>
-          leaveRequest.service.validationMode ===
-            ValidationMode.RESPONSABLE_PUIS_RELAIS &&
-          leaveRequest.service.primaryManagerId ===
-            authenticatedUser.id &&
-          leaveRequest.employeeId !== authenticatedUser.id &&
-          ![
+      const pending: LeaveRequest[] = [];
+      for (const leaveRequest of requests) {
+        if (
+          leaveRequest.service.validationMode !==
+            ValidationMode.RESPONSABLE_PUIS_RELAIS ||
+          leaveRequest.employeeId === authenticatedUser.id ||
+          [
             UserRole.RESPONSABLE_SERVICE,
             UserRole.RH,
             UserRole.DIRECTEUR,
-          ].includes(leaveRequest.employee.role),
-      );
+          ].includes(leaveRequest.employee.role)
+        ) {
+          continue;
+        }
+        if (
+          await this.validatorResolutionService
+            .isResponsableAuthorizedForRequest(
+              leaveRequest,
+              authenticatedUser.id,
+            )
+        ) {
+          pending.push(leaveRequest);
+        }
+      }
+      return pending;
     }
 
     return [];
@@ -986,24 +990,54 @@ export class LeaveRequestsService {
 
     if (
       authenticatedUser.role ===
-        UserRole.RESPONSABLE_SERVICE &&
-      leaveRequest.service.validationMode ===
-        ValidationMode.RESPONSABLE_PUIS_RELAIS &&
-      leaveRequest.service.primaryManagerId ===
-        authenticatedUser.id &&
-      leaveRequest.employeeId !== authenticatedUser.id &&
-      ![
-        UserRole.RESPONSABLE_SERVICE,
-        UserRole.RH,
-        UserRole.DIRECTEUR,
-      ].includes(leaveRequest.employee.role)
+      UserRole.RESPONSABLE_SERVICE
     ) {
-      return leaveRequest;
+      if (
+        leaveRequest.service.validationMode ===
+          ValidationMode.RESPONSABLE_PUIS_RELAIS &&
+        leaveRequest.employeeId !== authenticatedUser.id &&
+        ![
+          UserRole.RESPONSABLE_SERVICE,
+          UserRole.RH,
+          UserRole.DIRECTEUR,
+        ].includes(leaveRequest.employee.role) &&
+        (await this.validatorResolutionService
+          .isResponsableAuthorizedForRequest(
+            leaveRequest,
+            authenticatedUser.id,
+          ))
+      ) {
+        return leaveRequest;
+      }
     }
 
     throw new ForbiddenException(
       'Cette demande ne relève pas de votre périmètre.',
     );
+  }
+
+  private async findDecidedRequest(
+    id: number,
+  ): Promise<LeaveRequest> {
+    const leaveRequest =
+      await this.leaveRequestRepository.findOne({
+        where: { id },
+        relations: {
+          employee: true,
+          createdBy: true,
+          leaveType: true,
+          service: true,
+          finalDecider: true,
+        },
+      });
+
+    if (!leaveRequest) {
+      throw new NotFoundException(
+        `La demande de congé ${id} est introuvable.`,
+      );
+    }
+
+    return leaveRequest;
   }
 
   async getServiceAvailability(
@@ -1151,9 +1185,8 @@ export class LeaveRequestsService {
       );
     });
 
-    const validatedRequest = await this.findRequestForDecision(
+    const validatedRequest = await this.findDecidedRequest(
       id,
-      authenticatedUser,
     );
     await this.notificationsService.notifyLeaveRequestDecision(
       validatedRequest,
@@ -1271,9 +1304,8 @@ export class LeaveRequestsService {
       );
     });
 
-    const refusedRequest = await this.findRequestForDecision(
+    const refusedRequest = await this.findDecidedRequest(
       id,
-      authenticatedUser,
     );
     await this.notificationsService.notifyLeaveRequestDecision(
       refusedRequest,
@@ -1807,196 +1839,14 @@ export class LeaveRequestsService {
     emergencyTakeover: boolean,
     takeoverReasonValue?: string,
   ): Promise<DecisionAccess> {
-    if (leaveRequest.employeeId === authenticatedUser.id) {
-      throw new ForbiddenException(
-        'Vous ne pouvez pas traiter votre propre demande.',
-      );
-    }
-
-    if (leaveRequest.employee.role === UserRole.RH) {
-      if (authenticatedUser.role !== UserRole.DIRECTEUR) {
-        throw new ForbiddenException(
-          'Une demande déposée par la RH doit être traitée par le Directeur.',
-        );
-      }
-
-      return {
-        kind: 'DIRECTEUR_SEUL',
-        reason: null,
-      };
-    }
-
-    if (
-      leaveRequest.employee.role ===
-      UserRole.RESPONSABLE_SERVICE
-    ) {
-      if (
-        authenticatedUser.role !== UserRole.DIRECTEUR &&
-        authenticatedUser.role !== UserRole.RH
-      ) {
-        throw new ForbiddenException(
-          'La demande d’un Responsable de service doit être traitée par le Directeur ou la RH.',
-        );
-      }
-
-      return {
-        kind: 'DIRECTEUR_RH',
-        reason: null,
-      };
-    }
-
-    if (leaveRequest.service.serviceType === ServiceType.EXTERNE) {
-      if (
-        authenticatedUser.role !== UserRole.DIRECTEUR &&
-        authenticatedUser.role !== UserRole.RH
-      ) {
-        throw new ForbiddenException(
-          'La demande d’un collaborateur externe doit être traitée par le Directeur ou la RH.',
-        );
-      }
-
-      return {
-        kind: 'DIRECTEUR_RH',
-        reason: null,
-      };
-    }
-
-    switch (leaveRequest.service.validationMode) {
-      case ValidationMode.DIRECTEUR_ET_RH:
-        if (
-          authenticatedUser.role !== UserRole.DIRECTEUR &&
-          authenticatedUser.role !== UserRole.RH
-        ) {
-          throw new ForbiddenException(
-            'Cette demande doit être traitée par le Directeur ou la RH.',
-          );
-        }
-
-        return {
-          kind: 'DIRECTEUR_RH',
-          reason: null,
-        };
-
-      case ValidationMode.DIRECTEUR_SEUL:
-        if (authenticatedUser.role !== UserRole.DIRECTEUR) {
-          throw new ForbiddenException(
-            'Cette demande doit être traitée par le Directeur.',
-          );
-        }
-
-        return {
-          kind: 'DIRECTEUR_SEUL',
-          reason: null,
-        };
-
-      case ValidationMode.SANS_VALIDATION:
-        throw new BadRequestException(
-          'Ce service est configuré sans circuit de validation.',
-        );
-
-      case ValidationMode.RESPONSABLE_PUIS_RELAIS:
-        return this.determineManagerFirstAccess(
-          manager,
-          leaveRequest,
-          authenticatedUser,
-          emergencyTakeover,
-          takeoverReasonValue,
-        );
-
-      default:
-        throw new BadRequestException(
-          'Le circuit de validation du service est invalide.',
-        );
-    }
-  }
-
-  private async determineManagerFirstAccess(
-    manager: EntityManager,
-    leaveRequest: LeaveRequest,
-    authenticatedUser: AuthenticatedUser,
-    emergencyTakeover: boolean,
-    takeoverReasonValue?: string,
-  ): Promise<DecisionAccess> {
-    if (
-      authenticatedUser.role ===
-        UserRole.RESPONSABLE_SERVICE &&
-      leaveRequest.service.primaryManagerId ===
-        authenticatedUser.id
-    ) {
-      return {
-        kind: 'RESPONSABLE_PRINCIPAL',
-        reason: null,
-      };
-    }
-
-    if (
-      authenticatedUser.role !== UserRole.DIRECTEUR &&
-      authenticatedUser.role !== UserRole.RH
-    ) {
-      throw new ForbiddenException(
-        'Cette demande relève du Responsable principal du service.',
-      );
-    }
-
-    const primaryManager =
-      leaveRequest.service.primaryManagerId === null
-        ? null
-        : await manager.getRepository(User).findOneBy({
-            id: leaveRequest.service.primaryManagerId,
-          });
-
-    const managerUnavailable =
-      !primaryManager ||
-      !primaryManager.isActive ||
-      primaryManager.role !== UserRole.RESPONSABLE_SERVICE ||
-      primaryManager.serviceId !== leaveRequest.serviceId ||
-      (await this.presenceService.computeStatus(
-        primaryManager.id,
-        undefined,
+    return this.validatorResolutionService.resolveAccess(
+      leaveRequest,
+      authenticatedUser,
+      {
         manager,
-      )) !== PresenceStatus.PRESENT;
-
-    if (managerUnavailable) {
-      return {
-        kind: 'RELAIS',
-        reason:
-          'Le Responsable principal est absent ou indisponible.',
-      };
-    }
-
-    const takeoverAt = new Date(
-      (leaveRequest.submittedAt ?? leaveRequest.createdAt).getTime() +
-        leaveRequest.service.takeoverDelayDays *
-          24 *
-          60 *
-          60 *
-          1000,
-    );
-
-    if (Date.now() >= takeoverAt.getTime()) {
-      return {
-        kind: 'RELAIS',
-        reason: `Le délai de ${leaveRequest.service.takeoverDelayDays} jour(s) calendaires accordé au Responsable est expiré.`,
-      };
-    }
-
-    if (emergencyTakeover) {
-      const takeoverReason = takeoverReasonValue?.trim();
-
-      if (!takeoverReason) {
-        throw new BadRequestException(
-          'Le motif de l’intervention urgente est obligatoire.',
-        );
-      }
-
-      return {
-        kind: 'URGENCE',
-        reason: takeoverReason,
-      };
-    }
-
-    throw new ForbiddenException(
-      `Le Responsable principal reste prioritaire jusqu’au ${takeoverAt.toISOString()}. Une intervention anticipée du Directeur ou de la RH doit être déclarée comme urgente et motivée.`,
+        emergencyTakeover,
+        takeoverReason: takeoverReasonValue,
+      },
     );
   }
 

@@ -8,7 +8,9 @@ CREATE TEMPORARY TABLE `expected_schema_tables` (
 
 INSERT INTO `expected_schema_tables` (`table_name`, `column_count`) VALUES
   ('services', 12),
+  ('service_backup_validators', 6),
   ('users', 17),
+  ('validator_replacements', 10),
   ('leave_types', 15),
   ('leave_requests', 41),
   ('absence_declarations', 18),
