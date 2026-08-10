@@ -307,10 +307,12 @@ describe('ValidatorResolutionService', () => {
       );
     });
 
-    it('remplaçant devenu inéligible (rôle COLLABORATEUR) → ignoré', async () => {
+    it('remplaçant devenu inéligible (rôle COLLABORATEUR) → remplacement inopérant, retour au circuit normal', async () => {
       replacementRepository.findOne.mockResolvedValue(replacement());
-      userRepository.findOneBy.mockResolvedValue(
-        user({ id: 3, role: UserRole.COLLABORATEUR }),
+      userRepository.findOneBy.mockImplementation(async ({ id }) =>
+        id === 3
+          ? user({ id: 3, role: UserRole.COLLABORATEUR })
+          : user({ id: 2, role: UserRole.RESPONSABLE_SERVICE, serviceId: 10 }),
       );
 
       const resolution = await service.buildResolution(
@@ -318,13 +320,18 @@ describe('ValidatorResolutionService', () => {
         { now: nowWithinDelay },
       );
 
-      expect(resolution.firstLevelEligible).toBe(false);
+      expect(resolution.replacement).toBeNull();
+      expect(resolution.firstLevelId).toBe(2);
+      expect(resolution.firstLevelEligible).toBe(true);
+      expect(resolution.firstLevelPresent).toBe(true);
     });
 
-    it('remplaçant désactivé → ignoré', async () => {
+    it('remplaçant devenu inéligible (rôle ADMIN) → remplacement inopérant, retour au circuit normal', async () => {
       replacementRepository.findOne.mockResolvedValue(replacement());
-      userRepository.findOneBy.mockResolvedValue(
-        user({ id: 3, role: UserRole.RESPONSABLE_SERVICE, isActive: false }),
+      userRepository.findOneBy.mockImplementation(async ({ id }) =>
+        id === 3
+          ? user({ id: 3, role: UserRole.ADMIN })
+          : user({ id: 2, role: UserRole.RESPONSABLE_SERVICE, serviceId: 10 }),
       );
 
       const resolution = await service.buildResolution(
@@ -332,7 +339,48 @@ describe('ValidatorResolutionService', () => {
         { now: nowWithinDelay },
       );
 
-      expect(resolution.firstLevelEligible).toBe(false);
+      expect(resolution.replacement).toBeNull();
+      expect(resolution.firstLevelId).toBe(2);
+      expect(resolution.firstLevelEligible).toBe(true);
+    });
+
+    it('remplaçant désactivé → remplacement inopérant, retour au circuit normal', async () => {
+      replacementRepository.findOne.mockResolvedValue(replacement());
+      userRepository.findOneBy.mockImplementation(async ({ id }) =>
+        id === 3
+          ? user({ id: 3, role: UserRole.RESPONSABLE_SERVICE, isActive: false })
+          : user({ id: 2, role: UserRole.RESPONSABLE_SERVICE, serviceId: 10 }),
+      );
+
+      const resolution = await service.buildResolution(
+        leaveRequest(),
+        { now: nowWithinDelay },
+      );
+
+      expect(resolution.replacement).toBeNull();
+      expect(resolution.firstLevelId).toBe(2);
+      expect(resolution.firstLevelEligible).toBe(true);
+      expect(resolution.firstLevelPresent).toBe(true);
+    });
+
+    it('remplaçant actif et éligible mais ABSENT → remplacement conservé (non ignoré)', async () => {
+      replacementRepository.findOne.mockResolvedValue(replacement());
+      userRepository.findOneBy.mockResolvedValue(
+        user({ id: 3, role: UserRole.RESPONSABLE_SERVICE }),
+      );
+      presenceService.computeStatus.mockResolvedValue(
+        PresenceStatus.ABSENT,
+      );
+
+      const resolution = await service.buildResolution(
+        leaveRequest(),
+        { now: nowWithinDelay },
+      );
+
+      expect(resolution.replacement).not.toBeNull();
+      expect(resolution.firstLevelId).toBe(3);
+      expect(resolution.firstLevelEligible).toBe(true);
+      expect(resolution.firstLevelPresent).toBe(false);
     });
 
     it('aucun remplacement pour un salarié RH / Responsable / externe', async () => {
@@ -558,6 +606,22 @@ describe('ValidatorResolutionService', () => {
       );
 
       expect(ids.sort((a, b) => a - b)).toEqual([4, 7]);
+    });
+
+    it('remplaçant désactivé → notification vers le Responsable s’il est présent et délai non expiré', async () => {
+      replacementRepository.findOne.mockResolvedValue(replacement());
+      userRepository.findOneBy.mockImplementation(async ({ id }) =>
+        id === 3
+          ? user({ id: 3, role: UserRole.RESPONSABLE_SERVICE, isActive: false })
+          : user({ id: 2, role: UserRole.RESPONSABLE_SERVICE, serviceId: 10 }),
+      );
+
+      const ids = await service.getDecisionRecipientIds(
+        leaveRequest(),
+        { now: nowWithinDelay },
+      );
+
+      expect(ids).toEqual([2]);
     });
 
     it('mode DIRECTEUR_SEUL → Directeurs', async () => {
@@ -1023,6 +1087,100 @@ describe('ValidatorResolutionService', () => {
       ).rejects.toThrow(ForbiddenException);
     });
 
+    it('remplaçant désactivé → le Responsable principal redevient autorisé (RESPONSABLE_PRINCIPAL)', async () => {
+      replacementRepository.findOne.mockResolvedValue(replacement());
+      userRepository.findOneBy.mockImplementation(async ({ id }) =>
+        id === 3
+          ? user({ id: 3, role: UserRole.RESPONSABLE_SERVICE, isActive: false })
+          : user({ id: 2, role: UserRole.RESPONSABLE_SERVICE, serviceId: 10 }),
+      );
+
+      const access = await service.resolveAccess(
+        leaveRequest(),
+        user({ id: 2, role: UserRole.RESPONSABLE_SERVICE, serviceId: 10 }),
+        { now: nowWithinDelay },
+      );
+
+      expect(access).toEqual({ kind: 'RESPONSABLE_PRINCIPAL', reason: null });
+    });
+
+    it('remplaçant au rôle COLLABORATEUR → le Responsable principal redevient autorisé', async () => {
+      replacementRepository.findOne.mockResolvedValue(replacement());
+      userRepository.findOneBy.mockImplementation(async ({ id }) =>
+        id === 3
+          ? user({ id: 3, role: UserRole.COLLABORATEUR })
+          : user({ id: 2, role: UserRole.RESPONSABLE_SERVICE, serviceId: 10 }),
+      );
+
+      const access = await service.resolveAccess(
+        leaveRequest(),
+        user({ id: 2, role: UserRole.RESPONSABLE_SERVICE, serviceId: 10 }),
+        { now: nowWithinDelay },
+      );
+
+      expect(access).toEqual({ kind: 'RESPONSABLE_PRINCIPAL', reason: null });
+    });
+
+    it('remplaçant au rôle ADMIN → le Responsable principal redevient autorisé', async () => {
+      replacementRepository.findOne.mockResolvedValue(replacement());
+      userRepository.findOneBy.mockImplementation(async ({ id }) =>
+        id === 3
+          ? user({ id: 3, role: UserRole.ADMIN })
+          : user({ id: 2, role: UserRole.RESPONSABLE_SERVICE, serviceId: 10 }),
+      );
+
+      const access = await service.resolveAccess(
+        leaveRequest(),
+        user({ id: 2, role: UserRole.RESPONSABLE_SERVICE, serviceId: 10 }),
+        { now: nowWithinDelay },
+      );
+
+      expect(access).toEqual({ kind: 'RESPONSABLE_PRINCIPAL', reason: null });
+    });
+
+    it('remplaçant désactivé → le secours reste refusé quand le Responsable est présent', async () => {
+      replacementRepository.findOne.mockResolvedValue(replacement());
+      userRepository.findOneBy.mockImplementation(async ({ id }) =>
+        id === 3
+          ? user({ id: 3, role: UserRole.RESPONSABLE_SERVICE, isActive: false })
+          : user({ id: 2, role: UserRole.RESPONSABLE_SERVICE, serviceId: 10 }),
+      );
+      backupRepository.find.mockResolvedValue([
+        {
+          id: 1,
+          isActive: true,
+          validatorId: 4,
+          validator: user({ id: 4, role: UserRole.RESPONSABLE_SERVICE }),
+        },
+      ]);
+
+      await expect(
+        service.resolveAccess(
+          leaveRequest(),
+          user({ id: 4, role: UserRole.RESPONSABLE_SERVICE }),
+          { now: nowWithinDelay },
+        ),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('remplaçant actif et éligible mais ABSENT → le Responsable principal reste exclu', async () => {
+      replacementRepository.findOne.mockResolvedValue(replacement());
+      userRepository.findOneBy.mockResolvedValue(
+        user({ id: 3, role: UserRole.RESPONSABLE_SERVICE }),
+      );
+      presenceService.computeStatus.mockResolvedValue(
+        PresenceStatus.ABSENT,
+      );
+
+      await expect(
+        service.resolveAccess(
+          leaveRequest(),
+          user({ id: 2, role: UserRole.RESPONSABLE_SERVICE, serviceId: 10 }),
+          { now: nowWithinDelay },
+        ),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
     it('secours autorisé quand le remplaçant est absent → SECOURS', async () => {
       replacementRepository.findOne.mockResolvedValue(replacement());
       userRepository.findOneBy.mockResolvedValue(
@@ -1209,6 +1367,40 @@ describe('ValidatorResolutionService', () => {
         service.isResponsableAuthorizedForRequest(
           leaveRequest(),
           4,
+          { now: nowWithinDelay },
+        ),
+      ).resolves.toBe(true);
+    });
+
+    it('remplaçant désactivé → le Responsable principal redevient autorisé (liste d’attente)', async () => {
+      replacementRepository.findOne.mockResolvedValue(replacement());
+      userRepository.findOneBy.mockImplementation(async ({ id }) =>
+        id === 3
+          ? user({ id: 3, role: UserRole.RESPONSABLE_SERVICE, isActive: false })
+          : user({ id: 2, role: UserRole.RESPONSABLE_SERVICE, serviceId: 10 }),
+      );
+
+      await expect(
+        service.isResponsableAuthorizedForRequest(
+          leaveRequest(),
+          2,
+          { now: nowWithinDelay },
+        ),
+      ).resolves.toBe(true);
+    });
+
+    it('remplaçant au rôle ADMIN → le Responsable principal redevient autorisé (liste d’attente)', async () => {
+      replacementRepository.findOne.mockResolvedValue(replacement());
+      userRepository.findOneBy.mockImplementation(async ({ id }) =>
+        id === 3
+          ? user({ id: 3, role: UserRole.ADMIN })
+          : user({ id: 2, role: UserRole.RESPONSABLE_SERVICE, serviceId: 10 }),
+      );
+
+      await expect(
+        service.isResponsableAuthorizedForRequest(
+          leaveRequest(),
+          2,
           { now: nowWithinDelay },
         ),
       ).resolves.toBe(true);

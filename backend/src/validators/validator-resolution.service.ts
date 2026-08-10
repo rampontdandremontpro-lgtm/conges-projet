@@ -127,16 +127,33 @@ export class ValidatorResolutionService {
       });
     }
 
-    const firstLevelId =
+    let firstLevelId: number | null =
       replacement !== null
         ? replacement.replacementValidatorId
         : primaryManagerId;
 
     let firstLevelUser: User | null = null;
-    if (firstLevelId !== null && firstLevelId !== undefined) {
+    if (firstLevelId != null) {
       firstLevelUser = await userRepository.findOneBy({
         id: firstLevelId,
       });
+    }
+
+    const replacementOperative =
+      replacement !== null &&
+      firstLevelUser != null &&
+      firstLevelUser.isActive &&
+      ELIGIBLE_VALIDATOR_ROLES.includes(firstLevelUser.role);
+
+    if (replacement !== null && !replacementOperative) {
+      replacement = null;
+      firstLevelId = primaryManagerId;
+      firstLevelUser = null;
+      if (firstLevelId != null) {
+        firstLevelUser = await userRepository.findOneBy({
+          id: firstLevelId,
+        });
+      }
     }
 
     const eligibleRoles =
@@ -158,7 +175,6 @@ export class ValidatorResolutionService {
         manager,
         now,
       )) === PresenceStatus.PRESENT;
-
     const firstLevelBelongsToService =
       firstLevelUser != null &&
       (replacement !== null ||
