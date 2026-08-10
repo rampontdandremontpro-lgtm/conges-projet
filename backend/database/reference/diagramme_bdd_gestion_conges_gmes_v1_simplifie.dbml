@@ -7,9 +7,6 @@ Project gestion_conges_gmes_v1 {
   '''
 }
 
-/* =========================
-   ENUMERATIONS
-   ========================= */
 
 Enum user_role {
   COLLABORATEUR
@@ -118,9 +115,6 @@ Enum notification_channel {
   LES_DEUX
 }
 
-/* =========================
-   1. UTILISATEURS
-   ========================= */
 
 Table users {
   id bigint [pk, increment]
@@ -152,9 +146,6 @@ Table users {
   '''
 }
 
-/* =========================
-   2. SERVICES
-   ========================= */
 
 Table services {
   id bigint [pk, increment]
@@ -190,9 +181,6 @@ Table services {
   '''
 }
 
-/* =========================
-   3. TYPES DE CONGES / ABSENCES
-   ========================= */
 
 Table leave_types {
   id bigint [pk, increment]
@@ -225,9 +213,6 @@ Table leave_types {
   '''
 }
 
-/* =========================
-   4. DEMANDES DE CONGES
-   ========================= */
 
 Table leave_requests {
   id bigint [pk, increment]
@@ -300,9 +285,6 @@ Table leave_requests {
   '''
 }
 
-/* =========================
-   5. DECLARATIONS D'ABSENCE
-   ========================= */
 
 Table absence_declarations {
   id bigint [pk, increment]
@@ -341,9 +323,6 @@ Table absence_declarations {
   '''
 }
 
-/* =========================
-   6. DOCUMENTS
-   ========================= */
 
 Table documents {
   id bigint [pk, increment]
@@ -386,9 +365,6 @@ Table documents {
   '''
 }
 
-/* =========================
-   7. DEROGATIONS
-   ========================= */
 
 Table derogations {
   id bigint [pk, increment]
@@ -422,9 +398,6 @@ Table derogations {
   '''
 }
 
-/* =========================
-   8. SOLDES
-   ========================= */
 
 Table leave_balances {
   id bigint [pk, increment]
@@ -450,9 +423,6 @@ Table leave_balances {
   '''
 }
 
-/* =========================
-   9. MOUVEMENTS DE SOLDE
-   ========================= */
 
 Table balance_movements {
   id bigint [pk, increment]
@@ -482,9 +452,6 @@ Table balance_movements {
   '''
 }
 
-/* =========================
-   10. JOURS FERIES / FERMETURES
-   ========================= */
 
 Table holidays {
   id bigint [pk, increment]
@@ -510,9 +477,6 @@ Table holidays {
   '''
 }
 
-/* =========================
-   11. PARAMETRES
-   ========================= */
 
 Table settings {
   id bigint [pk, increment]
@@ -536,9 +500,6 @@ Table settings {
   '''
 }
 
-/* =========================
-   12. NOTIFICATIONS
-   ========================= */
 
 Table notifications {
   id bigint [pk, increment]
@@ -564,9 +525,6 @@ Table notifications {
   }
 }
 
-/* =========================
-   13. HISTORIQUE / AUDIT
-   ========================= */
 
 Table audit_logs {
   id bigint [pk, increment]
@@ -593,9 +551,6 @@ Table audit_logs {
   '''
 }
 
-/* =========================
-   RELATIONS
-   ========================= */
 
 Ref: services.id < users.service_id
 Ref: users.id < services.primary_manager_id

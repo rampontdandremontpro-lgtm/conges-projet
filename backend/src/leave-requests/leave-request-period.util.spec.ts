@@ -7,10 +7,6 @@ import {
   occupiesSlot,
 } from './leave-request-period.util';
 
-/**
- * Construit un instant absolu dont l'horloge America/Martinique affiche
- * `time` (UTC-4 sans heure d'été). Ne dépend pas de l'heure réelle.
- */
 function martiniqueTime(time: string): Date {
   const [hour, minute] = time.split(':').map((part) => Number(part));
   const utc = new Date('2025-06-15T00:00:00.000Z');
@@ -145,8 +141,6 @@ describe('getCurrentDayPeriod — bascule MATIN / APRES_MIDI', () => {
   });
 
   it('ne dépend pas du fuseau local du serveur (indépendance Intl)', () => {
-    // L'heure est exprimée par l'horloge America/Martinique de l'instant,
-    // jamais par l'heure locale du processus.
     expect(getCurrentDayPeriod(martiniqueTime('23:59'), '12:00')).toBe(
       DayPeriod.APRES_MIDI,
     );
@@ -173,7 +167,6 @@ describe('helpers de date/heure America/Martinique', () => {
 describe('getNextPeriodSwitch — prochaine bascule de période en America/Martinique', () => {
   it('11:59 → bascule le même jour à 12:00 (heure Martinique = UTC−4)', () => {
     const next = getNextPeriodSwitch(martiniqueTime('11:59'), '12:00');
-    // 12:00 Martinique = 16:00 UTC (UTC−4 fixe, sans heure d'été).
     expect(next.toISOString()).toBe('2025-06-15T16:00:00.000Z');
   });
 
@@ -214,7 +207,6 @@ describe('getNextPeriodSwitch — prochaine bascule de période en America/Marti
 
   it('retourne un instant exprimé avec le décalage UTC−4 (pas d\'heure d\'été)', () => {
     const next = getNextPeriodSwitch(martiniqueTime('11:59'), '12:00');
-    // Heure locale Martinique de l'instant retourné : 12:00 → UTC 16:00.
     expect(getMartiniqueTimeString(next)).toBe('12:00');
     expect(next.getUTCHours()).toBe(16);
   });

@@ -1,20 +1,7 @@
--- ============================================================================
--- GMES - Comptes locaux de test (développement uniquement)
--- Script idempotent : il peut être relancé sans créer de doublons.
--- N'exécute aucune suppression et ne modifie pas le schéma.
--- ============================================================================
 
 USE `gestion_conges_gmes`;
 SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
 
--- Mots de passe locaux de test :
--- admin@gmes.fr          / AdminGMES@2026!
--- rh@gmes.fr             / RhGMES@2026!
--- directeur@gmes.fr      / DirecteurGMES@2026!
--- responsable@gmes.fr    / ResponsableGMES@2026!
--- collaborateur@gmes.fr  / CollaborateurGMES@2026!
---
--- Ces comptes servent exclusivement au développement et aux tests locaux.
 
 INSERT INTO `users` (
   `nom`, `prenom`, `email`, `password_hash`, `microsoft_id`, `role`,
@@ -116,7 +103,6 @@ ON DUPLICATE KEY UPDATE
   `presence_status` = 'PRESENT',
   `is_active` = 1;
 
--- Configuration conforme au circuit de l'Équipe technique.
 UPDATE `services`
 SET
   `primary_manager_id` = (
@@ -129,7 +115,6 @@ SET
   `is_active` = 1
 WHERE `id` = 4;
 
--- Le Pôle Applicatif conserve son circuit Directeur + RH et son seuil de présence.
 UPDATE `services`
 SET
   `validation_mode` = 'DIRECTEUR_ET_RH',

@@ -143,15 +143,6 @@ export class NotificationsService {
     return { updated: result.affected ?? 0 };
   }
 
-  /**
-   * Vérifie l'existence EXACTE d'une notification (utilisateur + type +
-   * leaveRequestId), indépendamment de sa date de création.
-   *
-   * Utilisée par E4 (rappels de fin de période) : un rappel envoyé en
-   * retard (rattrapage) ne doit jamais être recréé les jours suivants,
-   * alors que alreadyExistsSince() (borné à « aujourd'hui ») ne suffit
-   * pas à le savoir.
-   */
   async alreadyExists(data: {
     userId: number;
     type: string;
@@ -237,9 +228,6 @@ export class NotificationsService {
         primaryManager &&
           primaryManager.isActive &&
           primaryManager.role === UserRole.RESPONSABLE_SERVICE &&
-          // Option demi-journées : computeStatus() évalue le SLOT COURANT
-          // — les destinataires reflètent la disponibilité réelle à
-          // l'instant de la décision (même définition que le relais).
           (await this.presenceService.computeStatus(
             primaryManager.id,
             undefined,
@@ -293,16 +281,6 @@ export class NotificationsService {
     );
   }
 
-  /**
-   * Réévalue les destinataires d'une demande EN_ATTENTE_VALIDATION et
-   * notifie ceux qui ont été ajoutés depuis la soumission (par exemple si
-   * le slot courant a changé : Responsable indisponible le matin, de
-   * nouveau disponible l'après-midi — demi-journées, OPTION D).
-   *
-   * Idempotent : une notification LEAVE_REQUEST_SUBMITTED existante après
-   * la soumission bloque la création d'un doublon. Ne crée que les
-   * manquantes ; renvoie le nombre de notifications créées.
-   */
   async reevaluateRecipientsForRequest(
     leaveRequest: LeaveRequest,
     manager?: EntityManager,

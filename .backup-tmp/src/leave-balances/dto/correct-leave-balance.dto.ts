@@ -1,0 +1,26 @@
+import { Type } from 'class-transformer';
+import {
+  IsNumber,
+  IsOptional,
+  IsString,
+  Length,
+  Max,
+  Min,
+  NotEquals,
+} from 'class-validator';
+
+export class CorrectLeaveBalanceDto {
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @NotEquals(0, {
+    message: 'La correction ne peut pas être égale à zéro.',
+  })
+  @Min(-99999.99)
+  @Max(99999.99)
+  days!: number;
+
+  @IsOptional()
+  @IsString()
+  @Length(3, 1000)
+  reason?: string;
+}

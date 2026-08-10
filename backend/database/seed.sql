@@ -1,12 +1,7 @@
--- ============================================================================
--- GMES - Données initiales de la base Gestion des congés et des absences
--- À exécuter après database/schema.sql.
--- ============================================================================
 
 USE `gestion_conges_gmes`;
 SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
 
--- Paramètres métier validés.
 INSERT INTO `settings` (`setting_key`, `setting_value`, `description`) VALUES
   ('NORMAL_REQUEST_DEADLINE_DAYS', '30', 'Délai normal de dépôt d’une demande, en jours calendaires.'),
   ('SPECIAL_REQUEST_DEADLINE_DAYS', '60', 'Délai spécial de dépôt d’une demande, en jours calendaires.'),
@@ -19,7 +14,6 @@ INSERT INTO `settings` (`setting_key`, `setting_value`, `description`) VALUES
   ('REFERENCE_PERIOD_START', '06-01', 'Début de la période de référence, au format MM-JJ.'),
   ('AFTERNOON_START_HOUR', '12:00', 'Heure de début de la période APRES_MIDI, fuseau America/Martinique. Format HH:MM. Avant cette heure : MATIN ; à partir de cette heure (inclus) : APRES_MIDI.');
 
--- Services internes.
 INSERT INTO `services`
   (`name`, `service_type`, `external_company_name`, `primary_manager_id`, `validation_mode`, `takeover_delay_days`, `minimum_presence`, `has_minimum_presence_rule`)
 VALUES
@@ -31,7 +25,6 @@ VALUES
   ('Équipe RH', 'INTERNE', NULL, NULL, 'DIRECTEUR_ET_RH', 7, NULL, 0),
   ('Pôle R&D — Intelligence Artificielle', 'INTERNE', NULL, NULL, 'DIRECTEUR_ET_RH', 7, NULL, 0);
 
--- Services externes.
 INSERT INTO `services`
   (`name`, `service_type`, `external_company_name`, `primary_manager_id`, `validation_mode`, `takeover_delay_days`, `minimum_presence`, `has_minimum_presence_rule`)
 VALUES
@@ -44,21 +37,17 @@ VALUES
   ('Service Informatique', 'EXTERNE', 'Port Maritime', NULL, 'DIRECTEUR_ET_RH', 7, NULL, 0),
   ('Service Informatique', 'EXTERNE', 'Ville de Fort-de-France', NULL, 'DIRECTEUR_ET_RH', 7, NULL, 0);
 
--- Compte Administrateur local initial. Aucun mot de passe n’est stocké ici :
--- utiliser POST /api/auth/request-password puis /api/auth/define-password.
 INSERT INTO `users`
   (`nom`, `prenom`, `email`, `password_hash`, `microsoft_id`, `role`, `employment_type`, `service_id`, `hire_date`, `presence_status`, `is_active`)
 VALUES
   ('ADMINISTRATION', 'GMES', 'admin@gmes.fr', NULL, NULL, 'ADMIN', 'INTERNE', NULL, NULL, 'PRESENT', 1);
 
--- Types de demandes de congé.
 INSERT INTO `leave_types`
   (`name`, `category`, `deducts_paid_leave_balance`, `document_required`, `document_can_be_added_later`, `employee_can_create`, `rh_only`, `allows_days`, `allows_half_days`, `allows_hours`, `requires_validation`, `is_active`)
 VALUES
   ('Congés payés', 'DEMANDE_CONGE', 1, 0, 1, 1, 0, 1, 1, 0, 1, 1),
   ('Congé sans solde', 'DEMANDE_CONGE', 0, 0, 1, 1, 0, 1, 1, 0, 1, 1);
 
--- Types de déclarations d’absence.
 INSERT INTO `leave_types`
   (`name`, `category`, `deducts_paid_leave_balance`, `document_required`, `document_can_be_added_later`, `employee_can_create`, `rh_only`, `allows_days`, `allows_half_days`, `allows_hours`, `requires_validation`, `is_active`)
 VALUES

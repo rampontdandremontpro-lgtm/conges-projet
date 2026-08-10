@@ -2,12 +2,6 @@ import { of } from 'rxjs';
 
 import { AuditInterceptor } from './audit.interceptor';
 
-/**
- * Test ciblé sur la confidentialité des journaux d'audit techniques.
- * Reproduit la condition du test fonctionnel (full-functional-test.mjs) :
- *  - aucun nom de clé sensible ne doit subsister dans le JSON journalisé ;
- *  - aucune valeur sensible ne doit apparaître dans le JSON journalisé.
- */
 describe('AuditInterceptor (confidentialité des journaux)', () => {
   const forbiddenKeys = new Set([
     'password',
@@ -104,7 +98,6 @@ describe('AuditInterceptor (confidentialité des journaux)', () => {
     expect(serialized).not.toContain('AdminGMES@2026!');
     expect(serialized).not.toContain('[MASQUE]');
 
-    // Les données légitimes sont conservées telles quelles.
     expect(storedBody.comment).toBe('Bonjour');
     expect(storedBody.leaveTypeId).toBe(1);
   });

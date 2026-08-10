@@ -11,11 +11,6 @@ import { SettingsModule } from '../settings/settings.module';
 import { User } from '../users/user.entity';
 import { PresenceService } from './presence.service';
 
-/**
- * Module global : le statut de présence calculé est consommé par les
- * demandes de congé (relais), les notifications (destinataires), les
- * services (disponibilité du responsable) et les déclarations d'absence.
- */
 @Global()
 @Module({
   imports: [

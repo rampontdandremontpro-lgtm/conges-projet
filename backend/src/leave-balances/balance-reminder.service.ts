@@ -21,30 +21,16 @@ import {
   type ReminderDeadline,
 } from './reference-period.util';
 
-/**
- * Structure interne claire d'un rappel individuel : E5 pourra réutiliser
- * exactement ces informations (elles sont aussi portées par le titre et le
- * message de la notification, `notifications` ne possédant pas de payload
- * JSON).
- *
- * E4.1 — distinction explicite entre :
- * - reminderDate  : date de DÉCLENCHEMENT du rappel (3M/2M/1M/15D/7D) ;
- * - usageDeadline : date LIMITE réelle d'utilisation des congés (fin de
- *   période). C'est la seule date affichée aux utilisateurs.
- */
 export interface BalanceReminderPayload {
   reminderKey: string;
   referencePeriod: string;
-  /** Date de déclenchement du rappel (palier), YYYY-MM-DD. */
   reminderDate: string;
-  /** Date limite réelle d'utilisation = fin de période, YYYY-MM-DD. */
   usageDeadline: string;
   availableDays: number;
   reservedDays: number;
   potentialDays: number;
 }
 
-/** Ligne du récapitulatif RH. */
 export interface BalanceRecapRow {
   employeeId: number;
   nom: string;
@@ -55,9 +41,7 @@ export interface BalanceRecapRow {
   availableDays: number;
   reservedDays: number;
   potentialDays: number;
-  /** Date de déclenchement du rappel (palier), YYYY-MM-DD. */
   reminderDate: string;
-  /** Date limite réelle d'utilisation = fin de période, YYYY-MM-DD. */
   usageDeadline: string;
 }
 
@@ -119,7 +103,6 @@ export class BalanceReminderService {
       result.periodClosed = closedMarker !== null;
       result.afterPeriodEnd = today > endDate;
 
-      // Après la fin de période ou après clôture : aucun rappel.
       if (result.periodClosed || result.afterPeriodEnd) {
         return result;
       }
@@ -127,12 +110,10 @@ export class BalanceReminderService {
       const deadlines = reminderDeadlines(period, startMonthDay);
       const due = deadlines.filter((deadline) => deadline.date <= today);
 
-      // Aucune échéance atteinte : rien à faire.
       if (due.length === 0) {
         return result;
       }
 
-      // Rattrapage : uniquement l'échéance la plus récente devenue due.
       const selected = due[due.length - 1];
       result.deadline = selected;
 
@@ -176,7 +157,6 @@ export class BalanceReminderService {
         });
       }
 
-      // --- Rappels individuels ---
       for (const entry of eligible) {
         try {
           const type = balanceReminderType(selected.key, period);
@@ -212,9 +192,7 @@ export class BalanceReminderService {
         }
       }
 
-      // --- Récapitulatif RH ---
       if (eligible.length === 0) {
-        // Aucune personne éligible : aucun récapitulatif RH vide.
         return result;
       }
 

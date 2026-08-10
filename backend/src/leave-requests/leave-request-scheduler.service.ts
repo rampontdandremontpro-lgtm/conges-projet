@@ -46,12 +46,6 @@ export class LeaveRequestSchedulerService
   private switchTimer?: NodeJS.Timeout;
   private running = false;
 
-  /**
-   * Handler stable (propriété liée) pour le désabonnement propre au
-   * shutdown. Replanifie la maintenance de bascule après modification
-   * réussie de AFTERNOON_START_HOUR pendant que l'application tourne :
-   * l'ancien timer est annulé puis recalculé sur la nouvelle valeur.
-   */
   private readonly handleAfternoonStartHourChange = (): void => {
     void this.scheduleNextSwitchMaintenance();
   };
@@ -90,17 +84,6 @@ export class LeaveRequestSchedulerService
     );
   }
 
-  /**
-   * Planifie une maintenance au moment de la prochaine bascule de période
-   * (MATIN ↔ APRES_MIDI) en America/Martinique.
-   *
-   * La bascule est calculée à partir du paramètre AFTERNOON_START_HOUR
-   * (configurable, jamais de cron hardcodé) : la maintenance garantit que
-   * `users.presence_status` et les destinataires des notifications sont
-   * réévalués exactement à la bascule — sans attendre la maintenance
-   * horaire suivante (décalage possible de 60 min). Après exécution, la
-   * prochaine bascule est reprogrammée.
-   */
   async scheduleNextSwitchMaintenance(): Promise<void> {
     try {
       const afternoonStartHour = await this.settingsService.getString(
@@ -138,12 +121,6 @@ export class LeaveRequestSchedulerService
     }
   }
 
-  /**
-   * Maintenance légère déclenchée à la bascule de période : réévaluation
-   * idempotente des destinataires des demandes EN_ATTENTE_VALIDATION et
-   * recalcule des statuts de présence. Les rappels et l'expiration restent
-   * du ressort de la maintenance horaire.
-   */
   async runSwitchMaintenance(): Promise<MaintenanceRunResult> {
     if (this.running) {
       return this.busyResult();
@@ -262,12 +239,6 @@ export class LeaveRequestSchedulerService
             );
           }
 
-          // Option demi-journées : les destinataires d'une demande en
-          // attente peuvent changer quand le slot courant change
-          // (Responsable indisponible le matin, disponible l'après-midi).
-          // Réévaluation idempotente à chaque maintenance : les
-          // destinataires déjà notifiés depuis la soumission ne sont pas
-          // re-notifiés, seuls les nouveaux le sont.
           result.notificationsReevaluated +=
             await this.notificationsService
               .reevaluateRecipientsForRequest(request);
@@ -296,13 +267,6 @@ export class LeaveRequestSchedulerService
     return result;
   }
 
-  /**
-   * E4 — Rappels de fin de période de référence : un seul appel
-   * d'orchestration léger vers BalanceReminderService (aucune logique
-   * métier E4 ici, aucun nouveau scheduler). Les échéances, soldes,
-   * éligibilité, anti-doublon et récapitulatif RH vivent dans
-   * BalanceReminderService.
-   */
   private async runBalanceReminders(
     result: MaintenanceRunResult,
   ): Promise<void> {

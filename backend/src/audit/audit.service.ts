@@ -55,15 +55,6 @@ export class AuditService {
     return repository.save(log);
   }
 
-  /**
-   * Enregistre un audit métier de changement d'état avec des colonnes
-   * explicites (resourceType, resourceId, oldValue, newValue).
-   *
-   * Les champs oldStatus/newStatus/comment/metadata ne sont que des
-   * paramètres de fonction : ils sont convertis immédiatement en JSON
-   * oldValue/newValue avant toute écriture TypeORM, sans dépendre de
-   * propriétés d'entité non persistées (cause de l'anomalie AUD-1).
-   */
   async recordStatusChange(
     input: AuditStatusChangeInput,
     manager?: EntityManager,

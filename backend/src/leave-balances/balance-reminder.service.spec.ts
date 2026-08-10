@@ -7,11 +7,6 @@ import { LeaveBalance } from './leave-balance.entity';
 import { User } from '../users/user.entity';
 import { BalanceReminderService } from './balance-reminder.service';
 
-/**
- * Instants absolus en UTC : 12:00 UTC = 08:00 America/Martinique (UTC−4
- * sans heure d'été) → le jour calendaire Martinique est stable quel que
- * soit le moment réel d'exécution.
- */
 const NOON = 'T12:00:00.000Z';
 
 function user(id: number, overrides: Record<string, unknown> = {}) {
@@ -119,7 +114,6 @@ describe('BalanceReminderService — E4 rappels de fin de période', () => {
           type: 'BALANCE_REMINDER_3M_2026-2027',
         }),
       );
-      // emailSentAt reste NULL : créé par create() (préparation E5).
       expect(
         notificationsService.create.mock.calls[0][0].emailSentAt,
       ).toBeUndefined();
@@ -315,7 +309,6 @@ describe('BalanceReminderService — E4 rappels de fin de période', () => {
 
   describe('U — solde modifié entre deux rappels', () => {
     it('chaque échéance relit les données actuelles de la base', async () => {
-      // Échéance 3M : solde 8.
       balanceRepository.find.mockResolvedValue([
         balance(1, { availableDays: 8, reservedDays: 0 }),
       ]);
@@ -324,7 +317,6 @@ describe('BalanceReminderService — E4 rappels de fin de période', () => {
         '8 jours',
       );
 
-      // Le collaborateur utilise 5 jours ; échéance 2M : solde 3.
       balanceRepository.find.mockResolvedValue([
         balance(1, { availableDays: 3, reservedDays: 0 }),
       ]);
@@ -360,8 +352,6 @@ describe('BalanceReminderService — E4 rappels de fin de période', () => {
       const result = await run('2027-06-01');
       expect(result.referencePeriod).toBe('2027-2028');
       expect(result.afterPeriodEnd).toBe(false);
-      // Première échéance de la période suivante : 3M avant 31/05/2028
-      // (29/02/2028) → rien n'est dû le 01/06/2027.
       expect(result.deadline).toBeNull();
       expect(result.remindersCreated).toBe(0);
       expect(balanceRepository.find).not.toHaveBeenCalled();
@@ -378,9 +368,6 @@ describe('BalanceReminderService — E4 rappels de fin de période', () => {
   });
 
   describe('E4.1 — 31 mai : date de déclenchement ≠ date limite d’utilisation', () => {
-    // Période normale 2026-2027 (REFERENCE_PERIOD_START = 06-01) :
-    // fin de période = 31/05/2027. Chaque palier se déclenche plus tôt,
-    // mais le titre/message doivent TOUJOURS afficher la fin de période.
     it.each([
       ['3M', '2027-02-28', '28 février 2027'],
       ['2M', '2027-03-31', '31 mars 2027'],
@@ -394,15 +381,11 @@ describe('BalanceReminderService — E4 rappels de fin de période', () => {
           balance(1, { availableDays: 8, reservedDays: 0 }),
         ]);
         const result = await run(reminderDate);
-        // reminderDate : date de déclenchement (palier).
         expect(result.deadline?.key).toBe(key);
         expect(result.deadline?.date).toBe(reminderDate);
         const args = createdArgs(`BALANCE_REMINDER_${key}_2026-2027`);
-        // usageDeadline : fin de période affichée dans le titre.
         expect(args.title).toBe('Congés à utiliser avant le 31 mai 2027');
-        // … et dans le message.
         expect(args.message).toContain('à utiliser avant le 31 mai 2027.');
-        // La date de déclenchement ne doit JAMAIS apparaître comme limite.
         expect(args.message).not.toContain(
           `à utiliser avant le ${frenchReminderDate}`,
         );
@@ -412,7 +395,7 @@ describe('BalanceReminderService — E4 rappels de fin de période', () => {
     it('récapitulatif RH : le palier déclenché et la date limite réelle sont distincts', async () => {
       balanceRepository.find.mockResolvedValue([balance(1)]);
       userRepository.find.mockResolvedValue([{ id: 10 }]);
-      await run('2027-05-16'); // 15D déclenché.
+      await run('2027-05-16');
       const recap = createdArgs('BALANCE_RECAP_15D_2026-2027');
       expect(recap.title).toBe(
         'Récapitulatif des congés à utiliser avant le 31 mai 2027',
@@ -470,7 +453,6 @@ describe('BalanceReminderService — E4 rappels de fin de période', () => {
       expect(recap.message).toContain('Équipe RH');
       expect(recap.message).toContain('2026-2027');
       expect(recap.message).toContain('N-1');
-      // Palier déclenché et date limite réelle sont distincts.
       expect(recap.message).toContain('Rappel 3 mois');
       expect(recap.message).toContain(
         'congés à utiliser avant le 31 mai 2027.',

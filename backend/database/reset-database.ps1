@@ -117,8 +117,6 @@ function Invoke-MySqlFile {
   $startInfo.CreateNoWindow = $true
   $utf8NoBom = New-Object System.Text.UTF8Encoding -ArgumentList $false
 
-  # Windows PowerShell 5.1 ne fournit pas toujours StandardInputEncoding.
-  # Les propriétés de sortie sont donc appliquées uniquement lorsqu'elles existent.
   if ($startInfo.PSObject.Properties['StandardOutputEncoding']) {
     $startInfo.StandardOutputEncoding = $utf8NoBom
   }
@@ -134,8 +132,6 @@ function Invoke-MySqlFile {
     throw "Impossible de démarrer mysql.exe pour $SqlFile"
   }
 
-  # Envoi binaire du fichier SQL pour conserver exactement son UTF-8,
-  # sans dépendre de l'encodage de la console PowerShell.
   $sqlBytes = [System.IO.File]::ReadAllBytes($SqlFile)
   $inputStream = $process.StandardInput.BaseStream
   $inputStream.Write($sqlBytes, 0, $sqlBytes.Length)

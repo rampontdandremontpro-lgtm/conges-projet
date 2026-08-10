@@ -1,27 +1,6 @@
-/**
- * Utilitaires purs de période de référence — source de vérité partagée.
- *
- * Toute la logique calendaire (période courante, début/fin de période,
- * échéances de rappel) est centralisée ici, sans dépendance NestJS/TypeORM,
- * pour être testable de façon pure et réutilisable (E4 aujourd'hui, lot
- * REF-1 « période d'acquisition mensuelle alignée sur REFERENCE_PERIOD_START »
- * ensuite).
- *
- * Conventions :
- * - Les dates sont des chaînes « YYYY-MM-DD » manipulées en Date.UTC
- *   (déterministe, aucun fuseau local) ;
- * - « Aujourd'hui » est toujours fourni par l'appelant (calculé en
- *   America/Martinique dans les services) ;
- * - La soustraction de mois est CALENDAIRE avec ajustement en fin de mois
- *   (28/29 février géré) : 31/05/2027 − 3 mois → 28/02/2027.
- *   Elle n'est JAMAIS traduite en 90/60/30 jours ;
- * - 15 jours et 7 jours sont des jours calendaires.
- */
 
 export interface ReminderDeadline {
-  /** Clé courte de l'échéance (portée dans le type de notification). */
   key: '3M' | '2M' | '1M' | '15D' | '7D';
-  /** Date d'échéance au format YYYY-MM-DD (rappel dû à cette date, inclus). */
   date: string;
 }
 
@@ -60,10 +39,6 @@ export interface ParsedReferencePeriod {
   endYear: number;
 }
 
-/**
- * Valide et décompose une période de référence « AAAA-AAAA » (années
- * consécutives). Lève une Error descriptive sinon.
- */
 export function parseReferencePeriod(
   referencePeriod: string,
 ): ParsedReferencePeriod {
@@ -114,7 +89,6 @@ export function formatDateString(
   return `${year}-${pad(month)}-${pad(day)}`;
 }
 
-/** Ajoute/retranche des jours calendaires à une date YYYY-MM-DD (UTC). */
 export function addDays(date: string, days: number): string {
   const [year, month, day] = date.split('-').map(Number);
   const value = new Date(Date.UTC(year, month - 1, day));
@@ -122,13 +96,9 @@ export function addDays(date: string, days: number): string {
   return value.toISOString().slice(0, 10);
 }
 
-/**
- * Soustraction calendaire de mois avec ajustement en fin de mois :
- * 31/05/2027 − 3 mois → 28/02/2027 ; 31/05/2028 − 3 mois → 29/02/2028.
- */
 export function subtractMonthsClamped(date: string, months: number): string {
   const [year, month, day] = date.split('-').map(Number);
-  const raw = month - months; // arithmétique 1-basée
+  const raw = month - months;
   const targetYear = year + Math.floor((raw - 1) / 12);
   const normalizedMonth = (((raw - 1) % 12) + 12) % 12 + 1;
   const lastDay = new Date(
@@ -137,12 +107,6 @@ export function subtractMonthsClamped(date: string, months: number): string {
   return formatDateString(targetYear, normalizedMonth, Math.min(day, lastDay));
 }
 
-/**
- * Période de référence courante pour une date donnée, selon
- * REFERENCE_PERIOD_START (MM-JJ) :
- * - date >= début de l'année → « Y-(Y+1) » ;
- * - sinon → « (Y-1)-Y ».
- */
 export function currentReferencePeriod(
   date: string,
   startMonthDay: string,
@@ -156,7 +120,6 @@ export function currentReferencePeriod(
   return `${year - 1}-${year}`;
 }
 
-/** Date de début de la période (YYYY-MM-DD) : année de début + MM-JJ. */
 export function referencePeriodStartDate(
   referencePeriod: string,
   startMonthDay: string,
@@ -166,11 +129,6 @@ export function referencePeriodStartDate(
   return formatDateString(startYear, month, day);
 }
 
-/**
- * Date de fin de la période (YYYY-MM-DD) : début de la période suivante
- * moins 1 jour — correct pour toute valeur de MM-JJ, y compris 29/02
- * (ex. fin 31/05/2028 pour la période 2027-2028).
- */
 export function referencePeriodEndDate(
   referencePeriod: string,
   startMonthDay: string,
@@ -181,18 +139,11 @@ export function referencePeriodEndDate(
   return addDays(nextStart, -1);
 }
 
-/** Période suivante (ex. 2026-2027 → 2027-2028). */
 export function nextReferencePeriod(referencePeriod: string): string {
   const { endYear } = parseReferencePeriod(referencePeriod);
   return `${endYear}-${endYear + 1}`;
 }
 
-/**
- * Les cinq échéances de rappel de fin de période, ordonnées de la plus
- * ancienne à la plus récente : 3 mois, 2 mois, 1 mois, 15 jours, 7 jours.
- * Soustraction calendaire pour les mois (clamp fin de mois), jours
- * calendaires pour 15D/7D.
- */
 export function reminderDeadlines(
   referencePeriod: string,
   startMonthDay: string,
@@ -207,10 +158,6 @@ export function reminderDeadlines(
   });
 }
 
-/**
- * Type de notification anti-doublon d'un rappel individuel :
- * BALANCE_REMINDER_<échéance>_<période> (ex. BALANCE_REMINDER_15D_2026-2027).
- */
 export function balanceReminderType(
   deadlineKey: ReminderDeadline['key'],
   referencePeriod: string,
@@ -218,7 +165,6 @@ export function balanceReminderType(
   return `BALANCE_REMINDER_${deadlineKey}_${referencePeriod}`;
 }
 
-/** Type de notification anti-doublon du récapitulatif RH. */
 export function balanceRecapType(
   deadlineKey: ReminderDeadline['key'],
   referencePeriod: string,
@@ -226,7 +172,6 @@ export function balanceRecapType(
   return `BALANCE_RECAP_${deadlineKey}_${referencePeriod}`;
 }
 
-/** Libellé français court d'une échéance (« 3 mois », « 15 jours », …). */
 export function reminderDeadlineLabel(
   deadlineKey: ReminderDeadline['key'],
 ): string {
@@ -236,7 +181,6 @@ export function reminderDeadlineLabel(
   );
 }
 
-/** Date en français lisible : « 31 mai 2027 ». */
 export function formatFrenchDate(date: string): string {
   const [year, month, day] = date.split('-').map(Number);
   return `${day} ${FRENCH_MONTHS[month - 1]} ${year}`;

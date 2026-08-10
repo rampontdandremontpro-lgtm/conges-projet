@@ -32,13 +32,6 @@ export class RolesGuard implements CanActivate {
         ],
       );
 
-    /*
-     * Lorsqu'aucun rôle n'est indiqué sur une route,
-     * le guard ne bloque pas l'accès.
-     *
-     * Le JwtAuthGuard peut toutefois continuer à
-     * imposer une authentification.
-     */
     if (!requiredRoles || requiredRoles.length === 0) {
       return true;
     }

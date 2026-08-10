@@ -224,14 +224,6 @@ export class LeaveRequestsService {
     return this.findOwnedRequest(savedRequest.id, employee.id);
   }
 
-  /**
-   * Le Directeur enregistre directement ses propres congés :
-   *  - statut immédiat VALIDEE, sans validation ni signature ;
-   *  - aucun circuit de validation, aucune notification aux valideurs ;
-   *  - contrôles de dates et de chevauchement identiques aux autres demandes ;
-   *  - solde réservé puis déduit immédiatement (jamais négatif) ;
-   *  - historique d'audit dédié et statut de présence recalculé.
-   */
   async createDirectorRequest(
     authenticatedUser: AuthenticatedUser,
     createLeaveRequestDto: CreateLeaveRequestDto,
@@ -420,11 +412,6 @@ export class LeaveRequestsService {
     return this.findOwnedRequest(requestId, requestEmployeeId);
   }
 
-  /**
-   * Résout le collaborateur concerné par une demande. La RH seule peut
-   * créer une demande pour un autre collaborateur ; l'identité est
-   * transmise explicitement et contrôlée côté backend.
-   */
   private async resolveEmployee(
     authenticatedUser: AuthenticatedUser,
     requestedEmployeeId?: number,
@@ -597,10 +584,6 @@ export class LeaveRequestsService {
         leaveRequest.endPeriod;
 
       if (isSubmittedRequest) {
-        /*
-         * Le départ éventuellement modifié doit lui aussi
-         * rester au minimum à J-7.
-         */
         await this.ensureModificationAllowed(startDate);
       }
 
@@ -682,11 +665,6 @@ export class LeaveRequestsService {
             },
           );
 
-        /*
-         * La demande quitte temporairement la file des
-         * valideurs. Elle doit être signée et soumise à
-         * nouveau par son propriétaire.
-         */
         leaveRequest.status = LeaveRequestStatus.BROUILLON;
         leaveRequest.submittedAt = null;
         leaveRequest.employeeSignatureType = null;
@@ -1972,11 +1950,6 @@ export class LeaveRequestsService {
       !primaryManager.isActive ||
       primaryManager.role !== UserRole.RESPONSABLE_SERVICE ||
       primaryManager.serviceId !== leaveRequest.serviceId ||
-      // Option demi-journées : computeStatus() évalue le SLOT COURANT
-      // (AFTERNOON_START_HOUR, 12:00 inclus → APRES_MIDI). Le relais est
-      // donc décidé à l'instant de la décision, slot par slot : un
-      // Responsable absent seulement le matin laisse la priorité au
-      // Responsable dès l'après-midi, sans aucune donnée stockée.
       (await this.presenceService.computeStatus(
         primaryManager.id,
         undefined,

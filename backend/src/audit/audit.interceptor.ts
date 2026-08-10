@@ -112,8 +112,6 @@ export class AuditInterceptor implements NestInterceptor {
     for (const [key, childValue] of Object.entries(
       value as Record<string, unknown>,
     )) {
-      // Les clés sensibles sont supprimées intégralement (ni nom, ni valeur)
-      // pour ne jamais exposer leur existence dans les journaux d'audit.
       if (forbiddenKeys.has(key)) {
         continue;
       }

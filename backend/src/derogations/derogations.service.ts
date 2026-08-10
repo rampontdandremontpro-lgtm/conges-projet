@@ -538,11 +538,6 @@ export class DerogationsService {
       data.leaveRequest.calendarDuration,
     );
 
-    /*
-     * La demande modifiée respecte désormais le délai :
-     * l'ancienne dérogation reste dans l'historique mais
-     * n'est plus nécessaire pour la nouvelle soumission.
-     */
     if (notice.isNoticeCompliant) {
       return null;
     }
@@ -580,11 +575,6 @@ export class DerogationsService {
       derogation.status === DerogationStatus.UTILISEE &&
       stillMatchesApprovedRequest
     ) {
-      /*
-       * Seul un champ sans incidence sur l'autorisation
-       * RH a changé. La même dérogation peut être
-       * consommée à nouveau lors de la nouvelle signature.
-       */
       derogation.status = DerogationStatus.ACCORDEE;
 
       await repository.save(derogation);
@@ -596,12 +586,6 @@ export class DerogationsService {
       };
     }
 
-    /*
-     * Les dates ou le type ont changé : l'accord RH
-     * précédent ne couvre plus la nouvelle version.
-     * La même ligne est remise en attente RH pour respecter
-     * l'unicité d'une dérogation par demande.
-     */
     derogation.status = DerogationStatus.EN_ATTENTE_RH;
     derogation.decidedByRhId = null;
     derogation.decisionComment = null;

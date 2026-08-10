@@ -183,7 +183,6 @@ function martiniqueToday() {
   return `${get('year')}-${get('month')}-${get('day')}`;
 }
 
-/** Heure courante America/Martinique en HH:MM:SS (zéro-paddée). */
 function martiniqueTimeNow() {
   const parts = new Intl.DateTimeFormat('en-GB', {
     timeZone: 'America/Martinique',
@@ -201,19 +200,6 @@ function sleep(milliseconds) {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
 
-/**
- * Force le slot courant via le paramètre AFTERNOON_START_HOUR.
- *
- * - '23:59' → MATIN, SAUF pendant la dernière minute du jour Martinique
- *   (23:59:00–23:59:59) où aucun réglage HH:MM ne peut forcer MATIN : on
- *   attend alors le passage à minuit (borné ≤ 65 s), après quoi le slot
- *   MATIN est garanti pour toute la journée restante.
- * - '00:00' → APRES_MIDI en permanence.
- *
- * Les scénarios créent ensuite leurs absences/journées sur
- * `martiniqueToday()` fraîchement relu : quel que soit le moment réel
- * d'exécution, le statut (slot courant) est déterministe.
- */
 async function forceSlot(tokens, label, settingValue) {
   await expectStatus(label, 200, '/settings/AFTERNOON_START_HOUR', {
     token: tokens.rh,
@@ -1127,9 +1113,6 @@ async function main() {
     token: tokens.collabC, method: 'PATCH',
   });
 
-  // ======================================================================
-  // E2 — La RH agit pour un collaborateur (demandes de congé)
-  // ======================================================================
   section('E2 — RH agit pour un collaborateur (demandes de congé)');
 
   const rhProfile = await expectStatus('Identité de la RH lue pour les scénarios E2', 200, '/auth/me', {
@@ -1295,15 +1278,11 @@ async function main() {
   await expectStatus('La RH modifie le brouillon qu’elle a créé', 200, `/leave-requests/${e2RhDraftId}`, {
     token: tokens.rh, method: 'PATCH', body: { comment: 'Modification par la RH créatrice.' },
   });
-  // ---------------------------------------------------------------------
-  // E2-5 : la RH ne signe ni ne soumet à la place du collaborateur
-  // ---------------------------------------------------------------------
   await expectStatus('La RH créatrice ne soumet pas la demande du collaborateur', 403, `/leave-requests/${e2RhDraftId}/submit`, {
     token: tokens.rh, method: 'POST',
     body: { signatureType: 'INITIALS', signatureData: 'RH' },
   });
 
-  // Deuxième RH pour les scénarios de séparation des droits
   const e2OtherRh = await expectStatus('Admin crée une seconde RH (scénario E2)', 201, '/users', {
     token: tokens.admin, method: 'POST',
     body: {
@@ -1323,7 +1302,6 @@ async function main() {
   });
   tokens.rh2 = await login('seconde RH E2', [e2OtherRh.body.email, 'AutreRhGMES@2026!', 'RH']);
 
-  // Autre RH : consultation uniquement pour ces opérations de propriétaire
   await expectStatus('Une autre RH ne modifie pas le brouillon créé par la RH', 403, `/leave-requests/${e2RhDraftId}`, {
     token: tokens.rh2, method: 'PATCH', body: { comment: 'Tentative par une autre RH.' },
   });
@@ -1332,7 +1310,6 @@ async function main() {
     body: { signatureType: 'INITIALS', signatureData: 'RH' },
   });
 
-  // Le collaborateur propriétaire soumet et signe lui-même
   await expectStatus('Le collaborateur propriétaire soumet avec sa propre signature', 200, `/leave-requests/${e2RhDraftId}/submit`, {
     token: tokens.collabA, method: 'POST',
     body: { signatureType: 'INITIALS', signatureData: 'CA' },
@@ -1353,7 +1330,6 @@ async function main() {
   );
   invariant(e2SubmitDbOk, 'La signature enregistrée n’est pas celle du collaborateur.');
 
-  // Une fois EN_ATTENTE_VALIDATION, la RH créatrice n'a plus de droit de propriétaire
   await expectStatus('La RH créatrice ne modifie pas la demande soumise', 403, `/leave-requests/${e2RhDraftId}`, {
     token: tokens.rh, method: 'PATCH', body: { comment: 'Tentative après soumission.' },
   });
@@ -1364,7 +1340,6 @@ async function main() {
     token: tokens.rh, method: 'POST', body: { reason: 'Tentative RH.' },
   });
 
-  // Le collaborateur propriétaire annule
   await expectStatus('Le collaborateur propriétaire annule sa demande', 200, `/leave-requests/${e2RhDraftId}/cancel`, {
     token: tokens.collabA, method: 'POST', body: { reason: 'Fin du scénario E2.' },
   }, (body) => {
@@ -1416,10 +1391,6 @@ async function main() {
     token: tokens.collabB, method: 'DELETE',
   });
 
-  // ---------------------------------------------------------------------
-  // E2-4 : services inactifs (cas A à E)
-  // ---------------------------------------------------------------------
-  // A + C : service du collaborateur A désactivé → leave-request et absence refusés
   await expectStatus('Admin désactive le service du collaborateur A (scénario E2-4)', 200, `/services/${fixtures.serviceId}/disable`, {
     token: tokens.admin, method: 'PATCH',
   });
@@ -1450,7 +1421,6 @@ async function main() {
     token: tokens.collabA, method: 'DELETE',
   });
 
-  // D : absence créée par la RH pour un collaborateur d'un service inactif
   await expectStatus('La RH ne crée pas d’absence pour un collaborateur d’un service inactif (cible dédiée)', 400, '/absence-declarations', {
     token: tokens.rh, method: 'POST',
     body: {
@@ -1459,7 +1429,6 @@ async function main() {
     },
   });
 
-  // E : route Directeur avec service inactif
   const [e2DirectorServiceRows] = await db.execute(
     `SELECT service_id AS serviceId FROM users WHERE id = ?`,
     [directeurUserId],
@@ -1482,9 +1451,6 @@ async function main() {
     });
   }
 
-  // ======================================================================
-  // E1 — Directeur : enregistrement direct des congés
-  // ======================================================================
   section('E1 — Directeur : enregistrement direct des congés');
 
   await expectStatus('Un collaborateur ne peut pas utiliser la route Directeur', 403, '/leave-requests/director', {
@@ -1704,9 +1670,6 @@ async function main() {
     return true;
   });
 
-  // ======================================================================
-  // E3 — Statut de présence calculé et relais du Responsable
-  // ======================================================================
   section('E3 — Présence calculée et relais du Responsable');
 
   const e3Today = martiniqueToday();
@@ -1782,12 +1745,6 @@ async function main() {
     );
     invariant(e3ReturnOk, 'Le retour à PRESENT échoue après annulation.');
 
-    // OPTION D : le statut reflète le SLOT COURANT. Pour un test
-    // déterministe, le slot est forcé via AFTERNOON_START_HOUR (23:59 →
-    // MATIN sauf la dernière minute, 00:00 → APRES_MIDI en permanence).
-    // OPTION D : le slot est forcé AVANT la création de l'absence : le
-    // statut (slot courant) de la journée forcée est déterministe quelle
-    // que soit l'heure réelle d'exécution (garde 23:59 dans forceSlot).
     await forceSlot(tokens, 'RH force le slot MATIN (AFTERNOON_START_HOUR=23:59)', '23:59');
     const e3HalfAbsence = await expectStatus('RH crée une absence autorisée demi-journée', 201, '/absence-declarations', {
       token: tokens.rh, method: 'POST',
@@ -1812,7 +1769,6 @@ async function main() {
     );
     invariant(e3HalfOk, 'Le statut devrait être ABSENT sur le slot MATIN.');
 
-    // Même absence, slot APRES_MIDI : la demi-journée MATIN ne couvre plus.
     await forceSlot(tokens, 'RH force le slot APRES_MIDI (AFTERNOON_START_HOUR=00:00)', '00:00');
     await expectStatus('Maintenance : recalcule les statuts sur le slot courant', 200, '/leave-requests/maintenance/run', {
       token: tokens.rh, method: 'POST',
@@ -1876,9 +1832,6 @@ async function main() {
     await expectStatus('La RH annule l’absence du Responsable', 200, `/absence-declarations/${e3ManagerAbsence.body.id}/cancel`, {
       token: tokens.rh, method: 'POST',
     });
-    // OPTION D : le slot MATIN est forcé AVANT la création de l'absence :
-    // le statut (slot courant) est déterministe quelle que soit l'heure
-    // réelle d'exécution (garde 23:59 dans forceSlot).
     await forceSlot(tokens, 'RH force le slot MATIN (AFTERNOON_START_HOUR=23:59)', '23:59');
     const e3ManagerHalfAbsence = await expectStatus('RH crée une absence demi-journée pour le Responsable', 201, '/absence-declarations', {
       token: tokens.rh, method: 'POST',
@@ -1891,8 +1844,6 @@ async function main() {
     await expectStatus('La RH soumet l’absence demi-journée du Responsable', 200, `/absence-declarations/${e3ManagerHalfAbsence.body.id}/submit`, {
       token: tokens.rh, method: 'POST', body: { certifiedAccurate: true },
     });
-    // OPTION D : relais décidé PAR SLOT au moment de la décision.
-    // Slot MATIN forcé (23:59) : Responsable absent le matin → relais RH.
     const e3HalfRelaisAfternoonDate = await nextOpenDate(addDays(scenarioDate, 40));
     await expectStatus('RH force le slot MATIN (AFTERNOON_START_HOUR=23:59)', 200, '/settings/AFTERNOON_START_HOUR', {
       token: tokens.rh, method: 'PATCH',
@@ -1908,8 +1859,6 @@ async function main() {
       return true;
     });
 
-    // Slot APRES_MIDI forcé (00:00) : Responsable présent → priorité
-    // Responsable, la RH reste refusée.
     await forceSlot(tokens, 'RH force le slot APRES_MIDI (AFTERNOON_START_HOUR=00:00)', '00:00');
     const e3HalfRelaisPmRequest = await createRequest(tokens.collabA, unpaidType.id, e3HalfRelaisAfternoonDate, 'Relais Responsable demi-journée (après-midi)');
     await submitRequest(tokens.collabA, e3HalfRelaisPmRequest.id);
@@ -1954,9 +1903,6 @@ async function main() {
     await db.execute(`UPDATE users SET presence_status = 'PRESENT' WHERE id = ?`, [fixtures.manager.id]);
   }
 
-  // ======================================================================
-  // Demi-journées — OPTION D (slots MATIN / APRES_MIDI)
-  // ======================================================================
   section('Demi-journées — OPTION D (slots MATIN / APRES_MIDI)');
 
   const restoreAfternoonStartHour = async () => {
@@ -1966,7 +1912,6 @@ async function main() {
     });
   };
 
-  // --- Validation du paramètre AFTERNOON_START_HOUR (HH:MM strict) ---
   for (const invalidValue of ['25:00', '12:60', '12h00', 'midi', 'abc']) {
     await expectStatus(`AFTERNOON_START_HOUR invalide (${invalidValue}) refusé`, 400, '/settings/AFTERNOON_START_HOUR', {
       token: tokens.rh, method: 'PATCH',
@@ -1985,7 +1930,6 @@ async function main() {
   });
   await restoreAfternoonStartHour();
 
-  // --- Combinaisons invalides APRES_MIDI → MATIN sur la même date ---
   const halfInvertedDate = await nextOpenDate(addDays(scenarioDate, 42));
   await expectStatus('Congé APRES_MIDI→MATIN même date refusé (création)', 400, '/leave-requests', {
     token: tokens.collabA, method: 'POST',
@@ -2003,9 +1947,6 @@ async function main() {
     token: tokens.collabA, method: 'DELETE',
   });
 
-  // --- Un seul mode par absence : heures OU jours/demi-journées ---
-  // Chaque création utilise une date distincte : les absences annulées
-  // restent prises en compte par le contrôle de chevauchement.
   const mixedDate = await nextOpenDate(addDays(scenarioDate, 70));
   const mixedDateH = await nextOpenDate(addDays(scenarioDate, 73));
   const mixedDateHd = await nextOpenDate(addDays(scenarioDate, 76));
@@ -2043,7 +1984,6 @@ async function main() {
     },
   });
 
-  // Mode heures seul : accepté, périodes nulles.
   const mixedHoursAbsence = await expectStatus('Absence en heures seule acceptée (durationHours=4)', 201, '/absence-declarations', {
     token: tokens.rh, method: 'POST',
     body: {
@@ -2067,7 +2007,6 @@ async function main() {
     token: tokens.rh, method: 'POST',
   });
 
-  // Demi-journée seule : acceptée, sans durée en heures.
   const mixedHalfAbsence = await expectStatus('Absence demi-journée seule acceptée (MATIN/MATIN)', 201, '/absence-declarations', {
     token: tokens.rh, method: 'POST',
     body: {
@@ -2092,7 +2031,6 @@ async function main() {
     token: tokens.rh, method: 'POST',
   });
 
-  // PATCH : refus d'un mélange explicite (heures + périodes dans la même requête).
   const mixedHoursDraft = await expectStatus('Brouillon en heures créé', 201, '/absence-declarations', {
     token: tokens.rh, method: 'POST',
     body: {
@@ -2115,10 +2053,6 @@ async function main() {
     token: tokens.rh, method: 'PATCH', body: { startPeriod: 'MATIN', durationHours: 3 },
   });
 
-  // Changement de mode via PATCH — comportement documenté, aucune
-  // convention arbitraire inventée :
-  // - HEURES → DEMI-JOURNÉE : le DTO partiel ne permet pas de RETIRER
-  //   durationHours → le brouillon reste en mode heures (périodes ignorées).
   await expectStatus('PATCH heures → demi-journée : périodes seules ne basculent pas le mode', 200, `/absence-declarations/${mixedHoursDraft.body.id}`, {
     token: tokens.rh, method: 'PATCH', body: { startPeriod: 'MATIN', endPeriod: 'MATIN' },
   });
@@ -2134,8 +2068,6 @@ async function main() {
   );
   invariant(stillHoursOk, 'Le mode heures ne doit pas basculer sans retrait de durationHours.');
 
-  // - DEMI-JOURNÉE → HEURES : PATCH { durationHours } → le calcul
-  //   réinitialise les périodes ; le brouillon devient un mode heures.
   await expectStatus('PATCH demi-journée → heures : durationHours appliqué', 200, `/absence-declarations/${mixedHalfDraft.body.id}`, {
     token: tokens.rh, method: 'PATCH', body: { durationHours: 3 },
   });
@@ -2151,7 +2083,6 @@ async function main() {
   );
   invariant(switchedToHoursOk, 'Le PATCH durationHours doit basculer en mode heures.');
 
-  // Nettoyage : soumission puis annulation des deux brouillons modifiés.
   await expectStatus('Soumission du brouillon en heures', 200, `/absence-declarations/${mixedHoursDraft.body.id}/submit`, {
     token: tokens.rh, method: 'POST', body: { certifiedAccurate: true },
   });
@@ -2165,14 +2096,10 @@ async function main() {
     token: tokens.rh, method: 'POST',
   });
 
-  // --- Relais du Responsable par slot (la disponibilité est évaluée à
-  // l'instant de la décision sur le slot courant) ---
   const halfD1 = await nextOpenDate(addDays(scenarioDate, 44));
   const halfD2 = await nextOpenDate(addDays(scenarioDate, 47));
   const halfD3 = await nextOpenDate(addDays(scenarioDate, 50));
 
-  // S2 — Responsable absent APRES_MIDI seulement (slot MATIN forcé AVANT
-  // la création : le statut de la journée forcée est déterministe).
   await forceSlot(tokens, 'RH force le slot MATIN (23:59)', '23:59');
   const halfS2Absence = await expectStatus('RH crée une absence APRES_MIDI pour le Responsable', 201, '/absence-declarations', {
     token: tokens.rh, method: 'POST',
@@ -2211,7 +2138,6 @@ async function main() {
     return true;
   });
 
-  // S3 — Responsable absent la journée entière : relais les deux slots
   await expectStatus('La RH annule l’absence APRES_MIDI du Responsable', 200, `/absence-declarations/${halfS2Absence.body.id}/cancel`, {
     token: tokens.rh, method: 'POST',
   });
@@ -2248,7 +2174,6 @@ async function main() {
     return true;
   });
 
-  // S7 — retour à PRESENT : priorité Responsable restaurée
   await expectStatus('La RH annule l’absence journée entière du Responsable', 200, `/absence-declarations/${halfS3Absence.body.id}/cancel`, {
     token: tokens.rh, method: 'POST',
   });
@@ -2266,8 +2191,6 @@ async function main() {
     return true;
   });
 
-  // S5 — destinataires des notifications au slot courant (slot MATIN forcé
-  // AVANT la création de l'absence : déterminisme).
   await forceSlot(tokens, 'RH force le slot MATIN (23:59)', '23:59');
   const halfS5Absence = await expectStatus('RH crée une absence MATIN pour le Responsable', 201, '/absence-declarations', {
     token: tokens.rh, method: 'POST',
@@ -2310,7 +2233,6 @@ async function main() {
   );
   invariant(rhNotifiedMorning, 'La RH devrait être destinataire le matin.');
 
-  // S6 — réévaluation des destinataires quand le slot change (maintenance)
   await forceSlot(tokens, 'RH force le slot APRES_MIDI (00:00)', '00:00');
   await expectStatus('Maintenance : réévalue les destinataires sur le slot courant', 200, '/leave-requests/maintenance/run', {
     token: tokens.rh, method: 'POST',
@@ -2351,7 +2273,6 @@ async function main() {
   });
   await restoreAfternoonStartHour();
 
-  // S4 — délai de relais expiré : relais même si le Responsable est présent
   const halfS4Request = await createRequest(tokens.collabA, unpaidType.id, await nextOpenDate(addDays(scenarioDate, 62)), 'Délai de relais expiré');
   await submitRequest(tokens.collabA, halfS4Request.id);
   await db.execute(
@@ -2382,7 +2303,6 @@ async function main() {
   });
   await restoreAfternoonStartHour();
 
-  // S9 — présence minimale par slot (une absence MATIN ne pénalise que le matin)
   const halfPresenceDate = await nextOpenDate(addDays(scenarioDate, 68));
   const halfS9Absence = await expectStatus('RH crée une absence MATIN pour un collègue', 201, '/absence-declarations', {
     token: tokens.rh, method: 'POST',
@@ -2522,8 +2442,6 @@ async function main() {
   invariant(closureBalanceOk, 'Résultat de clôture incorrect.');
 
   section('Audit technique et métier');
-  // L'intercepteur technique enregistre volontairement ses traces sans bloquer la réponse HTTP.
-  // Un bref délai évite qu'une lecture immédiate devance la dernière écriture asynchrone.
   await new Promise((resolve) => setTimeout(resolve, 750));
   const audit = await expectStatus('Admin consulte les journaux d’audit', 200, '/audit-logs?limit=500', {
     token: tokens.admin,
@@ -2546,12 +2464,7 @@ async function main() {
   );
   invariant(auditSafe, 'Les journaux d’audit exposent une donnée sensible.');
 
-  // ---------------------------------------------------------------------
-  // AUD-1 — Traçabilité métier des audits (resource_type / resource_id)
-  // ---------------------------------------------------------------------
   section('AUD-1 — Traçabilité métier des audits (resource_type/resource_id)');
-  // Les audits métier doivent référencer une ressource réelle (LEAVE_REQUESTS,
-  // ABSENCE_DECLARATIONS, DEROGATIONS) et jamais retomber sur APPLICATION/null.
   const businessAuditActions = [
     'BROUILLON_CREE', 'BROUILLON_MODIFIE', 'DEMANDE_MODIFIEE_AVANT_DECISION',
     'DEMANDE_SOUMISE', 'DEMANDE_VALIDEE', 'DEMANDE_REFUSEE', 'DEMANDE_ANNULEE',
@@ -2562,7 +2475,6 @@ async function main() {
   ];
   const businessPlaceholders = businessAuditActions.map(() => '?').join(',');
 
-  // 1) Plus aucun audit métier sur APPLICATION / LEAVE_REQUEST (singulier) / resource_id null.
   const [misMappedRows] = await db.execute(
     `SELECT COUNT(*) AS misMapped
      FROM audit_logs
@@ -2580,9 +2492,6 @@ async function main() {
   );
   invariant(noMisMapped, 'La correction AUD-1 n’est pas appliquée.');
 
-  // 2) Existence réelle : les actions post-brouillon référencent une demande encore en base.
-  //    (BROUILLON_CREE/MODIFIE exclus : les brouillons supprimés laissent des audits
-  //    légitimes dont la demande n'existe plus.)
   const persistedActions = [
     'DEMANDE_SOUMISE', 'DEMANDE_VALIDEE', 'DEMANDE_REFUSEE', 'DEMANDE_ANNULEE',
     'CONGE_DIRECTEUR_ENREGISTRE', 'REPRISE_PAR_RELAIS', 'INTERVENTION_URGENCE',
@@ -2607,7 +2516,6 @@ async function main() {
   );
   invariant(noOrphan, 'Des audits métier pointent vers une ressource inexistante.');
 
-  // 3) A — BROUILLON_CREE : resource_id réel + actor_id réel.
   const [draftAuditRows] = await db.execute(
     `SELECT resource_id AS resourceId, actor_id AS actorId
      FROM audit_logs
@@ -2627,8 +2535,6 @@ async function main() {
   );
   invariant(draftAuditOk, 'Audit BROUILLON_CREE sans ressource réelle.');
 
-  // 4) B/C/D/F — la même demande trace BROUILLON_CREE, SOUMISE, VALIDEE et RELAIS
-  //    sur un seul et même resource_id (scénario E3 relais).
   const [chainRows] = await db.execute(
     `SELECT resource_id AS resourceId, COUNT(DISTINCT action) AS nbActions
      FROM audit_logs
@@ -2666,7 +2572,6 @@ async function main() {
     invariant(validateActorOk, 'Le valideur tracé n’est pas l’auteur réel.');
   }
 
-  // 5) E — CONGE_DIRECTEUR_ENREGISTRE : LEAVE_REQUESTS + resource_id + actor_id = Directeur.
   const [directeurAuditRows] = await db.execute(
     `SELECT resource_type AS resourceType, resource_id AS resourceId, actor_id AS actorId
      FROM audit_logs
@@ -2687,8 +2592,6 @@ async function main() {
   );
   invariant(directeurAuditOk, 'Audit Directeur non conforme.');
 
-  // 6) G — Absence : un audit technique (intercepteur HTTP) référence une absence réelle.
-  //    L'intercepteur écrit en asynchrone : petite attente bornée pour laisser la trace arriver.
   let absenceAuditRows = [];
   for (let attempt = 0; attempt < 20; attempt += 1) {
     [absenceAuditRows] = await db.execute(
@@ -2720,7 +2623,6 @@ async function main() {
   );
   invariant(absenceAuditOk, 'L’audit d’absence ne référence pas sa ressource.');
 
-  // 7) Dérogations : DEROGATIONS + resource_id réel.
   const [derogationAuditRows] = await db.execute(
     `SELECT resource_type AS resourceType, resource_id AS resourceId
      FROM audit_logs
@@ -2742,17 +2644,8 @@ async function main() {
 
   section('E4 — Rappels de fin de période (soldes N-1)');
   {
-    // ------------------------------------------------------------------
-    // Scénarios déterministes : REFERENCE_PERIOD_START est déplacé de façon
-    // que l'échéance voulue tombe sur un jour relatif à la date Martinique
-    // du jour d'exécution (jamais dépendant du jour réel), puis restauré à
-    // 06-01 en finally. Les assertions sont PAR UTILISATEUR DÉDIÉ : elles
-    // restent exactes même si la période forcée coïncide avec la période
-    // opérationnelle (des compteurs d'autres sections existent alors).
-    // ------------------------------------------------------------------
     const D = martiniqueToday();
     const mmddOf = (isoDate) => isoDate.slice(5);
-    // Même algorithme que reference-period.util.ts (période contenant D).
     const periodFor = (dateStr, startMmDd) => {
       const y = Number(dateStr.slice(0, 4));
       const startOfYear = `${y}-${startMmDd}`;
@@ -2762,14 +2655,12 @@ async function main() {
       'janvier', 'février', 'mars', 'avril', 'mai', 'juin',
       'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre',
     ];
-    // Même format que formatFrenchDate (référence-period.util.ts).
     const frenchDate = (isoDate) => {
       const [y, m, d] = isoDate.split('-').map(Number);
       return `${d} ${e4FrenchMonths[m - 1]} ${y}`;
     };
     const originalReferencePeriodStart = '06-01';
 
-    // --- Fixtures E4 dédiées (aucun hardcode des comptes existants) ---
     const e4Tag = Date.now().toString(36);
     const [e4ServiceResult] = await db.execute(
       `INSERT INTO services
@@ -2838,7 +2729,6 @@ async function main() {
       return Number(rows[0].total);
     };
 
-    // RH actives au moment du run (base + fixtures E4).
     const [rhRows] = await db.query(
       `SELECT id FROM users WHERE role = 'RH' AND is_active = 1`,
     );
@@ -2848,14 +2738,13 @@ async function main() {
       'Aucune RH active pour le récapitulatif E4.',
     );
 
-    const startA = addDays(D, 8); // fin = D+7 → échéance 7 jours = D.
-    const endA = addDays(D, 7); // date limite réelle = fin de période.
+    const startA = addDays(D, 8);
+    const endA = addDays(D, 7);
     const periodA = periodFor(D, mmddOf(startA));
     const reminderType7D = `BALANCE_REMINDER_7D_${periodA}`;
     const recapType7D = `BALANCE_RECAP_7D_${periodA}`;
 
     try {
-      // --- Phase 1 : échéance 7 jours = aujourd'hui (jour exact) ---
       await expectStatus(
         'RH force REFERENCE_PERIOD_START (échéance 7 jours aujourd’hui)',
         200,
@@ -2876,7 +2765,6 @@ async function main() {
       await initializeE4Balance(e4Users.dirA, periodA, 3);
       await initializeE4Balance(e4Users.rhA, periodA, 2);
       await initializeE4Balance(e4Users.collabZero, periodA, 2);
-      // collabZero : 2 disponibles / 2 réservés → potentiel = 0.
       await db.execute(
         `UPDATE leave_balances
             SET reserved_days = 2
@@ -2907,7 +2795,6 @@ async function main() {
         `referencePeriod=${run1.body.balanceReminders.referencePeriod}, deadline=${run1.body.balanceReminders.deadline.key}.`,
       );
 
-      // Rappels individuels : chaque compteur N-1 positif dédié est rappelé.
       const positiveBalanceUserIds = [
         e4Users.collabA, e4Users.extA, e4Users.respA, e4Users.dirA, e4Users.rhA,
       ];
@@ -2925,8 +2812,6 @@ async function main() {
       invariant(collabA7DRows[0]?.channel === 'LES_DEUX', 'Canal attendu LES_DEUX.');
       invariant(collabA7DRows[0]?.emailSentAt === null, 'emailSentAt doit rester NULL en E4.');
       invariant(collabA7DRows[0].message.includes('8 jours de congés à utiliser'), 'Message E4 collabA inattendu.');
-      // E4.1 : la date affichée est la FIN DE PÉRIODE (D+7), jamais la date
-      // de déclenchement du palier 7D (aujourd'hui).
       invariant(
         collabA7DRows[0].message.includes(`à utiliser avant le ${frenchDate(endA)}`),
         `Le message doit indiquer la fin de période ${frenchDate(endA)}.`,
@@ -2941,17 +2826,14 @@ async function main() {
       );
       record('Rappel : titre et message affichent la fin de période (D+7), jamais la date du palier', 'PASS', collabA7DRows[0].message);
 
-      // Palier le plus récent uniquement (15D aussi due mais plus ancienne).
       const oldPalierTotal = await countNotifications(`BALANCE_REMINDER_15D_${periodA}`);
       invariant(oldPalierTotal === 0, 'Un palier plus ancien a été envoyé.');
       record('Plusieurs paliers dus : seul le plus récent est envoyé', 'PASS', 'Aucun BALANCE_REMINDER_15D créé.');
 
-      // Potentiel = 0 : aucun rappel individuel.
       const zeroTotal = await countNotifications(reminderType7D, e4Users.collabZero);
       invariant(zeroTotal === 0, 'collabZero (potentiel 0) ne doit pas être rappelé.');
       record('Potentiel = 0 : pas de rappel individuel', 'PASS', 'collabZero exclu.');
 
-      // Jamais Admin (compte dédié et tous les comptes ADMIN de la base).
       const adminE4Total = await countNotifications(reminderType7D, e4Users.adminE4);
       invariant(adminE4Total === 0, 'Un Admin dédié a reçu un rappel E4.');
       const [adminGlobalRows] = await db.query(
@@ -2962,7 +2844,6 @@ async function main() {
       invariant(Number(adminGlobalRows[0].total) === 0, 'Un Admin a reçu un rappel E4.');
       record('Aucune notification E4 pour un Admin', 'PASS', 'Admin exclu du rappel et du récap.');
 
-      // Récapitulatif RH : toutes les RH actives, jamais Directeur/Admin.
       const recapTotal = await countNotifications(recapType7D);
       invariant(recapTotal === expectedRecapCount, `Récaps ${recapTotal}, attendus ${expectedRecapCount}.`);
       const rhARecapTotal = await countNotifications(recapType7D, e4Users.rhA);
@@ -2989,8 +2870,6 @@ async function main() {
       invariant(!recapMessage.includes('E4-ADMIN'), 'Un Admin ne doit pas figurer dans le récapitulatif.');
       invariant(recapMessage.includes(periodA), 'Le récapitulatif doit porter la période.');
       invariant(recapMessage.includes('N-1'), 'Le récapitulatif doit mentionner le compteur N-1.');
-      // E4.1 : « Rappel 7 jours » = palier déclenché ; la date limite affichée
-      // est la fin de période (D+7), jamais la date de déclenchement (D).
       invariant(
         recapMessage.includes(`Rappel 7 jours — période ${periodA} (compteur N-1), congés à utiliser avant le ${frenchDate(endA)}`),
         `Le récapitulatif doit indiquer « Rappel 7 jours » et la limite ${frenchDate(endA)}.`,
@@ -3001,7 +2880,6 @@ async function main() {
       );
       record('Récapitulatif RH : palier déclenché distinct de la date limite (fin de période)', 'PASS', `Rappel 7 jours → avant le ${frenchDate(endA)}.`);
 
-      // Double maintenance : aucun doublon (ni rappel ni récap).
       await expectStatus(
         'Maintenance E4 — second passage idempotent (phase 1 bis)',
         200,
@@ -3027,9 +2905,8 @@ async function main() {
       invariant(recapTotalAfterDup === expectedRecapCount, 'Doublon de récapitulatif.');
       record('Double maintenance : aucun doublon', 'PASS', 'Rappels et récap RH inchangés.');
 
-      // --- Phase 2 : rattrapage + solde relu (échéance 15 jours hier) ---
-      const startB = addDays(D, 15); // fin = D+14 → échéance 15 jours = D−1.
-      const endB = addDays(D, 14); // date limite réelle = fin de période.
+      const startB = addDays(D, 15);
+      const endB = addDays(D, 14);
       const periodB = periodFor(D, mmddOf(startB));
       await expectStatus(
         'RH force REFERENCE_PERIOD_START (échéance 15 jours hier = rattrapage)',
@@ -3045,14 +2922,12 @@ async function main() {
         },
       );
       if (periodB !== periodA) {
-        // Cas limite de fin d'année : période distincte, soldes recréés.
         await initializeE4Balance(e4Users.collabA, periodB, 3);
         await initializeE4Balance(e4Users.extA, periodB, 6);
         await initializeE4Balance(e4Users.respA, periodB, 4);
         await initializeE4Balance(e4Users.dirA, periodB, 3);
         await initializeE4Balance(e4Users.rhA, periodB, 2);
       } else {
-        // Solde modifié entre deux échéances : 8 → 3 (relu à chaque passage).
         await db.execute(
           `UPDATE leave_balances
               SET available_days = 3
@@ -3093,8 +2968,6 @@ async function main() {
       const collabA15D = collabA15DRows[0]?.message ?? '';
       invariant(collabA15D.includes('3 jours'), 'Le rappel 15D doit relire le solde courant (3 j).');
       invariant(!collabA15D.includes('8 jours'), 'Le rappel 15D ne doit pas réutiliser l’ancien solde (8 j).');
-      // E4.1 : rattrapage 15D — la date affichée est la fin de période réelle
-      // (D+14), jamais la date historique du palier 15D (D−1).
       invariant(
         collabA15D.includes(`à utiliser avant le ${frenchDate(endB)}`),
         `Le rappel 15D doit indiquer la fin de période ${frenchDate(endB)}.`,

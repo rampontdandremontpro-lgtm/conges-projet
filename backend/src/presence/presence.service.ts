@@ -37,21 +37,6 @@ export interface DailyAvailability {
   afternoon: SlotAvailability;
 }
 
-/**
- * Statut de présence calculé, jamais dérivé du seul champ `users.presence_status`
- * (cache d'affichage).
- *
- * Règles par slot (MATIN / APRES_MIDI) — demi-journées, OPTION D :
- *  - ABSENT      : une absence ENREGISTREE couvre le slot (occupiesSlot) ;
- *  - EN_VACANCES : un congé VALIDEE (ou en cours d'annulation après
- *                  validation) couvre le slot ;
- *  - PRESENT     : aucun des cas ci-dessus.
- *
- * Priorité : ABSENT > EN_VACANCES > PRESENT.
- *
- * Les demandes REFUSEE, ANNULEE, ANNULEE_APRES_VALIDATION, EXPIREE_NON_VALIDEE
- * et les absences ANNULEES ne comptent pas.
- */
 @Injectable()
 export class PresenceService {
   constructor(
@@ -69,10 +54,6 @@ export class PresenceService {
     private readonly dataSource: DataSource,
   ) {}
 
-  /**
-   * Slot courant (MATIN / APRES_MIDI) en America/Martinique à partir du
-   * paramètre AFTERNOON_START_HOUR (défaut 12:00).
-   */
   async getCurrentSlot(now: Date = new Date()): Promise<DayPeriod> {
     const afternoonStartHour = await this.settingsService.getString(
       'AFTERNOON_START_HOUR',
@@ -81,11 +62,6 @@ export class PresenceService {
     return getCurrentDayPeriod(now, afternoonStartHour);
   }
 
-  /**
-   * Statut de présence pour un slot donné (date + période), en réutilisant
-   * la logique partagée occupiesSlot() — MÊME définition que la présence
-   * minimale. `manager` permet de rester cohérent dans une transaction.
-   */
   async computeStatusForPeriod(
     employeeId: number,
     date: string,
@@ -134,11 +110,6 @@ export class PresenceService {
     return PresenceStatus.PRESENT;
   }
 
-  /**
-   * Disponibilité d'un collaborateur pour une date complète (défaut :
-   * aujourd'hui, America/Martinique) : statut et disponibilité de chacun
-   * des deux slots MATIN et APRES_MIDI.
-   */
   async computeDailyAvailability(
     employeeId: number,
     dateValue?: string,
@@ -172,17 +143,6 @@ export class PresenceService {
     };
   }
 
-  /**
-   * Statut de présence d'un collaborateur pour la date donnée (défaut :
-   * aujourd'hui) et le SLOT COURANT.
-   *
-   * Depuis l'option demi-journées, le statut reflète le slot courant
-   * (12:00 inclus → APRES_MIDI, paramètre AFTERNOON_START_HOUR). Les
-   * consommateurs qui évaluent « en ce moment » (relais du Responsable,
-   * destinataires des notifications, services) obtiennent ainsi une
-   * disponibilité à l'instant de la décision, sans rien changer à leur
-   * appel. `now` permet de simuler l'heure dans les tests.
-   */
   async computeStatus(
     employeeId: number,
     dateValue?: string,
@@ -194,11 +154,6 @@ export class PresenceService {
     return this.computeStatusForPeriod(employeeId, date, slot, manager);
   }
 
-  /**
-   * Recalcule et enregistre le statut d'un collaborateur (champ
-   * `users.presence_status`, conservé pour l'affichage) — statut du SLOT
-   * COURANT.
-   */
   async refreshUserStatus(
     employeeId: number,
     manager?: EntityManager,
@@ -220,11 +175,6 @@ export class PresenceService {
     return status;
   }
 
-  /**
-   * Recalcule le statut de tous les collaborateurs actifs pour le slot
-   * courant. Le slot est lu UNE SEULE FOIS (et non par collaborateur).
-   * N'écrit en base que lorsque le statut a changé.
-   */
   async refreshAllStatuses(
     manager?: EntityManager,
   ): Promise<{ updated: number }> {

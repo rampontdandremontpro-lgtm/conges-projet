@@ -21,7 +21,6 @@ export interface SubmissionRules {
   summerPeriodEnd: string;
 }
 
-/** Écouteur interne notifié après une modification réussie de AFTERNOON_START_HOUR. */
 export type AfternoonStartHourChangeListener = () => void;
 
 const PUBLIC_SETTING_KEYS = [
@@ -47,12 +46,6 @@ export class SettingsService {
     private readonly settingRepository: Repository<Setting>,
   ) {}
 
-  /**
-   * Abonne un écouteur au changement de AFTERNOON_START_HOUR (après
-   * sauvegarde réussie uniquement). Mécanisme léger interne au module
-   * Settings : il évite toute dépendance circulaire avec LeaveRequestsModule
-   * (le scheduler consomme déjà SettingsService, jamais l'inverse).
-   */
   onAfternoonStartHourChange(
     listener: AfternoonStartHourChangeListener,
   ): void {
@@ -326,11 +319,6 @@ export class SettingsService {
     }
   }
 
-  /**
-   * Valide une valeur horaire au format HH:MM (00:00 à 23:59).
-   * Exemples valides : 00:00, 08:30, 12:00, 17:45, 23:59.
-   * Exemples refusés : 25:00, 12:60, 12h00, midi, abc.
-   */
   private validateHourMinute(value: string, key: string): void {
     if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(value)) {
       throw new BadRequestException(

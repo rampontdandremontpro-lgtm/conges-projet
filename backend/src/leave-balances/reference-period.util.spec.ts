@@ -86,7 +86,6 @@ describe('reference-period.util — période de référence et échéances E4', 
       expect(subtractMonthsClamped('2027-05-31', 3)).toBe('2027-02-28');
       expect(subtractMonthsClamped('2027-05-31', 2)).toBe('2027-03-31');
       expect(subtractMonthsClamped('2027-05-31', 1)).toBe('2027-04-30');
-      // 15 jours et 7 jours : jours calendaires.
       expect(addDays('2027-05-31', -15)).toBe('2027-05-16');
       expect(addDays('2027-05-31', -7)).toBe('2027-05-24');
     });

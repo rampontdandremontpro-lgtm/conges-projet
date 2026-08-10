@@ -603,12 +603,6 @@ export class AbsenceDeclarationsService {
     return employee;
   }
 
-  /**
-   * Une absence s'exprime soit en jours/demi-journées (périodes), soit en
-   * heures, mais jamais dans les deux modes simultanément. Refuse donc
-   * toute requête (création ou mise à jour) envoyant explicitement
-   * `durationHours` en même temps que `startPeriod`/`endPeriod`.
-   */
   private ensureSingleMode(dto: {
     startPeriod?: DayPeriod;
     endPeriod?: DayPeriod;

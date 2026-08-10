@@ -15,11 +15,6 @@ import { SettingsService } from '../settings/settings.service';
 import { PresenceStatus, User } from '../users/user.entity';
 import { PresenceService } from './presence.service';
 
-/**
- * Construit un instant absolu dont l'horloge America/Martinique affiche
- * `date` à `time`. La Martinique est en UTC-4 sans heure d'été :
- * UTC = heure Martinique + 4 h.
- */
 function martiniqueClock(date: string, time: string): Date {
   const [hour, minute] = time.split(':').map((part) => Number(part));
   const utc = new Date(`${date}T00:00:00.000Z`);
@@ -63,8 +58,6 @@ describe('PresenceService', () => {
     day: '2-digit',
   }).format(new Date());
 
-  // Absence couvrant les DEUX slots du jour courant : statut ABSENT quel
-  // que soit le slot courant (déterminisme des tests sans heure simulée).
   const absenceFullDay = {
     startDate: today,
     endDate: today,
@@ -164,7 +157,6 @@ describe('PresenceService', () => {
         ),
       ).resolves.toBe(PresenceStatus.ABSENT);
 
-      // L'absence prime : les congés ne sont pas consultés.
       expect(leaveRepository.find).not.toHaveBeenCalled();
     });
 
@@ -285,8 +277,8 @@ describe('PresenceService', () => {
   describe('computeDailyAvailability', () => {
     it('détaille les deux slots avec statut et disponibilité', async () => {
       absenceRepository.find
-        .mockResolvedValueOnce([absenceMatinOnly]) // MATIN
-        .mockResolvedValueOnce([]); // APRES_MIDI
+        .mockResolvedValueOnce([absenceMatinOnly])
+        .mockResolvedValueOnce([]);
       leaveRepository.find.mockResolvedValueOnce([]);
 
       await expect(
@@ -368,8 +360,6 @@ describe('PresenceService', () => {
 
   describe('refreshUserStatus', () => {
     it('recalcule le statut du slot courant puis met à jour le champ stocké', async () => {
-      // Absence JOURNALIÈRE : ABSENT quel que soit le slot courant
-      // (déterminisme du test, indépendant de l'heure réelle).
       absenceRepository.find.mockResolvedValueOnce([absenceFullDay]);
       userRepository.update.mockResolvedValueOnce(undefined);
 
@@ -391,11 +381,8 @@ describe('PresenceService', () => {
         { id: 2, presenceStatus: PresenceStatus.EN_VACANCES },
       ]);
 
-      // Utilisateur 1 : absence JOURNALIÈRE → ABSENT (quel que soit le
-      // slot courant — déterminisme du test).
       absenceRepository.find.mockResolvedValueOnce([absenceFullDay]);
 
-      // Utilisateur 2 : rien → PRESENT.
       absenceRepository.find.mockResolvedValueOnce([]);
       leaveRepository.find.mockResolvedValueOnce([]);
 

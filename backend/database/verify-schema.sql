@@ -1,4 +1,3 @@
-﻿-- Vérification du schéma GMES par rapport au diagramme de référence.
 USE `gestion_conges_gmes`;
 
 DROP TEMPORARY TABLE IF EXISTS `expected_schema_tables`;
@@ -77,11 +76,6 @@ BEGIN
     SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = v_message;
   END IF;
 
-  /*
-   * information_schema utilise une collation insensible a la casse.
-   * Sans BINARY, l'expression [A-Z] correspond aussi aux lettres minuscules
-   * et provoque un faux positif sur toutes les colonnes.
-   */
   IF EXISTS (
     SELECT 1
     FROM information_schema.COLUMNS

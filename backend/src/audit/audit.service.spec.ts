@@ -1,13 +1,6 @@
 import { AuditService } from './audit.service';
 import { AuditLog } from './audit-log.entity';
 
-/**
- * Test ciblé sur AuditService.recordStatusChange() (correction AUD-1) :
- *  - resourceType / resourceId / actorId écrits explicitement ;
- *  - oldStatus → oldValue.status, newStatus/comment/metadata → newValue ;
- *  - aucune propriété legacy d'AuditLog (leaveRequestId, oldStatus, ...)
- *    requise : l'entité ne les porte plus du tout.
- */
 describe('AuditService.recordStatusChange (colonnes explicites, sans legacy)', () => {
   function buildService() {
     const created: any[] = [];
@@ -107,7 +100,6 @@ describe('AuditService.recordStatusChange (colonnes explicites, sans legacy)', (
     expect((log as any).comment).toBeUndefined();
     expect((log as any).metadata).toBeUndefined();
 
-    // Les colonnes persistées restent présentes.
     expect('actorId' in log).toBe(true);
     expect('action' in log).toBe(true);
     expect('resourceType' in log).toBe(true);

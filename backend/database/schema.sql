@@ -1,8 +1,3 @@
--- ============================================================================
--- GMES - Base de données Gestion des congés et des absences
--- Source de vérité : diagramme_bdd_gestion_conges_gmes_v1_simplifie.dbml
--- ATTENTION : ce script SUPPRIME puis RECRÉE entièrement la base.
--- ============================================================================
 
 SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
 SET FOREIGN_KEY_CHECKS = 0;
@@ -13,7 +8,6 @@ CREATE DATABASE `gestion_conges_gmes`
   COLLATE utf8mb4_unicode_ci;
 USE `gestion_conges_gmes`;
 
--- 1. SERVICES
 CREATE TABLE `services` (
   `id` BIGINT NOT NULL AUTO_INCREMENT,
   `name` VARCHAR(180) NOT NULL,
@@ -36,7 +30,6 @@ CREATE TABLE `services` (
   UNIQUE KEY `UQ_services_name_company` (`name`, `external_company_name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 2. UTILISATEURS
 CREATE TABLE `users` (
   `id` BIGINT NOT NULL AUTO_INCREMENT,
   `nom` VARCHAR(100) NOT NULL,
@@ -76,7 +69,6 @@ ALTER TABLE `services`
     FOREIGN KEY (`primary_manager_id`) REFERENCES `users` (`id`)
     ON UPDATE CASCADE ON DELETE SET NULL;
 
--- 3. TYPES DE CONGÉS / ABSENCES
 CREATE TABLE `leave_types` (
   `id` BIGINT NOT NULL AUTO_INCREMENT,
   `name` VARCHAR(160) NOT NULL,
@@ -97,7 +89,6 @@ CREATE TABLE `leave_types` (
   UNIQUE KEY `UQ_leave_types_name` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 4. DEMANDES DE CONGÉS
 CREATE TABLE `leave_requests` (
   `id` BIGINT NOT NULL AUTO_INCREMENT,
   `employee_id` BIGINT NOT NULL,
@@ -183,7 +174,6 @@ CREATE TABLE `leave_requests` (
     ON UPDATE CASCADE ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 5. DÉCLARATIONS D'ABSENCE
 CREATE TABLE `absence_declarations` (
   `id` BIGINT NOT NULL AUTO_INCREMENT,
   `employee_id` BIGINT NOT NULL,
@@ -235,7 +225,6 @@ CREATE TABLE `absence_declarations` (
     ON UPDATE CASCADE ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 6. DOCUMENTS
 CREATE TABLE `documents` (
   `id` BIGINT NOT NULL AUTO_INCREMENT,
   `leave_request_id` BIGINT NULL,
@@ -274,7 +263,6 @@ CREATE TABLE `documents` (
     ON UPDATE CASCADE ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 7. DÉROGATIONS
 CREATE TABLE `derogations` (
   `id` BIGINT NOT NULL AUTO_INCREMENT,
   `employee_id` BIGINT NOT NULL,
@@ -310,7 +298,6 @@ CREATE TABLE `derogations` (
     ON UPDATE CASCADE ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 8. SOLDES
 CREATE TABLE `leave_balances` (
   `id` BIGINT NOT NULL AUTO_INCREMENT,
   `employee_id` BIGINT NOT NULL,
@@ -328,7 +315,6 @@ CREATE TABLE `leave_balances` (
     ON UPDATE CASCADE ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 9. MOUVEMENTS DE SOLDE
 CREATE TABLE `balance_movements` (
   `id` BIGINT NOT NULL AUTO_INCREMENT,
   `employee_id` BIGINT NOT NULL,
@@ -369,7 +355,6 @@ CREATE TABLE `balance_movements` (
     ON UPDATE CASCADE ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 10. JOURS FÉRIÉS / FERMETURES
 CREATE TABLE `holidays` (
   `id` BIGINT NOT NULL AUTO_INCREMENT,
   `date` DATE NOT NULL,
@@ -388,7 +373,6 @@ CREATE TABLE `holidays` (
     ON UPDATE CASCADE ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 11. PARAMÈTRES
 CREATE TABLE `settings` (
   `id` BIGINT NOT NULL AUTO_INCREMENT,
   `setting_key` VARCHAR(150) NOT NULL,
@@ -404,7 +388,6 @@ CREATE TABLE `settings` (
     ON UPDATE CASCADE ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 12. NOTIFICATIONS
 CREATE TABLE `notifications` (
   `id` BIGINT NOT NULL AUTO_INCREMENT,
   `user_id` BIGINT NOT NULL,
@@ -438,7 +421,6 @@ CREATE TABLE `notifications` (
     ON UPDATE CASCADE ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 13. HISTORIQUE / AUDIT
 CREATE TABLE `audit_logs` (
   `id` BIGINT NOT NULL AUTO_INCREMENT,
   `actor_id` BIGINT NULL,

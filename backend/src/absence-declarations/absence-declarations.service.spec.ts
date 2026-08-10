@@ -80,8 +80,6 @@ describe('AbsenceDeclarationsService — un seul mode (jours / heures)', () => {
 
     service = module.get(AbsenceDeclarationsService);
 
-    // Dépendances privées : contours minimaux, le comportement testé est
-    // uniquement le contrôle de mode unique (ensureSingleMode) et le calcul.
     serviceAny = service as unknown as {
       resolveEmployee: jest.Mock;
       ensureNoPersonalOverlap: jest.Mock;
@@ -239,8 +237,6 @@ describe('AbsenceDeclarationsService — un seul mode (jours / heures)', () => {
         } as never,
       );
 
-      // Le DTO partiel conserve durationHours (aucun moyen de le retirer) :
-      // le mode heures reste prioritaire, les périodes sont ignorées.
       expect(saved.startPeriod).toBeNull();
       expect(saved.endPeriod).toBeNull();
       expect(saved.durationHours).toBe(4);
