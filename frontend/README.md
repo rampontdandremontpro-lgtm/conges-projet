@@ -1,16 +1,24 @@
-# React + Vite
+# GMES — Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Interface de gestion des congés et des absences (GMES).
 
-Currently, two official plugins are available:
+## Commandes
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+```bash
+npm run dev      # serveur de développement (http://localhost:5173)
+npm run build    # build de production
+npm run lint     # eslint
+npm run preview  # prévisualisation du build
+```
 
-## React Compiler
+## Structure
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- `src/app` — racine applicative et routeur
+- `src/components` — composants réutilisables (layout, ui)
+- `src/config` — configuration (API, navigation par rôle)
+- `src/layouts` — layouts applicatifs
+- `src/pages` — pages
+- `src/services` — couche d'accès API
+- `src/styles` — design tokens et styles globaux
 
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+Le serveur de développement proxifie `/api` vers `http://localhost:3000`.
