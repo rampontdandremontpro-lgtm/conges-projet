@@ -34,8 +34,8 @@ export function RecentRequestsCard({ requests, loading, error, onRetry, onViewAl
                 <StatusBadge status={request.status} />
               </div>
               <span className="recent-row__period">
-                {formatRangeNumericFR(request.startDate, request.endDate)} ·{' '}
-                {formatDays(request.deductedDays)} j
+                {formatRangeNumericFR(request.startDate, request.endDate)}
+                <span className="recent-row__duration"> · {formatDays(request.deductedDays)} j</span>
               </span>
             </div>
             <span className="recent-row__more" aria-hidden="true">
@@ -50,7 +50,7 @@ export function RecentRequestsCard({ requests, loading, error, onRetry, onViewAl
   return (
     <section className="dash-card">
       <header className="dash-card__header">
-        <h2 className="dash-card__title">Demandes récentes</h2>
+        <h2 className="dash-card__title dash-card__title--lg">Demandes récentes</h2>
         {!loading && !error && requests.length > 0 && (
           <button type="button" className="dash-card__view-all" onClick={onViewAll}>
             Voir tout

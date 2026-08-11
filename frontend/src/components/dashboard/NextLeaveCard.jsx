@@ -15,11 +15,11 @@ function countdownLabel(startIso) {
   return `J-${days}`
 }
 
-function daysValue(startIso) {
+function daysSplit(startIso) {
   const days = daysBetween(todayISO(), startIso)
-  if (days <= 0) return "Aujourd'hui"
-  if (days === 1) return 'Demain'
-  return `${days} jours`
+  if (days <= 0) return { value: "Aujourd'hui", unit: null }
+  if (days === 1) return { value: 'Demain', unit: null }
+  return { value: String(days), unit: 'jours' }
 }
 
 export function NextLeaveCard({ nextLeave, loading, error, onRetry }) {
@@ -42,17 +42,22 @@ export function NextLeaveCard({ nextLeave, loading, error, onRetry }) {
       </div>
     )
   } else {
+    const dans = daysSplit(nextLeave.startDate)
     content = (
       <div className="next-leave">
         <div className="next-leave__stats">
           <div className="next-leave__stat">
             <span className="next-leave__stat-label">Dans</span>
-            <span className="next-leave__stat-value">{daysValue(nextLeave.startDate)}</span>
+            <span className="next-leave__stat-value">
+              <strong className="next-leave__stat-figure">{dans.value}</strong>
+              {dans.unit && <span className="next-leave__stat-unit">{dans.unit}</span>}
+            </span>
           </div>
           <div className="next-leave__stat">
             <span className="next-leave__stat-label">Durée</span>
             <span className="next-leave__stat-value">
-              {formatDays(nextLeave.deductedDays)} jours ouvrés
+              <strong className="next-leave__stat-figure">{formatDays(nextLeave.deductedDays)}</strong>
+              <span className="next-leave__stat-unit">jours ouvrés</span>
             </span>
           </div>
         </div>

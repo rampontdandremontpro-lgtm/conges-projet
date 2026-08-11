@@ -43,15 +43,24 @@
 }
 
 .dash-card__title {
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-bold);
-  letter-spacing: 0.08em;
+  font-size: 11px;
+  font-weight: var(--font-weight-black);
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--color-text-secondary);
 }
 
+.dash-card__title--lg {
+  font-size: 14px;
+  font-weight: var(--font-weight-black);
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--color-text);
+}
+
 .dash-card__period {
-  font-size: var(--font-size-xs);
+  font-size: 11px;
+  font-weight: var(--font-weight-medium);
   color: var(--color-text-muted);
   white-space: nowrap;
 }
@@ -107,10 +116,11 @@
 }
 
 .balance-hero__number {
-  font-size: 64px;
-  font-weight: var(--font-weight-bold);
+  font-size: 80px;
+  font-weight: var(--font-weight-black);
   line-height: 1;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
   color: var(--color-brand-700);
 }
 
@@ -119,7 +129,16 @@
   flex-direction: column;
   font-size: var(--font-size-base);
   line-height: 1.3;
-  color: var(--color-text-secondary);
+}
+
+.balance-hero__label span:first-child {
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+}
+
+.balance-hero__label span:last-child {
+  font-weight: var(--font-weight-normal);
+  color: var(--color-text-muted);
 }
 
 .balance-progress {
@@ -182,15 +201,16 @@
 }
 
 .balance-pill__label {
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-medium);
-  opacity: 0.85;
+  font-size: 11px;
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-secondary);
 }
 
 .balance-pill strong {
   font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-bold);
-  line-height: 1.2;
+  font-weight: var(--font-weight-black);
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
 }
 
 .next-leave {
@@ -224,11 +244,30 @@
 }
 
 .next-leave__stat-value {
-  font-size: 26px;
-  font-weight: var(--font-weight-bold);
-  line-height: 1.15;
-  letter-spacing: -0.01em;
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.next-leave__stat-figure {
+  font-size: 52px;
+  font-weight: var(--font-weight-black);
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
   color: var(--color-text);
+}
+
+.next-leave__stat:last-child .next-leave__stat-figure {
+  color: var(--color-brand-600);
+}
+
+.next-leave__stat-unit {
+  font-size: 13px;
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-secondary);
+  white-space: nowrap;
 }
 
 .next-leave__panel {
@@ -325,8 +364,8 @@
 }
 
 .recent-row__type {
-  font-size: var(--font-size-base);
-  font-weight: var(--font-weight-semibold);
+  font-size: 14px;
+  font-weight: var(--font-weight-black);
   color: var(--color-text);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -334,9 +373,15 @@
 }
 
 .recent-row__period {
-  font-size: var(--font-size-xs);
+  font-size: 12px;
+  font-weight: var(--font-weight-normal);
   color: var(--color-text-muted);
   white-space: nowrap;
+}
+
+.recent-row__duration {
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-secondary);
 }
 
 .recent-row__more {
@@ -399,15 +444,15 @@
 
 .plan-card__title {
   position: relative;
-  font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-bold);
+  font-size: 14px;
+  font-weight: var(--font-weight-black);
   color: #ffffff;
   margin-bottom: 2px;
 }
 
 .plan-card__balance {
   position: relative;
-  font-size: var(--font-size-sm);
+  font-size: 12px;
   font-weight: var(--font-weight-semibold);
   color: #ffffff;
   opacity: 0.95;
@@ -416,8 +461,8 @@
 
 .plan-card__text {
   position: relative;
-  font-size: var(--font-size-xs);
-  color: rgba(255, 255, 255, 0.78);
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.68);
   margin-bottom: var(--space-4);
   max-width: 260px;
 }
@@ -436,7 +481,7 @@
   color: #ffffff;
   font: inherit;
   font-size: var(--font-size-base);
-  font-weight: var(--font-weight-semibold);
+  font-weight: var(--font-weight-bold);
   cursor: pointer;
   box-shadow: var(--shadow-primary);
   transition: background var(--transition-fast), box-shadow var(--transition-fast), transform var(--transition-fast);
@@ -645,6 +690,14 @@
   .dash-grid {
     grid-template-columns: minmax(0, 1fr);
   }
+
+  .balance-hero__number {
+    font-size: 64px;
+  }
+
+  .next-leave__stat-figure {
+    font-size: 44px;
+  }
 }
 
 @media (max-width: 480px) {
@@ -657,7 +710,11 @@
   }
 
   .balance-hero__number {
-    font-size: 48px;
+    font-size: 52px;
+  }
+
+  .next-leave__stat-figure {
+    font-size: 36px;
   }
 
   .balance-summary {
