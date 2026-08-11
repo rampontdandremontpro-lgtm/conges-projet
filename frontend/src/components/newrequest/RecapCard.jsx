@@ -126,7 +126,7 @@ export function RecapCard({
           <span className="nr-recap__empty-icon">
             <Icon name="calendar" size={22} />
           </span>
-          <p>Sélectionnez une période dans le calendrier pour construire votre demande.</p>
+          <p>Sélectionnez une période dans le calendrier.</p>
         </div>
       ) : (
         <>

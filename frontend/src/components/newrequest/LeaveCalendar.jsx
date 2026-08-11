@@ -10,6 +10,7 @@ function monthLabel(year, month) {
   return new Date(Date.UTC(year, month, 1)).toLocaleDateString('fr-FR', {
     month: 'long',
     year: 'numeric',
+    timeZone: 'UTC',
   })
 }
 
@@ -153,7 +154,7 @@ export function LeaveCalendar({
 
   return (
     <div className="nr-cal">
-      <div className="nr-cal__nav">
+      <div className="nr-cal__header">
         <button
           type="button"
           className="nr-cal__nav-btn"
@@ -174,15 +175,7 @@ export function LeaveCalendar({
             <path d="M15 18l-6-6 6-6" />
           </svg>
         </button>
-        <span className="nr-cal__nav-label">
-          <span className="nr-cal__nav-month">
-            {monthLabel(months[0].year, months[0].month)}
-          </span>
-          <span className="nr-cal__nav-sep">·</span>
-          <span className="nr-cal__nav-month">
-            {monthLabel(months[1].year, months[1].month)}
-          </span>
-        </span>
+        <span className="nr-cal__nav-spacer" aria-hidden="true" />
         <button
           type="button"
           className="nr-cal__nav-btn"
@@ -233,6 +226,7 @@ export function LeaveCalendar({
                   const state = stateOf(cell.iso)
                   const holiday = holidayMap.get(cell.iso)
                   const isToday = cell.iso === todayIso
+                  const isSaturday = parseISODate(cell.iso).getUTCDay() === 6
                   const title = holiday
                     ? `${cell.iso} — ${holiday.name}`
                     : undefined
@@ -243,8 +237,8 @@ export function LeaveCalendar({
                       key={cell.iso}
                       data-iso={cell.iso}
                       className={`nr-cal__cell nr-cal__cell--${state}${
-                        isToday ? ' nr-cal__cell--today' : ''
-                      }`}
+                        isSaturday ? ' nr-cal__cell--saturday' : ''
+                      }${isToday ? ' nr-cal__cell--today' : ''}`}
                       onClick={() => handlePick(cell.iso)}
                       title={title}
                       disabled={state === 'blocked' || state === 'blocked-holiday'}
@@ -284,6 +278,9 @@ export function LeaveCalendar({
         </span>
         <span className="nr-cal__legend-item nr-cal__legend-item--range">
           <i className="nr-cal__legend-swatch" /> Période
+        </span>
+        <span className="nr-cal__legend-item nr-cal__legend-item--today">
+          <i className="nr-cal__legend-ring" /> Aujourd'hui
         </span>
         <span className="nr-cal__legend-item nr-cal__legend-item--closed">
           <LockGlyph /> Non décompté

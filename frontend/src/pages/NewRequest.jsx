@@ -27,6 +27,44 @@ const DAY_PERIODS = {
   APRES_MIDI: 'Après-midi',
 }
 
+function SunPillIcon() {
+  return (
+    <svg
+      width="13"
+      height="13"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" />
+    </svg>
+  )
+}
+
+function HalfPillIcon() {
+  return (
+    <svg
+      width="13"
+      height="13"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 21a9 9 0 0 1 0-18z" fill="currentColor" stroke="none" />
+    </svg>
+  )
+}
+
 function currentMonth() {
   const now = new Date()
   return { year: now.getFullYear(), month: now.getMonth() }
@@ -91,6 +129,7 @@ export function NewRequest() {
     const first = currentMonth()
     return [first, nextMonthOf(first)]
   })
+  const [todayIso, setTodayIso] = useState(() => todayISO())
   const fetchedYears = useRef(new Set())
 
   const [saving, setSaving] = useState(false)
@@ -109,6 +148,23 @@ export function NewRequest() {
     const timer = window.setTimeout(() => setToast(null), 5200)
     return () => window.clearTimeout(timer)
   }, [toast])
+
+  useEffect(() => {
+    const refreshToday = () => {
+      setTodayIso((previous) => {
+        const next = todayISO()
+        return next === previous ? previous : next
+      })
+    }
+    const timer = window.setInterval(refreshToday, 60_000)
+    window.addEventListener('focus', refreshToday)
+    document.addEventListener('visibilitychange', refreshToday)
+    return () => {
+      window.clearInterval(timer)
+      window.removeEventListener('focus', refreshToday)
+      document.removeEventListener('visibilitychange', refreshToday)
+    }
+  }, [])
 
   const fetchAll = useCallback(async () => {
     const [leaveTypes, settings, seasonal, derogations, balances] =
@@ -202,6 +258,18 @@ export function NewRequest() {
   const balance = selectPrimaryBalance(resources.balances)
   const selectedType = resources.leaveTypes.find(
     (type) => type.id === selection.leaveTypeId,
+  )
+
+  const displayLeaveTypes = useMemo(
+    () =>
+      [...resources.leaveTypes].sort((a, b) =>
+        a.deductsPaidLeaveBalance === b.deductsPaidLeaveBalance
+          ? 0
+          : a.deductsPaidLeaveBalance
+            ? -1
+            : 1,
+      ),
+    [resources.leaveTypes],
   )
 
   const draftMatchesSelection = Boolean(
@@ -342,13 +410,15 @@ export function NewRequest() {
       </header>
 
       {resources.loading ? (
-        <div className="nr-grid" aria-busy="true">
-          <div className="nr-col nr-col--main">
-            <div className="dash-card nr-skeleton-card" />
-            <div className="dash-card nr-skeleton-card nr-skeleton-card--tall" />
-          </div>
-          <div className="nr-col nr-col--side">
-            <div className="dash-card nr-skeleton-card nr-skeleton-card--tall" />
+        <div aria-busy="true">
+          <div className="dash-card nr-skeleton-card nr-skeleton-card--types" />
+          <div className="nr-grid">
+            <div className="nr-col nr-col--main">
+              <div className="dash-card nr-skeleton-card nr-skeleton-card--tall" />
+            </div>
+            <div className="nr-col nr-col--side">
+              <div className="dash-card nr-skeleton-card nr-skeleton-card--tall" />
+            </div>
           </div>
         </div>
       ) : resources.error ? (
@@ -368,47 +438,49 @@ export function NewRequest() {
           </button>
         </div>
       ) : (
-        <div className="nr-grid">
-          <div className="nr-col nr-col--main">
-            <section className="dash-card">
-              <div className="dash-card__header">
-                <div className="dash-card__heading">
-                  <span className="dash-card__title">Type de congé</span>
-                  <span className="dash-card__period">
-                    {resources.leaveTypes.length} type(s) de demande de congé disponible(s)
-                  </span>
-                </div>
+        <>
+          <section className="nr-types-card">
+            <div className="nr-types-card__heading">
+              <span className="dash-card__title">Type de congé</span>
+              <span className="nr-types-card__count">
+                {resources.leaveTypes.length} type(s) disponible(s)
+              </span>
+            </div>
+            {resources.leaveTypes.length === 0 ? (
+              <p className="nr-recap__note">
+                Aucun type de congé n’est disponible pour votre profil.
+              </p>
+            ) : (
+              <div className="nr-types">
+                {displayLeaveTypes.map((type) => (
+                  <button
+                    type="button"
+                    key={type.id}
+                    className={`nr-types__pill${
+                      selection.leaveTypeId === type.id ? ' nr-types__pill--active' : ''
+                    }`}
+                    aria-pressed={selection.leaveTypeId === type.id}
+                    onClick={() =>
+                      setSelection((prev) => ({ ...prev, leaveTypeId: type.id }))
+                    }
+                  >
+                    <span className="nr-types__pill-name">{type.name}</span>
+                    {type.deductsPaidLeaveBalance && (
+                      <span
+                        className="nr-types__pill-dot"
+                        title="Déduit du solde de congés payés"
+                        aria-hidden="true"
+                      />
+                    )}
+                  </button>
+                ))}
               </div>
-              {resources.leaveTypes.length === 0 ? (
-                <p className="nr-recap__note">
-                  Aucun type de congé n’est disponible pour votre profil.
-                </p>
-              ) : (
-                <div className="nr-types">
-                  {resources.leaveTypes.map((type) => (
-                    <button
-                      type="button"
-                      key={type.id}
-                      className={`nr-types__item${
-                        selection.leaveTypeId === type.id ? ' nr-types__item--active' : ''
-                      }`}
-                      onClick={() =>
-                        setSelection((prev) => ({ ...prev, leaveTypeId: type.id }))
-                      }
-                    >
-                      <span className="nr-types__name">{type.name}</span>
-                      <span className="nr-types__meta">
-                        {type.deductsPaidLeaveBalance
-                          ? 'Déduit du solde de congés payés'
-                          : 'Non déduit du solde de congés payés'}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </section>
+            )}
+          </section>
 
-            <section className="dash-card">
+          <div className="nr-grid">
+            <div className="nr-col nr-col--main">
+              <section className="dash-card">
               <div className="dash-card__header">
                 <div className="dash-card__heading">
                   <span className="dash-card__title">Calendrier</span>
@@ -419,7 +491,7 @@ export function NewRequest() {
               </div>
               <LeaveCalendar
                 months={months}
-                todayIso={todayISO()}
+                todayIso={todayIso}
                 selection={selection}
                 holidays={resources.holidays}
                 onPick={handlePick}
@@ -445,6 +517,7 @@ export function NewRequest() {
                               setSelection((prev) => ({ ...prev, startPeriod: value }))
                             }
                           >
+                            {value === 'MATIN' ? <SunPillIcon /> : <HalfPillIcon />}
                             {label}
                           </button>
                         ))}
@@ -465,6 +538,7 @@ export function NewRequest() {
                               setSelection((prev) => ({ ...prev, endPeriod: value }))
                             }
                           >
+                            {value === 'MATIN' ? <SunPillIcon /> : <HalfPillIcon />}
                             {label}
                           </button>
                         ))}
@@ -488,12 +562,13 @@ export function NewRequest() {
               derogation={derogation}
               saving={saving}
               submitting={submitting}
-              onSaveDraft={handleSaveDraft}
-              onSubmit={() => setSignatureOpen(true)}
-              onRequestDerogation={handleRequestDerogation}
-            />
+                onSaveDraft={handleSaveDraft}
+                onSubmit={() => setSignatureOpen(true)}
+                onRequestDerogation={handleRequestDerogation}
+              />
+            </div>
           </div>
-        </div>
+        </>
       )}
 
       <SignatureModal
