@@ -126,6 +126,12 @@ const ICON_PATHS = {
       <path d="M12 6v6l4 2" />
     </>
   ),
+  info: (
+    <>
+      <circle cx="12" cy="12" r="10" />
+      <path d="M12 16v-4M12 8h.01" />
+    </>
+  ),
   sparkles: (
     <>
       <path d="M12 3l1.9 5.7L19.6 10l-5.7 1.9L12 17.6l-1.9-5.7L4.4 10l5.7-1.3z" />

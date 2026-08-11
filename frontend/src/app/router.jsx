@@ -8,6 +8,9 @@ import { LoginPage } from '@/pages/LoginPage'
 import { NotFound } from '@/pages/NotFound'
 import { Preview } from '@/pages/Preview'
 import { DashboardGate } from '@/pages/DashboardGate'
+import { NewRequest } from '@/pages/NewRequest'
+import { NEW_REQUEST_ROLES } from '@/config/navigation'
+import { RoleRoute } from '@/auth/RoleRoute'
 
 export const router = createBrowserRouter([
   { path: '/', element: <RootRedirect /> },
@@ -22,6 +25,14 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <Navigate to="/app/dashboard" replace /> },
       { path: 'dashboard', element: <DashboardGate /> },
+      {
+        path: 'new-request',
+        element: (
+          <RoleRoute roles={NEW_REQUEST_ROLES}>
+            <NewRequest />
+          </RoleRoute>
+        ),
+      },
       { path: 'profile', element: <Preview /> },
       { path: 'settings', element: <Preview /> },
       { path: ':section', element: <SectionGuard /> },
