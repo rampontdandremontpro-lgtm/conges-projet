@@ -56,6 +56,30 @@ export function formatDays(value) {
   }).format(value)
 }
 
+export function formatDateNumericFR(iso) {
+  const [year, month, day] = iso.slice(0, 10).split('-')
+  return `${day}/${month}/${year}`
+}
+
+export function formatRangeNumericFR(startIso, endIso) {
+  return `${formatDateNumericFR(startIso)} → ${formatDateNumericFR(endIso)}`
+}
+
+export function formatRangeCompactFR(startIso, endIso) {
+  const start = parseISO(startIso)
+  const end = parseISO(endIso)
+  if (start.getFullYear() === end.getFullYear() && start.getMonth() === end.getMonth()) {
+    const monthLabel = end.toLocaleDateString('fr-FR', { month: 'long' })
+    return `${start.getDate()} – ${end.getDate()} ${monthLabel} ${end.getFullYear()}`
+  }
+  if (start.getFullYear() === end.getFullYear()) {
+    const startMonth = start.toLocaleDateString('fr-FR', { month: 'short' })
+    const endMonth = end.toLocaleDateString('fr-FR', { month: 'short' })
+    return `${start.getDate()} ${startMonth} – ${end.getDate()} ${endMonth} ${end.getFullYear()}`
+  }
+  return `${formatDateShortFR(startIso)} – ${formatDateFR(endIso)}`
+}
+
 export function formatPeriod(referencePeriod) {
   return referencePeriod.replace('-', ' – ')
 }

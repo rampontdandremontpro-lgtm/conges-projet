@@ -24,11 +24,16 @@ export function LeaveBalanceCard({ balance, loading, error, onRetry }) {
   } else {
     const acquired = balance.acquiredDays || 0
     const progress = acquired > 0 ? Math.min(100, (balance.availableDays / acquired) * 100) : 0
+    const reserved = balance.reservedDays || 0
+    const reservedLabel = reserved > 0 ? `-${formatDays(reserved)} j` : `${formatDays(reserved)} j`
     content = (
       <>
         <div className="balance-hero">
           <span className="balance-hero__number">{formatDays(balance.availableDays)}</span>
-          <span className="balance-hero__label">jours disponibles</span>
+          <span className="balance-hero__label">
+            <span>jours</span>
+            <span>disponibles</span>
+          </span>
         </div>
         <div
           className="balance-progress"
@@ -40,26 +45,26 @@ export function LeaveBalanceCard({ balance, loading, error, onRetry }) {
         >
           <div className="balance-progress__fill" style={{ width: `${progress}%` }} />
         </div>
+        <div className="balance-summary">
+          <span>
+            <strong>{formatDays(balance.availableDays)}</strong> utilisables
+          </span>
+          <span>
+            <strong>{formatDays(balance.acquiredDays)}</strong> acquis
+          </span>
+        </div>
         <div className="balance-pills">
-          <div className="balance-pill balance-pill--brand">
-            <span className="balance-pill__label">Disponible</span>
-            <strong>{formatDays(balance.availableDays)}</strong>
-            <em>jours</em>
-          </div>
-          <div className="balance-pill balance-pill--accent">
+          <div className="balance-pill balance-pill--cyan">
             <span className="balance-pill__label">Acquis</span>
-            <strong>{formatDays(balance.acquiredDays)}</strong>
-            <em>jours</em>
+            <strong>{formatDays(balance.acquiredDays)} j</strong>
           </div>
-          <div className="balance-pill balance-pill--warning">
+          <div className="balance-pill balance-pill--orange">
             <span className="balance-pill__label">Réservé</span>
-            <strong>{formatDays(balance.reservedDays)}</strong>
-            <em>jours</em>
+            <strong>{reservedLabel}</strong>
           </div>
-          <div className="balance-pill balance-pill--success">
-            <span className="balance-pill__label">Potentiel</span>
-            <strong>{formatDays(balance.potentialDays)}</strong>
-            <em>jours</em>
+          <div className="balance-pill balance-pill--green">
+            <span className="balance-pill__label">Solde potentiel</span>
+            <strong>{formatDays(balance.potentialDays)} j</strong>
           </div>
         </div>
       </>
@@ -69,10 +74,13 @@ export function LeaveBalanceCard({ balance, loading, error, onRetry }) {
   return (
     <section className="dash-card">
       <header className="dash-card__header">
-        <h2 className="dash-card__title">Congés à utiliser</h2>
-        {balance && !loading && !error && (
-          <span className="dash-card__period">Période {formatPeriod(balance.referencePeriod)}</span>
-        )}
+        <div className="dash-card__heading">
+          <h2 className="dash-card__title">Congés à utiliser</h2>
+          {balance && !loading && !error && (
+            <span className="dash-card__period">Période {formatPeriod(balance.referencePeriod)}</span>
+          )}
+        </div>
+        {balance && !loading && !error && <span className="dash-card__status-ok">Solde OK</span>}
       </header>
       {content}
     </section>

@@ -108,7 +108,7 @@ export function DashboardCollaborateur() {
 
   const balance = selectPrimaryBalance(balances.data)
   const nextLeave = computeNextLeave(requests.data)
-  const recent = requests.data.slice(0, 5)
+  const recent = requests.data.slice(0, 4)
   const availableDays = balance ? balance.availableDays : null
 
   return (

@@ -1,10 +1,26 @@
 import { Icon } from '@/components/ui/Icon'
 import { CardSkeleton, CardError } from '@/components/dashboard/DashboardStates'
-import { addDaysISO, formatDateFR, formatPeriod, todayISO, toISODate } from '@/utils/format'
+import {
+  addDaysISO,
+  formatDateNumericFR,
+  todayISO,
+  toISODate,
+} from '@/utils/format'
 
 function buildAlerts({ balance, requests, settings }) {
   const alerts = []
   const today = todayISO()
+
+  for (const request of requests ?? []) {
+    if (!request.decisionAt) continue
+    const decisionIso = String(request.decisionAt).slice(0, 10)
+    if (request.status === 'VALIDEE' && decisionIso >= addDaysISO(today, -14)) {
+      alerts.push({
+        tone: 'success',
+        text: `Demande du ${formatDateNumericFR(request.startDate)} validée`,
+      })
+    }
+  }
 
   if (balance) {
     const periodEndSetting = settings?.find(
@@ -17,33 +33,17 @@ function buildAlerts({ balance, requests, settings }) {
       if (today <= periodEnd && (balance.availableDays || 0) > 0) {
         alerts.push({
           tone: 'warning',
-          icon: 'clock',
-          text: `La période ${formatPeriod(balance.referencePeriod)} se termine le ${formatDateFR(periodEnd)}. Pensez à utiliser vos congés disponibles.`,
+          text: `Posez vos congés avant le ${formatDateNumericFR(periodEnd)}`,
         })
       }
     }
   }
 
-  const sevenDaysAgo = addDaysISO(today, -7)
-
   for (const request of requests ?? []) {
     if (request.status === 'EN_ATTENTE_VALIDATION') {
       alerts.push({
         tone: 'info',
-        icon: 'clock',
-        text: `Votre demande « ${request.leaveType.name} » est en attente de validation.`,
-      })
-      continue
-    }
-    if (!request.decisionAt) continue
-    const decisionIso = String(request.decisionAt).slice(0, 10)
-    if (decisionIso < sevenDaysAgo) continue
-    if (request.status === 'VALIDEE' || request.status === 'REFUSEE') {
-      const validated = request.status === 'VALIDEE'
-      alerts.push({
-        tone: validated ? 'success' : 'danger',
-        icon: validated ? 'check' : 'alert',
-        text: `Votre demande « ${request.leaveType.name} » a été ${validated ? 'validée' : 'refusée'} le ${formatDateFR(decisionIso)}.`,
+        text: `Demande du ${formatDateNumericFR(request.startDate)} en attente de validation`,
       })
     }
   }
@@ -88,11 +88,8 @@ export function AlertsCard({ balances, requests, settings, onRetryBalances, onRe
       content = (
         <ul className="alert-list">
           {alerts.map((alert, index) => (
-            <li key={index} className={`alert-item alert-item--${alert.tone}`}>
-              <span className="alert-item__icon">
-                <Icon name={alert.icon} size={18} />
-              </span>
-              <p>{alert.text}</p>
+            <li key={index} className={`alert-pill alert-pill--${alert.tone}`}>
+              {alert.text}
             </li>
           ))}
         </ul>

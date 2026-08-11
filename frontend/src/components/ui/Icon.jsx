@@ -106,6 +106,13 @@ const ICON_PATHS = {
     </>
   ),
   arrowRight: <path d="M5 12h14M12 5l7 7-7 7" />,
+  dots: (
+    <>
+      <circle cx="5" cy="12" r="1.6" fill="currentColor" stroke="none" />
+      <circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none" />
+      <circle cx="19" cy="12" r="1.6" fill="currentColor" stroke="none" />
+    </>
+  ),
   sun: (
     <>
       <circle cx="12" cy="12" r="4" />

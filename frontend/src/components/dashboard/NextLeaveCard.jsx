@@ -1,13 +1,25 @@
 import { Icon } from '@/components/ui/Icon'
 import { StatusBadge } from '@/components/dashboard/StatusBadge'
 import { CardSkeleton, CardError } from '@/components/dashboard/DashboardStates'
-import { formatDateFR, formatDays, daysBetween, todayISO } from '@/utils/format'
+import {
+  formatDays,
+  daysBetween,
+  formatRangeCompactFR,
+  todayISO,
+} from '@/utils/format'
 
 function countdownLabel(startIso) {
   const days = daysBetween(todayISO(), startIso)
   if (days <= 0) return "Aujourd'hui"
   if (days === 1) return 'Demain'
   return `J-${days}`
+}
+
+function daysValue(startIso) {
+  const days = daysBetween(todayISO(), startIso)
+  if (days <= 0) return "Aujourd'hui"
+  if (days === 1) return 'Demain'
+  return `${days} jours`
 }
 
 export function NextLeaveCard({ nextLeave, loading, error, onRetry }) {
@@ -32,23 +44,29 @@ export function NextLeaveCard({ nextLeave, loading, error, onRetry }) {
   } else {
     content = (
       <div className="next-leave">
-        <div className="next-leave__countdown">
-          <span className="next-leave__countdown-value">{countdownLabel(nextLeave.startDate)}</span>
-          <span className="next-leave__countdown-label">avant le départ</span>
-        </div>
-        <div className="next-leave__info">
-          <span className="next-leave__type">{nextLeave.leaveType.name}</span>
-          <span className="next-leave__dates">
-            {formatDateFR(nextLeave.startDate)} – {formatDateFR(nextLeave.endDate)}
-          </span>
-          <span className="next-leave__duration">
-            {nextLeave.calendarDuration} jour{nextLeave.calendarDuration > 1 ? 's' : ''} ·{' '}
-            {formatDays(nextLeave.deductedDays)} jour{nextLeave.deductedDays > 1 ? 's' : ''} déduit
-            {nextLeave.deductedDays > 1 ? 's' : ''}
-          </span>
-          <div className="next-leave__status">
-            <StatusBadge status={nextLeave.status} />
+        <div className="next-leave__stats">
+          <div className="next-leave__stat">
+            <span className="next-leave__stat-label">Dans</span>
+            <span className="next-leave__stat-value">{daysValue(nextLeave.startDate)}</span>
           </div>
+          <div className="next-leave__stat">
+            <span className="next-leave__stat-label">Durée</span>
+            <span className="next-leave__stat-value">
+              {formatDays(nextLeave.deductedDays)} jours ouvrés
+            </span>
+          </div>
+        </div>
+        <div className="next-leave__panel">
+          <span className="next-leave__dates">
+            {formatRangeCompactFR(nextLeave.startDate, nextLeave.endDate)}
+          </span>
+          <span className="next-leave__type">{nextLeave.leaveType.name}</span>
+        </div>
+        <div className="next-leave__progress-row">
+          <div className="next-leave__progress" aria-hidden="true">
+            <div className="next-leave__progress-fill" />
+          </div>
+          <span className="next-leave__countdown">{countdownLabel(nextLeave.startDate)}</span>
         </div>
       </div>
     )
@@ -58,6 +76,7 @@ export function NextLeaveCard({ nextLeave, loading, error, onRetry }) {
     <section className="dash-card">
       <header className="dash-card__header">
         <h2 className="dash-card__title">Prochain congé</h2>
+        {nextLeave && !loading && !error && <StatusBadge status={nextLeave.status} />}
       </header>
       {content}
     </section>
