@@ -1,15 +1,13 @@
 import { NavLink } from 'react-router-dom'
 
 import gmesLogo from '@/assets/logo-gmes.png'
+import { useAuth } from '@/auth/AuthContext'
 import { Icon } from '@/components/ui/Icon'
-import {
-  NEW_REQUEST_ITEM,
-  NEW_REQUEST_ROLES,
-  PREVIEW_ROLES,
-  getNavigationForRole,
-} from '@/config/navigation'
+import { NEW_REQUEST_ITEM, NEW_REQUEST_ROLES, getNavigationForRole } from '@/config/navigation'
 
-export function Sidebar({ role, onRoleChange, collapsed, onCloseMobile }) {
+export function Sidebar({ collapsed, onCloseMobile }) {
+  const { user } = useAuth()
+  const role = user?.role
   const navigation = getNavigationForRole(role)
   const showNewRequest = NEW_REQUEST_ROLES.includes(role)
 
@@ -54,24 +52,6 @@ export function Sidebar({ role, onRoleChange, collapsed, onCloseMobile }) {
           ))}
         </ul>
       </nav>
-
-      {!collapsed && (
-        <div className="sidebar__footer">
-          <span className="sidebar__footer-label">Aperçu du rôle</span>
-          <select
-            className="sidebar__role-select"
-            value={role}
-            onChange={(event) => onRoleChange(event.target.value)}
-            aria-label="Aperçu du rôle"
-          >
-            {PREVIEW_ROLES.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
     </aside>
   )
 }

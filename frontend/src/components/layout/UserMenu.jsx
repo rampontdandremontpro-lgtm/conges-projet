@@ -1,22 +1,29 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 
+import { useAuth } from '@/auth/AuthContext'
 import { Icon } from '@/components/ui/Icon'
+import { ROLE_LABELS } from '@/config/navigation'
 import { useClickOutside } from '@/hooks/useClickOutside'
 
-const DEMO_USER = {
-  prenom: 'Jean',
-  nom: 'Dupont',
-  role: 'Collaborateur',
-}
-
-function getUserInitials() {
-  return `${DEMO_USER.prenom[0]}${DEMO_USER.nom[0]}`.toUpperCase()
-}
-
 export function UserMenu() {
+  const { user, logout } = useAuth()
+  const navigate = useNavigate()
   const [open, setOpen] = useState(false)
   const ref = useClickOutside(() => setOpen(false), open)
+
+  if (!user) {
+    return null
+  }
+
+  const initials = `${user.prenom?.[0] ?? ''}${user.nom?.[0] ?? ''}`.toUpperCase()
+  const roleLabel = ROLE_LABELS[user.role] ?? user.role
+
+  function handleLogout() {
+    setOpen(false)
+    logout()
+    navigate('/login', { replace: true })
+  }
 
   return (
     <div className="dropdown" ref={ref}>
@@ -28,35 +35,31 @@ export function UserMenu() {
         aria-expanded={open}
       >
         <span className="user-menu__avatar" aria-hidden="true">
-          {getUserInitials()}
+          {initials}
         </span>
         <span className="user-menu__info">
           <span className="user-menu__name">
-            {DEMO_USER.prenom} {DEMO_USER.nom}
+            {user.prenom} {user.nom}
           </span>
-          <span className="user-menu__role">{DEMO_USER.role}</span>
+          <span className="user-menu__role">{roleLabel}</span>
         </span>
         <Icon name="chevronDown" className="user-menu__chevron" size={16} />
       </button>
       {open && (
         <div className="dropdown__panel dropdown__panel--user" role="menu">
-          <Link to="/app/my-profile" className="user-menu__item" onClick={() => setOpen(false)}>
+          <Link to="/app/profile" className="user-menu__item" onClick={() => setOpen(false)}>
             <Icon name="user" size={16} />
             Mon profil
           </Link>
-          <button
-            type="button"
-            className="user-menu__item"
-            onClick={() => setOpen(false)}
-          >
+          <Link to="/app/settings" className="user-menu__item" onClick={() => setOpen(false)}>
             <Icon name="settings" size={16} />
             Paramètres
-          </button>
+          </Link>
           <div className="user-menu__divider" />
           <button
             type="button"
             className="user-menu__item user-menu__item--danger"
-            onClick={() => setOpen(false)}
+            onClick={handleLogout}
           >
             <Icon name="logout" size={16} />
             Déconnexion

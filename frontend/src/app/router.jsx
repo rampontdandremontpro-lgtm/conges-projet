@@ -1,19 +1,29 @@
-import { createBrowserRouter } from 'react-router-dom'
+import { createBrowserRouter, Navigate } from 'react-router-dom'
 
+import { ProtectedRoute } from '@/auth/ProtectedRoute'
+import { RootRedirect } from '@/auth/RootRedirect'
+import { SectionGuard } from '@/auth/SectionGuard'
 import { AppLayout } from '@/layouts/AppLayout'
-import { Preview } from '@/pages/Preview'
-import { LoginPlaceholder } from '@/pages/LoginPlaceholder'
+import { LoginPage } from '@/pages/LoginPage'
 import { NotFound } from '@/pages/NotFound'
+import { Preview } from '@/pages/Preview'
 
 export const router = createBrowserRouter([
+  { path: '/', element: <RootRedirect /> },
+  { path: '/login', element: <LoginPage /> },
   {
-    path: '/',
-    element: <AppLayout />,
+    path: '/app',
+    element: (
+      <ProtectedRoute>
+        <AppLayout />
+      </ProtectedRoute>
+    ),
     children: [
-      { index: true, element: <Preview /> },
-      { path: 'app/:section', element: <Preview /> },
+      { index: true, element: <Navigate to="/app/dashboard" replace /> },
+      { path: 'profile', element: <Preview /> },
+      { path: 'settings', element: <Preview /> },
+      { path: ':section', element: <SectionGuard /> },
     ],
   },
-  { path: '/login', element: <LoginPlaceholder /> },
   { path: '*', element: <NotFound /> },
 ])

@@ -15,6 +15,14 @@ export const NEW_REQUEST_ITEM = {
   icon: 'plus',
 }
 
+export const ROLE_LABELS = {
+  [ROLES.COLLABORATEUR]: 'Collaborateur',
+  [ROLES.RESPONSABLE_SERVICE]: 'Responsable de service',
+  [ROLES.RH]: 'RH',
+  [ROLES.DIRECTEUR]: 'Directeur',
+  [ROLES.ADMIN]: 'Administrateur',
+}
+
 export const NAVIGATION = {
   [ROLES.COLLABORATEUR]: [
     { id: 'dashboard', label: 'Tableau de bord', to: '/app/dashboard', icon: 'dashboard' },
@@ -73,11 +81,3 @@ export function getSectionLabel(section) {
   }
   return null
 }
-
-export const PREVIEW_ROLES = [
-  { value: ROLES.COLLABORATEUR, label: 'Collaborateur' },
-  { value: ROLES.RESPONSABLE_SERVICE, label: 'Responsable de service' },
-  { value: ROLES.RH, label: 'RH' },
-  { value: ROLES.DIRECTEUR, label: 'Directeur' },
-  { value: ROLES.ADMIN, label: 'Administrateur' },
-]

@@ -10,7 +10,6 @@ export function AppLayout() {
     () => window.matchMedia('(max-width: 1024px) and (min-width: 768px)').matches,
   )
   const [mobileOpen, setMobileOpen] = useState(false)
-  const [previewRole, setPreviewRole] = useState('COLLABORATEUR')
 
   const shellClassName = [
     'app-shell',
@@ -30,12 +29,7 @@ export function AppLayout() {
           aria-label="Fermer le menu"
         />
       )}
-      <Sidebar
-        role={previewRole}
-        onRoleChange={setPreviewRole}
-        collapsed={collapsed}
-        onCloseMobile={() => setMobileOpen(false)}
-      />
+      <Sidebar collapsed={collapsed} onCloseMobile={() => setMobileOpen(false)} />
       <div className="app-shell__main">
         <Header />
         <main className="app-shell__content">
