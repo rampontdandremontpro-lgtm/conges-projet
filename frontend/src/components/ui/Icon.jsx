@@ -105,6 +105,27 @@ const ICON_PATHS = {
       <path d="M21 12H9" />
     </>
   ),
+  arrowRight: <path d="M5 12h14M12 5l7 7-7 7" />,
+  sun: (
+    <>
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" />
+    </>
+  ),
+  check: <path d="M20 6 9 17l-5-5" />,
+  clock: (
+    <>
+      <circle cx="12" cy="12" r="10" />
+      <path d="M12 6v6l4 2" />
+    </>
+  ),
+  sparkles: (
+    <>
+      <path d="M12 3l1.9 5.7L19.6 10l-5.7 1.9L12 17.6l-1.9-5.7L4.4 10l5.7-1.3z" />
+      <path d="M19 15l.9 2.6 2.6.9-2.6.9L19 22l-.9-2.6-2.6-.9 2.6-.9z" />
+      <path d="M5 16l.7 1.9 1.9.7-1.9.7L5 21.3l-.7-1.9-1.9-.7 1.9-.7z" />
+    </>
+  ),
 }
 
 export function Icon({ name, size = 20, className }) {

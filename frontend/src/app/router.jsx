@@ -7,6 +7,7 @@ import { AppLayout } from '@/layouts/AppLayout'
 import { LoginPage } from '@/pages/LoginPage'
 import { NotFound } from '@/pages/NotFound'
 import { Preview } from '@/pages/Preview'
+import { DashboardGate } from '@/pages/DashboardGate'
 
 export const router = createBrowserRouter([
   { path: '/', element: <RootRedirect /> },
@@ -20,6 +21,7 @@ export const router = createBrowserRouter([
     ),
     children: [
       { index: true, element: <Navigate to="/app/dashboard" replace /> },
+      { path: 'dashboard', element: <DashboardGate /> },
       { path: 'profile', element: <Preview /> },
       { path: 'settings', element: <Preview /> },
       { path: ':section', element: <SectionGuard /> },
