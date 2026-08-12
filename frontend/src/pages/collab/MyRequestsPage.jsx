@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 
 import { MyRequestCard } from '@/components/collab/requests/MyRequestCard'
+import { getRequestStatusLabel } from '@/components/collab/requests/RequestStatusBadge'
 import { Icon } from '@/components/ui/Icon'
 import { getMyAbsenceDeclarations, getMyLeaveRequests } from '@/services/myRequests'
+import { formatDays, formatRangeNumericFR } from '@/utils/format'
 
 import '@/styles/requests.css'
 
@@ -74,6 +76,37 @@ function matchesFilter(item, filter) {
   return FILTER_STATUSES[filter]?.has(item.status) ?? false
 }
 
+function normalizeSearchValue(value) {
+  return String(value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLocaleLowerCase('fr-FR')
+    .trim()
+}
+
+function matchesSearch(item, query) {
+  const normalizedQuery = normalizeSearchValue(query)
+
+  if (!normalizedQuery) {
+    return true
+  }
+
+  const duration = `${formatDays(item.duration)} ${item.durationUnit}`
+  const searchableText = [
+    item.type,
+    getRequestStatusLabel(item.status),
+    item.status,
+    item.startDate,
+    item.endDate,
+    formatRangeNumericFR(item.startDate, item.endDate),
+    duration,
+  ]
+    .map(normalizeSearchValue)
+    .join(' ')
+
+  return normalizedQuery.split(/\s+/).every((token) => searchableText.includes(token))
+}
+
 function LoadingState() {
   return (
     <div className="my-requests-list" aria-label="Chargement des demandes">
@@ -90,13 +123,19 @@ function LoadingState() {
   )
 }
 
-function EmptyState({ globalEmpty, onCreate }) {
+function EmptyState({ globalEmpty, hasSearch, onCreate }) {
   return (
     <div className="my-requests-empty">
       <span className="my-requests-empty__icon" aria-hidden="true">
         <Icon name="list" size={26} />
       </span>
-      <strong>{globalEmpty ? 'Aucune demande pour le moment.' : 'Aucune demande dans cette catégorie.'}</strong>
+      <strong>
+        {globalEmpty
+          ? 'Aucune demande pour le moment.'
+          : hasSearch
+            ? 'Aucune demande ne correspond à votre recherche.'
+            : 'Aucune demande dans cette catégorie.'}
+      </strong>
       {globalEmpty && (
         <button type="button" className="my-requests-empty__button" onClick={onCreate}>
           <Icon name="plus" size={15} />
@@ -109,6 +148,7 @@ function EmptyState({ globalEmpty, onCreate }) {
 
 export function MyRequestsPage() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const [filter, setFilter] = useState('all')
   const [state, setState] = useState({
     loading: true,
@@ -150,9 +190,11 @@ export function MyRequestsPage() {
     return [...leaveItems, ...absenceItems].sort(sortNewestFirst)
   }, [state.leaveRequests, state.absences])
 
+  const searchQuery = searchParams.get('q') ?? ''
+
   const filteredItems = useMemo(
-    () => items.filter((item) => matchesFilter(item, filter)),
-    [filter, items],
+    () => items.filter((item) => matchesFilter(item, filter) && matchesSearch(item, searchQuery)),
+    [filter, items, searchQuery],
   )
 
   const totalFailure = !state.loading && state.leaveError && state.absenceError
@@ -210,6 +252,7 @@ export function MyRequestsPage() {
       ) : filteredItems.length === 0 ? (
         <EmptyState
           globalEmpty={items.length === 0}
+          hasSearch={Boolean(searchQuery.trim())}
           onCreate={() => navigate('/app/new-request')}
         />
       ) : (

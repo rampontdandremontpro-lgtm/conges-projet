@@ -25,15 +25,15 @@
 
   .my-request-card {
     align-items: flex-start;
-    gap: 12px;
-    min-height: 76px;
-    padding: 14px;
+    gap: 13px;
+    min-height: 80px;
+    padding: 15px;
   }
 
   .my-request-card__icon {
-    width: 40px;
-    height: 40px;
-    flex-basis: 40px;
+    width: 42px;
+    height: 42px;
+    flex-basis: 42px;
   }
 
   .my-request-card__more {
@@ -73,11 +73,11 @@
   }
 
   .my-request-card__title {
-    font-size: 13px;
+    font-size: 14px;
   }
 
   .my-request-card__meta {
-    font-size: 11px;
+    font-size: 12px;
   }
 
   .my-requests-status {

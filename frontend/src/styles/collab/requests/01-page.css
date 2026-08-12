@@ -9,7 +9,7 @@
   --requests-border-hover: rgba(10, 30, 69, 0.12);
   --requests-orange: #f76b1c;
   --requests-orange-hover: #e55f14;
-  width: min(100%, 860px);
+  width: min(100%, 960px);
   margin: 0 auto;
   padding: 2px 0 24px;
   color: var(--requests-navy);
@@ -19,16 +19,16 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 14px;
-  margin-bottom: 20px;
+  gap: 18px;
+  margin-bottom: 22px;
 }
 
 .my-requests-filters {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 4px;
-  padding: 6px;
+  gap: 5px;
+  padding: 7px;
   border: 1px solid var(--requests-border);
   border-radius: 16px;
   background: #ffffff;
@@ -36,11 +36,11 @@
 }
 
 .my-requests-filter {
-  min-height: 34px;
-  padding: 7px 14px;
+  min-height: 38px;
+  padding: 8px 17px;
   border-radius: 11px;
   color: var(--requests-muted);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: var(--font-weight-bold);
   line-height: 1;
   transition: background var(--transition-fast), color var(--transition-fast), box-shadow var(--transition-fast), transform var(--transition-fast);
@@ -68,13 +68,13 @@
   align-items: center;
   justify-content: center;
   gap: 7px;
-  min-height: 38px;
-  padding: 8px 16px;
+  min-height: 42px;
+  padding: 9px 18px;
   flex-shrink: 0;
   border-radius: 14px;
   background: var(--requests-orange);
   color: #ffffff;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: var(--font-weight-bold);
   box-shadow: 0 4px 12px rgba(247, 107, 28, 0.22);
   transition: background var(--transition-fast), box-shadow var(--transition-fast), transform var(--transition-fast);
@@ -88,15 +88,15 @@
 .my-requests-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
 }
 
 .my-request-card {
   display: flex;
   align-items: center;
-  gap: 16px;
-  min-height: 78px;
-  padding: 15px 20px;
+  gap: 18px;
+  min-height: 88px;
+  padding: 17px 22px;
   border: 1px solid var(--requests-border);
   border-radius: 18px;
   background: #ffffff;
@@ -113,9 +113,9 @@
 .my-request-card__icon {
   display: grid;
   place-items: center;
-  width: 44px;
-  height: 44px;
-  flex: 0 0 44px;
+  width: 48px;
+  height: 48px;
+  flex: 0 0 48px;
   border-radius: 13px;
   background: var(--requests-soft);
   color: var(--requests-blue);
@@ -137,7 +137,7 @@
 .my-request-card__title {
   min-width: 0;
   color: var(--requests-navy);
-  font-size: 14px;
+  font-size: 15.5px;
   font-weight: var(--font-weight-black);
   line-height: 1.25;
 }
@@ -148,8 +148,8 @@
   flex-wrap: wrap;
   gap: 4px;
   color: var(--requests-muted);
-  font-size: 12px;
-  line-height: 1.35;
+  font-size: 13px;
+  line-height: 1.4;
 }
 
 .my-request-card__meta strong {
@@ -160,9 +160,9 @@
 .my-request-card__more {
   display: grid;
   place-items: center;
-  width: 34px;
-  height: 34px;
-  flex: 0 0 34px;
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
   border-radius: 11px;
   color: #c4d0e8;
 }
@@ -171,12 +171,12 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  min-height: 22px;
-  padding: 2px 8px;
+  min-height: 24px;
+  padding: 3px 9px;
   flex-shrink: 0;
   border: 1px solid transparent;
   border-radius: var(--radius-full);
-  font-size: 11px;
+  font-size: 11.5px;
   font-weight: var(--font-weight-semibold);
   line-height: 1.2;
   white-space: nowrap;
@@ -295,7 +295,7 @@
   margin-top: 5px;
   padding: 7px 14px;
   border-radius: 12px;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: var(--font-weight-bold);
   transition: background var(--transition-fast), color var(--transition-fast), transform var(--transition-fast);
 }
@@ -321,9 +321,9 @@
 .my-request-skeleton {
   display: flex;
   align-items: center;
-  gap: 16px;
-  min-height: 78px;
-  padding: 15px 20px;
+  gap: 18px;
+  min-height: 88px;
+  padding: 17px 22px;
   border: 1px solid var(--requests-border);
   border-radius: 18px;
   background: #ffffff;
@@ -339,9 +339,9 @@
 }
 
 .my-request-skeleton__icon {
-  width: 44px;
-  height: 44px;
-  flex: 0 0 44px;
+  width: 48px;
+  height: 48px;
+  flex: 0 0 48px;
   border-radius: 13px;
 }
 

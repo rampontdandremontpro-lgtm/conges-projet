@@ -1,4 +1,4 @@
-import { useLocation } from 'react-router-dom'
+import { useLocation, useSearchParams } from 'react-router-dom'
 
 import { NotificationsDropdown } from '@/components/layout/NotificationsDropdown'
 import { UserMenu } from '@/components/layout/UserMenu'
@@ -43,8 +43,28 @@ function SearchIcon() {
 
 export function Header() {
   const { pathname } = useLocation()
+  const [searchParams, setSearchParams] = useSearchParams()
   const title = headerTitle(pathname)
   const showSearch = !['/app/dashboard', '/app/new-request', '/app/my-balances'].includes(pathname)
+  const requestsSearchEnabled = pathname === '/app/my-requests'
+  const searchValue = requestsSearchEnabled ? searchParams.get('q') ?? '' : undefined
+
+  const handleSearchChange = (event) => {
+    if (!requestsSearchEnabled) {
+      return
+    }
+
+    const value = event.target.value
+    const nextParams = new URLSearchParams(searchParams)
+
+    if (value.trim()) {
+      nextParams.set('q', value)
+    } else {
+      nextParams.delete('q')
+    }
+
+    setSearchParams(nextParams, { replace: true })
+  }
 
   return (
     <header className="header">
@@ -55,7 +75,14 @@ export function Header() {
       {showSearch && (
         <label className="header__search">
           <SearchIcon />
-          <input type="search" placeholder="Rechercher…" aria-label="Rechercher" />
+          <input
+            key={pathname}
+            type="search"
+            placeholder="Rechercher…"
+            aria-label="Rechercher"
+            value={searchValue}
+            onChange={handleSearchChange}
+          />
         </label>
       )}
 

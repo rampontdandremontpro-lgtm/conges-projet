@@ -40,9 +40,13 @@ const STATUS_META = {
   ENREGISTREE: { label: 'Enregistrée', tone: 'teal', icon: 'check' },
 }
 
+export function getRequestStatusLabel(status) {
+  return STATUS_META[status]?.label ?? status ?? 'Statut inconnu'
+}
+
 export function RequestStatusBadge({ status }) {
   const meta = STATUS_META[status] ?? {
-    label: status || 'Statut inconnu',
+    label: getRequestStatusLabel(status),
     tone: 'neutral',
     icon: 'clock',
   }
