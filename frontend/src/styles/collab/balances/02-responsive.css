@@ -36,3 +36,12 @@
     grid-template-columns: 1fr;
   }
 }
+
+@media (min-width: 1200px) and (min-height: 820px) {
+  .balances-page {
+    min-height: calc(100svh - var(--header-height) - var(--space-6) - var(--space-12));
+    justify-content: center;
+    display: flex;
+    flex-direction: column;
+  }
+}

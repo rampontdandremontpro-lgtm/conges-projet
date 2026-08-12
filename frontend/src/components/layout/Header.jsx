@@ -44,7 +44,7 @@ function SearchIcon() {
 export function Header() {
   const { pathname } = useLocation()
   const title = headerTitle(pathname)
-  const showSearch = !['/app/dashboard', '/app/new-request'].includes(pathname)
+  const showSearch = !['/app/dashboard', '/app/new-request', '/app/my-balances'].includes(pathname)
 
   return (
     <header className="header">
