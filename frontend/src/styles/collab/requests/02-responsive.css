@@ -1,0 +1,87 @@
+@media (max-width: 767px) {
+  .my-requests-page {
+    padding-top: 0;
+  }
+
+  .my-requests-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+
+  .my-requests-filters {
+    width: 100%;
+  }
+
+  .my-requests-filter {
+    flex: 1 1 auto;
+    padding-inline: 11px;
+  }
+
+  .my-requests-new-button {
+    align-self: flex-start;
+  }
+
+  .my-request-card {
+    align-items: flex-start;
+    gap: 12px;
+    min-height: 76px;
+    padding: 14px;
+  }
+
+  .my-request-card__icon {
+    width: 40px;
+    height: 40px;
+    flex-basis: 40px;
+  }
+
+  .my-request-card__more {
+    width: 28px;
+    height: 28px;
+    flex-basis: 28px;
+  }
+
+  .my-requests-notice {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .my-requests-notice span {
+    min-width: calc(100% - 28px);
+  }
+}
+
+@media (max-width: 479px) {
+  .my-requests-filters {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .my-requests-filter:first-child {
+    grid-column: 1 / -1;
+  }
+
+  .my-requests-new-button {
+    width: 100%;
+  }
+
+  .my-request-card__topline {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .my-request-card__title {
+    font-size: 13px;
+  }
+
+  .my-request-card__meta {
+    font-size: 11px;
+  }
+
+  .my-requests-status {
+    max-width: 100%;
+    white-space: normal;
+  }
+}
