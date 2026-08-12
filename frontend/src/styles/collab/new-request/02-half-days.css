@@ -72,11 +72,26 @@
   color: var(--nr-fg);
 }
 
-.nr-pill--active,
-.nr-pill--active:hover:not(:disabled) {
-  background: var(--nr-primary);
+.nr-pill--morning {
+  color: #f59e0b;
+}
+
+.nr-pill--afternoon {
+  color: #132e63;
+}
+
+.nr-pill--morning.nr-pill--active,
+.nr-pill--morning.nr-pill--active:hover:not(:disabled) {
+  background: var(--nr-accent);
   color: #ffffff;
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 5px 14px rgba(247, 107, 28, 0.22);
+}
+
+.nr-pill--afternoon.nr-pill--active,
+.nr-pill--afternoon.nr-pill--active:hover:not(:disabled) {
+  background: #102b5c;
+  color: #ffffff;
+  box-shadow: 0 5px 14px rgba(16, 43, 92, 0.22);
 }
 
 .nr-pill:disabled {

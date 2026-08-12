@@ -60,15 +60,15 @@ function FaceHappy({ size = 15 }) {
   )
 }
 
-function FaceRelaxed({ size = 15 }) {
+function FaceSad({ size = 15 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 22 22" fill="none" aria-hidden="true">
-      <circle cx="11" cy="11" r="10" fill="#ECFDF5" stroke="#6EE7B7" strokeWidth="1.5" />
-      <path d="M7.5 9.5Q9 7.5 10.5 9.5" stroke="#065F46" strokeWidth="1.5" strokeLinecap="round" />
-      <path d="M11.5 9.5Q13 7.5 14.5 9.5" stroke="#065F46" strokeWidth="1.5" strokeLinecap="round" />
-      <path d="M7.5 13.5Q11 16.5 14.5 13.5" stroke="#065F46" strokeWidth="1.5" strokeLinecap="round" />
-      <circle cx="7.5" cy="12.5" r="1.5" fill="#A7F3D0" opacity="0.7" />
-      <circle cx="14.5" cy="12.5" r="1.5" fill="#A7F3D0" opacity="0.7" />
+      <circle cx="11" cy="11" r="10" fill="#FEF3C7" stroke="#FCD34D" strokeWidth="1.5" />
+      <path d="M7.4 8.7L8.5 7.8L9.6 8.7" stroke="#92400E" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M12.4 8.7L13.5 7.8L14.6 8.7" stroke="#92400E" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M7.5 15Q11 11.7 14.5 15" stroke="#92400E" strokeWidth="1.5" strokeLinecap="round" fill="none" />
+      <circle cx="7.4" cy="12" r="1.4" fill="#FCA5A5" opacity="0.55" />
+      <circle cx="14.6" cy="12" r="1.4" fill="#FCA5A5" opacity="0.55" />
     </svg>
   )
 }
@@ -138,7 +138,10 @@ export function LeaveCalendar({
   const holidayMap = useMemo(() => {
     const map = new Map()
     for (const holiday of holidays ?? []) {
-      map.set(holiday.date, holiday)
+      const date = typeof holiday.date === 'string' ? holiday.date.slice(0, 10) : ''
+      if (date) {
+        map.set(date, holiday)
+      }
     }
     return map
   }, [holidays])
@@ -254,7 +257,11 @@ export function LeaveCalendar({
                     const isEnd = Boolean(rangeEnd && iso === rangeEnd)
                     const single = isStart && isSingle
                     const inRange = Boolean(
-                      rangeStart && rangeEnd && iso >= rangeStart && iso <= rangeEnd,
+                      cell.inMonth &&
+                        rangeStart &&
+                        rangeEnd &&
+                        iso >= rangeStart &&
+                        iso <= rangeEnd,
                     )
                     const isMid = inRange && !isStart && !isEnd
                     const showLeftBand = inRange && !isStart
@@ -263,7 +270,7 @@ export function LeaveCalendar({
                     const startPm = isStart && !isSingle && startPeriod === 'APRES_MIDI'
                     const endAm = isEnd && !isSingle && endPeriod === 'MATIN'
                     const today = iso === todayIso
-                    const showDot = (isHoliday || isClosure) && !inRange && cell.inMonth
+                    const showDot = (isHoliday || isClosure) && cell.inMonth
 
                     const cellClassName = [
                       'nr-cal__cell',
@@ -307,7 +314,7 @@ export function LeaveCalendar({
                             </>
                           ) : showFace && isEnd ? (
                             <>
-                              <FaceRelaxed size={15} />
+                              <FaceSad size={15} />
                               <span className="nr-cal__face-day">{cell.day}</span>
                             </>
                           ) : (

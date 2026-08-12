@@ -260,9 +260,13 @@
   font-weight: 600;
 }
 
-.nr-cal__cell--holiday:not(.nr-cal__cell--in-range):not(.nr-cal__cell--edge) .nr-cal__day-num {
+.nr-cal__cell--holiday .nr-cal__day-num {
   color: var(--nr-accent);
-  font-weight: 700;
+  font-weight: 800;
+}
+
+.nr-cal__cell--holiday.nr-cal__cell--in-range .nr-cal__day-circle {
+  background: rgba(247, 107, 28, 0.08);
 }
 
 .nr-cal__cell--closure .nr-cal__day-circle {

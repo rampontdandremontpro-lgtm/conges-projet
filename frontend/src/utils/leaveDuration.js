@@ -2,6 +2,10 @@ function toUtcDate(iso) {
   return new Date(`${iso}T00:00:00.000Z`)
 }
 
+function normalizeHolidayDate(value) {
+  return typeof value === 'string' ? value.slice(0, 10) : ''
+}
+
 export function calculateDeductedDaysPreview(selection, holidays) {
   const { startDate, endDate, startPeriod, endPeriod } = selection ?? {}
   if (!startDate || !endDate || endDate < startDate) {
@@ -11,7 +15,8 @@ export function calculateDeductedDaysPreview(selection, holidays) {
   const nonDeductibleDates = new Set(
     (holidays ?? [])
       .filter((holiday) => holiday.deductible === false)
-      .map((holiday) => holiday.date),
+      .map((holiday) => normalizeHolidayDate(holiday.date))
+      .filter(Boolean),
   )
 
   const start = toUtcDate(startDate)

@@ -143,29 +143,41 @@ export function NewRequest() {
     })
   }
 
+  const buildPayload = () => ({
+    leaveTypeId: selection.leaveTypeId,
+    startDate: selection.startDate,
+    endDate: selection.endDate,
+    startPeriod: selection.startPeriod,
+    endPeriod: selection.endPeriod,
+  })
+
+  const persistCurrentRequest = async () => {
+    if (draftMatchesSelection) {
+      return draft
+    }
+    const payload = buildPayload()
+    const saved = draft
+      ? await updateLeaveRequest(draft.id, payload)
+      : await createLeaveRequest(payload)
+    setDraft(saved)
+    return saved
+  }
+
   const handleSaveDraft = async () => {
     if (
       !selection.leaveTypeId ||
       !selection.startDate ||
       !selection.endDate ||
-      saving
+      saving ||
+      submitting
     ) {
       return
     }
     setSaving(true)
     try {
-      const payload = {
-        leaveTypeId: selection.leaveTypeId,
-        startDate: selection.startDate,
-        endDate: selection.endDate,
-        startPeriod: selection.startPeriod,
-        endPeriod: selection.endPeriod,
-      }
-      const saved = draft
-        ? await updateLeaveRequest(draft.id, payload)
-        : await createLeaveRequest(payload)
-      setDraft(saved)
-      showToast('success', draft ? 'Brouillon mis à jour.' : 'Brouillon enregistré.')
+      const wasExistingDraft = Boolean(draft)
+      await persistCurrentRequest()
+      showToast('success', wasExistingDraft ? 'Brouillon mis à jour.' : 'Brouillon enregistré.')
     } catch (error) {
       showToast('error', errorMessage(error))
     } finally {
@@ -174,9 +186,18 @@ export function NewRequest() {
   }
 
   const handleSubmit = async (signatureType, signatureData) => {
+    if (
+      !selection.leaveTypeId ||
+      !selection.startDate ||
+      !selection.endDate ||
+      submitting
+    ) {
+      return
+    }
     setSubmitting(true)
     try {
-      await submitLeaveRequest(draft.id, { signatureType, signatureData })
+      const request = await persistCurrentRequest()
+      await submitLeaveRequest(request.id, { signatureType, signatureData })
       setSignatureOpen(false)
       showToast('success', 'Demande soumise pour validation.')
       window.setTimeout(() => navigate('/app/my-requests'), 900)

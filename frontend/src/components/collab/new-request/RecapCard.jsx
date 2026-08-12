@@ -75,23 +75,22 @@ export function RecapCard({
     !derogation
 
   const submitAllowed =
-    draftClean &&
-    (!notice || notice.isNoticeCompliant || derogation?.status === 'ACCORDEE')
+    periodComplete &&
+    Boolean(leaveType) &&
+    (!notice || notice.isNoticeCompliant || (draftClean && derogation?.status === 'ACCORDEE'))
 
   const submitHint =
-    !draft
-      ? 'Enregistrez d’abord le brouillon.'
-      : dirty
-        ? 'Enregistrez les modifications du brouillon avant de soumettre.'
-        : notice && !notice.isNoticeCompliant
-          ? derogation?.status === 'ACCORDEE'
-            ? 'Dérogation accordée — la soumission est possible.'
-            : notice.daysBeforeStart < 0
-              ? 'La date de départ est dépassée : la soumission est impossible.'
-              : notice.daysBeforeStart < 3
-                ? 'Départ à moins de J-2 : la soumission est impossible.'
-                : 'Une dérogation RH accordée est requise pour soumettre.'
-          : null
+    notice && !notice.isNoticeCompliant
+      ? derogation?.status === 'ACCORDEE' && draftClean
+        ? 'Dérogation accordée — la soumission est possible.'
+        : notice.daysBeforeStart < 0
+          ? 'La date de départ est dépassée : la soumission est impossible.'
+          : notice.daysBeforeStart < 3
+            ? 'Départ à moins de J-2 : la soumission est impossible.'
+            : draftClean
+              ? 'Une dérogation RH accordée est requise pour soumettre.'
+              : 'Enregistrez en brouillon pour pouvoir demander une dérogation RH.'
+      : null
 
   const handleDerogationSubmit = async () => {
     setDerogationError(null)
@@ -137,14 +136,14 @@ export function RecapCard({
           </section>
 
           <section className="nr-recap__block">
-            <h4 className="nr-recap__subtitle">Jours ouvrés décomptés</h4>
+            <h4 className="nr-recap__subtitle">Jours décomptés</h4>
             <p className="nr-recap__days">
               {deductedDays != null ? (
                 <>
                   <strong>{formatDays(deductedDays)}</strong>
                   <span>
                     {deductedDays === 1 ? 'jour' : 'jours'}
-                    <em>ouvrés décomptés</em>
+                    <em>décomptés pour cette demande</em>
                   </span>
                 </>
               ) : (
@@ -154,8 +153,8 @@ export function RecapCard({
             <p className="nr-recap__note">
               {deductedDays != null
                 ? deductedDaysSource === 'server'
-                  ? 'Décompte confirmé par le serveur.'
-                  : 'Décompte mis à jour en temps réel. Le serveur le confirme à l’enregistrement.'
+                  ? 'Calcul confirmé. Les dimanches et jours non décomptables sont exclus.'
+                  : 'Calcul en temps réel. Les dimanches et jours non décomptables sont exclus.'
                 : 'Sélectionnez une période complète pour calculer le décompte.'}
             </p>
           </section>
@@ -213,9 +212,9 @@ export function RecapCard({
               <section className="nr-recap__block">
                 <h4 className="nr-recap__subtitle">Solde congés payés</h4>
                 <div className="nr-solde">
-                  <SoldeRow label="Solde actuel" value={`${formatDays(balance.availableDays)} j`} />
+                  <SoldeRow label="Disponible aujourd’hui" value={`${formatDays(balance.availableDays)} j`} />
                   <SoldeRow
-                    label="Jours réservés"
+                    label="Déjà réservés"
                     value={`−${formatDays(balance.reservedDays)} j`}
                     tone="reserved"
                   />
@@ -226,7 +225,7 @@ export function RecapCard({
                   />
                   <div className="nr-solde__divider" />
                   <SoldeRow
-                    label="Solde potentiel"
+                    label="Disponible après cette demande"
                     value={`${formatDays(
                       deductedDays != null
                         ? balance.potentialDays - deductedDays

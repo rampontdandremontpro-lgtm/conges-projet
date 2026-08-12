@@ -44,6 +44,7 @@ function SearchIcon() {
 export function Header() {
   const { pathname } = useLocation()
   const title = headerTitle(pathname)
+  const showSearch = !['/app/dashboard', '/app/new-request'].includes(pathname)
 
   return (
     <header className="header">
@@ -51,10 +52,12 @@ export function Header() {
         <h1 className="header__page-title">{title}</h1>
       </div>
 
-      <label className="header__search">
-        <SearchIcon />
-        <input type="search" placeholder="Rechercher…" aria-label="Rechercher" />
-      </label>
+      {showSearch && (
+        <label className="header__search">
+          <SearchIcon />
+          <input type="search" placeholder="Rechercher…" aria-label="Rechercher" />
+        </label>
+      )}
 
       <NotificationsDropdown />
       <UserMenu />
