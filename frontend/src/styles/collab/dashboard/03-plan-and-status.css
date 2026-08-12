@@ -3,7 +3,7 @@
   overflow: hidden;
   border-radius: var(--radius-lg);
   padding: var(--space-5);
-  background: linear-gradient(150deg, var(--color-brand-700), var(--color-brand-900));
+  background: var(--gradient-gmes-sky);
   color: var(--color-text-inverse);
   box-shadow: var(--shadow-md);
 }

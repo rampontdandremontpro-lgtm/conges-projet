@@ -2,7 +2,7 @@ import { useState } from 'react'
 
 import { Icon } from '@/components/ui/Icon'
 import { formatDays, formatRangeCompactFR } from '@/utils/format'
-import { evaluateNotice } from '@/utils/leaveNotice'
+import { buildNoticeRules, evaluateNotice } from '@/utils/leaveNotice'
 import { calculateDeductedDaysPreview } from '@/utils/leaveDuration'
 
 const DEROGATION_LABELS = {
@@ -11,6 +11,23 @@ const DEROGATION_LABELS = {
   REFUSEE: 'Refusée par la RH',
   EXPIREE: 'Expirée',
   UTILISEE: 'Utilisée',
+}
+
+function departureTimingLabel(daysBeforeStart) {
+  if (daysBeforeStart === 0) {
+    return 'Le départ est prévu aujourd’hui'
+  }
+  if (daysBeforeStart === 1) {
+    return 'Le départ est prévu demain'
+  }
+  return `Le départ est prévu dans ${daysBeforeStart} jours`
+}
+
+function lateSubmissionMessage(daysBeforeStart, derogationLastAllowedDay) {
+  if (daysBeforeStart < 0) {
+    return 'La date de départ est déjà passée. Cette demande ne peut plus être soumise.'
+  }
+  return `${departureTimingLabel(daysBeforeStart)}. Une dérogation RH n’est possible que jusqu’à ${derogationLastAllowedDay} jours avant le départ.`
 }
 
 function SoldeRow({ label, value, tone }) {
@@ -50,6 +67,8 @@ export function RecapCard({
     periodComplete && settings && seasonal
       ? evaluateNotice({ startIso: startDate, endIso: endDate, settings, seasonal })
       : null
+  const noticeRules = settings ? buildNoticeRules(settings, seasonal) : null
+  const derogationLastAllowedDay = noticeRules?.derogationLastAllowedDay ?? 3
 
   const draftClean = Boolean(draft) && !dirty
   const previewDeductedDays = periodComplete
@@ -85,8 +104,8 @@ export function RecapCard({
         ? 'Dérogation accordée — la soumission est possible.'
         : notice.daysBeforeStart < 0
           ? 'La date de départ est dépassée : la soumission est impossible.'
-          : notice.daysBeforeStart < 3
-            ? 'Départ à moins de J-2 : la soumission est impossible.'
+          : !notice.isDerogationWindow
+            ? lateSubmissionMessage(notice.daysBeforeStart, derogationLastAllowedDay)
             : draftClean
               ? 'Une dérogation RH accordée est requise pour soumettre.'
               : 'Enregistrez en brouillon pour pouvoir demander une dérogation RH.'
@@ -189,9 +208,10 @@ export function RecapCard({
                   <span>
                     Soumission impossible
                     <em>
-                      {notice.daysBeforeStart < 0
-                        ? 'La date de départ est dépassée.'
-                        : 'La demande doit être déposée au plus tard à J-2.'}
+                      {lateSubmissionMessage(
+                        notice.daysBeforeStart,
+                        derogationLastAllowedDay,
+                      )}
                     </em>
                   </span>
                 </p>

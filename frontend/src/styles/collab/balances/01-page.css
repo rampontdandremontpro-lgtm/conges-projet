@@ -21,7 +21,7 @@
   padding: 28px 32px;
   overflow: hidden;
   border-radius: 20px;
-  background: linear-gradient(105deg, #2caee4 0%, #4aaedb 45%, #188dd4 100%);
+  background: var(--gradient-gmes-sky);
   color: #ffffff;
 }
 
