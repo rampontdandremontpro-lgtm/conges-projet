@@ -1,6 +1,6 @@
 import { Icon } from '@/components/ui/Icon'
-import { StatusBadge } from '@/components/dashboard/StatusBadge'
-import { CardSkeleton, CardError } from '@/components/dashboard/DashboardStates'
+import { StatusBadge } from '@/components/collab/dashboard/StatusBadge'
+import { CardSkeleton, CardError } from '@/components/collab/dashboard/DashboardStates'
 import { formatDays, formatRangeNumericFR } from '@/utils/format'
 
 export function RecentRequestsCard({ requests, loading, error, onRetry, onViewAll }) {

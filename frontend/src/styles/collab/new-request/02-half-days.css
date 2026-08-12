@@ -1,0 +1,86 @@
+.nr-halfdays {
+  padding: 20px;
+  border: 1px solid var(--nr-border);
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: var(--nr-shadow);
+  animation: nr-halfdays-enter 180ms var(--ease) both;
+}
+
+@keyframes nr-halfdays-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.nr-halfdays__heading {
+  margin: 0 0 16px;
+  color: var(--nr-muted-2);
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1.2;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+.nr-halfdays__groups {
+  display: flex;
+  gap: 20px;
+}
+
+.nr-halfdays__group {
+  flex: 1;
+  min-width: 0;
+}
+
+.nr-halfdays__label {
+  display: block;
+  margin-bottom: 10px;
+  color: var(--nr-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.nr-halfdays__pills {
+  display: flex;
+  gap: 8px;
+}
+
+.nr-pill {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 8px 14px;
+  border-radius: 12px;
+  background: var(--nr-bg);
+  color: var(--nr-muted);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.2;
+  transition: background 150ms var(--ease), color 150ms var(--ease), box-shadow 150ms var(--ease);
+}
+
+.nr-pill:hover:not(:disabled) {
+  color: var(--nr-fg);
+}
+
+.nr-pill--active,
+.nr-pill--active:hover:not(:disabled) {
+  background: var(--nr-primary);
+  color: #ffffff;
+  box-shadow: var(--shadow-sm);
+}
+
+.nr-pill:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+

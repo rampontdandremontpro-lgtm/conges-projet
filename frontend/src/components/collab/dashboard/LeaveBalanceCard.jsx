@@ -1,6 +1,6 @@
 import { Icon } from '@/components/ui/Icon'
 import { formatDays, formatPeriod } from '@/utils/format'
-import { CardSkeleton, CardError } from '@/components/dashboard/DashboardStates'
+import { CardSkeleton, CardError } from '@/components/collab/dashboard/DashboardStates'
 
 export function LeaveBalanceCard({ balance, loading, error, onRetry }) {
   let content

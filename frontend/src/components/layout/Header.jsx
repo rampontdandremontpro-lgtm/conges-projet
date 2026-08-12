@@ -4,24 +4,22 @@ import { NotificationsDropdown } from '@/components/layout/NotificationsDropdown
 import { UserMenu } from '@/components/layout/UserMenu'
 import { getSectionLabel } from '@/config/navigation'
 
-function headerMeta(pathname) {
+function headerTitle(pathname) {
   if (pathname === '/app/dashboard') {
-    return { title: 'Tableau de bord', crumbs: ['GMES', 'Tableau de bord'] }
+    return 'Tableau de bord'
   }
   if (pathname === '/app/new-request') {
-    return { title: 'Nouvelle demande', crumbs: ['GMES', 'Nouvelle demande'] }
+    return 'Nouvelle demande'
   }
   if (pathname === '/app/profile') {
-    return { title: 'Mon profil', crumbs: ['GMES', 'Mon profil'] }
+    return 'Mon profil'
   }
   if (pathname === '/app/settings') {
-    return { title: 'Paramètres', crumbs: ['GMES', 'Paramètres'] }
+    return 'Paramètres'
   }
 
   const section = pathname.startsWith('/app/') ? pathname.slice('/app/'.length) : ''
-  const label = section ? getSectionLabel(section) : null
-  const title = label ?? 'GMES'
-  return { title, crumbs: ['GMES', title] }
+  return (section ? getSectionLabel(section) : null) ?? 'GMES'
 }
 
 function SearchIcon() {
@@ -45,19 +43,11 @@ function SearchIcon() {
 
 export function Header() {
   const { pathname } = useLocation()
-  const { title, crumbs } = headerMeta(pathname)
+  const title = headerTitle(pathname)
 
   return (
     <header className="header">
       <div className="header__page-meta">
-        <div className="header__breadcrumbs" aria-label="Fil d’Ariane">
-          {crumbs.map((crumb, index) => (
-            <span className="header__breadcrumb" key={`${crumb}-${index}`}>
-              {index > 0 && <span className="header__breadcrumb-separator">›</span>}
-              <span className={index === crumbs.length - 1 ? 'is-current' : ''}>{crumb}</span>
-            </span>
-          ))}
-        </div>
         <h1 className="header__page-title">{title}</h1>
       </div>
 

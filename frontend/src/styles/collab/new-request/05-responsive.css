@@ -1,0 +1,107 @@
+@media (max-width: 1180px) {
+  .nr-grid {
+    grid-template-columns: minmax(0, 1fr) 280px;
+    gap: 20px;
+  }
+
+  .nr-cal__months {
+    grid-template-columns: 1fr;
+  }
+
+  .nr-cal__month:nth-child(2) {
+    display: none;
+  }
+}
+
+@media (max-width: 1024px) {
+  .nr-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .nr-recap {
+    position: static;
+  }
+
+  .nr-cal__months {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 32px;
+  }
+
+  .nr-cal__month:nth-child(2) {
+    display: block;
+  }
+}
+
+@media (max-width: 760px) {
+  .nr-cal__months {
+    grid-template-columns: 1fr;
+  }
+
+  .nr-cal__month:nth-child(2) {
+    display: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .nr-page {
+    padding-bottom: 20px;
+  }
+
+  .nr-types__pill {
+    padding: 6px 14px;
+    font-size: 12.5px;
+  }
+
+  .nr-cal-card {
+    padding: 16px;
+  }
+
+  .nr-cal__body {
+    flex-wrap: wrap;
+    row-gap: 8px;
+  }
+
+  .nr-cal__body > .nr-cal__nav-btn:last-child {
+    margin-left: auto;
+  }
+
+  .nr-cal__nav-btn {
+    margin-top: 0;
+  }
+
+  .nr-cal__months {
+    flex-basis: 100%;
+    order: 3;
+  }
+
+  .nr-cal__cell {
+    height: 44px;
+  }
+
+  .nr-cal__day-circle {
+    width: 36px;
+    height: 36px;
+  }
+
+  .nr-cal__day-num {
+    font-size: 14px;
+  }
+
+  .nr-halfdays {
+    padding: 16px;
+  }
+
+  .nr-halfdays__groups {
+    flex-direction: column;
+    gap: 16px;
+  }
+}
+
+@media (max-width: 390px) {
+  .nr-toast {
+    right: 12px;
+    bottom: 12px;
+    left: 12px;
+    max-width: none;
+  }
+}

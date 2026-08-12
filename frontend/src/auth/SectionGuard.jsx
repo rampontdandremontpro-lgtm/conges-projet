@@ -2,7 +2,7 @@ import { useParams } from 'react-router-dom'
 
 import { RoleRoute } from '@/auth/RoleRoute'
 import { NAVIGATION } from '@/config/navigation'
-import { Preview } from '@/pages/Preview'
+import { Preview } from '@/pages/shared/Preview'
 
 export function SectionGuard() {
   const { section } = useParams()

@@ -1,5 +1,5 @@
 import { Icon } from '@/components/ui/Icon'
-import { CardSkeleton, CardError } from '@/components/dashboard/DashboardStates'
+import { CardSkeleton, CardError } from '@/components/collab/dashboard/DashboardStates'
 import {
   addDaysISO,
   formatDateNumericFR,

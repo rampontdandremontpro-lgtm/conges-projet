@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { Icon } from '@/components/ui/Icon'
 import { formatDays, formatRangeCompactFR } from '@/utils/format'
 import { evaluateNotice } from '@/utils/leaveNotice'
+import { calculateDeductedDaysPreview } from '@/utils/leaveDuration'
 
 const DEROGATION_LABELS = {
   EN_ATTENTE_RH: 'En attente de décision RH',
@@ -27,6 +28,7 @@ export function RecapCard({
   balance,
   settings,
   seasonal,
+  holidays,
   draft,
   dirty,
   derogation,
@@ -50,7 +52,11 @@ export function RecapCard({
       : null
 
   const draftClean = Boolean(draft) && !dirty
-  const deductedDays = draftClean ? draft.deductedDays : null
+  const previewDeductedDays = periodComplete
+    ? calculateDeductedDaysPreview(selection, holidays)
+    : null
+  const deductedDays = draftClean ? draft.deductedDays : previewDeductedDays
+  const deductedDaysSource = draftClean ? 'server' : 'preview'
 
   const startLabel = startPeriod === 'MATIN' ? 'matin' : 'après-midi'
   const endLabel = endPeriod === 'MATIN' ? 'matin' : 'après-midi'
@@ -147,8 +153,10 @@ export function RecapCard({
             </p>
             <p className="nr-recap__note">
               {deductedDays != null
-                ? 'Valeur calculée par le serveur (brouillon enregistré).'
-                : 'Enregistrez le brouillon pour obtenir le décompte exact du serveur.'}
+                ? deductedDaysSource === 'server'
+                  ? 'Décompte confirmé par le serveur.'
+                  : 'Décompte mis à jour en temps réel. Le serveur le confirme à l’enregistrement.'
+                : 'Sélectionnez une période complète pour calculer le décompte.'}
             </p>
           </section>
 

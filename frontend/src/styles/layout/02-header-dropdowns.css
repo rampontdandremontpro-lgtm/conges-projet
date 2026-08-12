@@ -1,0 +1,305 @@
+.header {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-header);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: var(--header-height);
+  padding: 0 var(--space-6);
+  background: var(--color-surface);
+  border-bottom: 1px solid rgba(10, 30, 69, 0.07);
+}
+
+.header__page-meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.header__page-title {
+  overflow: hidden;
+  color: #0a1e45;
+  font-size: 18px;
+  font-weight: 900;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.header__search {
+  width: 224px;
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 14px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: #eff3fa;
+  color: #6b7fa3;
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+}
+
+.header__search:focus-within {
+  border-color: rgba(27, 110, 243, 0.3);
+  background: #ffffff;
+}
+
+.header__search input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #0a1e45;
+  font-size: 13px;
+}
+
+.header__search input::placeholder {
+  color: #c4d0e8;
+}
+
+.icon-button {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-md);
+  color: var(--color-text-secondary);
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.icon-button:hover {
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+.icon-button--badge {
+  position: relative;
+}
+
+.header__badge {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  display: grid;
+  place-items: center;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 5px;
+  border-radius: var(--radius-full);
+  background: var(--color-primary);
+  border: 2px solid var(--color-surface);
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: var(--font-weight-bold);
+  line-height: 1;
+}
+
+.dropdown {
+  position: relative;
+}
+
+.dropdown__panel {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: var(--z-dropdown);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  animation: dropdown-in var(--transition-fast);
+}
+
+.dropdown__panel--notifications {
+  width: 340px;
+}
+
+.dropdown__panel--user {
+  width: 240px;
+}
+
+@keyframes dropdown-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.notifications__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.notifications__title {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+.notifications__mark-all {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-accent);
+  transition: color var(--transition-fast);
+}
+
+.notifications__mark-all:hover:not(:disabled) {
+  color: var(--color-accent-hover);
+}
+
+.notifications__mark-all:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.notifications__list {
+  max-height: 360px;
+  overflow-y: auto;
+}
+
+.notification-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  transition: background var(--transition-fast);
+}
+
+.notification-item:last-child {
+  border-bottom: 0;
+}
+
+.notification-item:hover {
+  background: var(--color-bg);
+}
+
+.notification-item--unread {
+  background: var(--color-brand-100);
+}
+
+.notification-item--unread:hover {
+  background: var(--color-brand-100);
+}
+
+.notification-item__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.notification-item__text {
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+  line-height: 1.4;
+}
+
+.notification-item__time {
+  display: block;
+  margin-top: 2px;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.notification-item__dot {
+  width: 8px;
+  height: 8px;
+  margin-top: 5px;
+  border-radius: var(--radius-full);
+  background: var(--color-accent);
+  flex-shrink: 0;
+}
+
+.user-menu__button {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 4px 6px 4px 4px;
+  border-radius: var(--radius-full);
+  transition: background var(--transition-fast);
+}
+
+.user-menu__button:hover {
+  background: var(--color-bg);
+}
+
+.user-menu__avatar {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-full);
+  background: var(--color-accent-soft);
+  color: var(--color-accent-hover);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+}
+
+.user-menu__info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.25;
+}
+
+.user-menu__name {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+.user-menu__role {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.user-menu__chevron {
+  color: var(--color-text-muted);
+  transition: transform var(--transition-fast);
+}
+
+.user-menu__button[aria-expanded='true'] .user-menu__chevron {
+  transform: rotate(180deg);
+}
+
+.user-menu__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-2) var(--space-4);
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  text-align: left;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.user-menu__item:hover {
+  background: var(--color-bg);
+}
+
+.user-menu__item--danger {
+  color: var(--color-danger);
+}
+
+.user-menu__item--danger:hover {
+  background: var(--color-danger-soft);
+}
+
+.user-menu__divider {
+  height: 1px;
+  margin: var(--space-1) 0;
+  background: var(--color-border);
+}
+
