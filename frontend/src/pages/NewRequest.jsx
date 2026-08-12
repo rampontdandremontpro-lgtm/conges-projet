@@ -27,40 +27,28 @@ const DAY_PERIODS = {
   APRES_MIDI: 'Après-midi',
 }
 
-function SunPillIcon() {
+function SunPic({ size = 12 }) {
   return (
-    <svg
-      width="13"
-      height="13"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <circle cx="12" cy="12" r="4" />
-      <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" />
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <circle cx="8" cy="8" r="3" fill="#F59E0B" />
+      <path
+        d="M8 1.5V3M8 13V14.5M1.5 8H3M13 8H14.5M3.4 3.4L4.4 4.4M11.6 11.6L12.6 12.6M12.6 3.4L11.6 4.4M4.4 11.6L3.4 12.6"
+        stroke="#F59E0B"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
     </svg>
   )
 }
 
-function HalfPillIcon() {
+function MoonPic({ size = 12 }) {
   return (
-    <svg
-      width="13"
-      height="13"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <circle cx="12" cy="12" r="9" />
-      <path d="M12 21a9 9 0 0 1 0-18z" fill="currentColor" stroke="none" />
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <path
+        d="M14 10C12.8 12.6 10.1 14.3 7 14.3C3.7 14.3 1 11.6 1 8.3C1 5.2 3 2.8 5.8 2C5.1 3.1 4.7 4.4 4.7 5.8C4.7 9.5 7.7 12.5 11.4 12.5C12.3 12.5 13.2 12.3 14 10Z"
+        fill="#6366F1"
+        opacity="0.8"
+      />
     </svg>
   )
 }
@@ -229,13 +217,13 @@ export function NewRequest() {
     if (missing.length === 0) {
       return undefined
     }
-    missing.forEach((year) => fetchedYears.current.add(year))
     let cancelled = false
     Promise.all(missing.map((year) => getHolidays(year)))
       .then((results) => {
         if (cancelled) {
           return
         }
+        missing.forEach((year) => fetchedYears.current.add(year))
         const incoming = results.flat()
         setResources((prev) => {
           const merged = [...prev.holidays]
@@ -294,6 +282,9 @@ export function NewRequest() {
 
   const handlePick = (iso) => {
     setSelection((prev) => {
+      if (prev.startDate && iso === prev.startDate) {
+        return { ...prev, startDate: null, endDate: null }
+      }
       if (!prev.startDate || (prev.startDate && prev.endDate)) {
         return { ...prev, startDate: iso, endDate: null }
       }
@@ -391,6 +382,7 @@ export function NewRequest() {
   }
 
   const sameDay = selection.startDate && selection.startDate === selection.endDate
+  const hasCompleteRange = selection.startDate && selection.endDate && !sameDay
 
   const requestLabel =
     selection.startDate && selection.endDate && selectedType
@@ -465,13 +457,6 @@ export function NewRequest() {
                     }
                   >
                     <span className="nr-types__pill-name">{type.name}</span>
-                    {type.deductsPaidLeaveBalance && (
-                      <span
-                        className="nr-types__pill-dot"
-                        title="Déduit du solde de congés payés"
-                        aria-hidden="true"
-                      />
-                    )}
                   </button>
                 ))}
               </div>
@@ -480,31 +465,24 @@ export function NewRequest() {
 
           <div className="nr-grid">
             <div className="nr-col nr-col--main">
-              <section className="dash-card">
-              <div className="dash-card__header">
-                <div className="dash-card__heading">
-                  <span className="dash-card__title">Calendrier</span>
-                  <span className="dash-card__period">
-                    Cliquez deux fois pour délimiter une période continue
-                  </span>
-                </div>
-              </div>
-              <LeaveCalendar
-                months={months}
-                todayIso={todayIso}
-                selection={selection}
-                holidays={resources.holidays}
-                onPick={handlePick}
-                onPrev={goPrev}
-                onNext={goNext}
-              />
+              <section className="dash-card nr-cal-card">
+                <LeaveCalendar
+                  months={months}
+                  todayIso={todayIso}
+                  selection={selection}
+                  holidays={resources.holidays}
+                  onPick={handlePick}
+                  onPrev={goPrev}
+                  onNext={goNext}
+                />
+              </section>
 
-              {selectedType?.allowsHalfDays && (
-                <div className="nr-halfdays">
-                  <div className="nr-halfdays__heading">Demi-journées</div>
+              {hasCompleteRange && selectedType?.allowsHalfDays && (
+                <section className="nr-halfdays" style={{ animation: 'nr-halfdays-enter 0.18s var(--ease) both' }}>
+                  <p className="nr-halfdays__heading">Demi-journées</p>
                   <div className="nr-halfdays__groups">
                     <div className="nr-halfdays__group">
-                      <span className="nr-halfdays__label">Début de période</span>
+                      <span className="nr-halfdays__label">Début de la période</span>
                       <div className="nr-halfdays__pills">
                         {Object.entries(DAY_PERIODS).map(([value, label]) => (
                           <button
@@ -517,14 +495,14 @@ export function NewRequest() {
                               setSelection((prev) => ({ ...prev, startPeriod: value }))
                             }
                           >
-                            {value === 'MATIN' ? <SunPillIcon /> : <HalfPillIcon />}
+                            {value === 'MATIN' ? <SunPic size={12} /> : <MoonPic size={12} />}
                             {label}
                           </button>
                         ))}
                       </div>
                     </div>
                     <div className="nr-halfdays__group">
-                      <span className="nr-halfdays__label">Fin de période</span>
+                      <span className="nr-halfdays__label">Fin de la période</span>
                       <div className="nr-halfdays__pills">
                         {Object.entries(DAY_PERIODS).map(([value, label]) => (
                           <button
@@ -538,16 +516,15 @@ export function NewRequest() {
                               setSelection((prev) => ({ ...prev, endPeriod: value }))
                             }
                           >
-                            {value === 'MATIN' ? <SunPillIcon /> : <HalfPillIcon />}
+                            {value === 'MATIN' ? <SunPic size={12} /> : <MoonPic size={12} />}
                             {label}
                           </button>
                         ))}
                       </div>
                     </div>
                   </div>
-                </div>
+                </section>
               )}
-            </section>
           </div>
 
           <div className="nr-col nr-col--side">
