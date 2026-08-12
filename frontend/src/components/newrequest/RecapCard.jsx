@@ -1,10 +1,7 @@
 import { useState } from 'react'
 
 import { Icon } from '@/components/ui/Icon'
-import {
-  formatDays,
-  formatRangeCompactFR,
-} from '@/utils/format'
+import { formatDays, formatRangeCompactFR } from '@/utils/format'
 import { evaluateNotice } from '@/utils/leaveNotice'
 
 const DEROGATION_LABELS = {
@@ -15,12 +12,10 @@ const DEROGATION_LABELS = {
   UTILISEE: 'Utilisée',
 }
 
-function SoldeRow({ label, value, accent, muted }) {
+function SoldeRow({ label, value, tone }) {
   return (
-    <div className={`nr-solde__row${accent ? ' nr-solde__row--accent' : ''}`}>
-      <span className={muted ? 'nr-solde__label nr-solde__label--muted' : 'nr-solde__label'}>
-        {label}
-      </span>
+    <div className={`nr-solde__row${tone ? ` nr-solde__row--${tone}` : ''}`}>
+      <span className="nr-solde__label">{label}</span>
       <span className="nr-solde__value">{value}</span>
     </div>
   )
@@ -111,14 +106,9 @@ export function RecapCard({
   }
 
   return (
-    <aside className="dash-card nr-recap">
-      <div className="dash-card__header">
-        <div className="dash-card__heading">
-          <span className="dash-card__title">Récapitulatif</span>
-          <span className="dash-card__period">
-            {periodComplete ? 'Demande de congé' : 'En attente de sélection'}
-          </span>
-        </div>
+    <aside className="nr-recap">
+      <div className="nr-recap__header">
+        <h3>Récapitulatif</h3>
       </div>
 
       {!periodComplete ? (
@@ -126,16 +116,17 @@ export function RecapCard({
           <span className="nr-recap__empty-icon">
             <Icon name="calendar" size={22} />
           </span>
-          <p>Sélectionnez une période dans le calendrier.</p>
+          <p className="nr-recap__empty-title">Sélectionnez vos dates</p>
+          <p className="nr-recap__empty-text">
+            Cliquez sur le premier puis le dernier jour dans le calendrier.
+          </p>
         </div>
       ) : (
-        <>
+        <div className="nr-recap__content">
           <section className="nr-recap__block">
             <h4 className="nr-recap__subtitle">Période</h4>
             <p className="nr-recap__period-line">{formatRangeCompactFR(startDate, endDate)}</p>
-            {halfDayLabel && (
-              <span className="nr-recap__halfday">{halfDayLabel}</span>
-            )}
+            {halfDayLabel && <span className="nr-recap__halfday">{halfDayLabel}</span>}
             {leaveType && <span className="nr-recap__type">{leaveType.name}</span>}
           </section>
 
@@ -145,7 +136,10 @@ export function RecapCard({
               {deductedDays != null ? (
                 <>
                   <strong>{formatDays(deductedDays)}</strong>
-                  <span>{deductedDays === 1 ? 'jour' : 'jours'}</span>
+                  <span>
+                    {deductedDays === 1 ? 'jour' : 'jours'}
+                    <em>ouvrés décomptés</em>
+                  </span>
                 </>
               ) : (
                 <span className="nr-recap__days--pending">—</span>
@@ -212,11 +206,15 @@ export function RecapCard({
                 <h4 className="nr-recap__subtitle">Solde congés payés</h4>
                 <div className="nr-solde">
                   <SoldeRow label="Solde actuel" value={`${formatDays(balance.availableDays)} j`} />
-                  <SoldeRow label="Jours réservés" value={`−${formatDays(balance.reservedDays)} j`} muted />
+                  <SoldeRow
+                    label="Jours réservés"
+                    value={`−${formatDays(balance.reservedDays)} j`}
+                    tone="reserved"
+                  />
                   <SoldeRow
                     label="Cette demande"
                     value={deductedDays != null ? `−${formatDays(deductedDays)} j` : '—'}
-                    muted
+                    tone="danger"
                   />
                   <div className="nr-solde__divider" />
                   <SoldeRow
@@ -226,7 +224,7 @@ export function RecapCard({
                         ? balance.potentialDays - deductedDays
                         : balance.potentialDays,
                     )} j`}
-                    accent
+                    tone="success"
                   />
                 </div>
               </section>
@@ -241,9 +239,7 @@ export function RecapCard({
               <h4 className="nr-recap__subtitle">Solde congés payés</h4>
               <p className="nr-notice nr-notice--neutral">
                 <Icon name="info" size={15} />
-                <span>
-                  Cette demande n’est pas déduite du solde de congés payés.
-                </span>
+                <span>Cette demande n’est pas déduite du solde de congés payés.</span>
               </p>
             </section>
           )}
@@ -344,11 +340,9 @@ export function RecapCard({
                 'Signer et soumettre'
               )}
             </button>
-            {submitHint && !submitting && (
-              <p className="nr-recap__hint">{submitHint}</p>
-            )}
+            {submitHint && !submitting && <p className="nr-recap__hint">{submitHint}</p>}
           </div>
-        </>
+        </div>
       )}
     </aside>
   )

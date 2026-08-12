@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
-import { PageContainer } from '@/components/ui/PageContainer'
 import { Toast } from '@/components/ui/Toast'
 import { Icon } from '@/components/ui/Icon'
 import { LeaveCalendar } from '@/components/newrequest/LeaveCalendar'
@@ -54,8 +53,8 @@ function MoonPic({ size = 12 }) {
 }
 
 function currentMonth() {
-  const now = new Date()
-  return { year: now.getFullYear(), month: now.getMonth() }
+  const [year, month] = todayISO().split('-').map(Number)
+  return { year, month: month - 1 }
 }
 
 function nextMonthOf({ year, month }) {
@@ -235,9 +234,7 @@ export function NewRequest() {
           return { ...prev, holidays: merged }
         })
       })
-      .catch(() => {
-        // Les jours fériés restent facultatifs : le calendrier fonctionne sans.
-      })
+      .catch(() => undefined)
     return () => {
       cancelled = true
     }
@@ -381,8 +378,9 @@ export function NewRequest() {
     }
   }
 
-  const sameDay = selection.startDate && selection.startDate === selection.endDate
-  const hasCompleteRange = selection.startDate && selection.endDate && !sameDay
+  const hasCompleteRange = Boolean(
+    selection.startDate && selection.endDate && selection.startDate !== selection.endDate,
+  )
 
   const requestLabel =
     selection.startDate && selection.endDate && selectedType
@@ -390,17 +388,7 @@ export function NewRequest() {
       : ''
 
   return (
-    <PageContainer className="nr-page">
-      <header className="nr-page__header">
-        <div>
-          <h1 className="nr-page__title">Nouvelle demande de congé</h1>
-          <p className="nr-page__subtitle">
-            Sélectionnez un type de congé, une période dans le calendrier, puis
-            enregistrez et signez votre demande.
-          </p>
-        </div>
-      </header>
-
+    <div className="nr-page">
       {resources.loading ? (
         <div aria-busy="true">
           <div className="dash-card nr-skeleton-card nr-skeleton-card--types" />
@@ -430,18 +418,12 @@ export function NewRequest() {
           </button>
         </div>
       ) : (
-        <>
-          <section className="nr-types-card">
-            <div className="nr-types-card__heading">
-              <span className="dash-card__title">Type de congé</span>
-              <span className="nr-types-card__count">
-                {resources.leaveTypes.length} type(s) disponible(s)
-              </span>
-            </div>
+        <div className="nr-grid">
+          <div className="nr-col nr-col--main">
             {resources.leaveTypes.length === 0 ? (
-              <p className="nr-recap__note">
+              <div className="nr-types-empty">
                 Aucun type de congé n’est disponible pour votre profil.
-              </p>
+              </div>
             ) : (
               <div className="nr-types">
                 {displayLeaveTypes.map((type) => (
@@ -456,75 +438,71 @@ export function NewRequest() {
                       setSelection((prev) => ({ ...prev, leaveTypeId: type.id }))
                     }
                   >
-                    <span className="nr-types__pill-name">{type.name}</span>
+                    {type.name}
                   </button>
                 ))}
               </div>
             )}
-          </section>
 
-          <div className="nr-grid">
-            <div className="nr-col nr-col--main">
-              <section className="dash-card nr-cal-card">
-                <LeaveCalendar
-                  months={months}
-                  todayIso={todayIso}
-                  selection={selection}
-                  holidays={resources.holidays}
-                  onPick={handlePick}
-                  onPrev={goPrev}
-                  onNext={goNext}
-                />
-              </section>
+            <section className="nr-cal-card">
+              <LeaveCalendar
+                months={months}
+                todayIso={todayIso}
+                selection={selection}
+                holidays={resources.holidays}
+                onPick={handlePick}
+                onPrev={goPrev}
+                onNext={goNext}
+              />
+            </section>
 
-              {hasCompleteRange && selectedType?.allowsHalfDays && (
-                <section className="nr-halfdays" style={{ animation: 'nr-halfdays-enter 0.18s var(--ease) both' }}>
-                  <p className="nr-halfdays__heading">Demi-journées</p>
-                  <div className="nr-halfdays__groups">
-                    <div className="nr-halfdays__group">
-                      <span className="nr-halfdays__label">Début de la période</span>
-                      <div className="nr-halfdays__pills">
-                        {Object.entries(DAY_PERIODS).map(([value, label]) => (
-                          <button
-                            type="button"
-                            key={value}
-                            className={`nr-pill${
-                              selection.startPeriod === value ? ' nr-pill--active' : ''
-                            }`}
-                            onClick={() =>
-                              setSelection((prev) => ({ ...prev, startPeriod: value }))
-                            }
-                          >
-                            {value === 'MATIN' ? <SunPic size={12} /> : <MoonPic size={12} />}
-                            {label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="nr-halfdays__group">
-                      <span className="nr-halfdays__label">Fin de la période</span>
-                      <div className="nr-halfdays__pills">
-                        {Object.entries(DAY_PERIODS).map(([value, label]) => (
-                          <button
-                            type="button"
-                            key={value}
-                            className={`nr-pill${
-                              selection.endPeriod === value ? ' nr-pill--active' : ''
-                            }`}
-                            disabled={sameDay && selection.startPeriod === 'APRES_MIDI' && value === 'MATIN'}
-                            onClick={() =>
-                              setSelection((prev) => ({ ...prev, endPeriod: value }))
-                            }
-                          >
-                            {value === 'MATIN' ? <SunPic size={12} /> : <MoonPic size={12} />}
-                            {label}
-                          </button>
-                        ))}
-                      </div>
+            {hasCompleteRange && selectedType?.allowsHalfDays && (
+              <section className="nr-halfdays">
+                <p className="nr-halfdays__heading">Demi-journées</p>
+                <div className="nr-halfdays__groups">
+                  <div className="nr-halfdays__group">
+                    <span className="nr-halfdays__label">Début de la période</span>
+                    <div className="nr-halfdays__pills">
+                      {Object.entries(DAY_PERIODS).map(([value, label]) => (
+                        <button
+                          type="button"
+                          key={value}
+                          className={`nr-pill${
+                            selection.startPeriod === value ? ' nr-pill--active' : ''
+                          }`}
+                          onClick={() =>
+                            setSelection((prev) => ({ ...prev, startPeriod: value }))
+                          }
+                        >
+                          {value === 'MATIN' ? <SunPic size={12} /> : <MoonPic size={12} />}
+                          {label}
+                        </button>
+                      ))}
                     </div>
                   </div>
-                </section>
-              )}
+                  <div className="nr-halfdays__group">
+                    <span className="nr-halfdays__label">Fin de la période</span>
+                    <div className="nr-halfdays__pills">
+                      {Object.entries(DAY_PERIODS).map(([value, label]) => (
+                        <button
+                          type="button"
+                          key={value}
+                          className={`nr-pill${
+                            selection.endPeriod === value ? ' nr-pill--active' : ''
+                          }`}
+                          onClick={() =>
+                            setSelection((prev) => ({ ...prev, endPeriod: value }))
+                          }
+                        >
+                          {value === 'MATIN' ? <SunPic size={12} /> : <MoonPic size={12} />}
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </section>
+            )}
           </div>
 
           <div className="nr-col nr-col--side">
@@ -539,13 +517,12 @@ export function NewRequest() {
               derogation={derogation}
               saving={saving}
               submitting={submitting}
-                onSaveDraft={handleSaveDraft}
-                onSubmit={() => setSignatureOpen(true)}
-                onRequestDerogation={handleRequestDerogation}
-              />
-            </div>
+              onSaveDraft={handleSaveDraft}
+              onSubmit={() => setSignatureOpen(true)}
+              onRequestDerogation={handleRequestDerogation}
+            />
           </div>
-        </>
+        </div>
       )}
 
       <SignatureModal
@@ -562,6 +539,6 @@ export function NewRequest() {
       />
 
       <Toast kind={toast?.kind} message={toast?.message} onClose={() => setToast(null)} />
-    </PageContainer>
+    </div>
   )
 }

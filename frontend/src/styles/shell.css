@@ -234,12 +234,86 @@
   z-index: var(--z-header);
   display: flex;
   align-items: center;
-  justify-content: flex-end;
   gap: var(--space-2);
   height: var(--header-height);
   padding: 0 var(--space-6);
   background: var(--color-surface);
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1px solid rgba(10, 30, 69, 0.07);
+}
+
+.header__page-meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.header__breadcrumbs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 2px;
+  color: #a8c0e4;
+  font-size: 11px;
+  line-height: 1;
+}
+
+.header__breadcrumb {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.header__breadcrumb .is-current {
+  color: #0a1e45;
+  font-weight: 900;
+}
+
+.header__breadcrumb-separator {
+  color: #c4d0e8;
+}
+
+.header__page-title {
+  overflow: hidden;
+  color: #0a1e45;
+  font-size: 18px;
+  font-weight: 900;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.header__search {
+  width: 224px;
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 14px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: #eff3fa;
+  color: #6b7fa3;
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+}
+
+.header__search:focus-within {
+  border-color: rgba(27, 110, 243, 0.3);
+  background: #ffffff;
+}
+
+.header__search input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #0a1e45;
+  font-size: 13px;
+}
+
+.header__search input::placeholder {
+  color: #c4d0e8;
 }
 
 .icon-button {
@@ -735,6 +809,10 @@
   .header {
     padding-inline: var(--space-4);
   }
+
+  .header__search {
+    width: 190px;
+  }
 }
 
 @media (max-width: 767px) {
@@ -778,6 +856,14 @@
 
   .app-shell__content {
     padding: var(--space-4) var(--space-3) var(--space-8);
+  }
+
+  .header__search {
+    display: none;
+  }
+
+  .header__breadcrumbs {
+    display: none;
   }
 
   .app-shell__backdrop {
