@@ -9,7 +9,8 @@ import { NotFound } from '@/pages/shared/NotFound'
 import { Preview } from '@/pages/shared/Preview'
 import { DashboardGate } from '@/pages/shared/DashboardGate'
 import { NewRequest } from '@/pages/collab/NewRequestPage'
-import { NEW_REQUEST_ROLES } from '@/config/navigation'
+import { BalancesPage } from '@/pages/collab/BalancesPage'
+import { NEW_REQUEST_ROLES, ROLES } from '@/config/navigation'
 import { RoleRoute } from '@/auth/RoleRoute'
 
 export const router = createBrowserRouter([
@@ -30,6 +31,14 @@ export const router = createBrowserRouter([
         element: (
           <RoleRoute roles={NEW_REQUEST_ROLES}>
             <NewRequest />
+          </RoleRoute>
+        ),
+      },
+      {
+        path: 'my-balances',
+        element: (
+          <RoleRoute roles={[ROLES.COLLABORATEUR]}>
+            <BalancesPage />
           </RoleRoute>
         ),
       },

@@ -1,0 +1,174 @@
+import { useCallback, useEffect, useMemo, useState } from 'react'
+
+import { BalanceMetric } from '@/components/collab/balances/BalanceMetric'
+import { BalanceOverview } from '@/components/collab/balances/BalanceOverview'
+import { getBalanceSettings, getMyBalances } from '@/services/balances'
+import { formatDateNumericFR, formatDays, toISODate } from '@/utils/format'
+import { selectPrimaryBalance, settingsMap } from '@/utils/newRequest'
+
+import '@/styles/balances.css'
+
+function parseReferencePeriodDates(referencePeriod, startSetting = '06-01') {
+  const [startYear, endYear] = String(referencePeriod ?? '').split('-').map(Number)
+  const [month, day] = String(startSetting || '06-01').split('-').map(Number)
+
+  if (!startYear || !endYear || !month || !day) {
+    return null
+  }
+
+  const start = new Date(startYear, month - 1, day)
+  const nextStart = new Date(endYear, month - 1, day)
+  nextStart.setDate(nextStart.getDate() - 1)
+
+  return {
+    start: toISODate(start),
+    end: toISODate(nextStart),
+  }
+}
+
+function PageState({ title, text, onRetry }) {
+  return (
+    <div className="balances-state">
+      <strong>{title}</strong>
+      <span>{text}</span>
+      {onRetry && (
+        <button type="button" onClick={onRetry}>
+          Réessayer
+        </button>
+      )}
+    </div>
+  )
+}
+
+export function BalancesPage() {
+  const [state, setState] = useState({ loading: true, error: false, balances: [], settings: [] })
+
+  const load = useCallback(async () => {
+    setState((current) => ({ ...current, loading: true, error: false }))
+
+    try {
+      const [balancesResult, settingsResult] = await Promise.allSettled([
+        getMyBalances(),
+        getBalanceSettings(),
+      ])
+
+      if (balancesResult.status === 'rejected') {
+        throw balancesResult.reason
+      }
+
+      setState({
+        loading: false,
+        error: false,
+        balances: balancesResult.value ?? [],
+        settings: settingsResult.status === 'fulfilled' ? settingsResult.value ?? [] : [],
+      })
+    } catch {
+      setState({ loading: false, error: true, balances: [], settings: [] })
+    }
+  }, [])
+
+  useEffect(() => {
+    load()
+  }, [load])
+
+  const balance = useMemo(() => selectPrimaryBalance(state.balances), [state.balances])
+  const config = useMemo(() => settingsMap(state.settings), [state.settings])
+  const periodDates = balance
+    ? parseReferencePeriodDates(balance.referencePeriod, config.REFERENCE_PERIOD_START)
+    : null
+
+  if (state.loading) {
+    return (
+      <div className="balances-page">
+        <div className="balances-page__skeleton balances-page__skeleton--period" />
+        <div className="balances-page__skeleton balances-page__skeleton--overview" />
+        <div className="balances-page__skeleton balances-page__skeleton--potential" />
+        <div className="balances-page__cards balances-page__cards--loading">
+          <div className="balances-page__skeleton" />
+          <div className="balances-page__skeleton" />
+          <div className="balances-page__skeleton" />
+          <div className="balances-page__skeleton" />
+        </div>
+      </div>
+    )
+  }
+
+  if (state.error) {
+    return (
+      <div className="balances-page">
+        <PageState
+          title="Impossible de charger vos soldes"
+          text="Les informations de solde sont momentanément indisponibles."
+          onRetry={load}
+        />
+      </div>
+    )
+  }
+
+  if (!balance) {
+    return (
+      <div className="balances-page">
+        <PageState
+          title="Aucun solde disponible"
+          text="Votre solde apparaîtra ici dès qu’il sera initialisé par la RH."
+        />
+      </div>
+    )
+  }
+
+  const available = Number(balance.availableDays) || 0
+  const forecast = Number(balance.acquiredDays) || 0
+  const reserved = Number(balance.reservedDays) || 0
+  const acquisition = Math.max(0, forecast - available)
+  const potential = Math.max(0, forecast - reserved)
+  const periodLabel = periodDates
+    ? `${formatDateNumericFR(periodDates.start)} → ${formatDateNumericFR(periodDates.end)}`
+    : balance.referencePeriod
+
+  return (
+    <div className="balances-page">
+      <div className="balances-page__period">Période {periodLabel}</div>
+
+      <BalanceOverview
+        available={available}
+        acquisition={acquisition}
+        forecast={forecast}
+        reserved={reserved}
+        acquisitionSubtitle={periodDates ? `Acquis jusqu’au ${formatDateNumericFR(periodDates.end)}` : 'Acquis sur la période'}
+      />
+
+      <div className="balances-page__cards">
+        <BalanceMetric
+          label="Congés à utiliser"
+          value={available}
+          subtitle="Solde disponible aujourd’hui"
+          tone="blue"
+          icon="wallet"
+        />
+        <BalanceMetric
+          label="En cours d’acquisition"
+          value={acquisition}
+          subtitle={periodDates ? `Jours acquis d’ici le ${formatDateNumericFR(periodDates.end)}` : 'Jours acquis sur la période'}
+          tone="cyan"
+          icon="calendar"
+        />
+        <BalanceMetric
+          label="Prévisionnels"
+          value={forecast}
+          subtitle="Projection fin de période"
+          tone="navy"
+          icon="wallet"
+        />
+        <BalanceMetric
+          label="Jours réservés"
+          value={reserved}
+          subtitle="Demandes validées / en attente"
+          tone="orange"
+          icon="wallet"
+        />
+      </div>
+
+      <span className="balances-page__sr-only">Solde potentiel : {formatDays(potential)} jours</span>
+    </div>
+  )
+}

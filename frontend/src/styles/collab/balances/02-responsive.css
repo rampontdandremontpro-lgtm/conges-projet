@@ -1,0 +1,38 @@
+@media (max-width: 900px) {
+  .balances-page {
+    width: 100%;
+  }
+
+  .balances-overview {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .balances-page {
+    padding-top: 4px;
+  }
+
+  .balances-overview {
+    grid-template-columns: 1fr;
+    gap: 20px;
+    padding: 24px;
+  }
+
+  .balances-overview__metric > span {
+    min-height: 0;
+  }
+
+  .balances-potential-card__body {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .balances-potential-card__details {
+    align-items: flex-start;
+  }
+
+  .balances-page__cards {
+    grid-template-columns: 1fr;
+  }
+}
