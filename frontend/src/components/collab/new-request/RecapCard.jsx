@@ -213,11 +213,13 @@ export function RecapCard({
                 <h4 className="nr-recap__subtitle">Solde congés payés</h4>
                 <div className="nr-solde">
                   <SoldeRow label="Disponible aujourd’hui" value={`${formatDays(balance.availableDays)} j`} />
-                  <SoldeRow
-                    label="Déjà réservés"
-                    value={`−${formatDays(balance.reservedDays)} j`}
-                    tone="reserved"
-                  />
+                  {Number(balance.reservedDays ?? 0) > 0 && (
+                    <SoldeRow
+                      label="Déjà réservés"
+                      value={`−${formatDays(balance.reservedDays)} j`}
+                      tone="reserved"
+                    />
+                  )}
                   <SoldeRow
                     label="Cette demande"
                     value={deductedDays != null ? `−${formatDays(deductedDays)} j` : '—'}

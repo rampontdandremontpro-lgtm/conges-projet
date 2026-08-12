@@ -73,9 +73,13 @@ export function useNewRequestResources(months, setSelection) {
       .then((data) => {
         if (cancelled) return
         setResources({ loading: false, error: false, holidays: [], ...data })
+        const defaultLeaveType =
+          data.leaveTypes.find((type) => type.deductsPaidLeaveBalance) ??
+          data.leaveTypes[0] ??
+          null
         setSelection((previous) => ({
           ...previous,
-          leaveTypeId: previous.leaveTypeId ?? data.leaveTypes[0]?.id ?? null,
+          leaveTypeId: previous.leaveTypeId ?? defaultLeaveType?.id ?? null,
         }))
       })
       .catch(() => {
@@ -91,11 +95,21 @@ export function useNewRequestResources(months, setSelection) {
   const retryResources = useCallback(() => {
     setResources((previous) => ({ ...previous, loading: true, error: false }))
     fetchAll()
-      .then((data) => setResources({ loading: false, error: false, holidays: [], ...data }))
+      .then((data) => {
+        const defaultLeaveType =
+          data.leaveTypes.find((type) => type.deductsPaidLeaveBalance) ??
+          data.leaveTypes[0] ??
+          null
+        setResources({ loading: false, error: false, holidays: [], ...data })
+        setSelection((previous) => ({
+          ...previous,
+          leaveTypeId: previous.leaveTypeId ?? defaultLeaveType?.id ?? null,
+        }))
+      })
       .catch(() =>
         setResources((previous) => ({ ...previous, loading: false, error: true })),
       )
-  }, [fetchAll])
+  }, [fetchAll, setSelection])
 
   useEffect(() => {
     const years = [...new Set([months[0].year, months[1].year, months[1].year + 1])]
