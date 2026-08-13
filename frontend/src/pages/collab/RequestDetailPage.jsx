@@ -10,6 +10,7 @@ import {
   downloadValidationPdf,
   getAbsenceDeclaration,
   getAbsenceDocuments,
+  getLeaveDocuments,
   getLeaveRequest,
   requestLeaveCancellation,
   respondLeaveCancellation,
@@ -107,8 +108,11 @@ export function RequestDetailPage() {
     setState((current) => ({ ...current, loading: true, error: false }))
     try {
       if (isLeave) {
-        const request = await getLeaveRequest(numericId)
-        setState({ loading: false, request, documents: [], error: false })
+        const [request, documents] = await Promise.all([
+          getLeaveRequest(numericId),
+          getLeaveDocuments(numericId),
+        ])
+        setState({ loading: false, request, documents: documents ?? [], error: false })
       } else {
         const [request, documents] = await Promise.all([
           getAbsenceDeclaration(numericId),
@@ -142,6 +146,16 @@ export function RequestDetailPage() {
 
   const rejectedDocument = useMemo(
     () => state.documents.find((document) => document.status === 'REJETE') ?? null,
+    [state.documents],
+  )
+
+  const validationPdfAvailable = useMemo(
+    () => state.documents.some((document) => document.documentKind === 'PDF_VALIDATION'),
+    [state.documents],
+  )
+
+  const cancellationPdfAvailable = useMemo(
+    () => state.documents.some((document) => document.documentKind === 'PDF_ANNULATION'),
     [state.documents],
   )
 
@@ -337,10 +351,16 @@ export function RequestDetailPage() {
               </>
             )}
 
-            {isLeave && ['VALIDEE', 'ANNULATION_EN_ATTENTE_ACCORD'].includes(request.status) && (
+            {isLeave && validationPdfAvailable && ['VALIDEE', 'ANNULATION_EN_ATTENTE_ACCORD'].includes(request.status) && (
               <button type="button" className="request-detail-button request-detail-button--secondary" disabled={Boolean(busy)} onClick={() => run('download', () => downloadValidationPdf(request.id), null, false)}>
                 <Icon name="download" size={16} /> {busy === 'download' ? 'Téléchargement…' : 'Télécharger le PDF'}
               </button>
+            )}
+
+            {isLeave && !validationPdfAvailable && ['VALIDEE', 'ANNULATION_EN_ATTENTE_ACCORD'].includes(request.status) && (
+              <div className="request-detail-consent-note">
+                Le PDF officiel n’est pas disponible pour cette ancienne donnée. Les nouvelles validations génèrent automatiquement le document signé.
+              </div>
             )}
 
             {isLeave && request.status === 'VALIDEE' && (
@@ -369,12 +389,21 @@ export function RequestDetailPage() {
 
             {isLeave && request.status === 'ANNULEE_APRES_VALIDATION' && (
               <>
-                <button type="button" className="request-detail-button request-detail-button--secondary" disabled={Boolean(busy)} onClick={() => run('download-original', () => downloadValidationPdf(request.id), null, false)}>
-                  <Icon name="download" size={16} /> PDF de validation
-                </button>
-                <button type="button" className="request-detail-button request-detail-button--orange" disabled={Boolean(busy)} onClick={() => run('download-cancel', () => downloadCancellationPdf(request.id), null, false)}>
-                  <Icon name="download" size={16} /> PDF d’annulation
-                </button>
+                {validationPdfAvailable && (
+                  <button type="button" className="request-detail-button request-detail-button--secondary" disabled={Boolean(busy)} onClick={() => run('download-original', () => downloadValidationPdf(request.id), null, false)}>
+                    <Icon name="download" size={16} /> PDF de validation
+                  </button>
+                )}
+                {cancellationPdfAvailable && (
+                  <button type="button" className="request-detail-button request-detail-button--orange" disabled={Boolean(busy)} onClick={() => run('download-cancel', () => downloadCancellationPdf(request.id), null, false)}>
+                    <Icon name="download" size={16} /> PDF d’annulation
+                  </button>
+                )}
+                {!validationPdfAvailable && !cancellationPdfAvailable && (
+                  <div className="request-detail-consent-note">
+                    Aucun PDF officiel n’est disponible pour cette ancienne donnée.
+                  </div>
+                )}
               </>
             )}
 

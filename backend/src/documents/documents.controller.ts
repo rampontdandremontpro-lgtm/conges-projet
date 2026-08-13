@@ -128,12 +128,15 @@ export class DocumentsController {
   }
 
   @Get(':id/download')
-  @Roles(UserRole.RH)
   async download(
     @Param('id', ParseIntPipe) id: number,
+    @Req() request: AuthenticatedRequest,
     @Res() response: Response,
   ): Promise<void> {
-    const result = await this.documentsService.openForRh(id);
+    const result = await this.documentsService.openForUser(
+      id,
+      request.user,
+    );
     const originalName =
       result.document.originalName ?? `justificatif-${result.document.id}`;
     const mimeType =

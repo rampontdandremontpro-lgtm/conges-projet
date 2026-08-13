@@ -1,7 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
+import { DocumentPreviewModal } from '@/components/collab/documents/DocumentPreviewModal'
 import { Icon } from '@/components/ui/Icon'
-import { deleteMyDocument, downloadOfficialPdf, getMyDocuments, replaceMyDocument } from '@/services/documents'
+import {
+  deleteMyDocument,
+  downloadOfficialPdf,
+  fetchMyJustificatif,
+  fetchOfficialPdf,
+  getMyDocuments,
+  replaceMyDocument,
+  triggerBlobDownload,
+} from '@/services/documents'
 import { getMyAbsenceDeclarations, getMyLeaveRequests } from '@/services/myRequests'
 import { formatDateNumericFR, formatRangeNumericFR } from '@/utils/format'
 
@@ -102,14 +111,27 @@ function EmptyState({ tab }) {
   )
 }
 
-function JustificatifCard({ document, context, busy, onReplace, onDelete }) {
+function JustificatifCard({ document, context, busy, onReplace, onDelete, onPreview }) {
   const inputRef = useRef(null)
   const meta = statusMeta(document.status)
   const canManage = ['EN_ATTENTE', 'REJETE'].includes(document.status)
   const uploadedDate = datePart(document.uploadedAt)
 
   return (
-    <article className="document-card">
+    <article
+      className="document-card document-card--clickable"
+      role="button"
+      tabIndex={0}
+      aria-label={`Ouvrir ${document.originalName || 'le justificatif'}`}
+      onClick={() => onPreview(document)}
+      onKeyDown={(event) => {
+        if (event.target !== event.currentTarget) return
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault()
+          onPreview(document)
+        }
+      }}
+    >
       <span className="document-card__icon document-card__icon--file" aria-hidden="true">
         <Icon name="file" size={21} />
       </span>
@@ -159,7 +181,10 @@ function JustificatifCard({ document, context, busy, onReplace, onDelete }) {
               type="button"
               className="document-action document-action--secondary"
               disabled={busy}
-              onClick={() => inputRef.current?.click()}
+              onClick={(event) => {
+                event.stopPropagation()
+                inputRef.current?.click()
+              }}
             >
               <Icon name="refresh" size={15} />
               Remplacer
@@ -168,7 +193,10 @@ function JustificatifCard({ document, context, busy, onReplace, onDelete }) {
               type="button"
               className="document-action document-action--danger"
               disabled={busy}
-              onClick={() => onDelete(document)}
+              onClick={(event) => {
+                event.stopPropagation()
+                onDelete(document)
+              }}
             >
               <Icon name="trash" size={15} />
               Supprimer
@@ -180,12 +208,25 @@ function JustificatifCard({ document, context, busy, onReplace, onDelete }) {
   )
 }
 
-function PdfCard({ document, context, busy, onDownload }) {
+function PdfCard({ document, context, busy, onDownload, onPreview }) {
   const generatedDate = datePart(document.uploadedAt)
   const isCancellation = document.documentKind === 'PDF_ANNULATION'
 
   return (
-    <article className="document-card">
+    <article
+      className="document-card document-card--clickable"
+      role="button"
+      tabIndex={0}
+      aria-label="Ouvrir le document PDF"
+      onClick={() => onPreview(document)}
+      onKeyDown={(event) => {
+        if (event.target !== event.currentTarget) return
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault()
+          onPreview(document)
+        }
+      }}
+    >
       <span className="document-card__icon document-card__icon--pdf" aria-hidden="true">
         <Icon name="doc" size={21} />
       </span>
@@ -216,7 +257,10 @@ function PdfCard({ document, context, busy, onDownload }) {
           type="button"
           className="document-action document-action--primary"
           disabled={busy}
-          onClick={() => onDownload(document)}
+          onClick={(event) => {
+            event.stopPropagation()
+            onDownload(document)
+          }}
         >
           <Icon name="download" size={16} />
           {busy ? 'Téléchargement…' : 'Télécharger'}
@@ -238,6 +282,14 @@ export function DocumentsPage() {
   })
   const [busyId, setBusyId] = useState(null)
   const [feedback, setFeedback] = useState(null)
+  const [preview, setPreview] = useState({
+    document: null,
+    loading: false,
+    blob: null,
+    blobUrl: null,
+    mimeType: null,
+    error: null,
+  })
 
   const load = useCallback(async () => {
     setState((current) => ({ ...current, loading: true, error: false, partialError: false }))
@@ -279,6 +331,10 @@ export function DocumentsPage() {
     const timer = window.setTimeout(() => setFeedback(null), 5000)
     return () => window.clearTimeout(timer)
   }, [feedback])
+
+  useEffect(() => () => {
+    if (preview.blobUrl) URL.revokeObjectURL(preview.blobUrl)
+  }, [preview.blobUrl])
 
   const leaveRequestsById = useMemo(
     () => new Map(state.leaveRequests.map((request) => [Number(request.id), request])),
@@ -363,6 +419,73 @@ export function DocumentsPage() {
     }
   }
 
+  const closePreview = useCallback(() => {
+    setPreview((current) => {
+      if (current.blobUrl) URL.revokeObjectURL(current.blobUrl)
+      return {
+        document: null,
+        loading: false,
+        blob: null,
+        blobUrl: null,
+        mimeType: null,
+        error: null,
+      }
+    })
+  }, [])
+
+  const handlePreview = useCallback(async (document) => {
+    setPreview((current) => {
+      if (current.blobUrl) URL.revokeObjectURL(current.blobUrl)
+      return {
+        document,
+        loading: true,
+        blob: null,
+        blobUrl: null,
+        mimeType: document.mimeType || null,
+        error: null,
+      }
+    })
+
+    try {
+      const result = document.documentKind === 'JUSTIFICATIF'
+        ? await fetchMyJustificatif(document.id)
+        : await fetchOfficialPdf(document)
+      const blobUrl = URL.createObjectURL(result.blob)
+
+      setPreview((current) => {
+        if (current.document?.id !== document.id) {
+          URL.revokeObjectURL(blobUrl)
+          return current
+        }
+        return {
+          document,
+          loading: false,
+          blob: result.blob,
+          blobUrl,
+          mimeType: result.mimeType,
+          error: null,
+        }
+      })
+    } catch (error) {
+      setPreview((current) => {
+        if (current.document?.id !== document.id) return current
+        return {
+          ...current,
+          loading: false,
+          error: error.response?.data?.message || error.message || 'Le fichier est momentanément indisponible.',
+        }
+      })
+    }
+  }, [])
+
+  const handlePreviewDownload = () => {
+    if (!preview.document || !preview.blob) return
+    triggerBlobDownload(
+      preview.blob,
+      preview.document.originalName || (preview.document.documentKind === 'JUSTIFICATIF' ? 'justificatif' : 'document.pdf'),
+    )
+  }
+
   const visibleDocuments = tab === 'justificatifs' ? justificatifs : pdfs
 
   return (
@@ -430,6 +553,7 @@ export function DocumentsPage() {
                 busy={busyId === document.id}
                 onReplace={handleReplace}
                 onDelete={handleDelete}
+                onPreview={handlePreview}
               />
             ) : (
               <PdfCard
@@ -438,6 +562,7 @@ export function DocumentsPage() {
                 context={context}
                 busy={busyId === document.id}
                 onDownload={handleDownload}
+                onPreview={handlePreview}
               />
             )
           })}
@@ -447,9 +572,19 @@ export function DocumentsPage() {
       {tab === 'justificatifs' && !state.loading && !state.error && (
         <p className="documents-confidentiality">
           <Icon name="shield" size={15} />
-          Le contenu des justificatifs est consultable uniquement par la RH. Vous pouvez remplacer ou supprimer un justificatif tant qu’il n’a pas été accepté.
+          Vous pouvez consulter vos propres justificatifs ici. Leur contenu reste confidentiel et n’est accessible qu’à vous-même et à la RH.
         </p>
       )}
+
+      <DocumentPreviewModal
+        document={preview.document}
+        blobUrl={preview.blobUrl}
+        mimeType={preview.mimeType}
+        loading={preview.loading}
+        error={preview.error}
+        onClose={closePreview}
+        onDownload={handlePreviewDownload}
+      />
     </section>
   )
 }

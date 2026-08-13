@@ -578,6 +578,48 @@ export class DocumentsService {
     };
   }
 
+  async openForUser(
+    id: number,
+    authenticatedUser: AuthenticatedUser,
+  ): Promise<{
+    document: DocumentMetadataResponse;
+    absolutePath: string;
+  }> {
+    const document = await this.findActiveOne(id);
+
+    if (document.documentKind !== DocumentKind.JUSTIFICATIF) {
+      throw new BadRequestException(
+        'Cette route est réservée aux justificatifs.',
+      );
+    }
+
+    await this.ensureCanManageDocument(
+      document,
+      authenticatedUser,
+    );
+
+    const absolutePath = this.resolveStoragePath(
+      document.storageKey,
+    );
+
+    try {
+      await fs.access(absolutePath);
+    } catch {
+      throw new NotFoundException(
+        'Le fichier physique du justificatif est introuvable.',
+      );
+    }
+
+    this.logger.log(
+      `Consultation du justificatif ${document.id} par l’utilisateur ${authenticatedUser.id} (${authenticatedUser.role}).`,
+    );
+
+    return {
+      document: this.toMetadata(document),
+      absolutePath,
+    };
+  }
+
   createReadStream(absolutePath: string) {
     return createReadStream(absolutePath);
   }

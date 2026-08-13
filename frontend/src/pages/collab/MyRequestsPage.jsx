@@ -4,6 +4,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { MyRequestCard } from '@/components/collab/requests/MyRequestCard'
 import { getRequestStatusLabel } from '@/components/collab/requests/RequestStatusBadge'
 import { Icon } from '@/components/ui/Icon'
+import { getMyDocuments } from '@/services/documents'
 import { getMyAbsenceDeclarations, getMyLeaveRequests } from '@/services/myRequests'
 import { deleteAbsenceDraft, deleteLeaveDraft, downloadCancellationPdf, downloadValidationPdf } from '@/services/requestDetails'
 import { formatDays, formatRangeNumericFR } from '@/utils/format'
@@ -157,8 +158,10 @@ export function MyRequestsPage() {
     loading: true,
     leaveRequests: [],
     absences: [],
+    documents: [],
     leaveError: false,
     absenceError: false,
+    documentsError: false,
   })
 
   const load = useCallback(async () => {
@@ -167,19 +170,23 @@ export function MyRequestsPage() {
       loading: true,
       leaveError: false,
       absenceError: false,
+      documentsError: false,
     }))
 
-    const [leaveResult, absenceResult] = await Promise.allSettled([
+    const [leaveResult, absenceResult, documentsResult] = await Promise.allSettled([
       getMyLeaveRequests(),
       getMyAbsenceDeclarations(),
+      getMyDocuments(),
     ])
 
     setState({
       loading: false,
       leaveRequests: leaveResult.status === 'fulfilled' ? leaveResult.value ?? [] : [],
       absences: absenceResult.status === 'fulfilled' ? absenceResult.value ?? [] : [],
+      documents: documentsResult.status === 'fulfilled' ? documentsResult.value ?? [] : [],
       leaveError: leaveResult.status === 'rejected',
       absenceError: absenceResult.status === 'rejected',
+      documentsError: documentsResult.status === 'rejected',
     })
   }, [])
 
@@ -188,10 +195,39 @@ export function MyRequestsPage() {
   }, [load])
 
   const items = useMemo(() => {
-    const leaveItems = state.leaveRequests.map(normalizeLeaveRequest)
+    const availablePdfKindsByRequestId = new Map()
+    for (const document of state.documents) {
+      if (!document?.leaveRequestId) continue
+      if (!['PDF_VALIDATION', 'PDF_ANNULATION'].includes(document.documentKind)) continue
+
+      const requestId = Number(document.leaveRequestId)
+      const kinds = availablePdfKindsByRequestId.get(requestId) ?? new Set()
+      kinds.add(document.documentKind)
+      availablePdfKindsByRequestId.set(requestId, kinds)
+    }
+
+    const leaveItems = state.leaveRequests.map((request) => {
+      const item = normalizeLeaveRequest(request)
+      const kinds = availablePdfKindsByRequestId.get(Number(request.id)) ?? new Set()
+      const downloadDocumentKind = request.status === 'ANNULEE_APRES_VALIDATION'
+        ? kinds.has('PDF_ANNULATION')
+          ? 'PDF_ANNULATION'
+          : kinds.has('PDF_VALIDATION')
+            ? 'PDF_VALIDATION'
+            : null
+        : kinds.has('PDF_VALIDATION')
+          ? 'PDF_VALIDATION'
+          : null
+
+      return {
+        ...item,
+        canDownloadPdf: Boolean(downloadDocumentKind),
+        downloadDocumentKind,
+      }
+    })
     const absenceItems = state.absences.map(normalizeAbsenceDeclaration)
     return [...leaveItems, ...absenceItems].sort(sortNewestFirst)
-  }, [state.leaveRequests, state.absences])
+  }, [state.leaveRequests, state.absences, state.documents])
 
   const searchQuery = searchParams.get('q') ?? ''
 
@@ -201,7 +237,7 @@ export function MyRequestsPage() {
   )
 
   const totalFailure = !state.loading && state.leaveError && state.absenceError
-  const partialFailure = !state.loading && !totalFailure && (state.leaveError || state.absenceError)
+  const partialFailure = !state.loading && !totalFailure && (state.leaveError || state.absenceError || state.documentsError)
 
   useEffect(() => {
     if (!feedback) return undefined
@@ -257,7 +293,7 @@ export function MyRequestsPage() {
     if (action === 'download' && item.source === 'leave') {
       setBusyKey(item.key)
       try {
-        if (item.status === 'ANNULEE_APRES_VALIDATION') {
+        if (item.downloadDocumentKind === 'PDF_ANNULATION') {
           await downloadCancellationPdf(item.id)
         } else {
           await downloadValidationPdf(item.id)

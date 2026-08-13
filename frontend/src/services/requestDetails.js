@@ -26,6 +26,11 @@ export async function getAbsenceDocuments(id) {
   return data
 }
 
+export async function getLeaveDocuments(id) {
+  const { data } = await apiClient.get(`/documents/request/${id}`)
+  return data
+}
+
 export async function deleteLeaveDraft(id) {
   const { data: documents } = await apiClient.get(`/documents/request/${id}`)
   for (const document of documents ?? []) {

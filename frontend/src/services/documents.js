@@ -18,18 +18,18 @@ export async function deleteMyDocument(documentId) {
   return data
 }
 
-function triggerBlobDownload(blob, filename) {
-  const url = URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  link.href = url
-  link.download = filename || 'document.pdf'
-  document.body.appendChild(link)
-  link.click()
-  link.remove()
-  window.setTimeout(() => URL.revokeObjectURL(url), 500)
+export async function fetchMyJustificatif(documentId) {
+  const response = await apiClient.get(`/documents/${documentId}/download`, {
+    responseType: 'blob',
+  })
+
+  return {
+    blob: response.data,
+    mimeType: response.headers['content-type'] || response.data?.type || 'application/octet-stream',
+  }
 }
 
-export async function downloadOfficialPdf(document) {
+export async function fetchOfficialPdf(document) {
   const requestId = document?.leaveRequestId
   if (!requestId) {
     throw new Error('Ce document PDF n’est pas rattaché à une demande de congé.')
@@ -40,5 +40,30 @@ export async function downloadOfficialPdf(document) {
     : `/leave-requests/${requestId}/pdf`
 
   const response = await apiClient.get(endpoint, { responseType: 'blob' })
-  triggerBlobDownload(response.data, document.originalName || 'document.pdf')
+
+  return {
+    blob: response.data,
+    mimeType: response.headers['content-type'] || 'application/pdf',
+  }
+}
+
+export function triggerBlobDownload(blob, filename) {
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename || 'document'
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  window.setTimeout(() => URL.revokeObjectURL(url), 500)
+}
+
+export async function downloadOfficialPdf(document) {
+  const { blob } = await fetchOfficialPdf(document)
+  triggerBlobDownload(blob, document.originalName || 'document.pdf')
+}
+
+export async function downloadMyJustificatif(document) {
+  const { blob } = await fetchMyJustificatif(document.id)
+  triggerBlobDownload(blob, document.originalName || 'justificatif')
 }

@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   InternalServerErrorException,
@@ -504,8 +505,8 @@ export class DocumentPdfService {
       leaveRequest.validatorSignatureData === null ||
       leaveRequest.validatorSignedAt === null
     ) {
-      throw new InternalServerErrorException(
-        'La demande validée ne contient pas toutes les informations nécessaires à la génération du PDF.',
+      throw new ConflictException(
+        'Le PDF officiel n’est pas disponible pour cette ancienne demande, car les signatures figées nécessaires au document ne sont pas présentes.',
       );
     }
 

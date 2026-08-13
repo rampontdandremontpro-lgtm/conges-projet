@@ -15,7 +15,11 @@ function actionMeta(item) {
     return { type: 'delete', icon: 'trash', label: 'Supprimer le brouillon' }
   }
 
-  if (item.source === 'leave' && ['VALIDEE', 'ANNULATION_EN_ATTENTE_ACCORD', 'ANNULEE_APRES_VALIDATION'].includes(item.status)) {
+  if (
+    item.source === 'leave' &&
+    item.canDownloadPdf &&
+    ['VALIDEE', 'ANNULATION_EN_ATTENTE_ACCORD', 'ANNULEE_APRES_VALIDATION'].includes(item.status)
+  ) {
     return { type: 'download', icon: 'download', label: 'Télécharger le PDF' }
   }
 
