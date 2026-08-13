@@ -1,0 +1,34 @@
+@media (max-width: 767px) {
+  .profile-page { padding-top: 0; }
+  .profile-hero {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    padding: 20px;
+  }
+  .profile-hero__avatar {
+    width: 64px;
+    height: 64px;
+    flex-basis: 64px;
+    font-size: 20px;
+  }
+  .profile-hero__identity { min-width: calc(100% - 84px); }
+  .profile-hero h2 { font-size: 20px; }
+  .profile-hero__settings {
+    width: 100%;
+  }
+  .profile-details { padding: 20px; }
+  .profile-section-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .profile-details__grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 479px) {
+  .profile-hero__title-row {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 5px;
+  }
+  .profile-detail { min-height: 72px; }
+}

@@ -9,6 +9,7 @@ import * as bcrypt from 'bcrypt';
 import { createHash } from 'node:crypto';
 
 import { UsersService } from '../users/users.service';
+import { ChangePasswordDto } from './dto/change-password.dto';
 import { DefinePasswordDto } from './dto/define-password.dto';
 import { LoginDto } from './dto/login.dto';
 import { RequestPasswordDto } from './dto/request-password.dto';
@@ -123,6 +124,52 @@ export class AuthService {
     return {
       message:
         'Votre mot de passe a été défini avec succès. Vous pouvez maintenant vous connecter.',
+    };
+  }
+
+  async changePassword(
+    userId: number,
+    changePasswordDto: ChangePasswordDto,
+  ): Promise<{ message: string }> {
+    const user = await this.usersService.findByIdWithPassword(userId);
+
+    if (!user || !user.passwordHash) {
+      throw new BadRequestException(
+        'Ce compte ne possède pas de mot de passe local modifiable depuis l’application.',
+      );
+    }
+
+    const currentPasswordIsValid = await bcrypt.compare(
+      changePasswordDto.currentPassword,
+      user.passwordHash,
+    );
+
+    if (!currentPasswordIsValid) {
+      throw new BadRequestException(
+        'Le mot de passe actuel est incorrect.',
+      );
+    }
+
+    const samePassword = await bcrypt.compare(
+      changePasswordDto.newPassword,
+      user.passwordHash,
+    );
+
+    if (samePassword) {
+      throw new BadRequestException(
+        'Le nouveau mot de passe doit être différent du mot de passe actuel.',
+      );
+    }
+
+    const passwordHash = await bcrypt.hash(
+      changePasswordDto.newPassword,
+      12,
+    );
+
+    await this.usersService.setPassword(user.id, passwordHash);
+
+    return {
+      message: 'Votre mot de passe a été modifié avec succès.',
     };
   }
 

@@ -105,6 +105,94 @@ export class UsersService {
       .getOne();
   }
 
+  async findByIdWithPassword(id: number): Promise<User | null> {
+    return this.userRepository
+      .createQueryBuilder('user')
+      .addSelect('user.passwordHash')
+      .leftJoinAndSelect('user.service', 'service')
+      .where('user.id = :id', { id })
+      .getOne();
+  }
+
+  async getOwnProfile(id: number) {
+    const user = await this.findOne(id);
+
+    return {
+      id: user.id,
+      nom: user.nom,
+      prenom: user.prenom,
+      email: user.email,
+      role: user.role,
+      employmentType: user.employmentType,
+      hireDate: user.hireDate,
+      presenceStatus: user.presenceStatus,
+      serviceId: user.serviceId,
+      service: user.service
+        ? {
+            id: user.service.id,
+            name: user.service.name,
+            serviceType: user.service.serviceType,
+            externalCompanyName: user.service.externalCompanyName,
+          }
+        : null,
+      signature: {
+        configured: Boolean(user.signatureType),
+        type: user.signatureType,
+        updatedAt: user.signatureUpdatedAt,
+      },
+    };
+  }
+
+  async getOwnSignature(id: number) {
+    const user = await this.userRepository
+      .createQueryBuilder('user')
+      .addSelect('user.signatureData')
+      .where('user.id = :id', { id })
+      .getOne();
+
+    if (!user) {
+      throw new NotFoundException(
+        `L’utilisateur ${id} est introuvable.`,
+      );
+    }
+
+    return {
+      configured: Boolean(user.signatureType && user.signatureData),
+      signatureType: user.signatureType,
+      signatureData: user.signatureData,
+      updatedAt: user.signatureUpdatedAt,
+    };
+  }
+
+  async updateOwnSignature(
+    id: number,
+    signatureType: 'DRAWN' | 'INITIALS',
+    signatureDataValue: string,
+  ) {
+    const user = await this.findOne(id);
+    const signatureData = this.validateAndNormalizeSignature(
+      signatureType,
+      signatureDataValue,
+    );
+
+    user.signatureType = signatureType;
+    user.signatureData = signatureData;
+    user.signatureUpdatedAt = new Date();
+    await this.userRepository.save(user);
+
+    return this.getOwnSignature(id);
+  }
+
+  async deleteOwnSignature(id: number) {
+    const user = await this.findOne(id);
+    user.signatureType = null;
+    user.signatureData = null;
+    user.signatureUpdatedAt = null;
+    await this.userRepository.save(user);
+
+    return { message: 'Votre signature enregistrée a été supprimée.' };
+  }
+
   async setPassword(id: number, passwordHash: string): Promise<void> {
     const result = await this.userRepository.update(
       { id },
@@ -199,6 +287,67 @@ export class UsersService {
     user.isActive = true;
     await this.userRepository.save(user);
     return this.findOne(id);
+  }
+
+  private validateAndNormalizeSignature(
+    signatureType: 'DRAWN' | 'INITIALS',
+    signatureDataValue: string,
+  ): string {
+    const signatureData = signatureDataValue.trim();
+
+    if (signatureType === 'INITIALS') {
+      const letterCount = (signatureData.match(/\p{L}/gu) ?? []).length;
+
+      if (
+        letterCount < 2 ||
+        letterCount > 6 ||
+        !/^[\p{L}.\-\s]+$/u.test(signatureData)
+      ) {
+        throw new BadRequestException(
+          'Les initiales doivent contenir entre 2 et 6 lettres.',
+        );
+      }
+
+      return signatureData.toUpperCase();
+    }
+
+    const prefix = 'data:image/png;base64,';
+
+    if (!signatureData.startsWith(prefix)) {
+      throw new BadRequestException(
+        'La signature dessinée doit être transmise au format PNG encodé en base64.',
+      );
+    }
+
+    const base64Value = signatureData.slice(prefix.length);
+
+    if (!/^[A-Za-z0-9+/]+={0,2}$/.test(base64Value)) {
+      throw new BadRequestException(
+        'Les données de la signature dessinée ne sont pas valides.',
+      );
+    }
+
+    const decodedSignature = Buffer.from(base64Value, 'base64');
+    const pngHeader = Buffer.from([
+      0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+    ]);
+
+    if (
+      decodedSignature.length < pngHeader.length ||
+      !decodedSignature.subarray(0, pngHeader.length).equals(pngHeader)
+    ) {
+      throw new BadRequestException(
+        'La signature dessinée doit contenir une véritable image PNG.',
+      );
+    }
+
+    if (decodedSignature.length > 500 * 1024) {
+      throw new BadRequestException(
+        'La signature dessinée ne doit pas dépasser 500 Ko.',
+      );
+    }
+
+    return signatureData;
   }
 
   private async resolveServiceForCreation(

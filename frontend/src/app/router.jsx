@@ -6,7 +6,6 @@ import { SectionGuard } from '@/auth/SectionGuard'
 import { AppLayout } from '@/layouts/AppLayout'
 import { LoginPage } from '@/pages/auth/LoginPage'
 import { NotFound } from '@/pages/shared/NotFound'
-import { Preview } from '@/pages/shared/Preview'
 import { DashboardGate } from '@/pages/shared/DashboardGate'
 import { NewRequest } from '@/pages/collab/NewRequestPage'
 import { HistoryPage } from '@/pages/collab/HistoryPage'
@@ -15,6 +14,8 @@ import { DeclareAbsencePage } from '@/pages/collab/DeclareAbsencePage'
 import { DocumentsPage } from '@/pages/collab/DocumentsPage'
 import { NotificationsPage } from '@/pages/collab/NotificationsPage'
 import { RequestDetailPage } from '@/pages/collab/RequestDetailPage'
+import { ProfilePage } from '@/pages/collab/ProfilePage'
+import { SettingsPage } from '@/pages/collab/SettingsPage'
 import { NEW_REQUEST_ROLES, ROLES } from '@/config/navigation'
 import { RoleRoute } from '@/auth/RoleRoute'
 
@@ -112,8 +113,8 @@ export const router = createBrowserRouter([
         ),
       },
       { path: 'my-balances', element: <Navigate to="/app/history" replace /> },
-      { path: 'profile', element: <Preview /> },
-      { path: 'settings', element: <Preview /> },
+      { path: 'profile', element: <ProfilePage /> },
+      { path: 'settings', element: <SettingsPage /> },
       { path: ':section', element: <SectionGuard /> },
     ],
   },

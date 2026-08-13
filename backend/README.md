@@ -75,6 +75,25 @@ POST /api/auth/define-password
 
 Le jeton temporaire est affiché dans le terminal NestJS tant que l'envoi par e-mail n'est pas intégré.
 
+
+## Profil et paramètres personnels
+
+Les utilisateurs connectés disposent des routes personnelles suivantes :
+
+```text
+GET    /api/users/me
+GET    /api/users/me/signature
+PUT    /api/users/me/signature
+DELETE /api/users/me/signature
+PATCH  /api/auth/change-password
+```
+
+`GET /api/users/me` renvoie les informations réelles du compte et du service sans permettre au collaborateur de modifier son rôle ou son affectation.
+
+La signature personnelle est stockée dans les colonnes existantes `signature_type`, `signature_data` et `signature_updated_at` de `users`. Aucune nouvelle table n'est nécessaire. Lors d'une soumission, la signature utilisée est toujours copiée dans la demande afin que les documents anciens ne changent jamais après une modification du profil.
+
+`PATCH /api/auth/change-password` exige le mot de passe actuel et un nouveau mot de passe d'au moins 12 caractères. Cette route concerne les comptes locaux de développement/test ; Microsoft Entra ID reste le mode d'authentification principal prévu en production.
+
 ## Schéma V1 actuel
 
 La base contient :

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 
 import { Icon } from '@/components/ui/Icon'
+import { getMySignature } from '@/services/profile'
 
 const INITIALS_PATTERN = /^[\p{L}.\-\s]+$/u
 
@@ -14,10 +15,35 @@ export function SignatureModal({ open, requestLabel, submitting, onClose, onConf
   const [initials, setInitials] = useState('')
   const [hasDrawing, setHasDrawing] = useState(false)
   const [error, setError] = useState(null)
+  const [savedSignature, setSavedSignature] = useState(null)
+  const [savedLoading, setSavedLoading] = useState(false)
 
   const canvasRef = useRef(null)
   const containerRef = useRef(null)
   const drawingRef = useRef(false)
+
+  useEffect(() => {
+    if (!open) return undefined
+
+    let active = true
+    setSavedLoading(true)
+    getMySignature()
+      .then((signature) => {
+        if (!active) return
+        setSavedSignature(signature)
+        if (signature?.configured) setMode('SAVED')
+      })
+      .catch(() => {
+        if (active) setSavedSignature(null)
+      })
+      .finally(() => {
+        if (active) setSavedLoading(false)
+      })
+
+    return () => {
+      active = false
+    }
+  }, [open])
 
   useEffect(() => {
     if (!open || mode !== 'DRAWN' || !canvasRef.current) {
@@ -92,6 +118,15 @@ export function SignatureModal({ open, requestLabel, submitting, onClose, onConf
 
   const handleConfirm = () => {
     setError(null)
+    if (mode === 'SAVED') {
+      if (!savedSignature?.configured || !savedSignature.signatureType || !savedSignature.signatureData) {
+        setError('Votre signature enregistrée n’est pas disponible.')
+        return
+      }
+      onConfirm(savedSignature.signatureType, savedSignature.signatureData)
+      return
+    }
+
     if (mode === 'INITIALS') {
       if (!initialsValid(initials)) {
         setError('Les initiales doivent contenir entre 2 et 6 lettres.')
@@ -102,12 +137,7 @@ export function SignatureModal({ open, requestLabel, submitting, onClose, onConf
     }
 
     const canvas = canvasRef.current
-    const context = canvas.getContext('2d')
-    const imageData = context.getImageData(0, 0, canvas.width, canvas.height)
-    const hasInk = imageData.data.some(
-      (value, index) => index % 4 === 3 && value > 0,
-    )
-    if (!hasInk) {
+    if (!hasDrawing) {
       setError('Veuillez dessiner votre signature dans le cadre.')
       return
     }
@@ -140,6 +170,16 @@ export function SignatureModal({ open, requestLabel, submitting, onClose, onConf
         </div>
 
         <div className="nr-sig__mode-tabs">
+          {savedSignature?.configured && (
+            <button
+              type="button"
+              className={`nr-sig__tab${mode === 'SAVED' ? ' nr-sig__tab--active' : ''}`}
+              onClick={() => setMode('SAVED')}
+              disabled={submitting}
+            >
+              Enregistrée
+            </button>
+          )}
           <button
             type="button"
             className={`nr-sig__tab${mode === 'INITIALS' ? ' nr-sig__tab--active' : ''}`}
@@ -158,7 +198,21 @@ export function SignatureModal({ open, requestLabel, submitting, onClose, onConf
           </button>
         </div>
 
-        {mode === 'INITIALS' ? (
+        {savedLoading ? (
+          <div className="nr-sig__saved-loading">Chargement de votre signature…</div>
+        ) : mode === 'SAVED' ? (
+          <div className="nr-sig__saved">
+            <p className="nr-sig__label">Signature enregistrée dans vos paramètres</p>
+            <div className="nr-sig__saved-preview">
+              {savedSignature?.signatureType === 'DRAWN' ? (
+                <img src={savedSignature.signatureData} alt="Signature enregistrée" />
+              ) : (
+                <span>{savedSignature?.signatureData}</span>
+              )}
+            </div>
+            <p className="nr-sig__hint">Confirmez pour utiliser cette copie figée sur la demande.</p>
+          </div>
+        ) : mode === 'INITIALS' ? (
           <div className="nr-sig__initials">
             <label className="nr-sig__label" htmlFor="signature-initials">
               Saisissez vos initiales (2 à 6 lettres)

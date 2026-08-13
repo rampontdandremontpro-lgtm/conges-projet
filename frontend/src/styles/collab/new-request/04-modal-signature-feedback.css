@@ -359,3 +359,34 @@
 }
 
 
+
+.nr-sig__saved-loading {
+  min-height: 120px;
+  display: grid;
+  place-items: center;
+  color: var(--nr-muted);
+  font-size: 12.5px;
+}
+
+.nr-sig__saved-preview {
+  display: grid;
+  place-items: center;
+  min-height: 120px;
+  padding: 14px;
+  border: 1px dashed var(--nr-border-strong);
+  border-radius: var(--radius-md);
+  background: #ffffff;
+}
+
+.nr-sig__saved-preview img {
+  max-width: 260px;
+  max-height: 92px;
+  object-fit: contain;
+}
+
+.nr-sig__saved-preview span {
+  color: var(--nr-primary);
+  font-size: 30px;
+  font-weight: var(--font-weight-black);
+  letter-spacing: .08em;
+}

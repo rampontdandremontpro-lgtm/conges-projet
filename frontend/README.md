@@ -45,6 +45,8 @@ Routes fonctionnelles :
 /app/my-documents
 /app/history
 /app/notifications
+/app/profile
+/app/settings
 ```
 
 Évolutions déjà intégrées :
@@ -55,7 +57,10 @@ Routes fonctionnelles :
 - le Tableau de bord reste la vue du solde courant ;
 - l'Historique affiche les vrais mouvements de solde ;
 - les demandes, absences, documents et notifications utilisent les données du backend ;
-- les demandes en attente peuvent produire un récapitulatif PDF provisoire non officiel.
+- les demandes en attente peuvent produire un récapitulatif PDF provisoire non officiel ;
+- `Mon profil` affiche les données réelles du compte et du service en lecture seule ;
+- `Paramètres` permet d'enregistrer/supprimer une signature personnelle et de modifier le mot de passe local ;
+- une signature enregistrée peut être réutilisée depuis la fenêtre de signature d'une nouvelle demande.
 
 Compatibilité des anciennes URL :
 
