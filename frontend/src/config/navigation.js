@@ -34,8 +34,8 @@ export const NAVIGATION = {
   ],
   [ROLES.RESPONSABLE_SERVICE]: [
     { id: 'dashboard', label: 'Tableau de bord', to: '/app/dashboard', icon: 'dashboard' },
-    { id: 'requests', label: 'Demandes', to: '/app/requests', icon: 'list' },
-    { id: 'alerts', label: 'Alertes', to: '/app/alerts', icon: 'alert' },
+    { id: 'requests', label: 'Demandes à traiter', to: '/app/requests', icon: 'list' },
+    { id: 'alerts', label: 'Alertes de chevauchement', to: '/app/alerts', icon: 'alert' },
     { id: 'service-presence', label: 'Présence du service', to: '/app/service-presence', icon: 'users' },
     { id: 'notifications', label: 'Notifications', to: '/app/notifications', icon: 'bell' },
   ],

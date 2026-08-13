@@ -50,3 +50,15 @@ POST /api/auth/define-password
 ```
 
 Le jeton temporaire apparaît dans le terminal NestJS tant que l'envoi par e-mail n'est pas intégré.
+
+
+## Compte de test Responsable de service
+
+Pour le développement de l’espace Responsable, le fichier `dev-ensure-responsable-service.sql` crée ou remet en conformité le compte :
+
+```text
+responsable@gmes.fr
+ResponsableGMES@2026!
+```
+
+Le compte est rattaché à l’Équipe technique comme Responsable principal. Le script est idempotent et peut être relancé sur une base de développement existante.

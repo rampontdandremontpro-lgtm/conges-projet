@@ -48,6 +48,14 @@ export class UsersController {
     return this.usersService.getOwnProfile(request.user.id);
   }
 
+  @Get('me/service-presence')
+  @Roles(UserRole.RESPONSABLE_SERVICE)
+  getOwnServicePresence(
+    @Req() request: AuthenticatedRequest,
+  ) {
+    return this.usersService.getOwnServicePresence(request.user.id);
+  }
+
   @Get('me/signature')
   @Roles(
     UserRole.COLLABORATEUR,

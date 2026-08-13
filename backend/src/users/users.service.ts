@@ -12,6 +12,7 @@ import {
   ServiceType,
 } from '../services/service.entity';
 import { ServicesService } from '../services/services.service';
+import { PresenceService } from '../presence/presence.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import {
@@ -27,6 +28,7 @@ export class UsersService {
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
     private readonly servicesService: ServicesService,
+    private readonly presenceService: PresenceService,
   ) {}
 
   async create(createUserDto: CreateUserDto): Promise<User> {
@@ -112,6 +114,64 @@ export class UsersService {
       .leftJoinAndSelect('user.service', 'service')
       .where('user.id = :id', { id })
       .getOne();
+  }
+
+  async getOwnServicePresence(id: number) {
+    const currentUser = await this.findOne(id);
+
+    if (!currentUser.serviceId || !currentUser.service) {
+      throw new BadRequestException(
+        'Aucun service actif n’est rattaché à votre compte.',
+      );
+    }
+
+    const members = await this.userRepository.find({
+      where: {
+        serviceId: currentUser.serviceId,
+        isActive: true,
+      },
+      order: {
+        nom: 'ASC',
+        prenom: 'ASC',
+      },
+    });
+
+    const resolvedMembers = await Promise.all(
+      members.map(async (member) => ({
+        id: member.id,
+        nom: member.nom,
+        prenom: member.prenom,
+        role: member.role,
+        presenceStatus: await this.presenceService.computeStatus(member.id),
+      })),
+    );
+
+    const summary = resolvedMembers.reduce(
+      (accumulator, member) => {
+        accumulator.total += 1;
+        if (member.presenceStatus === PresenceStatus.PRESENT) {
+          accumulator.present += 1;
+        } else if (member.presenceStatus === PresenceStatus.EN_VACANCES) {
+          accumulator.onLeave += 1;
+        } else if (member.presenceStatus === PresenceStatus.ABSENT) {
+          accumulator.absent += 1;
+        }
+        return accumulator;
+      },
+      { total: 0, present: 0, onLeave: 0, absent: 0 },
+    );
+
+    return {
+      service: {
+        id: currentUser.service.id,
+        name: currentUser.service.name,
+        hasMinimumPresenceRule:
+          currentUser.service.hasMinimumPresenceRule,
+        minimumPresence: currentUser.service.minimumPresence,
+      },
+      summary,
+      members: resolvedMembers,
+    };
   }
 
   async getOwnProfile(id: number) {
