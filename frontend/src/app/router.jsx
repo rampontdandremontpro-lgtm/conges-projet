@@ -11,6 +11,7 @@ import { DashboardGate } from '@/pages/shared/DashboardGate'
 import { NewRequest } from '@/pages/collab/NewRequestPage'
 import { BalancesPage } from '@/pages/collab/BalancesPage'
 import { MyRequestsPage } from '@/pages/collab/MyRequestsPage'
+import { DeclareAbsencePage } from '@/pages/collab/DeclareAbsencePage'
 import { NEW_REQUEST_ROLES, ROLES } from '@/config/navigation'
 import { RoleRoute } from '@/auth/RoleRoute'
 
@@ -40,6 +41,14 @@ export const router = createBrowserRouter([
         element: (
           <RoleRoute roles={[ROLES.COLLABORATEUR]}>
             <MyRequestsPage />
+          </RoleRoute>
+        ),
+      },
+      {
+        path: 'declare-absence',
+        element: (
+          <RoleRoute roles={[ROLES.COLLABORATEUR]}>
+            <DeclareAbsencePage />
           </RoleRoute>
         ),
       },
