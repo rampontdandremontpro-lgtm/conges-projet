@@ -51,6 +51,7 @@ Routes fonctionnelles :
 
 - `Mes justificatifs` et `Documents PDF` sont regroupés dans `Mes documents` ;
 - `Mes soldes` est remplacé dans la sidebar par `Historique` ;
+- l'ancienne `BalancesPage.jsx` et ses composants/styles dédiés ont été supprimés ;
 - le Tableau de bord reste la vue du solde courant ;
 - l'Historique affiche les vrais mouvements de solde ;
 - les demandes, absences, documents et notifications utilisent les données du backend ;
