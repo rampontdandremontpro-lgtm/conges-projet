@@ -43,7 +43,7 @@ export function Header() {
   const [searchParams, setSearchParams] = useSearchParams()
   const title = headerTitle(pathname)
   const hideSearch =
-    ['/app/dashboard', '/app/new-request', '/app/my-balances', '/app/declare-absence', '/app/my-documents'].includes(pathname) ||
+    ['/app/dashboard', '/app/new-request', '/app/history', '/app/my-balances', '/app/declare-absence', '/app/my-documents'].includes(pathname) ||
     /^\/app\/(new-request|declare-absence)\/\d+$/.test(pathname) ||
     /^\/app\/my-requests\/(leave|absence)\/\d+$/.test(pathname)
   const showSearch = !hideSearch

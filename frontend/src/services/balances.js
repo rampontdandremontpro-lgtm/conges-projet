@@ -5,6 +5,11 @@ export async function getMyBalances() {
   return data
 }
 
+export async function getMyBalanceHistory(params = {}) {
+  const { data } = await apiClient.get('/leave-balances/my/history', { params })
+  return data
+}
+
 export async function getBalanceSettings() {
   const { data } = await apiClient.get('/settings/public')
   return data

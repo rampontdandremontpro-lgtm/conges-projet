@@ -9,7 +9,7 @@ import { NotFound } from '@/pages/shared/NotFound'
 import { Preview } from '@/pages/shared/Preview'
 import { DashboardGate } from '@/pages/shared/DashboardGate'
 import { NewRequest } from '@/pages/collab/NewRequestPage'
-import { BalancesPage } from '@/pages/collab/BalancesPage'
+import { HistoryPage } from '@/pages/collab/HistoryPage'
 import { MyRequestsPage } from '@/pages/collab/MyRequestsPage'
 import { DeclareAbsencePage } from '@/pages/collab/DeclareAbsencePage'
 import { DocumentsPage } from '@/pages/collab/DocumentsPage'
@@ -104,13 +104,14 @@ export const router = createBrowserRouter([
         ),
       },
       {
-        path: 'my-balances',
+        path: 'history',
         element: (
           <RoleRoute roles={[ROLES.COLLABORATEUR]}>
-            <BalancesPage />
+            <HistoryPage />
           </RoleRoute>
         ),
       },
+      { path: 'my-balances', element: <Navigate to="/app/history" replace /> },
       { path: 'profile', element: <Preview /> },
       { path: 'settings', element: <Preview /> },
       { path: ':section', element: <SectionGuard /> },

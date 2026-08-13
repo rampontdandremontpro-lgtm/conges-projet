@@ -29,7 +29,7 @@ export const NAVIGATION = {
     { id: 'my-requests', label: 'Mes demandes', to: '/app/my-requests', icon: 'list' },
     { id: 'declare-absence', label: 'Déclarer une absence', to: '/app/declare-absence', icon: 'calendar' },
     { id: 'my-documents', label: 'Mes documents', to: '/app/my-documents', icon: 'doc' },
-    { id: 'my-balances', label: 'Mes soldes', to: '/app/my-balances', icon: 'wallet' },
+    { id: 'history', label: 'Historique', to: '/app/history', icon: 'clock' },
     { id: 'notifications', label: 'Notifications', to: '/app/notifications', icon: 'bell' },
   ],
   [ROLES.RESPONSABLE_SERVICE]: [
