@@ -2,10 +2,12 @@
 
 Le fichier `reference/diagramme_bdd_gestion_conges_gmes_v1_simplifie.dbml` est la source de vérité du schéma.
 
-La base contient exactement 13 tables :
+La base contient exactement **15 tables** :
 
 - `services`
+- `service_backup_validators`
 - `users`
+- `validator_replacements`
 - `leave_types`
 - `leave_requests`
 - `absence_declarations`
@@ -17,6 +19,8 @@ La base contient exactement 13 tables :
 - `settings`
 - `notifications`
 - `audit_logs`
+
+Les tables `service_backup_validators` et `validator_replacements` implémentent E6 : valideurs de secours par service et remplacements temporaires par collaborateur.
 
 ## Réinitialisation complète
 
@@ -45,4 +49,4 @@ POST /api/auth/request-password
 POST /api/auth/define-password
 ```
 
-Le jeton temporaire apparaît dans le terminal NestJS tant que l’envoi par e-mail n’est pas intégré.
+Le jeton temporaire apparaît dans le terminal NestJS tant que l'envoi par e-mail n'est pas intégré.
