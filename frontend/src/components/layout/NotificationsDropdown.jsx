@@ -1,24 +1,147 @@
-import { useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 
 import { Icon } from '@/components/ui/Icon'
 import { useClickOutside } from '@/hooks/useClickOutside'
+import {
+  getMyNotifications,
+  getUnreadNotificationCount,
+  markAllNotificationsRead,
+  markNotificationRead,
+} from '@/services/notifications'
 
-const DEMO_NOTIFICATIONS = [
-  { id: 1, text: 'Votre demande de congé a été validée.', time: 'Il y a 5 min', read: false },
-  { id: 2, text: 'Un justificatif est en attente de vérification.', time: 'Il y a 2 h', read: false },
-  { id: 3, text: 'Votre solde de congés a été mis à jour.', time: 'Hier', read: true },
-  { id: 4, text: 'Une réponse a été apportée à votre dérogation.', time: 'Il y a 3 jours', read: true },
-]
+function formatNotificationTime(value) {
+  if (!value) {
+    return ''
+  }
+
+  const createdAt = new Date(value)
+  if (Number.isNaN(createdAt.getTime())) {
+    return ''
+  }
+
+  const elapsedMs = Date.now() - createdAt.getTime()
+  if (elapsedMs < 60_000) {
+    return "À l'instant"
+  }
+
+  const minutes = Math.floor(elapsedMs / 60_000)
+  if (minutes < 60) {
+    return `Il y a ${minutes} min`
+  }
+
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) {
+    return `Il y a ${hours} h`
+  }
+
+  const days = Math.floor(hours / 24)
+  if (days === 1) {
+    return 'Hier'
+  }
+  if (days < 7) {
+    return `Il y a ${days} jours`
+  }
+
+  return createdAt.toLocaleDateString('fr-FR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: createdAt.getFullYear() === new Date().getFullYear() ? undefined : 'numeric',
+  })
+}
 
 export function NotificationsDropdown() {
   const [open, setOpen] = useState(false)
-  const [items, setItems] = useState(DEMO_NOTIFICATIONS)
+  const [items, setItems] = useState([])
+  const [unreadCount, setUnreadCount] = useState(0)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(false)
+  const [markingAll, setMarkingAll] = useState(false)
   const ref = useClickOutside(() => setOpen(false), open)
 
-  const unreadCount = items.filter((item) => !item.read).length
+  const refreshUnreadCount = useCallback(async () => {
+    try {
+      const count = await getUnreadNotificationCount()
+      setUnreadCount(count)
+    } catch {
+      return
+    }
+  }, [])
 
-  function markAllRead() {
-    setItems((current) => current.map((item) => ({ ...item, read: true })))
+  const loadNotifications = useCallback(async () => {
+    setLoading(true)
+    setError(false)
+
+    try {
+      const [notifications, count] = await Promise.all([
+        getMyNotifications(),
+        getUnreadNotificationCount(),
+      ])
+      setItems(notifications)
+      setUnreadCount(count)
+    } catch {
+      setError(true)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    refreshUnreadCount()
+
+    const handleWindowFocus = () => refreshUnreadCount()
+    window.addEventListener('focus', handleWindowFocus)
+
+    return () => window.removeEventListener('focus', handleWindowFocus)
+  }, [refreshUnreadCount])
+
+  useEffect(() => {
+    if (open) {
+      loadNotifications()
+    }
+  }, [open, loadNotifications])
+
+  async function handleMarkRead(item) {
+    if (item.readAt) {
+      return
+    }
+
+    const previousItems = items
+    const previousUnreadCount = unreadCount
+    const readAt = new Date().toISOString()
+
+    setItems((current) =>
+      current.map((notification) =>
+        notification.id === item.id ? { ...notification, readAt } : notification,
+      ),
+    )
+    setUnreadCount((current) => Math.max(0, current - 1))
+
+    try {
+      await markNotificationRead(item.id)
+    } catch {
+      setItems(previousItems)
+      setUnreadCount(previousUnreadCount)
+    }
+  }
+
+  async function handleMarkAllRead() {
+    if (unreadCount === 0 || markingAll) {
+      return
+    }
+
+    setMarkingAll(true)
+    setError(false)
+
+    try {
+      await markAllNotificationsRead()
+      const readAt = new Date().toISOString()
+      setItems((current) => current.map((item) => ({ ...item, readAt: item.readAt ?? readAt })))
+      setUnreadCount(0)
+    } catch {
+      await loadNotifications()
+    } finally {
+      setMarkingAll(false)
+    }
   }
 
   return (
@@ -35,6 +158,7 @@ export function NotificationsDropdown() {
         <Icon name="bell" />
         {unreadCount > 0 && <span className="header__badge">{unreadCount}</span>}
       </button>
+
       {open && (
         <div className="dropdown__panel dropdown__panel--notifications" role="menu">
           <div className="notifications__header">
@@ -42,26 +166,63 @@ export function NotificationsDropdown() {
             <button
               type="button"
               className="notifications__mark-all"
-              onClick={markAllRead}
-              disabled={unreadCount === 0}
+              onClick={handleMarkAllRead}
+              disabled={unreadCount === 0 || markingAll}
             >
-              Tout lire
+              {markingAll ? 'Traitement…' : 'Tout lire'}
             </button>
           </div>
-          <ul className="notifications__list">
-            {items.map((item) => (
-              <li
-                key={item.id}
-                className={`notification-item${item.read ? '' : ' notification-item--unread'}`}
-              >
-                <div className="notification-item__body">
-                  <p className="notification-item__text">{item.text}</p>
-                  <span className="notification-item__time">{item.time}</span>
-                </div>
-                {!item.read && <span className="notification-item__dot" aria-hidden="true" />}
-              </li>
-            ))}
-          </ul>
+
+          {loading && (
+            <div className="notifications__state" role="status">
+              Chargement des notifications…
+            </div>
+          )}
+
+          {!loading && error && (
+            <div className="notifications__state notifications__state--error" role="alert">
+              <span>Impossible de charger les notifications.</span>
+              <button type="button" onClick={loadNotifications}>
+                Réessayer
+              </button>
+            </div>
+          )}
+
+          {!loading && !error && items.length === 0 && (
+            <div className="notifications__state">Aucune notification pour le moment.</div>
+          )}
+
+          {!loading && !error && items.length > 0 && (
+            <ul className="notifications__list">
+              {items.map((item) => {
+                const unread = !item.readAt
+                return (
+                  <li
+                    key={item.id}
+                    className={`notification-item${unread ? ' notification-item--unread' : ''}`}
+                  >
+                    <button
+                      type="button"
+                      className="notification-item__button"
+                      onClick={() => handleMarkRead(item)}
+                      aria-label={
+                        unread ? `Marquer comme lue : ${item.title}` : `${item.title}, déjà lue`
+                      }
+                    >
+                      <div className="notification-item__body">
+                        <p className="notification-item__title">{item.title}</p>
+                        <p className="notification-item__text">{item.message}</p>
+                        <span className="notification-item__time">
+                          {formatNotificationTime(item.createdAt)}
+                        </span>
+                      </div>
+                      {unread && <span className="notification-item__dot" aria-hidden="true" />}
+                    </button>
+                  </li>
+                )
+              })}
+            </ul>
+          )}
         </div>
       )}
     </div>
