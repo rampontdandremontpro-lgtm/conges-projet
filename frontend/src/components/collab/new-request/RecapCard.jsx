@@ -54,6 +54,7 @@ export function RecapCard({
   onSaveDraft,
   onSubmit,
   onRequestDerogation,
+  editingExisting = false,
 }) {
   const [derogationFormOpen, setDerogationFormOpen] = useState(false)
   const [derogationReason, setDerogationReason] = useState('')
@@ -349,6 +350,8 @@ export function RecapCard({
                 <>
                   <span className="nr-spinner" /> Enregistrement…
                 </>
+              ) : editingExisting ? (
+                'Enregistrer les modifications'
               ) : draftClean ? (
                 'Modifier le brouillon'
               ) : (

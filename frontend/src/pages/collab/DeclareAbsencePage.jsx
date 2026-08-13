@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 
 import { AbsenceDocumentPicker } from '@/components/collab/absence/AbsenceDocumentPicker'
 import { AbsenceTypeSelector } from '@/components/collab/absence/AbsenceTypeSelector'
@@ -14,6 +14,7 @@ import {
 } from '@/services/absenceDeclarations'
 import { formatDateNumericFR, todayISO } from '@/utils/format'
 import { errorMessage } from '@/utils/newRequest'
+import { getAbsenceDeclaration, getAbsenceDocuments } from '@/services/requestDetails'
 
 import '@/styles/absence.css'
 
@@ -80,6 +81,8 @@ function LoadingState() {
 
 export function DeclareAbsencePage() {
   const navigate = useNavigate()
+  const { id: editId } = useParams()
+  const isEditMode = Boolean(editId)
   const [types, setTypes] = useState([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState(false)
@@ -106,16 +109,42 @@ export function DeclareAbsencePage() {
     try {
       const data = await getCollaboratorAbsenceTypes()
       setTypes(data)
-      setForm((current) => ({
-        ...current,
-        leaveTypeId: current.leaveTypeId ?? data[0]?.id ?? null,
-      }))
+
+      if (isEditMode) {
+        const [declaration, documents] = await Promise.all([
+          getAbsenceDeclaration(editId),
+          getAbsenceDocuments(editId),
+        ])
+
+        if (declaration.status !== 'BROUILLON') {
+          navigate(`/app/my-requests/absence/${declaration.id}`, { replace: true })
+          return
+        }
+
+        setDraft(declaration)
+        setUploadedDocuments(documents ?? [])
+        setForm({
+          leaveTypeId: Number(declaration.leaveTypeId),
+          startDate: declaration.startDate,
+          endDate: declaration.endDate,
+          startPeriod: declaration.startPeriod || 'MATIN',
+          endPeriod: declaration.endPeriod || 'APRES_MIDI',
+          durationHours: declaration.durationHours ?? '',
+          comment: declaration.comment || '',
+          certifiedAccurate: false,
+        })
+      } else {
+        setForm((current) => ({
+          ...current,
+          leaveTypeId: current.leaveTypeId ?? data[0]?.id ?? null,
+        }))
+      }
     } catch {
       setLoadError(true)
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [editId, isEditMode, navigate])
 
   useEffect(() => {
     loadTypes()
@@ -619,7 +648,7 @@ export function DeclareAbsencePage() {
                 disabled={Boolean(validationError) || saving || submitting}
                 onClick={handleSaveDraft}
               >
-                {saving ? 'Enregistrement…' : 'Enregistrer en brouillon'}
+                {saving ? 'Enregistrement…' : isEditMode ? 'Enregistrer les modifications' : 'Enregistrer en brouillon'}
               </button>
               <button
                 type="button"

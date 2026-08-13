@@ -10,9 +10,42 @@ function formatDuration(item) {
   return `${formatDays(item.duration)} j`
 }
 
-export function MyRequestCard({ item }) {
+function actionMeta(item) {
+  if (item.status === 'BROUILLON') {
+    return { type: 'delete', icon: 'trash', label: 'Supprimer le brouillon' }
+  }
+
+  if (item.source === 'leave' && ['VALIDEE', 'ANNULATION_EN_ATTENTE_ACCORD', 'ANNULEE_APRES_VALIDATION'].includes(item.status)) {
+    return { type: 'download', icon: 'download', label: 'Télécharger le PDF' }
+  }
+
+  return { type: 'open', icon: 'chevronRight', label: 'Ouvrir le détail' }
+}
+
+export function MyRequestCard({ item, busy = false, onOpen, onAction }) {
+  const action = actionMeta(item)
+
+  const handleOpen = () => {
+    if (!busy) onOpen?.(item)
+  }
+
+  const handleKeyDown = (event) => {
+    if (event.target !== event.currentTarget) return
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault()
+      handleOpen()
+    }
+  }
+
   return (
-    <article className="my-request-card">
+    <article
+      className={`my-request-card${busy ? ' is-busy' : ''}`}
+      role="button"
+      tabIndex={0}
+      aria-label={`Ouvrir ${item.type}`}
+      onClick={handleOpen}
+      onKeyDown={handleKeyDown}
+    >
       <span className="my-request-card__icon" aria-hidden="true">
         <Icon name="calendar" size={18} />
       </span>
@@ -30,9 +63,23 @@ export function MyRequestCard({ item }) {
         </p>
       </div>
 
-      <span className="my-request-card__more" aria-hidden="true">
-        <Icon name="dots" size={17} />
-      </span>
+      <button
+        type="button"
+        className={`my-request-card__action my-request-card__action--${action.type}`}
+        title={action.label}
+        aria-label={action.label}
+        disabled={busy}
+        onClick={(event) => {
+          event.stopPropagation()
+          if (action.type === 'open') {
+            onOpen?.(item)
+          } else {
+            onAction?.(item, action.type)
+          }
+        }}
+      >
+        <Icon name={action.icon} size={17} />
+      </button>
     </article>
   )
 }

@@ -411,6 +411,46 @@ export class AbsenceDeclarationsService {
     return this.findOneWithRelations(id);
   }
 
+  async deleteDraft(
+    id: number,
+    authenticatedUser: AuthenticatedUser,
+  ): Promise<void> {
+    const declaration = await this.findAccessibleOne(
+      id,
+      authenticatedUser,
+    );
+
+    this.ensureDraft(declaration);
+
+    if (
+      authenticatedUser.role !== UserRole.RH &&
+      declaration.createdById !== authenticatedUser.id
+    ) {
+      throw new ForbiddenException(
+        'Seule la personne ayant créé le brouillon peut le supprimer.',
+      );
+    }
+
+    const activeDocuments = await this.documentRepository.count({
+      where: {
+        absenceDeclarationId: declaration.id,
+        status: In([
+          DocumentStatus.EN_ATTENTE,
+          DocumentStatus.ACCEPTE,
+          DocumentStatus.REJETE,
+        ]),
+      },
+    });
+
+    if (activeDocuments > 0) {
+      throw new BadRequestException(
+        'Supprimez les justificatifs du brouillon avant de supprimer la déclaration.',
+      );
+    }
+
+    await this.absenceDeclarationRepository.remove(declaration);
+  }
+
   async cancel(
     id: number,
     authenticatedUser: AuthenticatedUser,

@@ -5,18 +5,15 @@ import { UserMenu } from '@/components/layout/UserMenu'
 import { getSectionLabel } from '@/config/navigation'
 
 function headerTitle(pathname) {
-  if (pathname === '/app/dashboard') {
-    return 'Tableau de bord'
-  }
-  if (pathname === '/app/new-request') {
-    return 'Nouvelle demande'
-  }
-  if (pathname === '/app/profile') {
-    return 'Mon profil'
-  }
-  if (pathname === '/app/settings') {
-    return 'Paramètres'
-  }
+  if (pathname === '/app/dashboard') return 'Tableau de bord'
+  if (pathname === '/app/new-request') return 'Nouvelle demande'
+  if (/^\/app\/new-request\/\d+$/.test(pathname)) return 'Modifier la demande'
+  if (pathname === '/app/declare-absence') return 'Déclarer une absence'
+  if (/^\/app\/declare-absence\/\d+$/.test(pathname)) return 'Modifier la déclaration'
+  if (/^\/app\/my-requests\/leave\/\d+$/.test(pathname)) return 'Détail de la demande'
+  if (/^\/app\/my-requests\/absence\/\d+$/.test(pathname)) return 'Détail de l’absence'
+  if (pathname === '/app/profile') return 'Mon profil'
+  if (pathname === '/app/settings') return 'Paramètres'
 
   const section = pathname.startsWith('/app/') ? pathname.slice('/app/'.length) : ''
   return (section ? getSectionLabel(section) : null) ?? 'GMES'
@@ -45,7 +42,11 @@ export function Header() {
   const { pathname } = useLocation()
   const [searchParams, setSearchParams] = useSearchParams()
   const title = headerTitle(pathname)
-  const showSearch = !['/app/dashboard', '/app/new-request', '/app/my-balances', '/app/declare-absence', '/app/my-documents'].includes(pathname)
+  const hideSearch =
+    ['/app/dashboard', '/app/new-request', '/app/my-balances', '/app/declare-absence', '/app/my-documents'].includes(pathname) ||
+    /^\/app\/(new-request|declare-absence)\/\d+$/.test(pathname) ||
+    /^\/app\/my-requests\/(leave|absence)\/\d+$/.test(pathname)
+  const showSearch = !hideSearch
   const searchEnabled = ['/app/my-requests', '/app/notifications'].includes(pathname)
   const searchValue = searchEnabled ? searchParams.get('q') ?? '' : undefined
 

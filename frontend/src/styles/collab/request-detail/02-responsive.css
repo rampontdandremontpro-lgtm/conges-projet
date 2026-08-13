@@ -1,0 +1,14 @@
+@media (max-width: 900px) {
+  .request-detail-grid { grid-template-columns: 1fr; }
+  .request-detail-side { position: static; }
+}
+
+@media (max-width: 620px) {
+  .request-detail-hero { align-items: flex-start; padding: 16px; }
+  .request-detail-hero__icon { width: 44px; height: 44px; flex-basis: 44px; }
+  .request-detail-hero h2 { font-size: 18px; }
+  .request-detail-card { padding: 16px; }
+  .request-detail-info { grid-template-columns: 1fr; }
+  .request-detail-info__item { border-right: 0 !important; border-bottom: 1px solid #edf1f6 !important; }
+  .request-detail-info__item:last-child { border-bottom: 0 !important; }
+}

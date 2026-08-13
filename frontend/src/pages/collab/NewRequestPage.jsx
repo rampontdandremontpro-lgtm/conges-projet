@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 
 import { Toast } from '@/components/ui/Toast'
 import { Icon } from '@/components/ui/Icon'
@@ -23,11 +23,19 @@ import {
   selectPrimaryBalance,
 } from '@/utils/newRequest'
 import { useNewRequestResources } from '@/hooks/collab/useNewRequestResources'
+import { getLeaveRequest } from '@/services/requestDetails'
 
 import '@/styles/newrequest.css'
 
+function monthFromIso(iso) {
+  const [year, month] = String(iso).slice(0, 10).split('-').map(Number)
+  return { year, month: month - 1 }
+}
+
 export function NewRequest() {
   const navigate = useNavigate()
+  const { id: editId } = useParams()
+  const isEditMode = Boolean(editId)
 
   const [selection, setSelection] = useState({
     leaveTypeId: null,
@@ -48,6 +56,8 @@ export function NewRequest() {
   const [submitting, setSubmitting] = useState(false)
   const [signatureOpen, setSignatureOpen] = useState(false)
   const [toast, setToast] = useState(null)
+  const [editLoading, setEditLoading] = useState(isEditMode)
+  const [editError, setEditError] = useState(false)
 
   const showToast = useCallback((kind, message) => {
     setToast({ kind, message })
@@ -60,6 +70,45 @@ export function NewRequest() {
     const timer = window.setTimeout(() => setToast(null), 5200)
     return () => window.clearTimeout(timer)
   }, [toast])
+
+  useEffect(() => {
+    if (!isEditMode) {
+      setEditLoading(false)
+      return undefined
+    }
+
+    let cancelled = false
+    setEditLoading(true)
+    setEditError(false)
+    getLeaveRequest(editId)
+      .then((request) => {
+        if (cancelled) return
+        if (!['BROUILLON', 'EN_ATTENTE_VALIDATION'].includes(request.status)) {
+          navigate(`/app/my-requests/leave/${request.id}`, { replace: true })
+          return
+        }
+        setDraft(request)
+        setSelection({
+          leaveTypeId: Number(request.leaveTypeId),
+          startDate: request.startDate,
+          endDate: request.endDate,
+          startPeriod: request.startPeriod || 'MATIN',
+          endPeriod: request.endPeriod || 'APRES_MIDI',
+        })
+        const first = monthFromIso(request.startDate)
+        setMonths([first, nextMonthOf(first)])
+      })
+      .catch(() => {
+        if (!cancelled) setEditError(true)
+      })
+      .finally(() => {
+        if (!cancelled) setEditLoading(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [editId, isEditMode, navigate])
 
   const balance = selectPrimaryBalance(resources.balances)
   const selectedType = resources.leaveTypes.find(
@@ -152,7 +201,7 @@ export function NewRequest() {
   })
 
   const persistCurrentRequest = async () => {
-    if (draftMatchesSelection) {
+    if (draftMatchesSelection && draft?.status !== 'EN_ATTENTE_VALIDATION') {
       return draft
     }
     const payload = buildPayload()
@@ -231,7 +280,7 @@ export function NewRequest() {
 
   return (
     <div className="nr-page">
-      {resources.loading ? (
+      {resources.loading || editLoading ? (
         <div aria-busy="true">
           <div className="dash-card nr-skeleton-card nr-skeleton-card--types" />
           <div className="nr-grid">
@@ -243,20 +292,21 @@ export function NewRequest() {
             </div>
           </div>
         </div>
-      ) : resources.error ? (
+      ) : resources.error || editError ? (
         <div className="dash-card nr-page__error">
           <span className="nr-page__error-icon">
             <Icon name="alert" size={22} />
           </span>
-          <p>Impossible de charger les données nécessaires à la demande.</p>
+          <p>{editError ? 'Impossible de charger la demande à modifier.' : 'Impossible de charger les données nécessaires à la demande.'}</p>
           <button
             type="button"
             className="nr-btn nr-btn--secondary"
             onClick={() => {
-              retryResources()
+              if (editError) navigate('/app/my-requests')
+              else retryResources()
             }}
           >
-            Réessayer
+            {editError ? 'Retour à Mes demandes' : 'Réessayer'}
           </button>
         </div>
       ) : (
@@ -312,6 +362,7 @@ export function NewRequest() {
               onSaveDraft={handleSaveDraft}
               onSubmit={() => setSignatureOpen(true)}
               onRequestDerogation={handleRequestDerogation}
+              editingExisting={isEditMode}
             />
           </div>
         </div>

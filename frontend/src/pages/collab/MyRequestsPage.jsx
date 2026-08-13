@@ -5,6 +5,7 @@ import { MyRequestCard } from '@/components/collab/requests/MyRequestCard'
 import { getRequestStatusLabel } from '@/components/collab/requests/RequestStatusBadge'
 import { Icon } from '@/components/ui/Icon'
 import { getMyAbsenceDeclarations, getMyLeaveRequests } from '@/services/myRequests'
+import { deleteAbsenceDraft, deleteLeaveDraft, downloadCancellationPdf, downloadValidationPdf } from '@/services/requestDetails'
 import { formatDays, formatRangeNumericFR } from '@/utils/format'
 
 import '@/styles/requests.css'
@@ -150,6 +151,8 @@ export function MyRequestsPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const [filter, setFilter] = useState('all')
+  const [busyKey, setBusyKey] = useState(null)
+  const [feedback, setFeedback] = useState(null)
   const [state, setState] = useState({
     loading: true,
     leaveRequests: [],
@@ -200,6 +203,76 @@ export function MyRequestsPage() {
   const totalFailure = !state.loading && state.leaveError && state.absenceError
   const partialFailure = !state.loading && !totalFailure && (state.leaveError || state.absenceError)
 
+  useEffect(() => {
+    if (!feedback) return undefined
+    const timer = window.setTimeout(() => setFeedback(null), 4500)
+    return () => window.clearTimeout(timer)
+  }, [feedback])
+
+  const openItem = (item) => {
+    if (item.status === 'BROUILLON') {
+      navigate(item.source === 'leave' ? `/app/new-request/${item.id}` : `/app/declare-absence/${item.id}`)
+      return
+    }
+    navigate(`/app/my-requests/${item.source}/${item.id}`)
+  }
+
+  const removeItemLocally = (item) => {
+    if (item.source === 'leave') {
+      setState((current) => ({
+        ...current,
+        leaveRequests: current.leaveRequests.filter((request) => Number(request.id) !== Number(item.id)),
+      }))
+    } else {
+      setState((current) => ({
+        ...current,
+        absences: current.absences.filter((declaration) => Number(declaration.id) !== Number(item.id)),
+      }))
+    }
+  }
+
+  const handleCardAction = async (item, action) => {
+    if (busyKey) return
+
+    if (action === 'delete') {
+      const label = item.source === 'leave' ? 'cette demande de congé' : 'cette déclaration d’absence'
+      if (!window.confirm(`Supprimer définitivement le brouillon de ${label} ?`)) return
+      setBusyKey(item.key)
+      try {
+        if (item.source === 'leave') await deleteLeaveDraft(item.id)
+        else await deleteAbsenceDraft(item.id)
+        removeItemLocally(item)
+        setFeedback({ kind: 'success', message: 'Brouillon supprimé.' })
+      } catch (error) {
+        setFeedback({
+          kind: 'error',
+          message: error.response?.data?.message || error.message || 'Impossible de supprimer ce brouillon.',
+        })
+      } finally {
+        setBusyKey(null)
+      }
+      return
+    }
+
+    if (action === 'download' && item.source === 'leave') {
+      setBusyKey(item.key)
+      try {
+        if (item.status === 'ANNULEE_APRES_VALIDATION') {
+          await downloadCancellationPdf(item.id)
+        } else {
+          await downloadValidationPdf(item.id)
+        }
+      } catch (error) {
+        setFeedback({
+          kind: 'error',
+          message: error.response?.data?.message || error.message || 'Impossible de télécharger ce document.',
+        })
+      } finally {
+        setBusyKey(null)
+      }
+    }
+  }
+
   return (
     <section className="my-requests-page">
       <div className="my-requests-toolbar">
@@ -227,6 +300,14 @@ export function MyRequestsPage() {
           Nouvelle demande
         </button>
       </div>
+
+      {feedback && (
+        <div className={`my-requests-feedback my-requests-feedback--${feedback.kind}`} role="status">
+          <Icon name={feedback.kind === 'success' ? 'check' : 'alert'} size={16} />
+          <span>{feedback.message}</span>
+          <button type="button" onClick={() => setFeedback(null)} aria-label="Fermer">×</button>
+        </div>
+      )}
 
       {partialFailure && (
         <div className="my-requests-notice" role="status">
@@ -258,7 +339,7 @@ export function MyRequestsPage() {
       ) : (
         <div className="my-requests-list">
           {filteredItems.map((item) => (
-            <MyRequestCard key={item.key} item={item} />
+            <MyRequestCard key={item.key} item={item} busy={busyKey === item.key} onOpen={openItem} onAction={handleCardAction} />
           ))}
         </div>
       )}

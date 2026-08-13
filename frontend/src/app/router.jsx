@@ -14,6 +14,7 @@ import { MyRequestsPage } from '@/pages/collab/MyRequestsPage'
 import { DeclareAbsencePage } from '@/pages/collab/DeclareAbsencePage'
 import { DocumentsPage } from '@/pages/collab/DocumentsPage'
 import { NotificationsPage } from '@/pages/collab/NotificationsPage'
+import { RequestDetailPage } from '@/pages/collab/RequestDetailPage'
 import { NEW_REQUEST_ROLES, ROLES } from '@/config/navigation'
 import { RoleRoute } from '@/auth/RoleRoute'
 
@@ -39,6 +40,14 @@ export const router = createBrowserRouter([
         ),
       },
       {
+        path: 'new-request/:id',
+        element: (
+          <RoleRoute roles={[ROLES.COLLABORATEUR]}>
+            <NewRequest />
+          </RoleRoute>
+        ),
+      },
+      {
         path: 'my-requests',
         element: (
           <RoleRoute roles={[ROLES.COLLABORATEUR]}>
@@ -47,7 +56,23 @@ export const router = createBrowserRouter([
         ),
       },
       {
+        path: 'my-requests/:source/:id',
+        element: (
+          <RoleRoute roles={[ROLES.COLLABORATEUR]}>
+            <RequestDetailPage />
+          </RoleRoute>
+        ),
+      },
+      {
         path: 'declare-absence',
+        element: (
+          <RoleRoute roles={[ROLES.COLLABORATEUR]}>
+            <DeclareAbsencePage />
+          </RoleRoute>
+        ),
+      },
+      {
+        path: 'declare-absence/:id',
         element: (
           <RoleRoute roles={[ROLES.COLLABORATEUR]}>
             <DeclareAbsencePage />

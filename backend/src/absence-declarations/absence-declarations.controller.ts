@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
@@ -100,6 +101,18 @@ export class AbsenceDeclarationsController {
     @Req() request: AuthenticatedRequest,
   ) {
     return this.absenceDeclarationsService.registerByRh(
+      id,
+      request.user,
+    );
+  }
+
+  @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  deleteDraft(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    return this.absenceDeclarationsService.deleteDraft(
       id,
       request.user,
     );
