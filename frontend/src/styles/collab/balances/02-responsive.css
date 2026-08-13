@@ -46,3 +46,20 @@
     transform: translateY(-18px);
   }
 }
+
+@media (max-width: 760px) {
+  .balances-overview--simple {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+
+  .balances-impact-card__heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .balances-impact-card__numbers {
+    width: 100%;
+    align-items: flex-start;
+  }
+}

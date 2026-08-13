@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
-import { BalanceMetric } from '@/components/collab/balances/BalanceMetric'
 import { BalanceOverview } from '@/components/collab/balances/BalanceOverview'
 import { getBalanceSettings, getMyBalances } from '@/services/balances'
 import { formatDateNumericFR, formatDays, toISODate } from '@/utils/format'
@@ -99,12 +98,6 @@ export function BalancesPage() {
         <div className="balances-page__skeleton balances-page__skeleton--period" />
         <div className="balances-page__skeleton balances-page__skeleton--overview" />
         <div className="balances-page__skeleton balances-page__skeleton--potential" />
-        <div className="balances-page__cards balances-page__cards--loading">
-          <div className="balances-page__skeleton" />
-          <div className="balances-page__skeleton" />
-          <div className="balances-page__skeleton" />
-          <div className="balances-page__skeleton" />
-        </div>
       </div>
     )
   }
@@ -135,8 +128,7 @@ export function BalancesPage() {
   const available = summary.availableDays
   const reserved = summary.reservedDays
   const acquisition = summary.currentAccrualDays
-  const forecast = summary.forecastDays
-  const potential = Math.max(0, forecast - reserved)
+  const potential = summary.potentialDays
   const periodLabel = periodDates
     ? `${formatDateNumericFR(periodDates.start)} → ${formatDateNumericFR(periodDates.end)}`
     : summary.referencePeriod
@@ -148,43 +140,12 @@ export function BalancesPage() {
       <BalanceOverview
         available={available}
         acquisition={acquisition}
-        forecast={forecast}
         reserved={reserved}
-        acquisitionSubtitle={periodDates ? `Acquis jusqu’au ${formatDateNumericFR(periodDates.end)}` : 'Acquis sur la période'}
+        potential={potential}
+        acquisitionSubtitle={periodDates ? `Acquis sur la période jusqu’au ${formatDateNumericFR(periodDates.end)}` : 'Acquis sur la période'}
       />
 
-      <div className="balances-page__cards">
-        <BalanceMetric
-          label="Congés à utiliser"
-          value={available}
-          subtitle="Solde réel avant réservations"
-          tone="blue"
-          icon="wallet"
-        />
-        <BalanceMetric
-          label="En cours d’acquisition"
-          value={acquisition}
-          subtitle={periodDates ? `Jours acquis d’ici le ${formatDateNumericFR(periodDates.end)}` : 'Jours acquis sur la période'}
-          tone="cyan"
-          icon="calendar"
-        />
-        <BalanceMetric
-          label="Prévisionnels"
-          value={forecast}
-          subtitle="Projection fin de période"
-          tone="navy"
-          icon="wallet"
-        />
-        <BalanceMetric
-          label="Jours réservés"
-          value={reserved}
-          subtitle="Congés payés en attente"
-          tone="orange"
-          icon="wallet"
-        />
-      </div>
-
-      <span className="balances-page__sr-only">Solde potentiel : {formatDays(potential)} jours</span>
+      <span className="balances-page__sr-only">Disponible après réservations : {formatDays(potential)} jours</span>
     </div>
   )
 }

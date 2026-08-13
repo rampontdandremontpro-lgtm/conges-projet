@@ -2,14 +2,14 @@ import { Icon } from '@/components/ui/Icon'
 import { formatDays, formatPeriod } from '@/utils/format'
 import { CardSkeleton, CardError } from '@/components/collab/dashboard/DashboardStates'
 
-export function LeaveBalanceCard({ balance, loading, error, onRetry }) {
+export function LeaveBalanceCard({ summary, loading, error, onRetry }) {
   let content
 
   if (loading) {
     content = <CardSkeleton rows={4} />
   } else if (error) {
     content = <CardError onRetry={onRetry} />
-  } else if (!balance) {
+  } else if (!summary) {
     content = (
       <div className="dash-empty">
         <span className="dash-empty__icon dash-empty__icon--muted">
@@ -22,21 +22,20 @@ export function LeaveBalanceCard({ balance, loading, error, onRetry }) {
       </div>
     )
   } else {
-    const acquired = Number(balance.acquiredDays) || 0
-    const realBalance = Number(balance.availableDays) || 0
-    const reserved = Number(balance.reservedDays) || 0
-    const potential = Number.isFinite(Number(balance.potentialDays))
-      ? Number(balance.potentialDays)
-      : Math.max(0, realBalance - reserved)
-    const progress = acquired > 0 ? Math.min(100, (potential / acquired) * 100) : 0
+    const realBalance = Number(summary.availableDays) || 0
+    const reserved = Number(summary.reservedDays) || 0
+    const potential = Number(summary.potentialDays) || 0
+    const acquisition = Number(summary.currentAccrualDays) || 0
+    const progress = realBalance > 0 ? Math.min(100, (potential / realBalance) * 100) : 0
     const reservedLabel = reserved > 0 ? `-${formatDays(reserved)} j` : `${formatDays(reserved)} j`
+
     content = (
       <>
         <div className="balance-hero">
-          <span className="balance-hero__number">{formatDays(potential)}</span>
+          <span className="balance-hero__number">{formatDays(realBalance)}</span>
           <span className="balance-hero__label">
             <span>jours</span>
-            <span>disponibles</span>
+            <span>à utiliser</span>
           </span>
         </div>
         <div
@@ -45,29 +44,29 @@ export function LeaveBalanceCard({ balance, loading, error, onRetry }) {
           aria-valuemin="0"
           aria-valuemax="100"
           aria-valuenow={Math.round(progress)}
-          aria-label="Solde disponible"
+          aria-label="Disponible après réservations"
         >
           <div className="balance-progress__fill" style={{ width: `${progress}%` }} />
         </div>
         <div className="balance-summary">
           <span>
-            <strong>{formatDays(realBalance)}</strong> solde réel
+            <strong>{formatDays(realBalance)}</strong> disponibles aujourd&apos;hui
           </span>
           <span>
-            <strong>{formatDays(balance.acquiredDays)}</strong> acquis
+            <strong>{formatDays(acquisition)}</strong> en cours d&apos;acquisition
           </span>
         </div>
         <div className="balance-pills">
           <div className="balance-pill balance-pill--cyan">
-            <span className="balance-pill__label">Acquis</span>
-            <strong>{formatDays(balance.acquiredDays)} j</strong>
+            <span className="balance-pill__label">En acquisition</span>
+            <strong>{formatDays(acquisition)} j</strong>
           </div>
           <div className="balance-pill balance-pill--orange">
             <span className="balance-pill__label">Réservé</span>
             <strong>{reservedLabel}</strong>
           </div>
           <div className="balance-pill balance-pill--green">
-            <span className="balance-pill__label">Solde potentiel</span>
+            <span className="balance-pill__label">Après réservations</span>
             <strong>{formatDays(potential)} j</strong>
           </div>
         </div>
@@ -80,11 +79,11 @@ export function LeaveBalanceCard({ balance, loading, error, onRetry }) {
       <header className="dash-card__header">
         <div className="dash-card__heading">
           <h2 className="dash-card__title">Congés à utiliser</h2>
-          {balance && !loading && !error && (
-            <span className="dash-card__period">Période {formatPeriod(balance.referencePeriod)}</span>
+          {summary && !loading && !error && (
+            <span className="dash-card__period">Période {formatPeriod(summary.referencePeriod)}</span>
           )}
         </div>
-        {balance && !loading && !error && <span className="dash-card__status-ok">Solde OK</span>}
+        {summary && !loading && !error && <span className="dash-card__status-ok">Solde OK</span>}
       </header>
       {content}
     </section>

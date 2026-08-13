@@ -361,3 +361,99 @@
     background-position: -100% 0;
   }
 }
+
+.balances-overview--simple {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 64px;
+}
+
+.balances-overview--simple .balances-overview__metric {
+  padding-right: 24px;
+}
+
+.balances-impact-card {
+  margin-top: 14px;
+  padding: 22px 24px;
+  border: 1px solid rgba(10, 30, 69, 0.06);
+  border-radius: 20px;
+  background: #ffffff;
+  box-shadow: var(--shadow-sm);
+}
+
+.balances-impact-card__heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 28px;
+}
+
+.balances-impact-card__eyebrow {
+  display: block;
+  margin-bottom: 6px;
+  color: #8aa6cf;
+  font-size: 12px;
+  font-weight: var(--font-weight-black);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.balances-impact-card__heading > div:first-child > strong {
+  display: block;
+  color: #14a870;
+  font-size: 48px;
+  font-weight: var(--font-weight-black);
+  letter-spacing: -0.04em;
+  line-height: 1;
+}
+
+.balances-impact-card__heading p {
+  margin: 5px 0 0;
+  color: #6b7fa3;
+  font-size: 14px;
+}
+
+.balances-impact-card__numbers {
+  display: flex;
+  min-width: 220px;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 5px;
+  color: #8aa6cf;
+  font-size: 13px;
+}
+
+.balances-impact-card__numbers strong {
+  color: #0a1e45;
+  font-weight: var(--font-weight-black);
+}
+
+.balances-impact-card__numbers .is-negative {
+  color: #f76b1c;
+}
+
+.balances-impact-card__numbers .is-positive {
+  color: #14a870;
+}
+
+.balances-impact-card__progress {
+  height: 9px;
+  margin-top: 18px;
+  overflow: hidden;
+  border-radius: var(--radius-full);
+  background: #e4edf9;
+}
+
+.balances-impact-card__progress span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #1b6ef3 0%, #14a870 100%);
+  transition: width var(--transition-base);
+}
+
+.balances-impact-card__help {
+  margin: 12px 0 0;
+  color: #6b7fa3;
+  font-size: 12px;
+  line-height: 1.45;
+}

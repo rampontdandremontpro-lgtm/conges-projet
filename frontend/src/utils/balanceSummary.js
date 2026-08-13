@@ -20,12 +20,7 @@ export function selectUsableBalance(balances) {
     ? balances.filter((balance) => balance.referencePeriod === period)
     : balances
 
-  return (
-    findCounter(scoped, 'N-1') ??
-    findCounter(scoped, 'N') ??
-    scoped[0] ??
-    null
-  )
+  return findCounter(scoped, 'N-1') ?? findCounter(scoped, 'N') ?? scoped[0] ?? null
 }
 
 export function buildBalanceSummary(balances) {
@@ -36,10 +31,8 @@ export function buildBalanceSummary(balances) {
     ? balances.filter((balance) => balance.referencePeriod === referencePeriod)
     : balances
 
-  const nMinus1 = findCounter(scoped, 'N-1')
-  const n = findCounter(scoped, 'N')
-  const nPlus1 = findCounter(scoped, 'N+1')
-  const usable = nMinus1 ?? n ?? scoped[0] ?? null
+  const usable = findCounter(scoped, 'N-1') ?? findCounter(scoped, 'N') ?? scoped[0] ?? null
+  const acquisition = findCounter(scoped, 'N')
 
   if (!usable) return null
 
@@ -49,22 +42,13 @@ export function buildBalanceSummary(balances) {
     ? Number(usable.potentialDays)
     : Math.max(0, availableDays - reservedDays)
 
-  const currentAccrualDays = numberValue(n?.acquiredDays ?? n?.availableDays)
-  const forecastDays = numberValue(nPlus1?.availableDays ?? nPlus1?.acquiredDays)
-
   return {
     referencePeriod: usable.referencePeriod ?? referencePeriod,
     usableBalance: usable,
+    acquisitionBalance: acquisition,
     availableDays,
     reservedDays,
     potentialDays,
-    acquiredUsableDays: numberValue(usable.acquiredDays),
-    currentAccrualDays,
-    forecastDays,
-    counters: {
-      nMinus1,
-      n,
-      nPlus1,
-    },
+    currentAccrualDays: numberValue(acquisition?.acquiredDays ?? acquisition?.availableDays),
   }
 }

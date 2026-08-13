@@ -9,7 +9,7 @@ import { PlanLeaveCard } from '@/components/collab/dashboard/PlanLeaveCard'
 import { AlertsCard } from '@/components/collab/dashboard/AlertsCard'
 import { getMyLeaveBalances, getMyLeaveRequests, getPublicSettings } from '@/services/dashboard'
 import { todayISO } from '@/utils/format'
-import { selectUsableBalance } from '@/utils/balanceSummary'
+import { buildBalanceSummary } from '@/utils/balanceSummary'
 
 import '@/styles/dashboard.css'
 
@@ -93,21 +93,17 @@ export function DashboardCollaborateur() {
     }
   }, [])
 
-  const balance = selectUsableBalance(balances.data)
+  const balanceSummary = buildBalanceSummary(balances.data)
   const nextLeave = computeNextLeave(requests.data)
   const recent = requests.data.slice(0, 4)
-  const availableDays = balance
-    ? Number.isFinite(Number(balance.potentialDays))
-      ? Number(balance.potentialDays)
-      : Math.max(0, Number(balance.availableDays || 0) - Number(balance.reservedDays || 0))
-    : null
+  const availableDays = balanceSummary?.potentialDays ?? null
 
   return (
     <PageContainer className="dash-page">
       <div className="dash-grid">
         <div className="dash-col dash-col--main">
           <LeaveBalanceCard
-            balance={balance}
+            summary={balanceSummary}
             loading={balances.loading}
             error={balances.error}
             onRetry={retryBalances}
