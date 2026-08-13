@@ -46,11 +46,11 @@ export function Header() {
   const [searchParams, setSearchParams] = useSearchParams()
   const title = headerTitle(pathname)
   const showSearch = !['/app/dashboard', '/app/new-request', '/app/my-balances', '/app/declare-absence', '/app/my-documents'].includes(pathname)
-  const requestsSearchEnabled = pathname === '/app/my-requests'
-  const searchValue = requestsSearchEnabled ? searchParams.get('q') ?? '' : undefined
+  const searchEnabled = ['/app/my-requests', '/app/notifications'].includes(pathname)
+  const searchValue = searchEnabled ? searchParams.get('q') ?? '' : undefined
 
   const handleSearchChange = (event) => {
-    if (!requestsSearchEnabled) {
+    if (!searchEnabled) {
       return
     }
 

@@ -13,6 +13,7 @@ import { BalancesPage } from '@/pages/collab/BalancesPage'
 import { MyRequestsPage } from '@/pages/collab/MyRequestsPage'
 import { DeclareAbsencePage } from '@/pages/collab/DeclareAbsencePage'
 import { DocumentsPage } from '@/pages/collab/DocumentsPage'
+import { NotificationsPage } from '@/pages/collab/NotificationsPage'
 import { NEW_REQUEST_ROLES, ROLES } from '@/config/navigation'
 import { RoleRoute } from '@/auth/RoleRoute'
 
@@ -68,6 +69,14 @@ export const router = createBrowserRouter([
       {
         path: 'documents',
         element: <Navigate to="/app/my-documents" replace />,
+      },
+      {
+        path: 'notifications',
+        element: (
+          <RoleRoute roles={[ROLES.COLLABORATEUR, ROLES.RESPONSABLE_SERVICE, ROLES.RH, ROLES.DIRECTEUR]}>
+            <NotificationsPage />
+          </RoleRoute>
+        ),
       },
       {
         path: 'my-balances',

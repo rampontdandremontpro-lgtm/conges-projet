@@ -89,9 +89,14 @@ export function NotificationsDropdown() {
     refreshUnreadCount()
 
     const handleWindowFocus = () => refreshUnreadCount()
+    const handleNotificationsUpdated = () => refreshUnreadCount()
     window.addEventListener('focus', handleWindowFocus)
+    window.addEventListener('gmes:notifications-updated', handleNotificationsUpdated)
 
-    return () => window.removeEventListener('focus', handleWindowFocus)
+    return () => {
+      window.removeEventListener('focus', handleWindowFocus)
+      window.removeEventListener('gmes:notifications-updated', handleNotificationsUpdated)
+    }
   }, [refreshUnreadCount])
 
   useEffect(() => {
