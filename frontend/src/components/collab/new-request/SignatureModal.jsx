@@ -10,7 +10,17 @@ function initialsValid(value) {
   return letters >= 2 && letters <= 6 && INITIALS_PATTERN.test(value)
 }
 
-export function SignatureModal({ open, requestLabel, submitting, onClose, onConfirm }) {
+export function SignatureModal({
+  open,
+  requestLabel,
+  submitting,
+  onClose,
+  onConfirm,
+  title = 'Signer et soumettre',
+  confirmLabel = 'Confirmer et soumettre',
+  submittingLabel = 'Soumission…',
+  dialogLabel = 'Signer et soumettre la demande',
+}) {
   const [mode, setMode] = useState('INITIALS')
   const [initials, setInitials] = useState('')
   const [hasDrawing, setHasDrawing] = useState(false)
@@ -150,12 +160,12 @@ export function SignatureModal({ open, requestLabel, submitting, onClose, onConf
         className="nr-modal"
         role="dialog"
         aria-modal="true"
-        aria-label="Signer et soumettre la demande"
+        aria-label={dialogLabel}
         onMouseDown={(event) => event.stopPropagation()}
       >
         <div className="nr-modal__header">
           <div>
-            <h3 className="nr-modal__title">Signer et soumettre</h3>
+            <h3 className="nr-modal__title">{title}</h3>
             <p className="nr-modal__subtitle">{requestLabel}</p>
           </div>
           <button
@@ -284,11 +294,11 @@ export function SignatureModal({ open, requestLabel, submitting, onClose, onConf
           >
             {submitting ? (
               <>
-                <span className="nr-spinner" /> Soumission…
+                <span className="nr-spinner" /> {submittingLabel}
               </>
             ) : (
               <>
-                <Icon name="check" size={16} /> Confirmer et soumettre
+                <Icon name="check" size={16} /> {confirmLabel}
               </>
             )}
           </button>

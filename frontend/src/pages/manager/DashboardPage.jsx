@@ -76,6 +76,7 @@ export function DashboardResponsable() {
             error={requests.error}
             onRetry={loadRequests}
             onViewAll={() => navigate('/app/requests')}
+            onOpenRequest={(id) => navigate(`/app/requests/${id}`)}
           />
         </div>
 

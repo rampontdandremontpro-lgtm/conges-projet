@@ -5,7 +5,7 @@ function initials(employee) {
   return `${employee?.prenom?.[0] ?? ''}${employee?.nom?.[0] ?? ''}`.toUpperCase() || '—'
 }
 
-export function ManagerRecentRequestsCard({ requests, loading, error, onRetry, onViewAll }) {
+export function ManagerRecentRequestsCard({ requests, loading, error, onRetry, onViewAll, onOpenRequest }) {
   return (
     <section className="dash-card manager-recent-card">
       <div className="dash-card__header">
@@ -42,7 +42,7 @@ export function ManagerRecentRequestsCard({ requests, loading, error, onRetry, o
       ) : (
         <div className="manager-request-list">
           {requests.slice(0, 4).map((request) => (
-            <button className="manager-request-row" type="button" key={request.id} onClick={onViewAll}>
+            <button className="manager-request-row" type="button" key={request.id} onClick={() => onOpenRequest?.(request.id)}>
               <span className="manager-request-avatar">{initials(request.employee)}</span>
               <span className="manager-request-main">
                 <span className="manager-request-topline">

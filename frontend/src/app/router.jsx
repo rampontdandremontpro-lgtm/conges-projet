@@ -16,6 +16,8 @@ import { NotificationsPage } from '@/pages/collab/NotificationsPage'
 import { RequestDetailPage } from '@/pages/collab/RequestDetailPage'
 import { ProfilePage } from '@/pages/collab/ProfilePage'
 import { SettingsPage } from '@/pages/collab/SettingsPage'
+import { ManagerRequestsPage } from '@/pages/manager/RequestsPage'
+import { ManagerRequestDecisionPage } from '@/pages/manager/RequestDecisionPage'
 import { NEW_REQUEST_ROLES, ROLES } from '@/config/navigation'
 import { RoleRoute } from '@/auth/RoleRoute'
 
@@ -32,6 +34,22 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <Navigate to="/app/dashboard" replace /> },
       { path: 'dashboard', element: <DashboardGate /> },
+      {
+        path: 'requests',
+        element: (
+          <RoleRoute roles={[ROLES.RESPONSABLE_SERVICE]}>
+            <ManagerRequestsPage />
+          </RoleRoute>
+        ),
+      },
+      {
+        path: 'requests/:id',
+        element: (
+          <RoleRoute roles={[ROLES.RESPONSABLE_SERVICE]}>
+            <ManagerRequestDecisionPage />
+          </RoleRoute>
+        ),
+      },
       {
         path: 'new-request',
         element: (

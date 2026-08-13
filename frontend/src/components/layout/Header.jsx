@@ -12,6 +12,7 @@ function headerTitle(pathname) {
   if (/^\/app\/declare-absence\/\d+$/.test(pathname)) return 'Modifier la déclaration'
   if (/^\/app\/my-requests\/leave\/\d+$/.test(pathname)) return 'Détail de la demande'
   if (/^\/app\/my-requests\/absence\/\d+$/.test(pathname)) return 'Détail de l’absence'
+  if (/^\/app\/requests\/\d+$/.test(pathname)) return 'Détail de la demande'
   if (pathname === '/app/profile') return 'Mon profil'
   if (pathname === '/app/settings') return 'Paramètres'
 
@@ -45,9 +46,10 @@ export function Header() {
   const hideSearch =
     ['/app/dashboard', '/app/new-request', '/app/history', '/app/my-balances', '/app/declare-absence', '/app/my-documents', '/app/profile', '/app/settings'].includes(pathname) ||
     /^\/app\/(new-request|declare-absence)\/\d+$/.test(pathname) ||
-    /^\/app\/my-requests\/(leave|absence)\/\d+$/.test(pathname)
+    /^\/app\/my-requests\/(leave|absence)\/\d+$/.test(pathname) ||
+    /^\/app\/requests\/\d+$/.test(pathname)
   const showSearch = !hideSearch
-  const searchEnabled = ['/app/my-requests', '/app/notifications'].includes(pathname)
+  const searchEnabled = ['/app/my-requests', '/app/notifications', '/app/requests'].includes(pathname)
   const searchValue = searchEnabled ? searchParams.get('q') ?? '' : undefined
 
   const handleSearchChange = (event) => {
