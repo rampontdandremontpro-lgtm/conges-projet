@@ -32,25 +32,6 @@
     padding-bottom: 22px;
   }
 
-  .absence-intro {
-    align-items: flex-start;
-    padding: 15px;
-  }
-
-  .absence-intro__icon {
-    width: 42px;
-    height: 42px;
-    flex-basis: 42px;
-  }
-
-  .absence-intro h2 {
-    font-size: 16px;
-  }
-
-  .absence-intro p {
-    font-size: 12px;
-  }
-
   .absence-card,
   .absence-summary {
     padding: 17px;

@@ -19,39 +19,6 @@
   gap: 18px;
 }
 
-.absence-intro {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  margin-bottom: 18px;
-  padding: 18px 20px;
-  border: 1px solid rgba(27, 110, 243, 0.12);
-  border-radius: 18px;
-  background: linear-gradient(135deg, #ffffff 0%, #f7faff 100%);
-}
-
-.absence-intro__icon {
-  display: grid;
-  place-items: center;
-  width: 48px;
-  height: 48px;
-  flex: 0 0 48px;
-  border-radius: 14px;
-  background: #eaf2ff;
-  color: var(--absence-blue);
-}
-
-.absence-intro h2 {
-  margin-bottom: 3px;
-  font-size: 18px;
-  font-weight: 900;
-}
-
-.absence-intro p {
-  color: var(--absence-muted);
-  font-size: 13.5px;
-}
-
 .absence-card {
   padding: 22px;
   border: 1px solid var(--absence-border);

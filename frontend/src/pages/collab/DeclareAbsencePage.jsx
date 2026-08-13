@@ -365,16 +365,6 @@ export function DeclareAbsencePage() {
     <div className="absence-page">
       <Feedback feedback={feedback} onClose={() => setFeedback(null)} />
 
-      <div className="absence-intro">
-        <div className="absence-intro__icon"><Icon name="clock" size={24} /></div>
-        <div>
-          <h2>Déclarer une absence</h2>
-          <p>
-            Renseignez votre absence puis transmettez-la à la RH. Aucune signature électronique n’est demandée.
-          </p>
-        </div>
-      </div>
-
       <AbsenceTypeSelector
         types={types}
         selectedId={form.leaveTypeId}
