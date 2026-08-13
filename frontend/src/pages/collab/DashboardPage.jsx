@@ -114,6 +114,14 @@ export function DashboardCollaborateur() {
             error={requests.error}
             onRetry={retryRequests}
             onViewAll={() => navigate('/app/my-requests')}
+            onOpenRequest={(request) => {
+              if (request.status === 'BROUILLON') {
+                navigate(`/app/new-request/${request.id}`)
+                return
+              }
+
+              navigate(`/app/my-requests/leave/${request.id}`)
+            }}
           />
         </div>
         <div className="dash-col dash-col--side">

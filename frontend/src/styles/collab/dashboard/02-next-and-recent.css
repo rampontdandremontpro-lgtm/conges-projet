@@ -178,5 +178,29 @@
   height: 32px;
   border-radius: var(--radius-full);
   color: var(--color-text-muted);
+  transition:
+    color 160ms ease,
+    transform 160ms ease;
 }
 
+.recent-row--clickable {
+  cursor: pointer;
+  border-radius: var(--radius-md);
+  transition:
+    background-color 160ms ease,
+    transform 160ms ease;
+}
+
+.recent-row--clickable:hover {
+  background: var(--color-brand-50);
+}
+
+.recent-row--clickable:hover .recent-row__more {
+  color: var(--color-brand-600);
+  transform: translateX(2px);
+}
+
+.recent-row--clickable:focus-visible {
+  outline: 2px solid var(--color-brand-500);
+  outline-offset: 2px;
+}

@@ -3,7 +3,7 @@ import { StatusBadge } from '@/components/collab/dashboard/StatusBadge'
 import { CardSkeleton, CardError } from '@/components/collab/dashboard/DashboardStates'
 import { formatDays, formatRangeNumericFR } from '@/utils/format'
 
-export function RecentRequestsCard({ requests, loading, error, onRetry, onViewAll }) {
+export function RecentRequestsCard({ requests, loading, error, onRetry, onViewAll, onOpenRequest }) {
   let content
 
   if (loading) {
@@ -24,7 +24,20 @@ export function RecentRequestsCard({ requests, loading, error, onRetry, onViewAl
     content = (
       <ul className="recent-list">
         {requests.map((request) => (
-          <li key={request.id} className="recent-row">
+          <li
+            key={request.id}
+            className="recent-row recent-row--clickable"
+            role="button"
+            tabIndex={0}
+            aria-label={`Ouvrir le détail de ${request.leaveType?.name || 'la demande'}`}
+            onClick={() => onOpenRequest?.(request)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault()
+                onOpenRequest?.(request)
+              }
+            }}
+          >
             <span className="recent-row__icon" aria-hidden="true">
               <Icon name="calendar" size={16} />
             </span>
@@ -39,7 +52,7 @@ export function RecentRequestsCard({ requests, loading, error, onRetry, onViewAl
               </span>
             </div>
             <span className="recent-row__more" aria-hidden="true">
-              <Icon name="dots" size={18} />
+              <Icon name="chevronRight" size={17} />
             </span>
           </li>
         ))}
