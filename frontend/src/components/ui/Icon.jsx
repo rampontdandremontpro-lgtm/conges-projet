@@ -40,6 +40,29 @@ const ICON_PATHS = {
       <path d="M16 13H8M16 17H8M10 9H8" />
     </>
   ),
+  download: (
+    <>
+      <path d="M12 3v12" />
+      <path d="m7 10 5 5 5-5" />
+      <path d="M5 21h14" />
+    </>
+  ),
+  refresh: (
+    <>
+      <path d="M20 6v5h-5" />
+      <path d="M4 18v-5h5" />
+      <path d="M18.5 9a7 7 0 0 0-11.9-2.5L4 11" />
+      <path d="M5.5 15a7 7 0 0 0 11.9 2.5L20 13" />
+    </>
+  ),
+  trash: (
+    <>
+      <path d="M3 6h18" />
+      <path d="M8 6V4h8v2" />
+      <path d="M19 6l-1 15H6L5 6" />
+      <path d="M10 11v6M14 11v6" />
+    </>
+  ),
   bell: (
     <>
       <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />

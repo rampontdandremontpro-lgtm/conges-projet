@@ -45,7 +45,7 @@ export function Header() {
   const { pathname } = useLocation()
   const [searchParams, setSearchParams] = useSearchParams()
   const title = headerTitle(pathname)
-  const showSearch = !['/app/dashboard', '/app/new-request', '/app/my-balances', '/app/declare-absence'].includes(pathname)
+  const showSearch = !['/app/dashboard', '/app/new-request', '/app/my-balances', '/app/declare-absence', '/app/my-documents'].includes(pathname)
   const requestsSearchEnabled = pathname === '/app/my-requests'
   const searchValue = requestsSearchEnabled ? searchParams.get('q') ?? '' : undefined
 

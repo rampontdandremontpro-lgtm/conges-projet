@@ -28,9 +28,8 @@ export const NAVIGATION = {
     { id: 'dashboard', label: 'Tableau de bord', to: '/app/dashboard', icon: 'dashboard' },
     { id: 'my-requests', label: 'Mes demandes', to: '/app/my-requests', icon: 'list' },
     { id: 'declare-absence', label: 'Déclarer une absence', to: '/app/declare-absence', icon: 'calendar' },
-    { id: 'my-justificatifs', label: 'Mes justificatifs', to: '/app/my-justificatifs', icon: 'file' },
+    { id: 'my-documents', label: 'Mes documents', to: '/app/my-documents', icon: 'doc' },
     { id: 'my-balances', label: 'Mes soldes', to: '/app/my-balances', icon: 'wallet' },
-    { id: 'documents', label: 'Documents PDF', to: '/app/documents', icon: 'doc' },
     { id: 'notifications', label: 'Notifications', to: '/app/notifications', icon: 'bell' },
   ],
   [ROLES.RESPONSABLE_SERVICE]: [

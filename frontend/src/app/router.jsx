@@ -12,6 +12,7 @@ import { NewRequest } from '@/pages/collab/NewRequestPage'
 import { BalancesPage } from '@/pages/collab/BalancesPage'
 import { MyRequestsPage } from '@/pages/collab/MyRequestsPage'
 import { DeclareAbsencePage } from '@/pages/collab/DeclareAbsencePage'
+import { DocumentsPage } from '@/pages/collab/DocumentsPage'
 import { NEW_REQUEST_ROLES, ROLES } from '@/config/navigation'
 import { RoleRoute } from '@/auth/RoleRoute'
 
@@ -51,6 +52,22 @@ export const router = createBrowserRouter([
             <DeclareAbsencePage />
           </RoleRoute>
         ),
+      },
+      {
+        path: 'my-documents',
+        element: (
+          <RoleRoute roles={[ROLES.COLLABORATEUR]}>
+            <DocumentsPage />
+          </RoleRoute>
+        ),
+      },
+      {
+        path: 'my-justificatifs',
+        element: <Navigate to="/app/my-documents" replace />,
+      },
+      {
+        path: 'documents',
+        element: <Navigate to="/app/my-documents" replace />,
       },
       {
         path: 'my-balances',
