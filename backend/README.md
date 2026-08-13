@@ -1,98 +1,52 @@
-# Backend — Gestion des congés GMES
+# Base de données GMES
 
-API NestJS, TypeORM et MySQL pour la gestion des demandes de congés, déclarations d’absence, dérogations, soldes, justificatifs et PDF officiels.
+Le fichier `reference/diagramme_bdd_gestion_conges_gmes_v1_simplifie.dbml` est la source de vérité du schéma.
 
-## Prérequis
+La base contient exactement **15 tables** :
 
-- Node.js ;
-- npm ;
-- MySQL ou MariaDB ;
-- une base nommée `gestion_conges_gmes` ;
-- un fichier `.env` dans `backend`.
+- `services`
+- `service_backup_validators`
+- `users`
+- `validator_replacements`
+- `leave_types`
+- `leave_requests`
+- `absence_declarations`
+- `documents`
+- `derogations`
+- `leave_balances`
+- `balance_movements`
+- `holidays`
+- `settings`
+- `notifications`
+- `audit_logs`
 
-Exemple minimal de `.env` :
+Les tables `service_backup_validators` et `validator_replacements` implémentent E6 : valideurs de secours par service et remplacements temporaires par collaborateur.
 
-```env
-DB_HOST=localhost
-DB_PORT=3306
-DB_USERNAME=root
-DB_PASSWORD=
-DB_DATABASE=gestion_conges_gmes
+## Réinitialisation complète
 
-JWT_SECRET=remplace-par-une-cle-longue-et-secrete
-JWT_EXPIRES_IN=8h
-```
-
-## Installer les dépendances
-
-```powershell
-npm install
-```
-
-## Recréer la base conformément au diagramme
-
-La commande suivante supprime volontairement l’ancienne base, crée exactement les 13 tables prévues par le diagramme, insère les données initiales puis vérifie le résultat :
+Depuis le dossier `backend` :
 
 ```powershell
-npm run db:reset
+powershell -ExecutionPolicy Bypass -File .\database\reset-database.ps1
 ```
 
-Le fichier de référence est :
+Le script supprime volontairement la base `gestion_conges_gmes`, la recrée avec `schema.sql`, insère les données de départ avec `seed.sql`, puis lance `verify-schema.sql`.
 
-```text
-database/reference/diagramme_bdd_gestion_conges_gmes_v1_simplifie.dbml
-```
+TypeORM est configuré avec `synchronize: false`. Le démarrage du backend ne crée donc aucune table et ne modifie jamais automatiquement le schéma.
 
-TypeORM utilise `synchronize: false`. Le backend ne crée donc aucune table automatiquement.
+## Compte initial
 
-## Démarrer le backend
-
-```powershell
-npm run build
-npm run start:dev
-```
-
-L’API est disponible sur :
-
-```text
-http://localhost:3000/api
-```
-
-## Premier compte Admin
-
-Le seed crée :
+Le seed crée le compte local suivant sans mot de passe :
 
 ```text
 admin@gmes.fr
 ```
 
-Aucun mot de passe n’est préenregistré. Pour le définir :
+Utiliser successivement :
 
 ```text
 POST /api/auth/request-password
 POST /api/auth/define-password
 ```
 
-Le jeton temporaire est affiché dans le terminal NestJS tant que l’envoi par e-mail n’est pas intégré.
-
-## Schéma V1
-
-La base contient uniquement :
-
-```text
-services
-users
-leave_types
-leave_requests
-absence_declarations
-documents
-derogations
-leave_balances
-balance_movements
-holidays
-settings
-notifications
-audit_logs
-```
-
-Les PDF officiels sont stockés dans `documents`. L’historique général est stocké dans `audit_logs`. Les annulations après validation sont stockées directement dans `leave_requests`.
+Le jeton temporaire apparaît dans le terminal NestJS tant que l'envoi par e-mail n'est pas intégré.

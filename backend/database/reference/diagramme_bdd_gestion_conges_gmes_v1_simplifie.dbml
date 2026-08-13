@@ -1,9 +1,9 @@
 Project gestion_conges_gmes_v1 {
   database_type: 'MySQL'
   Note: '''
-  Version simplifiée de la base de données pour la V1 de l'application GMES.
-  Les règles techniques très avancées sont regroupées dans les tables principales
-  afin de garder un modèle lisible et réaliste pour le démarrage du projet.
+  Version actuelle de la base de données V1 de l'application GMES.
+  Le modèle contient 15 tables, dont les deux tables E6 dédiées aux valideurs
+  de secours par service et aux remplacements temporaires par collaborateur.
   '''
 }
 
@@ -178,6 +178,51 @@ Table services {
 
   Autres services internes et services externes :
   - validation_mode = DIRECTEUR_ET_RH
+  '''
+}
+
+
+Table service_backup_validators {
+  id bigint [pk, increment]
+  service_id bigint [not null]
+  validator_id bigint [not null]
+  is_active boolean [not null, default: true]
+  created_at datetime [not null, default: `CURRENT_TIMESTAMP`]
+  updated_at datetime [not null, default: `CURRENT_TIMESTAMP`]
+
+  indexes {
+    (service_id, validator_id) [unique]
+    (service_id, is_active)
+  }
+
+  Note: '''
+  E6 - Valideurs de secours rattachés à un service.
+  Les valideurs éligibles sont des utilisateurs actifs autorisés par les règles métier.
+  '''
+}
+
+
+Table validator_replacements {
+  id bigint [pk, increment]
+  employee_id bigint [not null]
+  replacement_validator_id bigint [not null]
+  start_date date [not null]
+  end_date date [not null]
+  reason text
+  created_by_rh_id bigint [not null]
+  is_active boolean [not null, default: true]
+  created_at datetime [not null, default: `CURRENT_TIMESTAMP`]
+  updated_at datetime [not null, default: `CURRENT_TIMESTAMP`]
+
+  indexes {
+    (employee_id, is_active, start_date, end_date)
+  }
+
+  Note: '''
+  E6 - Remplacement temporaire d'un valideur pour un collaborateur précis.
+  Les dates sont inclusives. Les règles métier interdisent les chevauchements actifs
+  pour un même collaborateur et rendent le remplacement inopérant si le remplaçant
+  devient inactif ou inéligible.
   '''
 }
 
@@ -419,7 +464,10 @@ Table leave_balances {
 
   Note: '''
   counter_type peut représenter N-1, N ou N+1.
-  Le solde potentiel correspond à available_days - reserved_days.
+  N-1 correspond aux congés à utiliser, N aux droits en cours d'acquisition.
+  N+1 reste conservé dans le modèle technique mais n'est plus exposé dans
+  l'interface Collaborateur actuelle.
+  Le disponible après réservations correspond à available_days - reserved_days.
   '''
 }
 
@@ -554,6 +602,13 @@ Table audit_logs {
 
 Ref: services.id < users.service_id
 Ref: users.id < services.primary_manager_id
+
+Ref: services.id < service_backup_validators.service_id
+Ref: users.id < service_backup_validators.validator_id
+
+Ref: users.id < validator_replacements.employee_id
+Ref: users.id < validator_replacements.replacement_validator_id
+Ref: users.id < validator_replacements.created_by_rh_id
 
 Ref: users.id < leave_requests.employee_id
 Ref: users.id < leave_requests.created_by_id
