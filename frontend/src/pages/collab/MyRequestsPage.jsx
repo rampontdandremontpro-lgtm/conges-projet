@@ -6,7 +6,7 @@ import { getRequestStatusLabel } from '@/components/collab/requests/RequestStatu
 import { Icon } from '@/components/ui/Icon'
 import { getMyDocuments } from '@/services/documents'
 import { getMyAbsenceDeclarations, getMyLeaveRequests } from '@/services/myRequests'
-import { deleteAbsenceDraft, deleteLeaveDraft, downloadCancellationPdf, downloadValidationPdf } from '@/services/requestDetails'
+import { deleteAbsenceDraft, deleteLeaveDraft, downloadCancellationPdf, downloadPendingSummaryPdf, downloadValidationPdf } from '@/services/requestDetails'
 import { formatDays, formatRangeNumericFR } from '@/utils/format'
 
 import '@/styles/requests.css'
@@ -192,6 +192,21 @@ export function MyRequestsPage() {
 
   useEffect(() => {
     load()
+
+    const refresh = () => load()
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === 'visible') load()
+    }
+
+    window.addEventListener('focus', refresh)
+    window.addEventListener('gmes:data-changed', refresh)
+    document.addEventListener('visibilitychange', refreshWhenVisible)
+
+    return () => {
+      window.removeEventListener('focus', refresh)
+      window.removeEventListener('gmes:data-changed', refresh)
+      document.removeEventListener('visibilitychange', refreshWhenVisible)
+    }
   }, [load])
 
   const items = useMemo(() => {
@@ -283,6 +298,21 @@ export function MyRequestsPage() {
         setFeedback({
           kind: 'error',
           message: error.response?.data?.message || error.message || 'Impossible de supprimer ce brouillon.',
+        })
+      } finally {
+        setBusyKey(null)
+      }
+      return
+    }
+
+    if (action === 'summary' && item.source === 'leave') {
+      setBusyKey(item.key)
+      try {
+        await downloadPendingSummaryPdf(item.id)
+      } catch (error) {
+        setFeedback({
+          kind: 'error',
+          message: error.response?.data?.message || error.message || 'Impossible de télécharger le récapitulatif.',
         })
       } finally {
         setBusyKey(null)

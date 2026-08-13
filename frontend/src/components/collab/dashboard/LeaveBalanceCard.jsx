@@ -22,14 +22,18 @@ export function LeaveBalanceCard({ balance, loading, error, onRetry }) {
       </div>
     )
   } else {
-    const acquired = balance.acquiredDays || 0
-    const progress = acquired > 0 ? Math.min(100, (balance.availableDays / acquired) * 100) : 0
-    const reserved = balance.reservedDays || 0
+    const acquired = Number(balance.acquiredDays) || 0
+    const realBalance = Number(balance.availableDays) || 0
+    const reserved = Number(balance.reservedDays) || 0
+    const potential = Number.isFinite(Number(balance.potentialDays))
+      ? Number(balance.potentialDays)
+      : Math.max(0, realBalance - reserved)
+    const progress = acquired > 0 ? Math.min(100, (potential / acquired) * 100) : 0
     const reservedLabel = reserved > 0 ? `-${formatDays(reserved)} j` : `${formatDays(reserved)} j`
     content = (
       <>
         <div className="balance-hero">
-          <span className="balance-hero__number">{formatDays(balance.availableDays)}</span>
+          <span className="balance-hero__number">{formatDays(potential)}</span>
           <span className="balance-hero__label">
             <span>jours</span>
             <span>disponibles</span>
@@ -47,7 +51,7 @@ export function LeaveBalanceCard({ balance, loading, error, onRetry }) {
         </div>
         <div className="balance-summary">
           <span>
-            <strong>{formatDays(balance.availableDays)}</strong> utilisables
+            <strong>{formatDays(realBalance)}</strong> solde réel
           </span>
           <span>
             <strong>{formatDays(balance.acquiredDays)}</strong> acquis
@@ -64,7 +68,7 @@ export function LeaveBalanceCard({ balance, loading, error, onRetry }) {
           </div>
           <div className="balance-pill balance-pill--green">
             <span className="balance-pill__label">Solde potentiel</span>
-            <strong>{formatDays(balance.potentialDays)} j</strong>
+            <strong>{formatDays(potential)} j</strong>
           </div>
         </div>
       </>

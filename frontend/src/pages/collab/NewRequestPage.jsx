@@ -24,6 +24,7 @@ import {
 } from '@/utils/newRequest'
 import { useNewRequestResources } from '@/hooks/collab/useNewRequestResources'
 import { getLeaveRequest } from '@/services/requestDetails'
+import { notifyAppDataChanged } from '@/utils/dataRefresh'
 
 import '@/styles/newrequest.css'
 
@@ -247,6 +248,7 @@ export function NewRequest() {
     try {
       const request = await persistCurrentRequest()
       await submitLeaveRequest(request.id, { signatureType, signatureData })
+      notifyAppDataChanged({ source: 'leave-request', action: 'submitted', id: request.id })
       setSignatureOpen(false)
       showToast('success', 'Demande soumise pour validation.')
       window.setTimeout(() => navigate('/app/my-requests'), 900)

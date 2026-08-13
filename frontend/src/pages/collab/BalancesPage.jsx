@@ -4,7 +4,8 @@ import { BalanceMetric } from '@/components/collab/balances/BalanceMetric'
 import { BalanceOverview } from '@/components/collab/balances/BalanceOverview'
 import { getBalanceSettings, getMyBalances } from '@/services/balances'
 import { formatDateNumericFR, formatDays, toISODate } from '@/utils/format'
-import { selectPrimaryBalance, settingsMap } from '@/utils/newRequest'
+import { settingsMap } from '@/utils/newRequest'
+import { buildBalanceSummary } from '@/utils/balanceSummary'
 
 import '@/styles/balances.css'
 
@@ -69,12 +70,27 @@ export function BalancesPage() {
 
   useEffect(() => {
     load()
+
+    const refresh = () => load()
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === 'visible') load()
+    }
+
+    window.addEventListener('focus', refresh)
+    window.addEventListener('gmes:data-changed', refresh)
+    document.addEventListener('visibilitychange', refreshWhenVisible)
+
+    return () => {
+      window.removeEventListener('focus', refresh)
+      window.removeEventListener('gmes:data-changed', refresh)
+      document.removeEventListener('visibilitychange', refreshWhenVisible)
+    }
   }, [load])
 
-  const balance = useMemo(() => selectPrimaryBalance(state.balances), [state.balances])
+  const summary = useMemo(() => buildBalanceSummary(state.balances), [state.balances])
   const config = useMemo(() => settingsMap(state.settings), [state.settings])
-  const periodDates = balance
-    ? parseReferencePeriodDates(balance.referencePeriod, config.REFERENCE_PERIOD_START)
+  const periodDates = summary
+    ? parseReferencePeriodDates(summary.referencePeriod, config.REFERENCE_PERIOD_START)
     : null
 
   if (state.loading) {
@@ -105,7 +121,7 @@ export function BalancesPage() {
     )
   }
 
-  if (!balance) {
+  if (!summary) {
     return (
       <div className="balances-page">
         <PageState
@@ -116,14 +132,14 @@ export function BalancesPage() {
     )
   }
 
-  const available = Number(balance.availableDays) || 0
-  const forecast = Number(balance.acquiredDays) || 0
-  const reserved = Number(balance.reservedDays) || 0
-  const acquisition = Math.max(0, forecast - available)
+  const available = summary.availableDays
+  const reserved = summary.reservedDays
+  const acquisition = summary.currentAccrualDays
+  const forecast = summary.forecastDays
   const potential = Math.max(0, forecast - reserved)
   const periodLabel = periodDates
     ? `${formatDateNumericFR(periodDates.start)} → ${formatDateNumericFR(periodDates.end)}`
-    : balance.referencePeriod
+    : summary.referencePeriod
 
   return (
     <div className="balances-page">
@@ -141,7 +157,7 @@ export function BalancesPage() {
         <BalanceMetric
           label="Congés à utiliser"
           value={available}
-          subtitle="Solde disponible aujourd’hui"
+          subtitle="Solde réel avant réservations"
           tone="blue"
           icon="wallet"
         />
@@ -162,7 +178,7 @@ export function BalancesPage() {
         <BalanceMetric
           label="Jours réservés"
           value={reserved}
-          subtitle="Demandes validées / en attente"
+          subtitle="Congés payés en attente"
           tone="orange"
           icon="wallet"
         />

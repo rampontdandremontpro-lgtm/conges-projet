@@ -9,17 +9,9 @@ import { PlanLeaveCard } from '@/components/collab/dashboard/PlanLeaveCard'
 import { AlertsCard } from '@/components/collab/dashboard/AlertsCard'
 import { getMyLeaveBalances, getMyLeaveRequests, getPublicSettings } from '@/services/dashboard'
 import { todayISO } from '@/utils/format'
+import { selectUsableBalance } from '@/utils/balanceSummary'
 
 import '@/styles/dashboard.css'
-
-function selectPrimaryBalance(balances) {
-  if (!balances || balances.length === 0) return null
-  const current = balances.find((balance) => balance.counterType === 'N')
-  if (current) return current
-  return [...balances].sort((a, b) =>
-    b.referencePeriod.localeCompare(a.referencePeriod),
-  )[0]
-}
 
 function computeNextLeave(requests) {
   if (!requests || requests.length === 0) return null
@@ -65,32 +57,27 @@ export function DashboardCollaborateur() {
   }, [loadRequests])
 
   useEffect(() => {
-    let cancelled = false
-    getMyLeaveBalances()
-      .then((data) => {
-        if (!cancelled) setBalances({ loading: false, error: false, data })
-      })
-      .catch(() => {
-        if (!cancelled) setBalances({ loading: false, error: true, data: [] })
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [])
+    loadBalances()
+    loadRequests()
 
-  useEffect(() => {
-    let cancelled = false
-    getMyLeaveRequests()
-      .then((data) => {
-        if (!cancelled) setRequests({ loading: false, error: false, data })
-      })
-      .catch(() => {
-        if (!cancelled) setRequests({ loading: false, error: true, data: [] })
-      })
-    return () => {
-      cancelled = true
+    const refresh = () => {
+      loadBalances()
+      loadRequests()
     }
-  }, [])
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === 'visible') refresh()
+    }
+
+    window.addEventListener('focus', refresh)
+    window.addEventListener('gmes:data-changed', refresh)
+    document.addEventListener('visibilitychange', refreshWhenVisible)
+
+    return () => {
+      window.removeEventListener('focus', refresh)
+      window.removeEventListener('gmes:data-changed', refresh)
+      document.removeEventListener('visibilitychange', refreshWhenVisible)
+    }
+  }, [loadBalances, loadRequests])
 
   useEffect(() => {
     let cancelled = false
@@ -106,10 +93,14 @@ export function DashboardCollaborateur() {
     }
   }, [])
 
-  const balance = selectPrimaryBalance(balances.data)
+  const balance = selectUsableBalance(balances.data)
   const nextLeave = computeNextLeave(requests.data)
   const recent = requests.data.slice(0, 4)
-  const availableDays = balance ? balance.availableDays : null
+  const availableDays = balance
+    ? Number.isFinite(Number(balance.potentialDays))
+      ? Number(balance.potentialDays)
+      : Math.max(0, Number(balance.availableDays || 0) - Number(balance.reservedDays || 0))
+    : null
 
   return (
     <PageContainer className="dash-page">

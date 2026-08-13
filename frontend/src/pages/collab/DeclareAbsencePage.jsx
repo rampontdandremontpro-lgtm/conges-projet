@@ -16,6 +16,8 @@ import { formatDateNumericFR, todayISO } from '@/utils/format'
 import { errorMessage } from '@/utils/newRequest'
 import { getAbsenceDeclaration, getAbsenceDocuments } from '@/services/requestDetails'
 
+import { notifyAppDataChanged } from '@/utils/dataRefresh'
+
 import '@/styles/absence.css'
 
 const MAX_FILES = 5
@@ -355,6 +357,7 @@ export function DeclareAbsencePage() {
       const saved = await persistDraft()
       await uploadPendingFiles(saved.id)
       await submitAbsenceDeclaration(saved.id, { certifiedAccurate: true })
+      notifyAppDataChanged({ source: 'absence-declaration', action: 'submitted', id: saved.id })
       showFeedback('success', 'Absence transmise à la RH.')
       window.setTimeout(() => navigate('/app/my-requests'), 900)
     } catch (error) {

@@ -203,6 +203,37 @@ export class DocumentPdfService {
     };
   }
 
+  async getPendingSummaryPdf(
+    leaveRequestId: number,
+    authenticatedUser: AuthenticatedUser,
+  ): Promise<ValidationPdfFile> {
+    const leaveRequest = await this.findPendingRequestForSummary(
+      leaveRequestId,
+    );
+
+    this.ensureUserCanAccessValidationPdf(
+      leaveRequest,
+      authenticatedUser,
+    );
+
+    const generatedAt = new Date();
+    const referenceNumber = `RECAP-${generatedAt.getFullYear()}-${String(
+      leaveRequest.id,
+    ).padStart(6, '0')}`;
+    const buffer = await this.buildPendingSummaryPdf({
+      leaveRequest,
+      referenceNumber,
+      generatedAt,
+    });
+
+    return {
+      buffer,
+      filename: `${referenceNumber}.pdf`,
+      referenceNumber,
+      checksum: createHash('sha256').update(buffer).digest('hex'),
+    };
+  }
+
   async ensureCancellationPdf(
     leaveRequestId: number,
     generatedByUserId: number,
@@ -453,6 +484,204 @@ export class DocumentPdfService {
         );
 
       document.end();
+    });
+  }
+
+  private async findPendingRequestForSummary(
+    leaveRequestId: number,
+  ): Promise<LeaveRequest> {
+    const leaveRequest = await this.leaveRequestRepository
+      .createQueryBuilder('leaveRequest')
+      .leftJoinAndSelect('leaveRequest.employee', 'employee')
+      .leftJoinAndSelect('leaveRequest.createdBy', 'createdBy')
+      .leftJoinAndSelect('leaveRequest.leaveType', 'leaveType')
+      .leftJoinAndSelect('leaveRequest.service', 'service')
+      .where('leaveRequest.id = :leaveRequestId', { leaveRequestId })
+      .getOne();
+
+    if (!leaveRequest) {
+      throw new NotFoundException(
+        `La demande de congé ${leaveRequestId} est introuvable.`,
+      );
+    }
+
+    if (
+      leaveRequest.status !==
+      LeaveRequestStatus.EN_ATTENTE_VALIDATION
+    ) {
+      throw new BadRequestException(
+        'Le récapitulatif provisoire est disponible uniquement pour une demande en attente de validation.',
+      );
+    }
+
+    return leaveRequest;
+  }
+
+  private async buildPendingSummaryPdf(input: {
+    leaveRequest: LeaveRequest;
+    referenceNumber: string;
+    generatedAt: Date;
+  }): Promise<Buffer> {
+    const { leaveRequest, referenceNumber, generatedAt } = input;
+
+    return new Promise<Buffer>((resolvePromise, rejectPromise) => {
+      const chunks: Buffer[] = [];
+      const document = new PDFDocument({
+        size: 'A4',
+        margins: { top: 44, right: 48, bottom: 60, left: 48 },
+        info: {
+          Title: `Récapitulatif provisoire ${referenceNumber}`,
+          Author: 'GMES',
+          Subject: 'Demande de congé en attente de validation',
+          Keywords: 'GMES, congé, en attente, récapitulatif provisoire',
+          CreationDate: generatedAt,
+        },
+      });
+
+      document.on('data', (chunk: Buffer | Uint8Array) => {
+        chunks.push(Buffer.from(chunk));
+      });
+      document.on('error', rejectPromise);
+      document.on('end', () => {
+        resolvePromise(Buffer.concat(chunks));
+      });
+
+      try {
+        if (existsSync(this.logoPath)) {
+          document.image(this.logoPath, 48, 38, { width: 72 });
+        } else {
+          document
+            .fillColor('#0b5fb3')
+            .font('Helvetica-Bold')
+            .fontSize(20)
+            .text('GMES', 48, 44);
+        }
+
+        document
+          .fillColor('#0b2347')
+          .font('Helvetica-Bold')
+          .fontSize(18)
+          .text('Récapitulatif de demande de congé', 150, 46, {
+            align: 'right',
+          });
+
+        document
+          .moveDown(2.6)
+          .roundedRect(48, 112, 499, 58, 10)
+          .fillAndStroke('#fff4e8', '#f76b1c');
+        document
+          .fillColor('#d65a12')
+          .font('Helvetica-Bold')
+          .fontSize(12)
+          .text(
+            'DEMANDE EN ATTENTE DE VALIDATION — DOCUMENT NON DÉFINITIF',
+            64,
+            128,
+            { width: 467, align: 'center' },
+          );
+        document
+          .fillColor('#6b7280')
+          .font('Helvetica')
+          .fontSize(8.5)
+          .text(
+            'Ce document est un récapitulatif provisoire. Il ne constitue pas une autorisation d’absence.',
+            64,
+            149,
+            { width: 467, align: 'center' },
+          );
+
+        document.y = 194;
+        document
+          .fillColor('#0b2347')
+          .font('Helvetica-Bold')
+          .fontSize(10)
+          .text(`Référence : ${referenceNumber}`)
+          .moveDown(0.4)
+          .font('Helvetica')
+          .fillColor('#64748b')
+          .fontSize(9)
+          .text('Statut : En attente de validation')
+          .moveDown(1.4);
+
+        this.drawSectionTitle(document, 'Collaborateur');
+        this.drawKeyValueRows(document, [
+          [
+            'Nom',
+            `${leaveRequest.employee.prenom} ${leaveRequest.employee.nom}`,
+          ],
+          ['Adresse e-mail', leaveRequest.employee.email],
+          ['Service', leaveRequest.service.name],
+        ]);
+
+        this.drawSectionTitle(document, 'Demande');
+        this.drawKeyValueRows(document, [
+          ['Type de congé', leaveRequest.leaveType.name],
+          [
+            'Date de début',
+            `${this.formatDateOnly(leaveRequest.startDate)} — ${this.formatDayPeriod(leaveRequest.startPeriod)}`,
+          ],
+          [
+            'Date de fin',
+            `${this.formatDateOnly(leaveRequest.endDate)} — ${this.formatDayPeriod(leaveRequest.endPeriod)}`,
+          ],
+          [
+            'Jours ouvrables décomptés',
+            this.formatDays(leaveRequest.deductedDays),
+          ],
+          [
+            'Soumise le',
+            this.formatDateTime(leaveRequest.submittedAt),
+          ],
+          [
+            'Modification possible jusqu’au',
+            leaveRequest.modificationDeadline
+              ? this.formatDateOnly(
+                  String(leaveRequest.modificationDeadline).slice(0, 10),
+                )
+              : 'Non renseignée',
+          ],
+        ]);
+
+        if (leaveRequest.comment) {
+          this.drawSectionTitle(document, 'Commentaire');
+          document
+            .fillColor('#334155')
+            .font('Helvetica')
+            .fontSize(9.5)
+            .text(leaveRequest.comment, { width: 499 })
+            .moveDown(1.2);
+        }
+
+        if (leaveRequest.realBalanceBefore !== null) {
+          this.drawSectionTitle(document, 'Solde au moment de la soumission');
+          this.drawKeyValueRows(document, [
+            [
+              'Solde réel',
+              this.formatOptionalDays(leaveRequest.realBalanceBefore),
+            ],
+            [
+              'Solde potentiel avant réservation',
+              this.formatOptionalDays(
+                leaveRequest.potentialBalanceBefore,
+              ),
+            ],
+          ]);
+        }
+
+        document
+          .moveDown(1.4)
+          .fillColor('#94a3b8')
+          .font('Helvetica')
+          .fontSize(8)
+          .text(
+            `Document provisoire généré le ${this.formatDateTime(generatedAt)} — ${referenceNumber}`,
+            { align: 'center' },
+          );
+
+        document.end();
+      } catch (error) {
+        rejectPromise(error);
+      }
     });
   }
 

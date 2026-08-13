@@ -69,7 +69,12 @@ export function AlertsCard({ balances, requests, settings, onRetryBalances, onRe
       />
     )
   } else {
-    const balance = balances.data?.find((item) => item.counterType === 'N') ?? balances.data?.[0] ?? null
+    const latestPeriod = [...new Set((balances.data ?? []).map((item) => item.referencePeriod).filter(Boolean))]
+      .sort((left, right) => right.localeCompare(left))[0]
+    const scopedBalances = latestPeriod
+      ? balances.data.filter((item) => item.referencePeriod === latestPeriod)
+      : (balances.data ?? [])
+    const balance = scopedBalances.find((item) => item.counterType === 'N-1') ?? scopedBalances[0] ?? null
     const alerts = buildAlerts({
       balance,
       requests: requests.error ? [] : (requests.data ?? []),

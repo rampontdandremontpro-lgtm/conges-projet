@@ -15,11 +15,19 @@ export function prevMonthOf({ year, month }) {
 
 export function selectPrimaryBalance(balances) {
   if (!balances || balances.length === 0) return null
-  const current = balances.find((balance) => balance.counterType === 'N')
-  if (current) return current
-  return [...balances].sort((a, b) =>
-    b.referencePeriod.localeCompare(a.referencePeriod),
-  )[0]
+
+  const latestPeriod = [...new Set(balances.map((balance) => balance.referencePeriod).filter(Boolean))]
+    .sort((left, right) => right.localeCompare(left))[0]
+  const scoped = latestPeriod
+    ? balances.filter((balance) => balance.referencePeriod === latestPeriod)
+    : balances
+
+  return (
+    scoped.find((balance) => balance.counterType === 'N-1') ??
+    scoped.find((balance) => balance.counterType === 'N') ??
+    scoped[0] ??
+    null
+  )
 }
 
 export function settingsMap(settings) {

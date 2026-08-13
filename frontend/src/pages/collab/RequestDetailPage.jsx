@@ -7,6 +7,7 @@ import {
   cancelAbsenceDeclaration,
   cancelLeaveRequest,
   downloadCancellationPdf,
+  downloadPendingSummaryPdf,
   downloadValidationPdf,
   getAbsenceDeclaration,
   getAbsenceDocuments,
@@ -18,6 +19,7 @@ import {
 } from '@/services/requestDetails'
 import { formatDateNumericFR, formatDays, formatRangeNumericFR, todayISO } from '@/utils/format'
 import { errorMessage } from '@/utils/newRequest'
+import { notifyAppDataChanged } from '@/utils/dataRefresh'
 
 import '@/styles/request-detail.css'
 
@@ -165,7 +167,10 @@ export function RequestDetailPage() {
     try {
       await action()
       if (successMessage) setFeedback({ kind: 'success', message: successMessage })
-      if (reload) await load()
+      if (reload) {
+        notifyAppDataChanged({ source, id: numericId })
+        await load()
+      }
     } catch (error) {
       setFeedback({ kind: 'error', message: errorMessage(error) })
     } finally {
@@ -340,6 +345,9 @@ export function RequestDetailPage() {
 
             {isLeave && request.status === 'EN_ATTENTE_VALIDATION' && (
               <>
+                <button type="button" className="request-detail-button request-detail-button--secondary" disabled={Boolean(busy)} onClick={() => run('download-summary', () => downloadPendingSummaryPdf(request.id), null, false)}>
+                  <Icon name="download" size={16} /> {busy === 'download-summary' ? 'Téléchargement…' : 'Télécharger le récapitulatif'}
+                </button>
                 {canModifyPendingLeave && (
                   <button type="button" className="request-detail-button request-detail-button--primary" onClick={() => navigate(`/app/new-request/${request.id}`)}>
                     <Icon name="refresh" size={16} /> Modifier la demande

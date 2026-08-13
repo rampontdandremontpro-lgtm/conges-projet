@@ -15,6 +15,10 @@ function actionMeta(item) {
     return { type: 'delete', icon: 'trash', label: 'Supprimer le brouillon' }
   }
 
+  if (item.source === 'leave' && item.status === 'EN_ATTENTE_VALIDATION') {
+    return { type: 'summary', icon: 'download', label: 'Télécharger le récapitulatif' }
+  }
+
   if (
     item.source === 'leave' &&
     item.canDownloadPdf &&

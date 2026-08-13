@@ -191,13 +191,15 @@
   color: var(--requests-blue);
 }
 
-.my-request-card__action--download {
+.my-request-card__action--download,
+.my-request-card__action--summary {
   border-color: #cfe0ff;
   background: #eef4ff;
   color: var(--requests-blue);
 }
 
-.my-request-card__action--download:hover {
+.my-request-card__action--download:hover,
+.my-request-card__action--summary:hover {
   border-color: #aecdff;
   background: #e5efff;
 }

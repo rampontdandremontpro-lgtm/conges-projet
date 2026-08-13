@@ -250,6 +250,40 @@ export class LeaveRequestsController {
     );
   }
 
+  @Get(':id/pending-summary-pdf')
+  @Roles(
+    UserRole.COLLABORATEUR,
+    UserRole.RESPONSABLE_SERVICE,
+    UserRole.RH,
+    UserRole.DIRECTEUR,
+  )
+  async downloadPendingSummaryPdf(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() request: AuthenticatedRequest,
+    @Res({ passthrough: true }) response: Response,
+  ): Promise<StreamableFile> {
+    const file =
+      await this.documentPdfService.getPendingSummaryPdf(
+        id,
+        request.user,
+      );
+
+    response.setHeader('Content-Type', 'application/pdf');
+    response.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${file.filename}"`,
+    );
+    response.setHeader('Content-Length', String(file.buffer.length));
+    response.setHeader(
+      'X-Document-Reference',
+      file.referenceNumber,
+    );
+    response.setHeader('X-Document-Checksum', file.checksum);
+    response.setHeader('Cache-Control', 'private, no-store, max-age=0');
+
+    return new StreamableFile(file.buffer);
+  }
+
   @Get(':id/cancellation-pdf')
   async downloadCancellationPdf(
     @Param('id', ParseIntPipe) id: number,

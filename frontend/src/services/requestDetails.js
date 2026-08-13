@@ -80,6 +80,11 @@ export async function uploadAbsenceJustificatif(id, file) {
   return data
 }
 
+export async function downloadPendingSummaryPdf(id, filename = `recapitulatif-demande-${id}.pdf`) {
+  const response = await apiClient.get(`/leave-requests/${id}/pending-summary-pdf`, { responseType: 'blob' })
+  triggerPdfDownload(response.data, filename)
+}
+
 export async function downloadValidationPdf(id, filename = `demande-conge-${id}.pdf`) {
   const response = await apiClient.get(`/leave-requests/${id}/pdf`, { responseType: 'blob' })
   triggerPdfDownload(response.data, filename)
