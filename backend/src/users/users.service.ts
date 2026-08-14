@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Not, Repository } from 'typeorm';
+import { DataSource, Not, Repository } from 'typeorm';
 
 import {
   Service,
@@ -13,7 +13,16 @@ import {
 } from '../services/service.entity';
 import { ServicesService } from '../services/services.service';
 import { PresenceService } from '../presence/presence.service';
-import { DayPeriod } from '../leave-requests/leave-request.entity';
+import {
+  DayPeriod,
+  LeaveRequest,
+  LeaveRequestStatus,
+} from '../leave-requests/leave-request.entity';
+import { occupiesSlot } from '../leave-requests/leave-request-period.util';
+import {
+  AbsenceDeclaration,
+  AbsenceDeclarationStatus,
+} from '../absence-declarations/absence-declaration.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import {
@@ -30,6 +39,7 @@ export class UsersService {
     private readonly userRepository: Repository<User>,
     private readonly servicesService: ServicesService,
     private readonly presenceService: PresenceService,
+    private readonly dataSource: DataSource,
   ) {}
 
   async create(createUserDto: CreateUserDto): Promise<User> {
@@ -186,6 +196,176 @@ export class UsersService {
       summary,
       members: resolvedMembers,
     };
+  }
+
+  async getOwnServicePresenceCalendar(id: number, monthValue?: string) {
+    const currentUser = await this.findOne(id);
+
+    if (!currentUser.serviceId || !currentUser.service) {
+      throw new BadRequestException(
+        'Aucun service actif n’est rattaché à votre compte.',
+      );
+    }
+
+    const month = this.normalizeCalendarMonth(monthValue);
+    const [year, monthNumber] = month.split('-').map(Number);
+    const monthStart = `${month}-01`;
+    const monthEndDate = new Date(Date.UTC(year, monthNumber, 0));
+    const monthEnd = monthEndDate.toISOString().slice(0, 10);
+
+    const members = await this.userRepository.find({
+      where: {
+        serviceId: currentUser.serviceId,
+        isActive: true,
+      },
+      order: {
+        nom: 'ASC',
+        prenom: 'ASC',
+      },
+    });
+
+    const memberIds = members.map((member) => member.id);
+    const manager = this.dataSource.manager;
+
+    const leaves = memberIds.length === 0
+      ? []
+      : await manager
+          .getRepository(LeaveRequest)
+          .createQueryBuilder('request')
+          .where('request.employeeId IN (:...memberIds)', { memberIds })
+          .andWhere('request.startDate <= :monthEnd', { monthEnd })
+          .andWhere('request.endDate >= :monthStart', { monthStart })
+          .andWhere('request.status IN (:...statuses)', {
+            statuses: [
+              LeaveRequestStatus.VALIDEE,
+              LeaveRequestStatus.ANNULATION_EN_ATTENTE_ACCORD,
+            ],
+          })
+          .getMany();
+
+    const absences = memberIds.length === 0
+      ? []
+      : await manager
+          .getRepository(AbsenceDeclaration)
+          .createQueryBuilder('absence')
+          .where('absence.employeeId IN (:...memberIds)', { memberIds })
+          .andWhere('absence.startDate <= :monthEnd', { monthEnd })
+          .andWhere('absence.endDate >= :monthStart', { monthStart })
+          .andWhere('absence.status = :status', {
+            status: AbsenceDeclarationStatus.ENREGISTREE,
+          })
+          .getMany();
+
+    const days: Array<{
+      date: string;
+      morningPresent: number;
+      afternoonPresent: number;
+      morningMinimumRespected: boolean;
+      afternoonMinimumRespected: boolean;
+      members: Array<{
+        id: number;
+        morningStatus: PresenceStatus;
+        afternoonStatus: PresenceStatus;
+      }>;
+    }> = [];
+
+    const minimumPresence = currentUser.service.hasMinimumPresenceRule
+      ? currentUser.service.minimumPresence ?? 0
+      : null;
+
+    for (let day = 1; day <= monthEndDate.getUTCDate(); day += 1) {
+      const date = `${month}-${String(day).padStart(2, '0')}`;
+      let morningPresent = 0;
+      let afternoonPresent = 0;
+
+      const dayMembers = members.map((member) => {
+        const memberAbsences = absences.filter(
+          (absence) => absence.employeeId === member.id,
+        );
+        const memberLeaves = leaves.filter(
+          (leave) => leave.employeeId === member.id,
+        );
+
+        const resolveStatus = (period: DayPeriod): PresenceStatus => {
+          if (
+            memberAbsences.some((absence) =>
+              occupiesSlot(absence, date, period),
+            )
+          ) {
+            return PresenceStatus.ABSENT;
+          }
+
+          if (
+            memberLeaves.some((leave) =>
+              occupiesSlot(leave, date, period),
+            )
+          ) {
+            return PresenceStatus.EN_VACANCES;
+          }
+
+          return PresenceStatus.PRESENT;
+        };
+
+        const morningStatus = resolveStatus(DayPeriod.MATIN);
+        const afternoonStatus = resolveStatus(DayPeriod.APRES_MIDI);
+
+        if (morningStatus === PresenceStatus.PRESENT) morningPresent += 1;
+        if (afternoonStatus === PresenceStatus.PRESENT) afternoonPresent += 1;
+
+        return {
+          id: member.id,
+          morningStatus,
+          afternoonStatus,
+        };
+      });
+
+      days.push({
+        date,
+        morningPresent,
+        afternoonPresent,
+        morningMinimumRespected:
+          minimumPresence === null || morningPresent >= minimumPresence,
+        afternoonMinimumRespected:
+          minimumPresence === null || afternoonPresent >= minimumPresence,
+        members: dayMembers,
+      });
+    }
+
+    return {
+      month,
+      service: {
+        id: currentUser.service.id,
+        name: currentUser.service.name,
+        hasMinimumPresenceRule:
+          currentUser.service.hasMinimumPresenceRule,
+        minimumPresence,
+      },
+      members: members.map((member) => ({
+        id: member.id,
+        nom: member.nom,
+        prenom: member.prenom,
+        role: member.role,
+      })),
+      days,
+    };
+  }
+
+  private normalizeCalendarMonth(monthValue?: string): string {
+    if (!monthValue) {
+      return new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'America/Martinique',
+        year: 'numeric',
+        month: '2-digit',
+      }).format(new Date());
+    }
+
+    if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(monthValue)) {
+      throw new BadRequestException(
+        'Le mois doit être fourni au format AAAA-MM.',
+      );
+    }
+
+    return monthValue;
   }
 
   async getOwnProfile(id: number) {

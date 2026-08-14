@@ -29,3 +29,8 @@
   .manager-presence-member-card__status { justify-self: start; }
   .manager-presence-member-card__slots { grid-column: auto; width: 100%; }
 }
+
+@media (max-width: 720px) {
+  .manager-presence-toolbar__left { width: 100%; align-items: stretch; flex-direction: column; }
+  .manager-presence-toolbar__left .manager-view-toggle { align-self: stretch; }
+}

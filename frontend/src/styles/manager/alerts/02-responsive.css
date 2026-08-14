@@ -19,3 +19,8 @@
   .manager-overlap-person__period { padding-left: 44px; white-space: normal; }
   .manager-overlap-card__chevron { display: none; }
 }
+
+@media (max-width: 900px) {
+  .manager-alerts-toolbar__left { align-items: stretch; flex-direction: column; }
+  .manager-alerts-toolbar__left .manager-view-toggle { align-self: flex-start; }
+}

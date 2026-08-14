@@ -8,6 +8,7 @@ import {
   Patch,
   Post,
   Put,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -54,6 +55,18 @@ export class UsersController {
     @Req() request: AuthenticatedRequest,
   ) {
     return this.usersService.getOwnServicePresence(request.user.id);
+  }
+
+  @Get('me/service-presence/calendar')
+  @Roles(UserRole.RESPONSABLE_SERVICE)
+  getOwnServicePresenceCalendar(
+    @Req() request: AuthenticatedRequest,
+    @Query('month') month?: string,
+  ) {
+    return this.usersService.getOwnServicePresenceCalendar(
+      request.user.id,
+      month,
+    );
   }
 
   @Get('me/signature')

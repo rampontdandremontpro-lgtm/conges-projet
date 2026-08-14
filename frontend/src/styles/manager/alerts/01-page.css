@@ -314,3 +314,6 @@
   font-size: 11.5px;
 }
 
+
+.manager-alerts-page { width: min(100%, 1080px); }
+.manager-alerts-toolbar__left { display: flex; align-items: center; gap: 10px; min-width: 0; }

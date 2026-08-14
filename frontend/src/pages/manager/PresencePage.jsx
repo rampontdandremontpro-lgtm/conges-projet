@@ -1,9 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 
+import { ManagerPresenceCalendar } from '@/components/manager/calendar/ManagerPresenceCalendar'
 import { ManagerPresenceMemberCard } from '@/components/manager/presence/ManagerPresenceMemberCard'
 import { Icon } from '@/components/ui/Icon'
-import { getManagerServicePresence } from '@/services/managerDashboard'
+import {
+  getManagerServicePresence,
+  getManagerServicePresenceCalendar,
+} from '@/services/managerDashboard'
+import { getCurrentMonthKey, shiftMonthKey } from '@/utils/managerCalendar'
 
 import '@/styles/manager-presence.css'
 
@@ -57,7 +62,10 @@ function LoadingState() {
 export function ManagerPresencePage() {
   const [searchParams] = useSearchParams()
   const [filter, setFilter] = useState('all')
+  const [viewMode, setViewMode] = useState('list')
+  const [calendarMonth, setCalendarMonth] = useState(getCurrentMonthKey())
   const [state, setState] = useState({ loading: true, error: false, data: null })
+  const [calendarState, setCalendarState] = useState({ loading: false, error: false, data: null })
 
   const load = useCallback(async () => {
     setState((current) => ({ ...current, loading: true, error: false }))
@@ -69,12 +77,25 @@ export function ManagerPresencePage() {
     }
   }, [])
 
+  const loadCalendar = useCallback(async (month) => {
+    setCalendarState((current) => ({ ...current, loading: true, error: false }))
+    try {
+      const data = await getManagerServicePresenceCalendar(month)
+      setCalendarState({ loading: false, error: false, data })
+    } catch {
+      setCalendarState({ loading: false, error: true, data: null })
+    }
+  }, [])
+
   useEffect(() => {
     load()
 
-    const refresh = () => load()
+    const refresh = () => {
+      load()
+      if (viewMode === 'calendar') loadCalendar(calendarMonth)
+    }
     const refreshWhenVisible = () => {
-      if (document.visibilityState === 'visible') load()
+      if (document.visibilityState === 'visible') refresh()
     }
 
     window.addEventListener('focus', refresh)
@@ -86,7 +107,11 @@ export function ManagerPresencePage() {
       window.removeEventListener('gmes:data-changed', refresh)
       document.removeEventListener('visibilitychange', refreshWhenVisible)
     }
-  }, [load])
+  }, [calendarMonth, load, loadCalendar, viewMode])
+
+  useEffect(() => {
+    if (viewMode === 'calendar') loadCalendar(calendarMonth)
+  }, [calendarMonth, loadCalendar, viewMode])
 
   const members = state.data?.members ?? []
   const summary = state.data?.summary ?? { total: 0, present: 0, onLeave: 0, absent: 0 }
@@ -122,10 +147,34 @@ export function ManagerPresencePage() {
     })
   }, [filter, members, query, service?.name])
 
+  const calendarData = useMemo(() => {
+    if (!calendarState.data || !query) return calendarState.data
+    const normalizedQuery = normalize(query)
+    const matchingIds = new Set(
+      (calendarState.data.members ?? [])
+        .filter((member) => normalize(`${member.prenom} ${member.nom} ${member.role}`).includes(normalizedQuery))
+        .map((member) => Number(member.id)),
+    )
+
+    return {
+      ...calendarState.data,
+      totalMembers: calendarState.data.members?.length ?? 0,
+      members: calendarState.data.members.filter((member) => matchingIds.has(Number(member.id))),
+      days: calendarState.data.days.map((day) => ({
+        ...day,
+        members: day.members.filter((member) => matchingIds.has(Number(member.id))),
+      })),
+    }
+  }, [calendarState.data, query])
+
   const morningPresent = countSlotPresent(members, 'morning')
   const afternoonPresent = countSlotPresent(members, 'afternoon')
   const total = summary.total ?? members.length
   const percentage = total > 0 ? Math.round(((summary.present ?? 0) / total) * 100) : 0
+
+  const changeCalendarMonth = (offset, exactMonth) => {
+    setCalendarMonth((current) => exactMonth ?? shiftMonthKey(current, offset))
+  }
 
   return (
     <div className="manager-presence-page">
@@ -208,28 +257,56 @@ export function ManagerPresencePage() {
           </section>
 
           <div className="manager-presence-toolbar">
-            <div className="manager-presence-filters" role="tablist" aria-label="Filtres de présence">
-              {FILTERS.map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  role="tab"
-                  aria-selected={filter === item.id}
-                  className={`manager-presence-filter${filter === item.id ? ' is-active' : ''}`}
-                  onClick={() => setFilter(item.id)}
-                >
-                  {item.label}
-                  <span>{counts[item.id] ?? 0}</span>
-                </button>
-              ))}
+            <div className="manager-presence-toolbar__left">
+              <div className="manager-presence-filters" role="tablist" aria-label="Filtres de présence">
+                {FILTERS.map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={filter === item.id}
+                    className={`manager-presence-filter${filter === item.id ? ' is-active' : ''}`}
+                    onClick={() => setFilter(item.id)}
+                  >
+                    {item.label}
+                    <span>{counts[item.id] ?? 0}</span>
+                  </button>
+                ))}
+              </div>
+              <button
+                type="button"
+                className={`manager-view-toggle${viewMode === 'calendar' ? ' is-active' : ''}`}
+                onClick={() => setViewMode((current) => current === 'calendar' ? 'list' : 'calendar')}
+              >
+                <Icon name={viewMode === 'calendar' ? 'list' : 'calendar'} size={16} />
+                {viewMode === 'calendar' ? 'Vue liste' : 'Vue calendrier'}
+              </button>
             </div>
             <div className="manager-presence-toolbar__label">
-              <Icon name="users" size={16} />
-              <span>{visibleMembers.length} membre{visibleMembers.length > 1 ? 's' : ''} affiché{visibleMembers.length > 1 ? 's' : ''}</span>
+              <Icon name={viewMode === 'calendar' ? 'calendar' : 'users'} size={16} />
+              <span>{viewMode === 'calendar' ? 'Vue mensuelle du service' : `${visibleMembers.length} membre${visibleMembers.length > 1 ? 's' : ''} affiché${visibleMembers.length > 1 ? 's' : ''}`}</span>
             </div>
           </div>
 
-          {visibleMembers.length === 0 ? (
+          {viewMode === 'calendar' ? (
+            calendarState.loading && !calendarState.data ? (
+              <div className="manager-calendar-loading"><Icon name="calendar" size={24} /><span>Chargement du calendrier…</span></div>
+            ) : calendarState.error || !calendarData ? (
+              <div className="manager-presence-state manager-presence-state--error">
+                <span className="manager-presence-state__icon"><Icon name="alert" size={25} /></span>
+                <strong>Impossible de charger le calendrier du service.</strong>
+                <button type="button" onClick={() => loadCalendar(calendarMonth)}>Réessayer</button>
+              </div>
+            ) : (
+              <ManagerPresenceCalendar
+                key={calendarMonth}
+                data={calendarData}
+                month={calendarMonth}
+                filter={filter}
+                onMonthChange={changeCalendarMonth}
+              />
+            )
+          ) : visibleMembers.length === 0 ? (
             <div className="manager-presence-state">
               <span className="manager-presence-state__icon"><Icon name="users" size={25} /></span>
               <strong>{query ? 'Aucun membre ne correspond à votre recherche.' : 'Aucun membre dans cette catégorie.'}</strong>

@@ -2,12 +2,18 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 
 import { ManagerOverlapAlertCard } from '@/components/manager/alerts/ManagerOverlapAlertCard'
+import { ManagerAlertsCalendar } from '@/components/manager/calendar/ManagerAlertsCalendar'
 import { Icon } from '@/components/ui/Icon'
 import {
   getManagerPendingRequests,
   getManagerRequestAvailability,
 } from '@/services/managerRequests'
 import { formatRangeNumericFR } from '@/utils/format'
+import {
+  getCurrentMonthKey,
+  monthKeyFromDate,
+  shiftMonthKey,
+} from '@/utils/managerCalendar'
 
 import '@/styles/manager-alerts.css'
 
@@ -77,6 +83,8 @@ export function ManagerAlertsPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const [filter, setFilter] = useState('all')
+  const [viewMode, setViewMode] = useState('list')
+  const [calendarMonth, setCalendarMonth] = useState(getCurrentMonthKey())
   const [state, setState] = useState({ loading: true, error: false, alerts: [] })
 
   const load = useCallback(async () => {
@@ -146,23 +154,47 @@ export function ManagerAlertsPage() {
   )
   const query = searchParams.get('q') ?? ''
 
+  const toggleCalendar = () => {
+    if (viewMode === 'calendar') {
+      setViewMode('list')
+      return
+    }
+
+    const hasCurrentMonthAlert = visibleAlerts.some(({ request }) => monthKeyFromDate(request.startDate) === calendarMonth)
+    if (!hasCurrentMonthAlert && visibleAlerts[0]?.request?.startDate) {
+      setCalendarMonth(monthKeyFromDate(visibleAlerts[0].request.startDate))
+    }
+    setViewMode('calendar')
+  }
+
+  const changeCalendarMonth = (offset, exactMonth) => {
+    setCalendarMonth((current) => exactMonth ?? shiftMonthKey(current, offset))
+  }
+
   return (
     <div className="manager-alerts-page">
       <div className="manager-alerts-toolbar">
-        <div className="manager-alerts-filters" role="tablist" aria-label="Filtres des chevauchements">
-          {FILTERS.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              role="tab"
-              aria-selected={filter === item.id}
-              className={`manager-alerts-filter${filter === item.id ? ' is-active' : ''}`}
-              onClick={() => setFilter(item.id)}
-            >
-              <span>{item.label}</span>
-              <span className="manager-alerts-filter__count">{counts[item.id]}</span>
-            </button>
-          ))}
+        <div className="manager-alerts-toolbar__left">
+          <div className="manager-alerts-filters" role="tablist" aria-label="Filtres des chevauchements">
+            {FILTERS.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                role="tab"
+                aria-selected={filter === item.id}
+                className={`manager-alerts-filter${filter === item.id ? ' is-active' : ''}`}
+                onClick={() => setFilter(item.id)}
+              >
+                <span>{item.label}</span>
+                <span className="manager-alerts-filter__count">{counts[item.id]}</span>
+              </button>
+            ))}
+          </div>
+
+          <button type="button" className={`manager-view-toggle${viewMode === 'calendar' ? ' is-active' : ''}`} onClick={toggleCalendar}>
+            <Icon name={viewMode === 'calendar' ? 'list' : 'calendar'} size={16} />
+            {viewMode === 'calendar' ? 'Vue liste' : 'Vue calendrier'}
+          </button>
         </div>
 
         <div className="manager-alerts-summary">
@@ -201,6 +233,13 @@ export function ManagerAlertsPage() {
           <span className="manager-alerts-state__icon"><Icon name="list" size={25} /></span>
           <strong>{query ? 'Aucune alerte ne correspond à votre recherche.' : 'Aucune alerte dans cette catégorie.'}</strong>
         </div>
+      ) : viewMode === 'calendar' ? (
+        <ManagerAlertsCalendar
+          alerts={visibleAlerts}
+          month={calendarMonth}
+          onMonthChange={changeCalendarMonth}
+          onOpenRequest={(id) => navigate(`/app/requests/${id}`)}
+        />
       ) : (
         <div className="manager-alerts-list">
           {visibleAlerts.map(({ request, availability }) => (
