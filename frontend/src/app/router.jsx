@@ -19,6 +19,7 @@ import { SettingsPage } from '@/pages/collab/SettingsPage'
 import { ManagerRequestsPage } from '@/pages/manager/RequestsPage'
 import { ManagerRequestDecisionPage } from '@/pages/manager/RequestDecisionPage'
 import { ManagerAlertsPage } from '@/pages/manager/AlertsPage'
+import { ManagerPresencePage } from '@/pages/manager/PresencePage'
 import { NEW_REQUEST_ROLES, ROLES } from '@/config/navigation'
 import { RoleRoute } from '@/auth/RoleRoute'
 
@@ -56,6 +57,14 @@ export const router = createBrowserRouter([
         element: (
           <RoleRoute roles={[ROLES.RESPONSABLE_SERVICE]}>
             <ManagerAlertsPage />
+          </RoleRoute>
+        ),
+      },
+      {
+        path: 'service-presence',
+        element: (
+          <RoleRoute roles={[ROLES.RESPONSABLE_SERVICE]}>
+            <ManagerPresencePage />
           </RoleRoute>
         ),
       },

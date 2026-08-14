@@ -1,0 +1,31 @@
+@media (max-width: 900px) {
+  .manager-presence-summary-card__main { grid-template-columns: 1fr; }
+  .manager-presence-summary-card__metrics { grid-template-columns: repeat(4, minmax(90px, 1fr)); }
+  .manager-presence-member-card { grid-template-columns: minmax(190px, 1fr) auto; }
+  .manager-presence-member-card__slots { grid-column: 1 / -1; }
+}
+
+@media (max-width: 720px) {
+  .manager-presence-page { padding-top: 14px; }
+  .manager-presence-summary-card__header,
+  .manager-presence-day-card,
+  .manager-presence-toolbar { align-items: stretch; flex-direction: column; }
+  .manager-presence-threshold-badge { align-self: flex-start; }
+  .manager-presence-summary-card__hero > strong { font-size: 52px; }
+  .manager-presence-summary-card__metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .manager-presence-day-card__slots { width: 100%; }
+  .manager-presence-filters { width: 100%; overflow-x: auto; }
+  .manager-presence-filter { flex: 0 0 auto; }
+  .manager-presence-toolbar__label { align-self: flex-end; }
+}
+
+@media (max-width: 520px) {
+  .manager-presence-summary-card { padding: 17px 15px; }
+  .manager-presence-summary-card__hero { align-items: center; }
+  .manager-presence-summary-card__hero > strong { font-size: 46px; }
+  .manager-presence-summary-card__hero > span { padding-bottom: 0; }
+  .manager-presence-day-card__slots { grid-template-columns: 1fr; }
+  .manager-presence-member-card { grid-template-columns: 1fr; align-items: start; }
+  .manager-presence-member-card__status { justify-self: start; }
+  .manager-presence-member-card__slots { grid-column: auto; width: 100%; }
+}

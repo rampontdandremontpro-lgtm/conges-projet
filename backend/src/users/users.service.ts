@@ -13,6 +13,7 @@ import {
 } from '../services/service.entity';
 import { ServicesService } from '../services/services.service';
 import { PresenceService } from '../presence/presence.service';
+import { DayPeriod } from '../leave-requests/leave-request.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import {
@@ -136,14 +137,25 @@ export class UsersService {
       },
     });
 
+    const currentPeriod = await this.presenceService.getCurrentSlot();
+
     const resolvedMembers = await Promise.all(
-      members.map(async (member) => ({
-        id: member.id,
-        nom: member.nom,
-        prenom: member.prenom,
-        role: member.role,
-        presenceStatus: await this.presenceService.computeStatus(member.id),
-      })),
+      members.map(async (member) => {
+        const dailyAvailability =
+          await this.presenceService.computeDailyAvailability(member.id);
+        const presenceStatus = currentPeriod === DayPeriod.MATIN
+          ? dailyAvailability.morning.status
+          : dailyAvailability.afternoon.status;
+
+        return {
+          id: member.id,
+          nom: member.nom,
+          prenom: member.prenom,
+          role: member.role,
+          presenceStatus,
+          dailyAvailability,
+        };
+      }),
     );
 
     const summary = resolvedMembers.reduce(
@@ -162,6 +174,8 @@ export class UsersService {
     );
 
     return {
+      date: resolvedMembers[0]?.dailyAvailability.date ?? null,
+      currentPeriod,
       service: {
         id: currentUser.service.id,
         name: currentUser.service.name,
