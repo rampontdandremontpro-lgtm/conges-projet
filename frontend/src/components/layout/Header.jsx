@@ -49,7 +49,7 @@ export function Header() {
     /^\/app\/my-requests\/(leave|absence)\/\d+$/.test(pathname) ||
     /^\/app\/requests\/\d+$/.test(pathname)
   const showSearch = !hideSearch
-  const searchEnabled = ['/app/my-requests', '/app/notifications', '/app/requests'].includes(pathname)
+  const searchEnabled = ['/app/my-requests', '/app/notifications', '/app/requests', '/app/alerts'].includes(pathname)
   const searchValue = searchEnabled ? searchParams.get('q') ?? '' : undefined
 
   const handleSearchChange = (event) => {

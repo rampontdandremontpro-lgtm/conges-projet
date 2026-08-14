@@ -1,0 +1,21 @@
+@media (max-width: 900px) {
+  .manager-alerts-page { padding-inline: 14px; }
+  .manager-alerts-toolbar { align-items: stretch; flex-direction: column; }
+  .manager-alerts-filters { width: fit-content; max-width: 100%; flex-wrap: wrap; }
+  .manager-alerts-summary { align-self: flex-start; }
+}
+
+@media (max-width: 640px) {
+  .manager-alerts-page { padding-top: 16px; }
+  .manager-alerts-filters { display: grid; width: 100%; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .manager-alerts-filter { justify-content: center; }
+  .manager-alerts-summary { width: 100%; }
+  .manager-overlap-card__request { align-items: flex-start; padding: 14px; }
+  .manager-overlap-card__divider { margin-inline: 14px; }
+  .manager-overlap-card__overlaps { padding: 13px 14px 14px; }
+  .manager-overlap-card__presence-warning { margin: 0 14px 14px; }
+  .manager-overlap-person { align-items: flex-start; flex-wrap: wrap; }
+  .manager-overlap-person__identity { min-width: calc(100% - 46px); }
+  .manager-overlap-person__period { padding-left: 44px; white-space: normal; }
+  .manager-overlap-card__chevron { display: none; }
+}
