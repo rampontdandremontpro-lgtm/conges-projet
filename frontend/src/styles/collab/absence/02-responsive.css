@@ -1,6 +1,6 @@
 @media (max-width: 1180px) {
   .absence-page {
-    width: min(100%, 940px);
+    width: min(100%, 1000px);
   }
 
   .absence-type-grid {

@@ -15,6 +15,7 @@ function headerTitle(pathname) {
   if (/^\/app\/requests\/\d+$/.test(pathname)) return 'Détail de la demande'
   if (pathname === '/app/profile') return 'Mon profil'
   if (pathname === '/app/settings') return 'Paramètres'
+  if (pathname === '/app/history') return 'Historique'
 
   const section = pathname.startsWith('/app/') ? pathname.slice('/app/'.length) : ''
   return (section ? getSectionLabel(section) : null) ?? 'GMES'

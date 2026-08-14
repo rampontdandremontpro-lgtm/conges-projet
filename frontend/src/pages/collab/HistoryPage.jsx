@@ -200,7 +200,11 @@ function HistoryRow({ movement, onOpenRequest }) {
 export function HistoryPage() {
   const navigate = useNavigate()
   const { user } = useAuth()
-  const showBalanceBack = user?.role === ROLES.RESPONSABLE_SERVICE
+  const backNavigation = user?.role === ROLES.RESPONSABLE_SERVICE
+    ? { to: '/app/my-balance', label: 'Retour à Mon solde' }
+    : user?.role === ROLES.COLLABORATEUR
+      ? { to: '/app/dashboard', label: 'Retour au Tableau de bord' }
+      : null
   const [filter, setFilter] = useState('all')
   const [state, setState] = useState({ loading: true, error: false, movements: [] })
 
@@ -272,15 +276,15 @@ export function HistoryPage() {
 
   return (
     <div className="history-page">
-      {showBalanceBack && (
+      {backNavigation && (
         <div className="history-page__back-row">
           <button
             type="button"
             className="history-page__back"
-            onClick={() => navigate('/app/my-balance')}
+            onClick={() => navigate(backNavigation.to)}
           >
             <Icon name="chevronLeft" size={17} />
-            Retour à Mon solde
+            {backNavigation.label}
           </button>
         </div>
       )}

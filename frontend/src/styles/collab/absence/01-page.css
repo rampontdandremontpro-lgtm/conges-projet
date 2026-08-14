@@ -783,3 +783,213 @@
   0% { background-position: 100% 0; }
   100% { background-position: 0 0; }
 }
+
+/* Lisibilité renforcée — partagé par Collaborateur et Responsable de service */
+.absence-page {
+  width: min(100%, 1080px);
+}
+
+.absence-card {
+  padding: 26px;
+  border-radius: 22px;
+}
+
+.absence-card__heading {
+  margin-bottom: 22px;
+}
+
+.absence-card__eyebrow {
+  font-size: 11.5px;
+}
+
+.absence-card__heading h2 {
+  font-size: 19px;
+}
+
+.absence-card__heading p {
+  font-size: 14px;
+}
+
+.absence-type-card {
+  margin-bottom: 20px;
+}
+
+.absence-type-grid {
+  gap: 12px;
+}
+
+.absence-type-option {
+  min-height: 80px;
+  padding: 14px 15px;
+  border-radius: 16px;
+}
+
+.absence-type-option__icon {
+  width: 44px;
+  height: 44px;
+  flex-basis: 44px;
+}
+
+.absence-type-option__content strong {
+  font-size: 14px;
+}
+
+.absence-type-option__content small {
+  font-size: 11.5px;
+}
+
+.absence-type-option__check {
+  width: 24px;
+  height: 24px;
+  flex-basis: 24px;
+}
+
+.absence-form-grid,
+.absence-form-main {
+  gap: 20px;
+}
+
+.absence-fields {
+  gap: 16px;
+}
+
+.absence-field {
+  gap: 8px;
+}
+
+.absence-field > span,
+.absence-half-day-group > span {
+  font-size: 13px;
+}
+
+.absence-input-wrap {
+  min-height: 50px;
+  padding-inline: 14px;
+}
+
+.absence-input-wrap input {
+  font-size: 14px;
+}
+
+.absence-input-suffix {
+  font-size: 13px;
+}
+
+.absence-half-days {
+  gap: 16px;
+  margin-top: 18px;
+  padding-top: 18px;
+}
+
+.absence-segmented button {
+  min-height: 38px;
+  font-size: 12.5px;
+}
+
+.absence-inline-error {
+  padding: 10px 12px;
+  font-size: 12.5px;
+}
+
+.absence-requirement {
+  padding: 6px 10px;
+  font-size: 11.5px;
+}
+
+.absence-dropzone {
+  min-height: 86px;
+  padding: 16px 17px;
+}
+
+.absence-dropzone__icon {
+  width: 48px;
+  height: 48px;
+  flex-basis: 48px;
+}
+
+.absence-dropzone__text strong {
+  font-size: 13.5px;
+}
+
+.absence-dropzone__text small,
+.absence-file-row__name strong {
+  font-size: 11.5px;
+}
+
+.absence-dropzone__action {
+  padding: 8px 12px;
+  font-size: 12px;
+}
+
+.absence-file-row {
+  padding: 10px 12px;
+}
+
+.absence-confidentiality {
+  padding: 10px 12px;
+  font-size: 11.5px;
+}
+
+.absence-field--textarea textarea {
+  min-height: 116px;
+  padding: 13px 14px;
+  font-size: 13.5px;
+}
+
+.absence-summary {
+  padding: 23px;
+  border-radius: 22px;
+}
+
+.absence-summary__header {
+  gap: 12px;
+  padding-bottom: 17px;
+}
+
+.absence-summary__icon {
+  width: 44px;
+  height: 44px;
+  flex-basis: 44px;
+}
+
+.absence-summary__header span:not(.absence-summary__icon) {
+  font-size: 11px;
+}
+
+.absence-summary__header strong {
+  font-size: 14px;
+}
+
+.absence-summary__details {
+  gap: 14px 16px;
+  margin: 18px 0;
+}
+
+.absence-summary__details dt {
+  font-size: 10.5px;
+}
+
+.absence-summary__details dd {
+  font-size: 13px;
+}
+
+.absence-summary__notice {
+  padding: 11px 12px;
+  font-size: 11.5px;
+}
+
+.absence-certification {
+  padding: 13px;
+  font-size: 11.7px;
+}
+
+.absence-button {
+  min-height: 46px;
+  padding: 10px 14px;
+  font-size: 13px;
+}
+
+.absence-summary__footnote {
+  font-size: 10.5px;
+}
+

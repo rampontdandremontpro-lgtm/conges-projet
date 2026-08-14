@@ -213,3 +213,46 @@
   font-variant-numeric: tabular-nums;
 }
 
+.balance-card__action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  width: 100%;
+  min-height: 42px;
+  margin-top: var(--space-4);
+  padding: 9px var(--space-4);
+  border: 1px solid var(--color-brand-600);
+  border-radius: var(--radius-md);
+  background: var(--color-brand-600);
+  color: #ffffff;
+  font: inherit;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  cursor: pointer;
+  transition:
+    background var(--transition-fast),
+    border-color var(--transition-fast),
+    transform var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
+.balance-card__action svg:last-child {
+  margin-left: 2px;
+}
+
+.balance-card__action:hover {
+  border-color: var(--color-brand-700, #1557c0);
+  background: var(--color-brand-700, #1557c0);
+  box-shadow: var(--shadow-sm);
+}
+
+.balance-card__action:active {
+  transform: translateY(1px);
+}
+
+.balance-card__action:focus-visible {
+  outline: 2px solid var(--color-brand-500);
+  outline-offset: 2px;
+}
+

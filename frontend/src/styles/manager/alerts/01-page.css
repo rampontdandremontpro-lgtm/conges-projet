@@ -158,3 +158,159 @@
 .manager-alerts-skeleton__line--title { width: 36%; height: 14px; }
 .manager-alerts-skeleton__line--short { width: 45%; }
 @keyframes managerAlertsPulse { from { opacity: .55; } to { opacity: 1; } }
+
+/* Lisibilité renforcée */
+.manager-alerts-page {
+  width: min(100%, 1040px);
+  padding-top: 28px;
+}
+
+.manager-alerts-toolbar {
+  gap: 20px;
+  margin-bottom: 16px;
+}
+
+.manager-alerts-filters {
+  gap: 5px;
+  padding: 6px;
+  border-radius: 16px;
+}
+
+.manager-alerts-filter {
+  min-height: 40px;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 11px;
+  font-size: 13px;
+}
+
+.manager-alerts-filter__count {
+  min-width: 22px;
+  height: 22px;
+  font-size: 11px;
+}
+
+.manager-alerts-summary {
+  min-height: 50px;
+  gap: 10px;
+  padding: 9px 15px;
+  border-radius: 14px;
+  font-size: 13px;
+}
+
+.manager-alerts-summary__icon {
+  width: 34px;
+  height: 34px;
+}
+
+.manager-alerts-summary strong {
+  font-size: 17px;
+}
+
+.manager-alerts-info {
+  gap: 10px;
+  margin-bottom: 16px;
+  padding: 12px 15px;
+  border-radius: 14px;
+  font-size: 12.5px;
+}
+
+.manager-alerts-list {
+  gap: 14px;
+}
+
+.manager-overlap-card {
+  border-radius: 20px;
+}
+
+.manager-overlap-card__request {
+  gap: 15px;
+  padding: 19px 21px;
+}
+
+.manager-overlap-card__avatar {
+  width: 48px;
+  height: 48px;
+  font-size: 13px;
+}
+
+.manager-overlap-card__topline {
+  gap: 8px;
+}
+
+.manager-overlap-card__topline > strong {
+  font-size: 15.5px;
+}
+
+.manager-overlap-card__request-meta {
+  margin-top: 6px;
+  font-size: 12.5px;
+}
+
+.manager-overlap-badge {
+  min-height: 25px;
+  padding: 4px 8px;
+  font-size: 11px;
+}
+
+.manager-overlap-card__divider {
+  margin-inline: 21px;
+}
+
+.manager-overlap-card__overlaps {
+  padding: 16px 21px 19px;
+}
+
+.manager-overlap-card__section-title {
+  margin-bottom: 12px;
+}
+
+.manager-overlap-card__section-icon {
+  width: 35px;
+  height: 35px;
+}
+
+.manager-overlap-card__section-title strong {
+  font-size: 12.5px;
+}
+
+.manager-overlap-card__section-title small {
+  font-size: 11px;
+}
+
+.manager-overlap-card__people {
+  border-radius: 14px;
+}
+
+.manager-overlap-person {
+  min-height: 64px;
+  gap: 12px;
+  padding: 11px 13px;
+}
+
+.manager-overlap-person__avatar {
+  width: 38px;
+  height: 38px;
+  font-size: 10.5px;
+}
+
+.manager-overlap-person__identity strong {
+  font-size: 12.5px;
+}
+
+.manager-overlap-person__identity small {
+  font-size: 11px;
+}
+
+.manager-overlap-person__period {
+  font-size: 11.5px;
+}
+
+.manager-overlap-card__presence-warning {
+  gap: 9px;
+  margin: 0 21px 19px;
+  padding: 12px 13px;
+  border-radius: 12px;
+  font-size: 11.5px;
+}
+

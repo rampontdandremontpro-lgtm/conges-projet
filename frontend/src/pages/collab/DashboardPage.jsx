@@ -107,6 +107,9 @@ export function DashboardCollaborateur() {
             loading={balances.loading}
             error={balances.error}
             onRetry={retryBalances}
+            actionLabel="Voir mon historique"
+            actionIcon="clock"
+            onAction={() => navigate('/app/history')}
           />
           <RecentRequestsCard
             requests={recent}
