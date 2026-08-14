@@ -1,0 +1,31 @@
+@import './collab/new-request/03-recap-actions.css';
+@import './collab/new-request/04-modal-signature-feedback.css';
+
+/*
+ * La modale de signature est réutilisée hors de la page Nouvelle demande
+ * (notamment pour les validations Responsable/RH/Directeur).
+ * Les variables ci-dessous la rendent autonome quel que soit son parent.
+ */
+.nr-modal-backdrop {
+  --nr-primary: #1b6ef3;
+  --nr-primary-strong: #135cd6;
+  --nr-primary-soft: #eff3fa;
+  --nr-primary-ring: rgba(27, 110, 243, 0.18);
+  --nr-accent: #f76b1c;
+  --nr-accent-strong: #e05a0d;
+  --nr-fg: #0a1e45;
+  --nr-fg-soft: #27385f;
+  --nr-muted: #6b7fa3;
+  --nr-muted-2: #a8c0e4;
+  --nr-border: rgba(10, 30, 69, 0.07);
+  --nr-border-strong: rgba(10, 30, 69, 0.12);
+  --nr-bg: #eff3fa;
+  --nr-card-radius: 20px;
+  --nr-shadow:
+    0 18px 45px rgba(10, 30, 69, 0.18),
+    0 3px 10px rgba(10, 30, 69, 0.08);
+}
+
+.nr-modal__footer .nr-btn--primary {
+  min-width: 178px;
+}

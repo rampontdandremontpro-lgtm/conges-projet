@@ -510,7 +510,7 @@ export function DocumentsPage() {
           onClick={() => setTab('pdfs')}
         >
           <Icon name="doc" size={16} />
-          Documents PDF
+          Mes demandes
           <span className="documents-tab__count">{pdfs.length}</span>
         </button>
       </div>
