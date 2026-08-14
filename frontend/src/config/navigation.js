@@ -44,7 +44,7 @@ export const NAVIGATION = {
   ],
   [ROLES.RH]: [
     { id: 'dashboard', label: 'Tableau de bord', to: '/app/dashboard', icon: 'dashboard' },
-    { id: 'requests', label: 'Demandes', to: '/app/requests', icon: 'list' },
+    { id: 'rh-requests', label: 'Demandes', to: '/app/rh-requests', icon: 'list' },
     { id: 'absences', label: 'Absences', to: '/app/absences', icon: 'calendar' },
     { id: 'derogations', label: 'Dérogations', to: '/app/derogations', icon: 'alert' },
     { id: 'balances', label: 'Soldes', to: '/app/balances', icon: 'wallet' },
