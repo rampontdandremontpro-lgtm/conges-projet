@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
+import { useAuth } from '@/auth/AuthContext'
+import { ROLES } from '@/config/navigation'
+
 import { Icon } from '@/components/ui/Icon'
 import { getMyBalanceHistory } from '@/services/balances'
 import { formatDays } from '@/utils/format'
@@ -196,6 +199,8 @@ function HistoryRow({ movement, onOpenRequest }) {
 
 export function HistoryPage() {
   const navigate = useNavigate()
+  const { user } = useAuth()
+  const showBalanceBack = user?.role === ROLES.RESPONSABLE_SERVICE
   const [filter, setFilter] = useState('all')
   const [state, setState] = useState({ loading: true, error: false, movements: [] })
 
@@ -267,6 +272,19 @@ export function HistoryPage() {
 
   return (
     <div className="history-page">
+      {showBalanceBack && (
+        <div className="history-page__back-row">
+          <button
+            type="button"
+            className="history-page__back"
+            onClick={() => navigate('/app/my-balance')}
+          >
+            <Icon name="chevronLeft" size={17} />
+            Retour à Mon solde
+          </button>
+        </div>
+      )}
+
       <div className="history-page__toolbar">
         <div className="history-page__filters" role="tablist" aria-label="Filtrer l’historique">
           {FILTERS.map((item) => (

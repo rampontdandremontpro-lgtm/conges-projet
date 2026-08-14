@@ -4,6 +4,42 @@
   padding: 4px 0 24px;
 }
 
+
+.history-page__back-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.history-page__back {
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  gap: 7px;
+  padding: 0 12px;
+  border: 1px solid #dce7f6;
+  border-radius: 11px;
+  background: #ffffff;
+  color: #315b94;
+  font: inherit;
+  font-size: 12px;
+  font-weight: var(--font-weight-bold);
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition:
+    border-color var(--transition-base),
+    background var(--transition-base),
+    color var(--transition-base),
+    transform var(--transition-base);
+}
+
+.history-page__back:hover {
+  border-color: #bfd4f2;
+  background: #f7faff;
+  color: #1b6ef3;
+  transform: translateX(-2px);
+}
+
 .history-page__toolbar {
   display: flex;
   align-items: center;

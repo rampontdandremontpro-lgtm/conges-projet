@@ -37,6 +37,10 @@ export const NAVIGATION = {
     { id: 'requests', label: 'Demandes à traiter', to: '/app/requests', icon: 'list' },
     { id: 'alerts', label: 'Alertes de chevauchement', to: '/app/alerts', icon: 'alert' },
     { id: 'service-presence', label: 'Présence du service', to: '/app/service-presence', icon: 'users' },
+    { id: 'my-requests', label: 'Mes demandes', to: '/app/my-requests', icon: 'list' },
+    { id: 'my-balance', label: 'Mon solde', to: '/app/my-balance', icon: 'wallet' },
+    { id: 'declare-absence', label: 'Déclarer une absence', to: '/app/declare-absence', icon: 'calendar' },
+    { id: 'my-documents', label: 'Mes documents', to: '/app/my-documents', icon: 'doc' },
     { id: 'notifications', label: 'Notifications', to: '/app/notifications', icon: 'bell' },
   ],
   [ROLES.RH]: [
