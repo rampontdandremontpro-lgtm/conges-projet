@@ -2,7 +2,15 @@ import { Icon } from '@/components/ui/Icon'
 import { formatDays, formatPeriod } from '@/utils/format'
 import { CardSkeleton, CardError } from '@/components/collab/dashboard/DashboardStates'
 
-export function LeaveBalanceCard({ summary, loading, error, onRetry }) {
+export function LeaveBalanceCard({
+  summary,
+  loading,
+  error,
+  onRetry,
+  actionLabel,
+  actionIcon = 'arrowRight',
+  onAction,
+}) {
   let content
 
   if (loading) {
@@ -70,6 +78,13 @@ export function LeaveBalanceCard({ summary, loading, error, onRetry }) {
             <strong>{formatDays(potential)} j</strong>
           </div>
         </div>
+        {actionLabel && onAction && (
+          <button type="button" className="balance-card__action" onClick={onAction}>
+            <Icon name={actionIcon} size={17} />
+            <span>{actionLabel}</span>
+            <Icon name="arrowRight" size={15} />
+          </button>
+        )}
       </>
     )
   }

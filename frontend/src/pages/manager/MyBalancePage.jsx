@@ -1,87 +1,79 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
+import { AlertsCard } from '@/components/collab/dashboard/AlertsCard'
 import { LeaveBalanceCard } from '@/components/collab/dashboard/LeaveBalanceCard'
-import { Icon } from '@/components/ui/Icon'
+import { NextLeaveCard } from '@/components/collab/dashboard/NextLeaveCard'
+import { PlanLeaveCard } from '@/components/collab/dashboard/PlanLeaveCard'
+import { RecentRequestsCard } from '@/components/collab/dashboard/RecentRequestsCard'
 import { PageContainer } from '@/components/ui/PageContainer'
-import { getMyLeaveBalances } from '@/services/dashboard'
+import {
+  getMyLeaveBalances,
+  getMyLeaveRequests,
+  getPublicSettings,
+} from '@/services/dashboard'
 import { buildBalanceSummary } from '@/utils/balanceSummary'
-import { formatDays, formatPeriod } from '@/utils/format'
+import { todayISO } from '@/utils/format'
 
 import '@/styles/dashboard.css'
 import '@/styles/manager-my-balance.css'
 
-function BalanceHistoryCard({ summary, onHistory }) {
-  const real = Number(summary?.availableDays ?? 0)
-  const reserved = Number(summary?.reservedDays ?? 0)
-  const potential = Number(summary?.potentialDays ?? 0)
-  const acquisition = Number(summary?.currentAccrualDays ?? 0)
+function computeNextLeave(requests) {
+  if (!requests || requests.length === 0) return null
 
-  return (
-    <section className="manager-my-balance__history-card">
-      <div className="manager-my-balance__history-icon" aria-hidden="true">
-        <Icon name="clock" size={24} />
-      </div>
+  const today = todayISO()
+  const upcoming = requests
+    .filter((request) => request.status === 'VALIDEE' && request.endDate >= today)
+    .sort((left, right) => left.startDate.localeCompare(right.startDate))
 
-      <div className="manager-my-balance__history-copy">
-        <span className="manager-my-balance__eyebrow">Historique des soldes</span>
-        <h2>Retrouvez tous vos mouvements</h2>
-        <p>
-          Consultez les acquisitions mensuelles, congés débités, recrédits et éventuelles
-          corrections enregistrées sur votre compte.
-        </p>
-      </div>
-
-      {summary && (
-        <div className="manager-my-balance__mini-stats" aria-label="Résumé du solde">
-          <div>
-            <span>Solde réel</span>
-            <strong>{formatDays(real)} j</strong>
-          </div>
-          <div>
-            <span>Réservé</span>
-            <strong>{formatDays(reserved)} j</strong>
-          </div>
-          <div>
-            <span>Disponible</span>
-            <strong>{formatDays(potential)} j</strong>
-          </div>
-          <div>
-            <span>Acquisition</span>
-            <strong>{formatDays(acquisition)} j</strong>
-          </div>
-        </div>
-      )}
-
-      <button type="button" className="manager-my-balance__history-button" onClick={onHistory}>
-        <Icon name="clock" size={16} />
-        Voir mon historique
-        <Icon name="chevronRight" size={16} />
-      </button>
-    </section>
-  )
+  return upcoming[0] ?? null
 }
 
 export function ManagerMyBalancePage() {
   const navigate = useNavigate()
-  const [state, setState] = useState({ loading: true, error: false, data: [] })
+  const [balances, setBalances] = useState({ loading: true, error: false, data: [] })
+  const [requests, setRequests] = useState({ loading: true, error: false, data: [] })
+  const [settings, setSettings] = useState({ loading: true, error: false, data: null })
 
-  const load = useCallback(async () => {
-    setState((current) => ({ ...current, loading: true, error: false }))
+  const loadBalances = useCallback(async () => {
     try {
       const data = await getMyLeaveBalances()
-      setState({ loading: false, error: false, data: Array.isArray(data) ? data : [] })
+      setBalances({ loading: false, error: false, data: Array.isArray(data) ? data : [] })
     } catch {
-      setState({ loading: false, error: true, data: [] })
+      setBalances({ loading: false, error: true, data: [] })
     }
   }, [])
 
-  useEffect(() => {
-    load()
+  const retryBalances = useCallback(() => {
+    setBalances({ loading: true, error: false, data: [] })
+    loadBalances()
+  }, [loadBalances])
 
-    const refresh = () => load()
+  const loadRequests = useCallback(async () => {
+    try {
+      const data = await getMyLeaveRequests()
+      setRequests({ loading: false, error: false, data: Array.isArray(data) ? data : [] })
+    } catch {
+      setRequests({ loading: false, error: true, data: [] })
+    }
+  }, [])
+
+  const retryRequests = useCallback(() => {
+    setRequests({ loading: true, error: false, data: [] })
+    loadRequests()
+  }, [loadRequests])
+
+  useEffect(() => {
+    loadBalances()
+    loadRequests()
+
+    const refresh = () => {
+      loadBalances()
+      loadRequests()
+    }
+
     const refreshWhenVisible = () => {
-      if (document.visibilityState === 'visible') load()
+      if (document.visibilityState === 'visible') refresh()
     }
 
     window.addEventListener('focus', refresh)
@@ -93,35 +85,81 @@ export function ManagerMyBalancePage() {
       window.removeEventListener('gmes:data-changed', refresh)
       document.removeEventListener('visibilitychange', refreshWhenVisible)
     }
-  }, [load])
+  }, [loadBalances, loadRequests])
 
-  const summary = useMemo(() => buildBalanceSummary(state.data), [state.data])
+  useEffect(() => {
+    let cancelled = false
+
+    getPublicSettings()
+      .then((data) => {
+        if (!cancelled) setSettings({ loading: false, error: false, data })
+      })
+      .catch(() => {
+        if (!cancelled) setSettings({ loading: false, error: true, data: null })
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const balanceSummary = useMemo(() => buildBalanceSummary(balances.data), [balances.data])
+  const nextLeave = useMemo(() => computeNextLeave(requests.data), [requests.data])
+  const recentRequests = useMemo(() => requests.data.slice(0, 4), [requests.data])
+  const availableDays = balanceSummary?.potentialDays ?? null
 
   return (
-    <PageContainer className="manager-my-balance">
-      <div className="manager-my-balance__content">
-        <LeaveBalanceCard
-          summary={summary}
-          loading={state.loading}
-          error={state.error}
-          onRetry={load}
-        />
+    <PageContainer className="dash-page manager-my-balance">
+      <div className="dash-grid manager-my-balance__grid">
+        <div className="dash-col dash-col--main">
+          <LeaveBalanceCard
+            summary={balanceSummary}
+            loading={balances.loading}
+            error={balances.error}
+            onRetry={retryBalances}
+            actionLabel="Voir mon historique"
+            actionIcon="clock"
+            onAction={() => navigate('/app/history')}
+          />
 
-        {!state.loading && !state.error && summary && (
-          <div className="manager-my-balance__period-note">
-            <Icon name="info" size={16} />
-            <span>
-              Période de référence <strong>{formatPeriod(summary.referencePeriod)}</strong>.
-              Les demandes de congés payés en attente réservent des jours sans diminuer
-              le solde réel avant leur validation.
-            </span>
-          </div>
-        )}
+          <RecentRequestsCard
+            requests={recentRequests}
+            loading={requests.loading}
+            error={requests.error}
+            onRetry={retryRequests}
+            onViewAll={() => navigate('/app/my-requests')}
+            onOpenRequest={(request) => {
+              if (request.status === 'BROUILLON') {
+                navigate(`/app/new-request/${request.id}`)
+                return
+              }
 
-        <BalanceHistoryCard
-          summary={!state.loading && !state.error ? summary : null}
-          onHistory={() => navigate('/app/history')}
-        />
+              navigate(`/app/my-requests/leave/${request.id}`)
+            }}
+          />
+        </div>
+
+        <div className="dash-col dash-col--side">
+          <NextLeaveCard
+            nextLeave={nextLeave}
+            loading={requests.loading}
+            error={requests.error}
+            onRetry={retryRequests}
+          />
+
+          <PlanLeaveCard
+            availableDays={availableDays}
+            onNewRequest={() => navigate('/app/new-request')}
+          />
+
+          <AlertsCard
+            balances={balances}
+            requests={requests}
+            settings={settings}
+            onRetryBalances={retryBalances}
+            onRetryRequests={retryRequests}
+          />
+        </div>
       </div>
     </PageContainer>
   )

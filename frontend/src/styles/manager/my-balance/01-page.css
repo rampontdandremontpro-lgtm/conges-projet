@@ -1,156 +1,61 @@
-/* Mon solde — Responsable de service */
+/* Mon solde — Responsable de service
+   Même composition que le Tableau de bord Collaborateur, avec accès à l'historique. */
 
 .page-container.manager-my-balance {
-  width: 100%;
   max-width: none;
   margin: 0;
-  padding: 24px 0 38px;
+  padding: var(--space-6) 0 var(--space-10);
 }
 
-.manager-my-balance__content {
-  width: min(100%, 980px);
-  margin: 0 auto;
+.manager-my-balance__grid {
+  width: 100%;
 }
 
-.manager-my-balance__content > .dash-card {
-  padding: 24px;
-  border-radius: 20px;
+.manager-my-balance .balance-hero__number {
+  font-size: 80px;
 }
 
-.manager-my-balance__content .balance-hero__number {
-  font-size: 86px;
-}
-
-.manager-my-balance__period-note {
+.manager-my-balance .balance-card__action {
   display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  margin: 14px 0 18px;
-  padding: 13px 16px;
-  border: 1px solid #dbe7f8;
-  border-radius: 14px;
-  background: #f7faff;
-  color: #6781aa;
-  font-size: 12px;
-  line-height: 1.5;
-}
-
-.manager-my-balance__period-note > svg {
-  flex: 0 0 auto;
-  margin-top: 1px;
-  color: #1b6ef3;
-}
-
-.manager-my-balance__period-note strong {
-  color: #244d85;
-}
-
-.manager-my-balance__history-card {
-  display: grid;
-  grid-template-columns: 58px minmax(0, 1fr) auto;
-  gap: 16px;
   align-items: center;
-  padding: 22px 24px;
-  border: 1px solid rgba(10, 30, 69, 0.07);
-  border-radius: 20px;
-  background: #ffffff;
+  justify-content: center;
+  gap: var(--space-2);
+  width: 100%;
+  min-height: 42px;
+  margin-top: var(--space-4);
+  padding: 9px var(--space-4);
+  border: 1px solid var(--color-brand-600);
+  border-radius: var(--radius-md);
+  background: var(--color-brand-600);
+  color: #ffffff;
+  font: inherit;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  cursor: pointer;
+  transition:
+    background var(--transition-fast),
+    border-color var(--transition-fast),
+    color var(--transition-fast),
+    transform var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
+.manager-my-balance .balance-card__action svg:last-child {
+  margin-left: 2px;
+}
+
+.manager-my-balance .balance-card__action:hover {
+  border-color: var(--color-brand-700, #1557c0);
+  background: var(--color-brand-700, #1557c0);
+  color: #ffffff;
   box-shadow: var(--shadow-sm);
 }
 
-.manager-my-balance__history-icon {
-  display: grid;
-  width: 54px;
-  height: 54px;
-  place-items: center;
-  border-radius: 16px;
-  background: #edf4ff;
-  color: #1b6ef3;
+.manager-my-balance .balance-card__action:active {
+  transform: translateY(1px);
 }
 
-.manager-my-balance__history-copy {
-  min-width: 0;
-}
-
-.manager-my-balance__eyebrow {
-  display: block;
-  margin-bottom: 3px;
-  color: #87a2c8;
-  font-size: 10px;
-  font-weight: var(--font-weight-black);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.manager-my-balance__history-copy h2 {
-  margin: 0;
-  color: #0a1e45;
-  font-size: 17px;
-  font-weight: var(--font-weight-black);
-}
-
-.manager-my-balance__history-copy p {
-  max-width: 610px;
-  margin: 5px 0 0;
-  color: #748baa;
-  font-size: 12px;
-  line-height: 1.5;
-}
-
-.manager-my-balance__mini-stats {
-  grid-column: 2 / -1;
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.manager-my-balance__mini-stats > div {
-  display: flex;
-  min-height: 62px;
-  flex-direction: column;
-  justify-content: center;
-  gap: 4px;
-  padding: 10px 13px;
-  border-radius: 14px;
-  background: #f6f9fe;
-}
-
-.manager-my-balance__mini-stats span {
-  color: #8197b8;
-  font-size: 10px;
-  font-weight: var(--font-weight-semibold);
-}
-
-.manager-my-balance__mini-stats strong {
-  color: #0a1e45;
-  font-size: 16px;
-  font-weight: var(--font-weight-black);
-  font-variant-numeric: tabular-nums;
-}
-
-.manager-my-balance__history-button {
-  grid-column: 3;
-  grid-row: 1;
-  display: inline-flex;
-  min-height: 42px;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 0 15px;
-  border: 0;
-  border-radius: 12px;
-  background: #1b6ef3;
-  color: #ffffff;
-  font: inherit;
-  font-size: 12px;
-  font-weight: var(--font-weight-bold);
-  cursor: pointer;
-  box-shadow: 0 6px 16px rgba(27, 110, 243, 0.18);
-  transition:
-    background var(--transition-base),
-    transform var(--transition-base);
-}
-
-.manager-my-balance__history-button:hover {
-  background: #135cd6;
-  transform: translateY(-1px);
+.manager-my-balance .balance-card__action:focus-visible {
+  outline: 2px solid var(--color-brand-500);
+  outline-offset: 2px;
 }
