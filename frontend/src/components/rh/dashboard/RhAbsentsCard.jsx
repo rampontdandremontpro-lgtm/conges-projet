@@ -20,7 +20,7 @@ export function RhAbsentsCard({ presence, onNavigate }) {
           <h2 className="dash-card__title dash-card__title--lg">Absents aujourd&apos;hui</h2>
           <span className="dash-card__period">{presence?.unavailable ?? 0} indisponible(s)</span>
         </div>
-        <button type="button" className="dash-card__view-all" onClick={() => onNavigate('/app/absences')}>
+        <button type="button" className="dash-card__view-all" onClick={() => onNavigate('/app/rh-authorized-absences')}>
           Voir tout <Icon name="arrowRight" size={14} />
         </button>
       </header>

@@ -41,7 +41,7 @@ export function RhPresenceCard({ presence, onNavigate }) {
         </div>
       </div>
 
-      <button type="button" className="rh-dashboard-primary-link" onClick={() => onNavigate('/app/absences')}>
+      <button type="button" className="rh-dashboard-primary-link" onClick={() => onNavigate('/app/rh-authorized-absences')}>
         <Icon name="users" size={17} />
         <span>Voir les absences</span>
         <Icon name="arrowRight" size={15} />

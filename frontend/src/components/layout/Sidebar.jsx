@@ -35,21 +35,31 @@ export function Sidebar({ collapsed, onCloseMobile }) {
 
       <nav className="sidebar__nav">
         <ul className="sidebar__nav-group">
-          {navigation.map((item) => (
-            <li key={item.id}>
-              <NavLink
-                to={item.to}
-                onClick={onCloseMobile}
-                title={collapsed ? item.label : undefined}
-                className={({ isActive }) =>
-                  `sidebar__nav-item${isActive ? ' is-active' : ''}`
-                }
-              >
-                <Icon name={item.icon} />
-                <span>{item.label}</span>
-              </NavLink>
-            </li>
-          ))}
+          {navigation.map((item, index) => {
+            const previousGroup = index > 0 ? navigation[index - 1]?.group : null
+            const showGroupTitle = Boolean(item.group) && item.group !== previousGroup
+
+            return (
+              <li key={item.id} className="sidebar__nav-entry">
+                {showGroupTitle && (
+                  <span className="sidebar__section-title" aria-hidden={collapsed ? 'true' : undefined}>
+                    {item.group}
+                  </span>
+                )}
+                <NavLink
+                  to={item.to}
+                  onClick={onCloseMobile}
+                  title={collapsed ? item.label : undefined}
+                  className={({ isActive }) =>
+                    `sidebar__nav-item${isActive ? ' is-active' : ''}`
+                  }
+                >
+                  <Icon name={item.icon} />
+                  <span>{item.label}</span>
+                </NavLink>
+              </li>
+            )
+          })}
         </ul>
       </nav>
     </aside>

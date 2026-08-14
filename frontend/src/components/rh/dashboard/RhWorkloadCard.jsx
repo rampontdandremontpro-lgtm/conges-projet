@@ -25,15 +25,15 @@ export function RhWorkloadCard({ workload, onNavigate }) {
           <span>Demandes</span>
           <strong>{workload?.leaveRequests ?? 0}</strong>
         </button>
-        <button type="button" className="rh-workload-metric rh-workload-metric--cyan" onClick={() => onNavigate('/app/absences')}>
+        <button type="button" className="rh-workload-metric rh-workload-metric--cyan" onClick={() => onNavigate('/app/rh-absences')}>
           <span>Absences</span>
           <strong>{workload?.absences ?? 0}</strong>
         </button>
-        <button type="button" className="rh-workload-metric rh-workload-metric--orange" onClick={() => onNavigate('/app/documents-exports')}>
+        <button type="button" className="rh-workload-metric rh-workload-metric--orange" onClick={() => onNavigate('/app/rh-justificatifs')}>
           <span>Justificatifs</span>
           <strong>{workload?.documents ?? 0}</strong>
         </button>
-        <button type="button" className="rh-workload-metric rh-workload-metric--green" onClick={() => onNavigate('/app/derogations')}>
+        <button type="button" className="rh-workload-metric rh-workload-metric--green" onClick={() => onNavigate('/app/rh-derogations')}>
           <span>Dérogations</span>
           <strong>{workload?.derogations ?? 0}</strong>
         </button>

@@ -67,7 +67,7 @@ function buildPriorityItems({
       : 'À vérifier par la RH',
     date: itemDate(absence),
     urgent: false,
-    to: '/app/absences',
+    to: '/app/rh-absences',
   }))
 
   const documentItems = documents.map((document) => ({
@@ -84,7 +84,7 @@ function buildPriorityItems({
     meta: 'En attente de vérification RH',
     date: itemDate(document),
     urgent: false,
-    to: '/app/documents-exports',
+    to: '/app/rh-justificatifs',
   }))
 
   const derogationItems = derogations.map((derogation) => ({
@@ -99,7 +99,7 @@ function buildPriorityItems({
       : 'Décision RH requise',
     date: itemDate(derogation),
     urgent: true,
-    to: '/app/derogations',
+    to: '/app/rh-derogations',
   }))
 
   return [...leaveItems, ...absenceItems, ...documentItems, ...derogationItems]
