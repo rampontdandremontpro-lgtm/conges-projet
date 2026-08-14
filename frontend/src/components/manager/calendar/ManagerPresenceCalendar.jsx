@@ -1,64 +1,82 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo } from 'react'
 
 import { Icon } from '@/components/ui/Icon'
 import {
-  buildMonthGrid,
+  buildMonthDays,
   formatMonthLabel,
-  formatShortDateFR,
+  getCurrentDateKey,
   getCurrentMonthKey,
+  getMonthDayMeta,
   getPersonColor,
-  WEEKDAY_LABELS,
 } from '@/utils/managerCalendar'
 
-const STATUS_META = {
-  PRESENT: { label: 'Présent', short: 'Présent' },
-  EN_VACANCES: { label: 'En congés', short: 'Congé' },
-  ABSENT: { label: 'Absent', short: 'Absence' },
+const STATUS_LABELS = {
+  PRESENT: 'Présent',
+  EN_VACANCES: 'Congé',
+  ABSENT: 'Absence',
 }
 
 function initials(person) {
   return `${person?.prenom?.[0] ?? ''}${person?.nom?.[0] ?? ''}`.toUpperCase()
 }
 
-function memberStatusLabel(memberDay) {
-  if (memberDay.morningStatus === memberDay.afternoonStatus) {
-    return STATUS_META[memberDay.morningStatus]?.short ?? memberDay.morningStatus
-  }
-  const parts = []
-  if (memberDay.morningStatus !== 'PRESENT') parts.push(`Matin : ${STATUS_META[memberDay.morningStatus]?.short ?? memberDay.morningStatus}`)
-  if (memberDay.afternoonStatus !== 'PRESENT') parts.push(`Après-midi : ${STATUS_META[memberDay.afternoonStatus]?.short ?? memberDay.afternoonStatus}`)
-  return parts.join(' · ') || 'Présent'
+function getMemberDay(day, memberId) {
+  return day?.members?.find((member) => Number(member.id) === Number(memberId)) ?? null
 }
 
-function matchesCalendarFilter(memberDay, filter) {
-  if (filter === 'all') return memberDay.morningStatus !== 'PRESENT' || memberDay.afternoonStatus !== 'PRESENT'
-  return memberDay.morningStatus === filter || memberDay.afternoonStatus === filter
+function memberMatchesFilter(member, daysByDate, monthDays, filter) {
+  if (filter === 'all') return true
+
+  const statuses = monthDays.flatMap((date) => {
+    const memberDay = getMemberDay(daysByDate.get(date), member.id)
+    return memberDay ? [memberDay.morningStatus, memberDay.afternoonStatus] : []
+  })
+
+  if (filter === 'PRESENT') return statuses.includes('PRESENT')
+  return statuses.includes(filter)
+}
+
+function statusClass(status) {
+  if (status === 'EN_VACANCES') return 'is-leave'
+  if (status === 'ABSENT') return 'is-absence'
+  return 'is-present'
+}
+
+function DaySlot({ status, baseClass }) {
+  return <span className={`manager-month-cell__half ${statusClass(status)} ${baseClass}`} />
 }
 
 export function ManagerPresenceCalendar({ data, month, filter, onMonthChange }) {
-  const cells = useMemo(() => buildMonthGrid(month), [month])
+  const monthDays = useMemo(() => buildMonthDays(month), [month])
   const daysByDate = useMemo(() => new Map((data?.days ?? []).map((day) => [day.date, day])), [data?.days])
-  const membersById = useMemo(() => new Map((data?.members ?? []).map((member) => [Number(member.id), member])), [data?.members])
-  const today = new Date()
-  const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
-  const initialSelected = month === todayKey.slice(0, 7) ? todayKey : `${month}-01`
-  const [selectedDate, setSelectedDate] = useState(initialSelected)
-
-  useEffect(() => {
-    setSelectedDate(initialSelected)
-  }, [initialSelected])
-
-  const selectedDay = daysByDate.get(selectedDate) ?? null
-  const selectedMembers = selectedDay?.members ?? []
+  const holidayByDate = useMemo(() => {
+    const map = new Map()
+    ;(data?.holidays ?? []).forEach((holiday) => {
+      if (!map.has(holiday.date)) map.set(holiday.date, [])
+      map.get(holiday.date).push(holiday)
+    })
+    return map
+  }, [data?.holidays])
+  const todayKey = getCurrentDateKey()
+  const members = useMemo(
+    () => (data?.members ?? []).filter((member) => memberMatchesFilter(member, daysByDate, monthDays, filter)),
+    [data?.members, daysByDate, filter, monthDays],
+  )
+  const total = data?.totalMembers ?? data?.members?.length ?? 0
+  const threshold = data?.service?.minimumPresence ?? null
+  const gridStyle = {
+    gridTemplateColumns: `170px repeat(${monthDays.length}, minmax(28px, 1fr))`,
+    minWidth: `${170 + (monthDays.length * 29)}px`,
+  }
 
   return (
-    <section className="manager-calendar-card manager-calendar-card--presence">
+    <section className="manager-calendar-card manager-calendar-card--monthly">
       <div className="manager-calendar-head">
         <div className="manager-calendar-head__title">
           <span className="manager-calendar-head__icon"><Icon name="calendar" size={18} /></span>
           <div>
             <strong>{formatMonthLabel(month)}</strong>
-            <small>Visualisez les congés, absences et demi-journées de l’équipe sur le mois.</small>
+            <small>Planning mensuel de l’équipe. Blanc : présent, bleu : congé, rouge : absence.</small>
           </div>
         </div>
         <div className="manager-calendar-nav">
@@ -68,104 +86,105 @@ export function ManagerPresenceCalendar({ data, month, filter, onMonthChange }) 
         </div>
       </div>
 
-      <div className="manager-calendar-legend manager-calendar-legend--presence">
-        {(data?.members ?? []).map((person) => {
-          const color = getPersonColor(person)
-          return (
-            <span key={person.id} className="manager-calendar-legend__person">
-              <i style={{ background: color.solid }} />
-              <b>{initials(person)}</b>
-              <span>{person.prenom} {person.nom}</span>
-            </span>
-          )
-        })}
-        <span className="manager-calendar-status-key"><i className="is-leave" /> Congé</span>
-        <span className="manager-calendar-status-key"><i className="is-absence" /> Absence</span>
-        <span className="manager-calendar-status-key"><i className="is-risk" /> Seuil à risque</span>
-      </div>
+      <div className="manager-month-planning-wrap">
+        <div className="manager-month-planning" style={gridStyle}>
+          <div className="manager-month-planning__corner">Équipe</div>
 
-      <div className="manager-calendar-grid manager-calendar-grid--presence">
-        {WEEKDAY_LABELS.map((label) => <div className="manager-calendar-weekday" key={label}>{label}</div>)}
-        {cells.map((date, index) => {
-          if (!date) return <div className="manager-calendar-day is-empty" key={`empty-${index}`} />
-          const day = daysByDate.get(date)
-          const dayMembers = day?.members ?? []
-          const displayed = dayMembers.filter((memberDay) => matchesCalendarFilter(memberDay, filter))
-          const risk = day && (!day.morningMinimumRespected || !day.afternoonMinimumRespected)
-          const visible = displayed.slice(0, 3)
-          const extra = Math.max(displayed.length - visible.length, 0)
-          const total = data?.totalMembers ?? data?.members?.length ?? 0
-          const selected = selectedDate === date
-
-          return (
-            <button
-              type="button"
-              key={date}
-              className={`manager-calendar-day manager-calendar-day--selectable${risk ? ' has-risk' : ''}${selected ? ' is-selected' : ''}`}
-              onClick={() => setSelectedDate(date)}
-            >
-              <div className="manager-calendar-day__number">
-                <span>{Number(date.slice(-2))}</span>
-                {risk && <span className="manager-calendar-risk-badge"><Icon name="alert" size={11} /> Risque</span>}
+          {monthDays.map((date) => {
+            const meta = getMonthDayMeta(date)
+            const holidays = holidayByDate.get(date) ?? []
+            const isHoliday = holidays.length > 0
+            const isToday = date === todayKey
+            const title = isHoliday ? holidays.map((holiday) => holiday.name).join(' · ') : undefined
+            return (
+              <div
+                key={date}
+                title={title}
+                className={`manager-month-planning__day-head${meta.isWeekend ? ' is-weekend' : ''}${isHoliday ? ' is-holiday' : ''}${isToday ? ' is-today' : ''}`}
+              >
+                <span>{meta.weekday}</span>
+                <strong>{meta.day}</strong>
               </div>
-              <div className="manager-calendar-day__events">
-                {visible.map((memberDay) => {
-                  const person = membersById.get(Number(memberDay.id))
-                  if (!person) return null
-                  const color = getPersonColor(person)
+            )
+          })}
+
+          {members.map((member) => {
+            const personColor = getPersonColor(member)
+            return (
+              <div className="manager-month-planning__row" key={member.id}>
+                <div className="manager-month-planning__person">
+                  <span className="manager-month-planning__avatar" style={{ background: personColor.soft, color: personColor.solid }}>{initials(member)}</span>
+                  <span className="manager-month-planning__person-copy">
+                    <strong>{member.prenom} {member.nom}</strong>
+                    <small>{member.role === 'RESPONSABLE_SERVICE' ? 'Responsable de service' : 'Collaborateur'}</small>
+                  </span>
+                </div>
+
+                {monthDays.map((date) => {
+                  const meta = getMonthDayMeta(date)
+                  const day = daysByDate.get(date)
+                  const memberDay = getMemberDay(day, member.id) ?? { morningStatus: 'PRESENT', afternoonStatus: 'PRESENT' }
+                  const holidays = holidayByDate.get(date) ?? []
+                  const isHoliday = holidays.length > 0
+                  const isToday = date === todayKey
+                  const baseClass = isHoliday ? 'is-holiday' : isToday ? 'is-today' : meta.isWeekend ? 'is-weekend' : ''
+                  const label = memberDay.morningStatus === memberDay.afternoonStatus
+                    ? STATUS_LABELS[memberDay.morningStatus]
+                    : `Matin : ${STATUS_LABELS[memberDay.morningStatus]} · Après-midi : ${STATUS_LABELS[memberDay.afternoonStatus]}`
+                  const holidayLabel = isHoliday ? ` · ${holidays.map((holiday) => holiday.name).join(', ')}` : ''
+
                   return (
-                    <span
-                      key={memberDay.id}
-                      className="manager-calendar-event"
-                      style={{ '--person-color': color.solid, '--person-soft': color.soft }}
+                    <div
+                      key={`${member.id}-${date}`}
+                      className={`manager-month-planning__cell${meta.isWeekend ? ' is-weekend' : ''}${isHoliday ? ' is-holiday' : ''}${isToday ? ' is-today' : ''}`}
+                      title={`${member.prenom} ${member.nom} · ${date} · ${label}${holidayLabel}`}
                     >
-                      <span className="manager-calendar-event__dot" />
-                      <strong>{person.prenom}</strong>
-                      <small>{memberStatusLabel(memberDay)}</small>
-                    </span>
+                      <DaySlot status={memberDay.morningStatus} baseClass={baseClass} />
+                      <DaySlot status={memberDay.afternoonStatus} baseClass={baseClass} />
+                    </div>
                   )
                 })}
-                {extra > 0 && <span className="manager-calendar-day__extra">+{extra} autre{extra > 1 ? 's' : ''}</span>}
               </div>
-              <span className="manager-calendar-day__coverage">
-                M {day?.morningPresent ?? total}/{total} · AM {day?.afternoonPresent ?? total}/{total}
-              </span>
-            </button>
-          )
-        })}
+            )
+          })}
+
+          <div className="manager-month-planning__footer-label">Présents</div>
+          {monthDays.map((date) => {
+            const meta = getMonthDayMeta(date)
+            const day = daysByDate.get(date)
+            const holidays = holidayByDate.get(date) ?? []
+            const isHoliday = holidays.length > 0
+            const isToday = date === todayKey
+            const risk = day && (!day.morningMinimumRespected || !day.afternoonMinimumRespected)
+            const skip = meta.isWeekend || isHoliday
+            return (
+              <div
+                key={`summary-${date}`}
+                className={`manager-month-planning__footer-cell${meta.isWeekend ? ' is-weekend' : ''}${isHoliday ? ' is-holiday' : ''}${isToday ? ' is-today' : ''}${risk && !skip ? ' has-risk' : ''}`}
+              >
+                {skip ? (
+                  <strong>—</strong>
+                ) : (
+                  <>
+                    <strong>{day?.morningPresent ?? total}/{total}</strong>
+                    <small>{day?.morningPresent === day?.afternoonPresent ? 'M/AM' : `AM ${day?.afternoonPresent ?? total}/${total}`}</small>
+                  </>
+                )}
+              </div>
+            )
+          })}
+        </div>
       </div>
 
-      {selectedDay && (
-        <div className="manager-calendar-detail">
-          <div className="manager-calendar-detail__head">
-            <div>
-              <span>Journée sélectionnée</span>
-              <strong>{formatShortDateFR(selectedDate)}</strong>
-            </div>
-            <div className={`manager-calendar-detail__coverage${(!selectedDay.morningMinimumRespected || !selectedDay.afternoonMinimumRespected) ? ' is-risk' : ''}`}>
-              Matin {selectedDay.morningPresent}/{data.totalMembers ?? data.members.length} · Après-midi {selectedDay.afternoonPresent}/{data.totalMembers ?? data.members.length}
-            </div>
-          </div>
-          <div className="manager-calendar-detail__members">
-            {selectedMembers.map((memberDay) => {
-              const person = membersById.get(Number(memberDay.id))
-              if (!person) return null
-              const color = getPersonColor(person)
-              return (
-                <div className="manager-calendar-detail-member" key={memberDay.id}>
-                  <span className="manager-calendar-detail-member__avatar" style={{ background: color.soft, color: color.solid }}>{initials(person)}</span>
-                  <div className="manager-calendar-detail-member__identity">
-                    <strong>{person.prenom} {person.nom}</strong>
-                    <small>{person.role === 'RESPONSABLE_SERVICE' ? 'Responsable de service' : 'Collaborateur'}</small>
-                  </div>
-                  <span className={`manager-calendar-detail-member__slot is-${memberDay.morningStatus.toLowerCase()}`}>Matin · {STATUS_META[memberDay.morningStatus]?.label}</span>
-                  <span className={`manager-calendar-detail-member__slot is-${memberDay.afternoonStatus.toLowerCase()}`}>Après-midi · {STATUS_META[memberDay.afternoonStatus]?.label}</span>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      )}
+      <div className="manager-month-planning__legend">
+        <span><i className="is-present" /> Présent</span>
+        <span><i className="is-leave" /> Congé</span>
+        <span><i className="is-absence" /> Absence</span>
+        <span><i className="is-weekend" /> Week-end</span>
+        <span><i className="is-holiday" /> Jour férié / fermeture</span>
+        <span><i className="is-today" /> Aujourd’hui</span>
+        {threshold != null && <small>Minimum du service : {threshold} personne{threshold > 1 ? 's' : ''}</small>}
+      </div>
     </section>
   )
 }

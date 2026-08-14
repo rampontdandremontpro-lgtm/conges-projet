@@ -2,12 +2,13 @@ import { useMemo } from 'react'
 
 import { Icon } from '@/components/ui/Icon'
 import {
-  buildMonthGrid,
+  buildMonthDays,
   dateInRange,
   formatMonthLabel,
+  getCurrentDateKey,
   getCurrentMonthKey,
+  getMonthDayMeta,
   getPersonColor,
-  WEEKDAY_LABELS,
 } from '@/utils/managerCalendar'
 
 function initials(person) {
@@ -49,48 +50,110 @@ function buildEvents(alerts) {
   return [...byKey.values()]
 }
 
-function eventLabel(event) {
-  return event.source === 'DECLARATION_ABSENCE' ? 'Absence' : 'Congé'
+function eventStatus(event) {
+  return event?.source === 'DECLARATION_ABSENCE' ? 'ABSENT' : 'EN_VACANCES'
 }
 
-function slotLabel(event, date) {
-  const start = event.startPeriod ?? 'MATIN'
-  const end = event.endPeriod ?? 'APRES_MIDI'
+function occupiesHalf(event, date, period) {
+  if (!dateInRange(date, event?.startDate, event?.endDate)) return false
+
+  const startPeriod = event?.startPeriod ?? 'MATIN'
+  const endPeriod = event?.endPeriod ?? 'APRES_MIDI'
+
   if (event.startDate === event.endDate) {
-    if (start === 'MATIN' && end === 'MATIN') return 'Matin'
-    if (start === 'APRES_MIDI' && end === 'APRES_MIDI') return 'Après-midi'
-    return ''
+    if (startPeriod === 'MATIN' && endPeriod === 'MATIN') return period === 'MATIN'
+    if (startPeriod === 'APRES_MIDI' && endPeriod === 'APRES_MIDI') return period === 'APRES_MIDI'
+    return true
   }
-  if (date === event.startDate && start === 'APRES_MIDI') return 'Après-midi'
-  if (date === event.endDate && end === 'MATIN') return 'Matin'
-  return ''
+
+  if (date === event.startDate && startPeriod === 'APRES_MIDI') return period === 'APRES_MIDI'
+  if (date === event.endDate && endPeriod === 'MATIN') return period === 'MATIN'
+  return true
 }
 
-export function ManagerAlertsCalendar({ alerts, month, onMonthChange, onOpenRequest }) {
-  const cells = useMemo(() => buildMonthGrid(month), [month])
+function resolveHalfStatus(events, date, period) {
+  const active = events.filter((event) => occupiesHalf(event, date, period))
+  if (active.some((event) => eventStatus(event) === 'ABSENT')) return 'ABSENT'
+  if (active.some((event) => eventStatus(event) === 'EN_VACANCES')) return 'EN_VACANCES'
+  return 'PRESENT'
+}
+
+function statusClass(status) {
+  if (status === 'EN_VACANCES') return 'is-leave'
+  if (status === 'ABSENT') return 'is-absence'
+  return 'is-present'
+}
+
+function Half({ status, baseClass }) {
+  return <span className={`manager-month-cell__half ${statusClass(status)} ${baseClass}`} />
+}
+
+export function ManagerAlertsCalendar({
+  alerts,
+  calendarData,
+  month,
+  onMonthChange,
+  onOpenRequest,
+}) {
+  const monthDays = useMemo(() => buildMonthDays(month), [month])
   const events = useMemo(() => buildEvents(alerts), [alerts])
+  const holidayByDate = useMemo(() => {
+    const map = new Map()
+    ;(calendarData?.holidays ?? []).forEach((holiday) => {
+      if (!map.has(holiday.date)) map.set(holiday.date, [])
+      map.get(holiday.date).push(holiday)
+    })
+    return map
+  }, [calendarData?.holidays])
+  const todayKey = getCurrentDateKey()
+
   const people = useMemo(() => {
     const map = new Map()
+    ;(calendarData?.members ?? []).forEach((person) => {
+      map.set(Number(person.id), person)
+    })
     events.forEach((event) => {
-      if (!map.has(event.employeeId)) {
-        map.set(event.employeeId, {
+      if (!map.has(Number(event.employeeId))) {
+        map.set(Number(event.employeeId), {
           id: event.employeeId,
           nom: event.nom,
           prenom: event.prenom,
+          role: null,
         })
       }
     })
     return [...map.values()].sort((a, b) => `${a.nom}${a.prenom}`.localeCompare(`${b.nom}${b.prenom}`, 'fr'))
+  }, [calendarData?.members, events])
+
+  const eventsByPerson = useMemo(() => {
+    const map = new Map()
+    events.forEach((event) => {
+      const id = Number(event.employeeId)
+      if (!map.has(id)) map.set(id, [])
+      map.get(id).push(event)
+    })
+    return map
   }, [events])
 
+  const dayStats = useMemo(() => new Map(monthDays.map((date) => {
+    const dayEvents = events.filter((event) => dateInRange(date, event.startDate, event.endDate))
+    const peopleIds = new Set(dayEvents.map((event) => Number(event.employeeId)))
+    return [date, { unavailable: peopleIds.size, overlap: peopleIds.size > 1 }]
+  })), [events, monthDays])
+
+  const gridStyle = {
+    gridTemplateColumns: `170px repeat(${monthDays.length}, minmax(28px, 1fr))`,
+    minWidth: `${170 + (monthDays.length * 29)}px`,
+  }
+
   return (
-    <section className="manager-calendar-card manager-calendar-card--alerts">
+    <section className="manager-calendar-card manager-calendar-card--monthly">
       <div className="manager-calendar-head">
         <div className="manager-calendar-head__title">
           <span className="manager-calendar-head__icon"><Icon name="calendar" size={18} /></span>
           <div>
             <strong>{formatMonthLabel(month)}</strong>
-            <small>Les zones orange signalent les jours où plusieurs indisponibilités se recouvrent.</small>
+            <small>Le mois de l’alerte est affiché. Les cellules entourées d’orange indiquent la zone réelle de chevauchement.</small>
           </div>
         </div>
         <div className="manager-calendar-nav">
@@ -100,62 +163,115 @@ export function ManagerAlertsCalendar({ alerts, month, onMonthChange, onOpenRequ
         </div>
       </div>
 
-      <div className="manager-calendar-legend" aria-label="Légende des collaborateurs">
-        {people.map((person) => {
-          const color = getPersonColor(person)
-          return (
-            <span key={person.id} className="manager-calendar-legend__person">
-              <i style={{ background: color.solid }} />
-              <b>{initials(person)}</b>
-              <span>{person.prenom} {person.nom}</span>
-            </span>
-          )
-        })}
-      </div>
+      <div className="manager-month-planning-wrap">
+        <div className="manager-month-planning manager-month-planning--alerts" style={gridStyle}>
+          <div className="manager-month-planning__corner">Équipe</div>
 
-      <div className="manager-calendar-grid manager-calendar-grid--alerts">
-        {WEEKDAY_LABELS.map((label) => <div className="manager-calendar-weekday" key={label}>{label}</div>)}
-        {cells.map((date, index) => {
-          if (!date) return <div className="manager-calendar-day is-empty" key={`empty-${index}`} />
-          const dayEvents = events.filter((event) => dateInRange(date, event.startDate, event.endDate))
-          const uniquePeople = new Set(dayEvents.map((event) => event.employeeId))
-          const hasOverlap = uniquePeople.size > 1
-          const visible = dayEvents.slice(0, 3)
-          const extra = Math.max(dayEvents.length - visible.length, 0)
-
-          return (
-            <div className={`manager-calendar-day${hasOverlap ? ' has-overlap' : ''}`} key={date}>
-              <div className="manager-calendar-day__number">
-                <span>{Number(date.slice(-2))}</span>
-                {hasOverlap && <span className="manager-calendar-overlap-badge">{uniquePeople.size} pers.</span>}
+          {monthDays.map((date) => {
+            const meta = getMonthDayMeta(date)
+            const holidays = holidayByDate.get(date) ?? []
+            const stats = dayStats.get(date)
+            const isHoliday = holidays.length > 0
+            const isToday = date === todayKey
+            return (
+              <div
+                key={date}
+                title={isHoliday ? holidays.map((holiday) => holiday.name).join(' · ') : undefined}
+                className={`manager-month-planning__day-head${meta.isWeekend ? ' is-weekend' : ''}${isHoliday ? ' is-holiday' : ''}${isToday ? ' is-today' : ''}${stats?.overlap ? ' has-overlap' : ''}`}
+              >
+                <span>{meta.weekday}</span>
+                <strong>{meta.day}</strong>
+                {stats?.overlap && <i aria-label={`${stats.unavailable} personnes indisponibles`} />}
               </div>
-              <div className="manager-calendar-day__events">
-                {visible.map((event) => {
-                  const person = { id: event.employeeId, nom: event.nom, prenom: event.prenom }
-                  const color = getPersonColor(person)
-                  const slot = slotLabel(event, date)
-                  const canOpen = event.source === 'DEMANDE_CONGE' && event.isPrimary
-                  const Component = canOpen ? 'button' : 'div'
+            )
+          })}
+
+          {people.map((person) => {
+            const personColor = getPersonColor(person)
+            const personEvents = eventsByPerson.get(Number(person.id)) ?? []
+
+            return (
+              <div className="manager-month-planning__row" key={person.id}>
+                <div className="manager-month-planning__person">
+                  <span className="manager-month-planning__avatar" style={{ background: personColor.soft, color: personColor.solid }}>{initials(person)}</span>
+                  <span className="manager-month-planning__person-copy">
+                    <strong>{person.prenom} {person.nom}</strong>
+                    <small>{person.role === 'RESPONSABLE_SERVICE' ? 'Responsable de service' : 'Collaborateur'}</small>
+                  </span>
+                </div>
+
+                {monthDays.map((date) => {
+                  const meta = getMonthDayMeta(date)
+                  const holidays = holidayByDate.get(date) ?? []
+                  const stats = dayStats.get(date)
+                  const isHoliday = holidays.length > 0
+                  const isToday = date === todayKey
+                  const morningStatus = resolveHalfStatus(personEvents, date, 'MATIN')
+                  const afternoonStatus = resolveHalfStatus(personEvents, date, 'APRES_MIDI')
+                  const hasEvent = morningStatus !== 'PRESENT' || afternoonStatus !== 'PRESENT'
+                  const overlap = hasEvent && stats?.overlap
+                  const baseClass = isHoliday ? 'is-holiday' : isToday ? 'is-today' : meta.isWeekend ? 'is-weekend' : ''
+                  const primary = personEvents.find((event) => event.isPrimary && dateInRange(date, event.startDate, event.endDate))
+                  const commonClass = `manager-month-planning__cell${meta.isWeekend ? ' is-weekend' : ''}${isHoliday ? ' is-holiday' : ''}${isToday ? ' is-today' : ''}${overlap ? ' has-overlap' : ''}`
+                  const content = (
+                    <>
+                      <Half status={morningStatus} baseClass={baseClass} />
+                      <Half status={afternoonStatus} baseClass={baseClass} />
+                      {overlap && <span className="manager-month-planning__overlap-mark">!</span>}
+                    </>
+                  )
+
+                  if (primary) {
+                    return (
+                      <button
+                        type="button"
+                        key={`${person.id}-${date}`}
+                        className={`${commonClass} is-clickable`}
+                        onClick={() => onOpenRequest?.(primary.sourceId)}
+                        title={`Ouvrir la demande de ${person.prenom} ${person.nom}`}
+                      >
+                        {content}
+                      </button>
+                    )
+                  }
+
                   return (
-                    <Component
-                      key={event.key}
-                      type={canOpen ? 'button' : undefined}
-                      className="manager-calendar-event"
-                      style={{ '--person-color': color.solid, '--person-soft': color.soft }}
-                      title={`${person.prenom} ${person.nom} — ${eventLabel(event)}${slot ? ` (${slot})` : ''}`}
-                      onClick={canOpen ? () => onOpenRequest(event.sourceId) : undefined}
-                    >
-                      <span className="manager-calendar-event__dot" />
-                      <strong>{person.prenom}</strong>
-                      <small>{eventLabel(event)}{slot ? ` · ${slot}` : ''}</small>
-                    </Component>
+                    <div key={`${person.id}-${date}`} className={commonClass}>
+                      {content}
+                    </div>
                   )
                 })}
-                {extra > 0 && <span className="manager-calendar-day__extra">+{extra} autre{extra > 1 ? 's' : ''}</span>}
               </div>
-            </div>
-          )
-        })}
+            )
+          })}
+
+          <div className="manager-month-planning__footer-label">Indispo.</div>
+          {monthDays.map((date) => {
+            const meta = getMonthDayMeta(date)
+            const holidays = holidayByDate.get(date) ?? []
+            const stats = dayStats.get(date)
+            const isHoliday = holidays.length > 0
+            const isToday = date === todayKey
+            return (
+              <div
+                key={`summary-${date}`}
+                className={`manager-month-planning__footer-cell${meta.isWeekend ? ' is-weekend' : ''}${isHoliday ? ' is-holiday' : ''}${isToday ? ' is-today' : ''}${stats?.overlap ? ' has-overlap' : ''}`}
+              >
+                <strong>{stats?.unavailable ?? 0}</strong>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
+      <div className="manager-month-planning__legend">
+        <span><i className="is-present" /> Présent</span>
+        <span><i className="is-leave" /> Congé</span>
+        <span><i className="is-absence" /> Absence</span>
+        <span><i className="is-weekend" /> Week-end</span>
+        <span><i className="is-holiday" /> Jour férié / fermeture</span>
+        <span><i className="is-today" /> Aujourd’hui</span>
+        <span><i className="is-overlap" /> Chevauchement</span>
       </div>
     </section>
   )

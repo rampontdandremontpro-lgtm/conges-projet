@@ -19,9 +19,26 @@ export function getPersonColor(person) {
   return PERSON_PALETTE[Math.abs(hash) % PERSON_PALETTE.length]
 }
 
+function dateFromKey(value) {
+  const [year, month, day] = String(value).split('-').map(Number)
+  return new Date(year, month - 1, day)
+}
+
+function dateKey(date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+}
+
+export function getCurrentDateKey() {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Martinique',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date())
+}
+
 export function getCurrentMonthKey() {
-  const now = new Date()
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+  return getCurrentDateKey().slice(0, 7)
 }
 
 export function monthKeyFromDate(value) {
@@ -44,24 +61,21 @@ export function formatMonthLabel(monthKey) {
   return label.charAt(0).toUpperCase() + label.slice(1)
 }
 
-export function buildMonthGrid(monthKey) {
+export function buildMonthDays(monthKey) {
   const [year, month] = monthKey.split('-').map(Number)
-  const firstDay = new Date(year, month - 1, 1)
-  const lastDay = new Date(year, month, 0)
-  const mondayIndex = (firstDay.getDay() + 6) % 7
-  const cells = []
+  const lastDay = new Date(year, month, 0).getDate()
+  return Array.from({ length: lastDay }, (_, index) => `${monthKey}-${String(index + 1).padStart(2, '0')}`)
+}
 
-  for (let index = 0; index < mondayIndex; index += 1) {
-    cells.push(null)
+export function getMonthDayMeta(dateValue) {
+  const date = dateFromKey(dateValue)
+  const weekdayIndex = (date.getDay() + 6) % 7
+  const weekday = ['L', 'M', 'M', 'J', 'V', 'S', 'D'][weekdayIndex]
+  return {
+    weekday,
+    day: date.getDate(),
+    isWeekend: weekdayIndex >= 5,
   }
-
-  for (let day = 1; day <= lastDay.getDate(); day += 1) {
-    cells.push(`${monthKey}-${String(day).padStart(2, '0')}`)
-  }
-
-  while (cells.length % 7 !== 0) cells.push(null)
-  while (cells.length < 35) cells.push(null)
-  return cells
 }
 
 export function dateInRange(date, startDate, endDate) {
@@ -70,12 +84,10 @@ export function dateInRange(date, startDate, endDate) {
 
 export function formatShortDateFR(dateValue) {
   if (!dateValue) return ''
-  const [year, month, day] = String(dateValue).split('-').map(Number)
+  const date = dateFromKey(dateValue)
   return new Intl.DateTimeFormat('fr-FR', {
     weekday: 'short',
     day: 'numeric',
     month: 'short',
-  }).format(new Date(year, month - 1, day))
+  }).format(date)
 }
-
-export const WEEKDAY_LABELS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']

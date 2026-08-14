@@ -23,6 +23,7 @@ import {
   AbsenceDeclaration,
   AbsenceDeclarationStatus,
 } from '../absence-declarations/absence-declaration.entity';
+import { Holiday } from '../holidays/holiday.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import {
@@ -256,6 +257,18 @@ export class UsersService {
           })
           .getMany();
 
+    const holidays = await manager
+      .getRepository(Holiday)
+      .createQueryBuilder('holiday')
+      .where('holiday.isActive = :isActive', { isActive: true })
+      .andWhere('holiday.date BETWEEN :monthStart AND :monthEnd', {
+        monthStart,
+        monthEnd,
+      })
+      .orderBy('holiday.date', 'ASC')
+      .addOrderBy('holiday.holidayType', 'ASC')
+      .getMany();
+
     const days: Array<{
       date: string;
       morningPresent: number;
@@ -345,6 +358,12 @@ export class UsersService {
         nom: member.nom,
         prenom: member.prenom,
         role: member.role,
+      })),
+      holidays: holidays.map((holiday) => ({
+        id: holiday.id,
+        date: holiday.date,
+        name: holiday.name,
+        holidayType: holiday.holidayType,
       })),
       days,
     };
