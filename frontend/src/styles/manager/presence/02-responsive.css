@@ -34,3 +34,42 @@
   .manager-presence-toolbar__left { width: 100%; align-items: stretch; flex-direction: column; }
   .manager-presence-toolbar__left .manager-view-toggle { align-self: stretch; }
 }
+
+
+@media (max-width: 980px) {
+  .manager-presence-insights-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .manager-presence-insights-grid > .manager-presence-summary-card,
+  .manager-presence-insights-grid > .manager-presence-day-card,
+  .manager-presence-insights-grid > .manager-presence-summary-skeleton {
+    min-height: 0;
+  }
+}
+
+@media (max-width: 720px) {
+  .manager-presence-toolbar--top {
+    gap: 10px;
+  }
+
+  .manager-presence-toolbar--top .manager-presence-toolbar__left {
+    width: 100%;
+  }
+
+  .manager-presence-toolbar--top .manager-view-toggle {
+    width: 100%;
+  }
+
+  .manager-presence-toolbar--top .manager-presence-filters {
+    width: 100%;
+  }
+
+  .manager-presence-summary-card--compact .manager-presence-summary-card__main {
+    grid-template-columns: 1fr;
+  }
+
+  .manager-presence-day-card--compact .manager-presence-day-card__slots {
+    grid-template-columns: 1fr;
+  }
+}

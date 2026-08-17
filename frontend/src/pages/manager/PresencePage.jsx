@@ -43,26 +43,10 @@ function countSlotPresent(members, slotName) {
   return members.filter((member) => member.dailyAvailability?.[slotName]?.status === 'PRESENT').length
 }
 
-function LoadingState() {
-  return (
-    <div className="manager-presence-members" aria-label="Chargement de la présence du service">
-      {Array.from({ length: 4 }, (_, index) => (
-        <div className="manager-presence-member-skeleton" key={index} aria-hidden="true">
-          <span className="manager-presence-member-skeleton__avatar" />
-          <span className="manager-presence-member-skeleton__body">
-            <span className="manager-presence-member-skeleton__line manager-presence-member-skeleton__line--title" />
-            <span className="manager-presence-member-skeleton__line" />
-          </span>
-        </div>
-      ))}
-    </div>
-  )
-}
-
 export function ManagerPresencePage() {
   const [searchParams] = useSearchParams()
   const [filter, setFilter] = useState('all')
-  const [viewMode, setViewMode] = useState('list')
+  const [viewMode, setViewMode] = useState('calendar')
   const [calendarMonth, setCalendarMonth] = useState(getCurrentMonthKey())
   const [state, setState] = useState({ loading: true, error: false, data: null })
   const [calendarState, setCalendarState] = useState({ loading: false, error: false, data: null })
@@ -180,8 +164,19 @@ export function ManagerPresencePage() {
     <div className="manager-presence-page">
       {state.loading && !state.data ? (
         <>
-          <div className="manager-presence-summary-skeleton" aria-hidden="true" />
-          <LoadingState />
+          <div className="manager-presence-toolbar manager-presence-toolbar--top" aria-hidden="true">
+            <div className="manager-presence-toolbar__left">
+              <span className="manager-view-toggle is-active">Vue liste</span>
+            </div>
+          </div>
+          <div className="manager-calendar-loading">
+            <Icon name="calendar" size={24} />
+            <span>Chargement du calendrier du service…</span>
+          </div>
+          <div className="manager-presence-insights-grid">
+            <div className="manager-presence-summary-skeleton" aria-hidden="true" />
+            <div className="manager-presence-summary-skeleton" aria-hidden="true" />
+          </div>
         </>
       ) : state.error && !state.data ? (
         <div className="manager-presence-state manager-presence-state--error">
@@ -192,87 +187,8 @@ export function ManagerPresencePage() {
         </div>
       ) : (
         <>
-          <section className="manager-presence-summary-card">
-            <div className="manager-presence-summary-card__header">
-              <div>
-                <span className="manager-presence-eyebrow">Présence aujourd’hui</span>
-                <strong>{service?.name ?? 'Votre service'}</strong>
-                <small>{formatDateFR(state.data?.date)}</small>
-              </div>
-              <span className={`manager-presence-threshold-badge ${thresholdOk ? 'is-ok' : 'is-warning'}`}>
-                {threshold == null ? 'Aucun seuil configuré' : thresholdOk ? 'Seuil respecté' : 'Seuil non respecté'}
-              </span>
-            </div>
-
-            <div className="manager-presence-summary-card__main">
-              <div className="manager-presence-summary-card__hero">
-                <strong>{percentage}%</strong>
-                <span><b>{summary.present ?? 0}</b> présent{(summary.present ?? 0) > 1 ? 's' : ''} sur {total}</span>
-              </div>
-
-              <div className="manager-presence-summary-card__metrics">
-                <div className="is-present"><span>Présents</span><strong>{summary.present ?? 0}</strong></div>
-                <div className="is-leave"><span>En vacances</span><strong>{summary.onLeave ?? 0}</strong></div>
-                <div className="is-absent"><span>Absents</span><strong>{summary.absent ?? 0}</strong></div>
-                <div className="is-threshold"><span>Minimum requis</span><strong>{threshold ?? '—'}</strong></div>
-              </div>
-            </div>
-
-            <div className="manager-presence-summary-card__progress" aria-hidden="true">
-              <span style={{ width: `${Math.min(percentage, 100)}%` }} />
-            </div>
-
-            {threshold != null && (
-              <div className={`manager-presence-threshold-note ${thresholdOk ? 'is-ok' : 'is-warning'}`}>
-                <Icon name={thresholdOk ? 'check' : 'alert'} size={16} />
-                <span>
-                  {thresholdOk
-                    ? `La présence minimale est respectée${margin > 0 ? ` avec une marge de ${margin} personne${margin > 1 ? 's' : ''}` : ''}.`
-                    : `Il manque ${Math.abs(margin)} personne${Math.abs(margin) > 1 ? 's' : ''} pour respecter le seuil minimum du service.`}
-                </span>
-              </div>
-            )}
-          </section>
-
-          <section className="manager-presence-day-card">
-            <div className="manager-presence-day-card__header">
-              <span className="manager-presence-day-card__icon"><Icon name="clock" size={18} /></span>
-              <div>
-                <strong>Couverture de la journée</strong>
-                <small>Les demi-journées sont prises en compte automatiquement.</small>
-              </div>
-            </div>
-            <div className="manager-presence-day-card__slots">
-              <div className={state.data?.currentPeriod === 'MATIN' ? 'is-current' : ''}>
-                <span>Matin</span>
-                <strong>{morningPresent} / {total}</strong>
-                <small>{threshold == null ? 'présents' : `minimum ${threshold}`}</small>
-              </div>
-              <div className={state.data?.currentPeriod === 'APRES_MIDI' ? 'is-current' : ''}>
-                <span>Après-midi</span>
-                <strong>{afternoonPresent} / {total}</strong>
-                <small>{threshold == null ? 'présents' : `minimum ${threshold}`}</small>
-              </div>
-            </div>
-          </section>
-
-          <div className="manager-presence-toolbar">
+          <div className="manager-presence-toolbar manager-presence-toolbar--top">
             <div className="manager-presence-toolbar__left">
-              <div className="manager-presence-filters" role="tablist" aria-label="Filtres de présence">
-                {FILTERS.map((item) => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    role="tab"
-                    aria-selected={filter === item.id}
-                    className={`manager-presence-filter${filter === item.id ? ' is-active' : ''}`}
-                    onClick={() => setFilter(item.id)}
-                  >
-                    {item.label}
-                    <span>{counts[item.id] ?? 0}</span>
-                  </button>
-                ))}
-              </div>
               <button
                 type="button"
                 className={`manager-view-toggle${viewMode === 'calendar' ? ' is-active' : ''}`}
@@ -281,47 +197,153 @@ export function ManagerPresencePage() {
                 <Icon name={viewMode === 'calendar' ? 'list' : 'calendar'} size={16} />
                 {viewMode === 'calendar' ? 'Vue liste' : 'Vue calendrier'}
               </button>
+
+              {viewMode === 'list' && (
+                <div className="manager-presence-filters" role="tablist" aria-label="Filtres de présence">
+                  {FILTERS.map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      role="tab"
+                      aria-selected={filter === item.id}
+                      className={`manager-presence-filter${filter === item.id ? ' is-active' : ''}`}
+                      onClick={() => setFilter(item.id)}
+                    >
+                      {item.label}
+                      <span>{counts[item.id] ?? 0}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
+
             <div className="manager-presence-toolbar__label">
               <Icon name={viewMode === 'calendar' ? 'calendar' : 'users'} size={16} />
-              <span>{viewMode === 'calendar' ? 'Vue mensuelle du service' : `${visibleMembers.length} membre${visibleMembers.length > 1 ? 's' : ''} affiché${visibleMembers.length > 1 ? 's' : ''}`}</span>
+              <span>
+                {viewMode === 'calendar'
+                  ? 'Vue mensuelle du service'
+                  : `${visibleMembers.length} membre${visibleMembers.length > 1 ? 's' : ''} affiché${visibleMembers.length > 1 ? 's' : ''}`}
+              </span>
             </div>
           </div>
 
-          {viewMode === 'calendar' ? (
-            calendarState.loading && !calendarState.data ? (
-              <div className="manager-calendar-loading"><Icon name="calendar" size={24} /><span>Chargement du calendrier…</span></div>
-            ) : calendarState.error || !calendarData ? (
-              <div className="manager-presence-state manager-presence-state--error">
-                <span className="manager-presence-state__icon"><Icon name="alert" size={25} /></span>
-                <strong>Impossible de charger le calendrier du service.</strong>
-                <button type="button" onClick={() => loadCalendar(calendarMonth)}>Réessayer</button>
+          <div className="manager-presence-main-view">
+            {viewMode === 'calendar' ? (
+              calendarState.loading && !calendarState.data ? (
+                <div className="manager-calendar-loading">
+                  <Icon name="calendar" size={24} />
+                  <span>Chargement du calendrier…</span>
+                </div>
+              ) : calendarState.error || !calendarData ? (
+                <div className="manager-presence-state manager-presence-state--error">
+                  <span className="manager-presence-state__icon"><Icon name="alert" size={25} /></span>
+                  <strong>Impossible de charger le calendrier du service.</strong>
+                  <button type="button" onClick={() => loadCalendar(calendarMonth)}>Réessayer</button>
+                </div>
+              ) : (
+                <ManagerPresenceCalendar
+                  key={calendarMonth}
+                  data={calendarData}
+                  month={calendarMonth}
+                  filter="all"
+                  onMonthChange={changeCalendarMonth}
+                />
+              )
+            ) : visibleMembers.length === 0 ? (
+              <div className="manager-presence-state">
+                <span className="manager-presence-state__icon"><Icon name="users" size={25} /></span>
+                <strong>{query ? 'Aucun membre ne correspond à votre recherche.' : 'Aucun membre dans cette catégorie.'}</strong>
               </div>
             ) : (
-              <ManagerPresenceCalendar
-                key={calendarMonth}
-                data={calendarData}
-                month={calendarMonth}
-                filter={filter}
-                onMonthChange={changeCalendarMonth}
-              />
-            )
-          ) : visibleMembers.length === 0 ? (
-            <div className="manager-presence-state">
-              <span className="manager-presence-state__icon"><Icon name="users" size={25} /></span>
-              <strong>{query ? 'Aucun membre ne correspond à votre recherche.' : 'Aucun membre dans cette catégorie.'}</strong>
-            </div>
-          ) : (
-            <div className="manager-presence-members">
-              {visibleMembers.map((member) => (
-                <ManagerPresenceMemberCard
-                  key={member.id}
-                  member={member}
-                  currentPeriod={state.data?.currentPeriod}
-                />
-              ))}
-            </div>
-          )}
+              <div className="manager-presence-members">
+                {visibleMembers.map((member) => (
+                  <ManagerPresenceMemberCard
+                    key={member.id}
+                    member={member}
+                    currentPeriod={state.data?.currentPeriod}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="manager-presence-insights-grid">
+            <section className="manager-presence-summary-card manager-presence-summary-card--compact">
+              <div className="manager-presence-summary-card__header">
+                <div>
+                  <span className="manager-presence-eyebrow">Présence aujourd’hui</span>
+                  <strong>{service?.name ?? 'Votre service'}</strong>
+                  <small>{formatDateFR(state.data?.date)}</small>
+                </div>
+                <span className={`manager-presence-threshold-badge ${thresholdOk ? 'is-ok' : 'is-warning'}`}>
+                  {threshold == null ? 'Aucun seuil' : thresholdOk ? 'Seuil respecté' : 'Seuil non respecté'}
+                </span>
+              </div>
+
+              <div className="manager-presence-summary-card__main">
+                <div className="manager-presence-summary-card__hero">
+                  <strong>{percentage}%</strong>
+                </div>
+
+                <div className="manager-presence-summary-card__metrics">
+                  <div className="is-present"><span>Présents</span><strong>{summary.present ?? 0}</strong></div>
+                  <div className="is-leave"><span>En vacances</span><strong>{summary.onLeave ?? 0}</strong></div>
+                  <div className="is-absent"><span>Absents</span><strong>{summary.absent ?? 0}</strong></div>
+                  <div className="is-threshold"><span>Minimum requis</span><strong>{threshold ?? '—'}</strong></div>
+                </div>
+              </div>
+
+              <div className="manager-presence-summary-card__progress" aria-hidden="true">
+                <span style={{ width: `${Math.min(percentage, 100)}%` }} />
+              </div>
+
+              {threshold != null && (
+                <div className={`manager-presence-threshold-note ${thresholdOk ? 'is-ok' : 'is-warning'}`}>
+                  <Icon name={thresholdOk ? 'check' : 'alert'} size={16} />
+                  <span>
+                    {thresholdOk
+                      ? `La présence minimale est respectée${margin > 0 ? ` avec une marge de ${margin} personne${margin > 1 ? 's' : ''}` : ''}.`
+                      : `Il manque ${Math.abs(margin)} personne${Math.abs(margin) > 1 ? 's' : ''} pour respecter le seuil minimum du service.`}
+                  </span>
+                </div>
+              )}
+            </section>
+
+            <section className="manager-presence-day-card manager-presence-day-card--compact">
+              <div className="manager-presence-day-card__header">
+                <span className="manager-presence-day-card__icon"><Icon name="clock" size={18} /></span>
+                <div>
+                  <span className="manager-presence-eyebrow">Aujourd’hui</span>
+                  <strong>Couverture de la journée</strong>
+                  <small>Les demi-journées sont prises en compte automatiquement.</small>
+                </div>
+              </div>
+
+              <div className="manager-presence-day-card__slots">
+                <div className={state.data?.currentPeriod === 'MATIN' ? 'is-current' : ''}>
+                  <span>Matin</span>
+                  <strong>{morningPresent} / {total}</strong>
+                  <small>{threshold == null ? 'présents' : `minimum ${threshold}`}</small>
+                </div>
+                <div className={state.data?.currentPeriod === 'APRES_MIDI' ? 'is-current' : ''}>
+                  <span>Après-midi</span>
+                  <strong>{afternoonPresent} / {total}</strong>
+                  <small>{threshold == null ? 'présents' : `minimum ${threshold}`}</small>
+                </div>
+              </div>
+
+              <div className={`manager-presence-day-card__status ${thresholdOk ? 'is-ok' : 'is-warning'}`}>
+                <Icon name={thresholdOk ? 'check' : 'alert'} size={16} />
+                <span>
+                  {threshold == null
+                    ? 'Aucun seuil minimum n’est configuré pour ce service.'
+                    : thresholdOk
+                      ? 'La couverture respecte le minimum requis.'
+                      : 'La couverture est sous le minimum requis.'}
+                </span>
+              </div>
+            </section>
+          </div>
         </>
       )}
     </div>

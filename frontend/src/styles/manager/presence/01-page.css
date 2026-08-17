@@ -105,3 +105,191 @@
 
 .manager-presence-page { width: min(100%, 1120px); }
 .manager-presence-toolbar__left { display: flex; align-items: center; gap: 10px; min-width: 0; }
+
+
+/* Organisation principale : la vue calendrier/liste passe en premier. */
+.manager-presence-toolbar--top {
+  margin: 0 0 14px;
+}
+
+.manager-presence-main-view {
+  width: 100%;
+}
+
+.manager-presence-insights-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  align-items: stretch;
+  margin-top: 18px;
+}
+
+.manager-presence-insights-grid > .manager-presence-summary-card,
+.manager-presence-insights-grid > .manager-presence-day-card,
+.manager-presence-insights-grid > .manager-presence-summary-skeleton {
+  min-width: 0;
+  min-height: 302px;
+  height: 100%;
+}
+
+.manager-presence-summary-card--compact {
+  display: flex;
+  flex-direction: column;
+  padding: 22px 24px;
+  border-radius: 20px;
+}
+
+.manager-presence-summary-card--compact .manager-presence-summary-card__header strong {
+  font-size: 16px;
+}
+
+.manager-presence-summary-card--compact .manager-presence-summary-card__header small {
+  font-size: 11px;
+}
+
+.manager-presence-summary-card--compact .manager-presence-summary-card__main {
+  grid-template-columns: .78fr 1.22fr;
+  gap: 18px;
+  align-items: center;
+  margin-top: 20px;
+}
+
+.manager-presence-summary-card--compact .manager-presence-summary-card__hero {
+  gap: 9px;
+}
+
+.manager-presence-summary-card--compact .manager-presence-summary-card__hero > strong {
+  font-size: 55px;
+}
+
+.manager-presence-summary-card--compact .manager-presence-summary-card__hero > span {
+  padding-bottom: 5px;
+  font-size: 11.5px;
+}
+
+.manager-presence-summary-card--compact .manager-presence-summary-card__hero b {
+  font-size: 15px;
+}
+
+.manager-presence-summary-card--compact .manager-presence-summary-card__metrics {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.manager-presence-summary-card--compact .manager-presence-summary-card__metrics > div {
+  min-height: 58px;
+  padding: 9px 11px;
+  border-radius: 12px;
+}
+
+.manager-presence-summary-card--compact .manager-presence-summary-card__metrics span {
+  font-size: 9.5px;
+}
+
+.manager-presence-summary-card--compact .manager-presence-summary-card__metrics strong {
+  font-size: 20px;
+}
+
+.manager-presence-summary-card--compact .manager-presence-summary-card__progress {
+  margin-top: 18px;
+}
+
+.manager-presence-summary-card--compact .manager-presence-threshold-note {
+  margin-top: 12px;
+  padding: 9px 11px;
+  font-size: 11.5px;
+}
+
+.manager-presence-day-card--compact {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: 18px;
+  margin-top: 0;
+  padding: 22px 24px;
+  border-radius: 20px;
+}
+
+.manager-presence-day-card--compact .manager-presence-day-card__header {
+  align-items: flex-start;
+}
+
+.manager-presence-day-card--compact .manager-presence-day-card__header .manager-presence-eyebrow {
+  display: block;
+  margin-bottom: 3px;
+  font-size: 9.5px;
+}
+
+.manager-presence-day-card--compact .manager-presence-day-card__header strong {
+  font-size: 16px;
+}
+
+.manager-presence-day-card--compact .manager-presence-day-card__header small {
+  margin-top: 4px;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.manager-presence-day-card--compact .manager-presence-day-card__slots {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  width: 100%;
+}
+
+.manager-presence-day-card--compact .manager-presence-day-card__slots > div {
+  min-width: 0;
+  min-height: 88px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 13px 15px;
+  border-radius: 13px;
+}
+
+.manager-presence-day-card--compact .manager-presence-day-card__slots span {
+  font-size: 10.5px;
+}
+
+.manager-presence-day-card--compact .manager-presence-day-card__slots strong {
+  font-size: 24px;
+}
+
+.manager-presence-day-card--compact .manager-presence-day-card__slots small {
+  margin-left: 0;
+  margin-top: 3px;
+  font-size: 10.5px;
+}
+
+.manager-presence-day-card__status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: auto;
+  padding: 11px 13px;
+  border-radius: 11px;
+  font-size: 11.5px;
+  line-height: 1.4;
+}
+
+.manager-presence-day-card__status.is-ok {
+  background: #f0fdf4;
+  color: #18723b;
+}
+
+.manager-presence-day-card__status.is-warning {
+  background: #fff5f5;
+  color: #b43a4c;
+}
+
+.manager-presence-toolbar--top .manager-presence-toolbar__left {
+  flex-wrap: wrap;
+}
+
+.manager-presence-toolbar--top .manager-view-toggle {
+  order: 0;
+}
+
+.manager-presence-toolbar--top .manager-presence-filters {
+  order: 1;
+}

@@ -76,7 +76,7 @@ export function ManagerPresenceCalendar({ data, month, filter, onMonthChange }) 
           <span className="manager-calendar-head__icon"><Icon name="calendar" size={18} /></span>
           <div>
             <strong>{formatMonthLabel(month)}</strong>
-            <small>Planning mensuel de l’équipe. Blanc : présent, bleu : congé, rouge : absence.</small>
+            <small>Planning mensuel de l’équipe.</small>
           </div>
         </div>
         <div className="manager-calendar-nav">
@@ -183,7 +183,6 @@ export function ManagerPresenceCalendar({ data, month, filter, onMonthChange }) 
         <span><i className="is-weekend" /> Week-end</span>
         <span><i className="is-holiday" /> Jour férié / fermeture</span>
         <span><i className="is-today" /> Aujourd’hui</span>
-        {threshold != null && <small>Minimum du service : {threshold} personne{threshold > 1 ? 's' : ''}</small>}
       </div>
     </section>
   )
