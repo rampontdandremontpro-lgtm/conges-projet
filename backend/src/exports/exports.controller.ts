@@ -25,6 +25,11 @@ type AuthenticatedRequest = Request & { user: AuthenticatedUser };
 export class ExportsController {
   constructor(private readonly exportsService: ExportsService) {}
 
+  @Get('overview')
+  getOverview(@Query() query: ExportQueryDto) {
+    return this.exportsService.getOverview(query);
+  }
+
   @Get('leave-requests')
   async exportLeaveRequests(
     @Req() request: AuthenticatedRequest,
@@ -46,6 +51,48 @@ export class ExportsController {
     @Res({ passthrough: true }) response: Response,
   ): Promise<StreamableFile> {
     const file = await this.exportsService.exportAbsenceDeclarations(
+      query,
+      request.user,
+    );
+    this.setDownloadHeaders(response, file.contentType, file.fileName);
+    return new StreamableFile(file.buffer);
+  }
+
+  @Get('leave-balances')
+  async exportLeaveBalances(
+    @Req() request: AuthenticatedRequest,
+    @Query() query: ExportQueryDto,
+    @Res({ passthrough: true }) response: Response,
+  ): Promise<StreamableFile> {
+    const file = await this.exportsService.exportLeaveBalances(
+      query,
+      request.user,
+    );
+    this.setDownloadHeaders(response, file.contentType, file.fileName);
+    return new StreamableFile(file.buffer);
+  }
+
+  @Get('balance-movements')
+  async exportBalanceMovements(
+    @Req() request: AuthenticatedRequest,
+    @Query() query: ExportQueryDto,
+    @Res({ passthrough: true }) response: Response,
+  ): Promise<StreamableFile> {
+    const file = await this.exportsService.exportBalanceMovements(
+      query,
+      request.user,
+    );
+    this.setDownloadHeaders(response, file.contentType, file.fileName);
+    return new StreamableFile(file.buffer);
+  }
+
+  @Get('derogations')
+  async exportDerogations(
+    @Req() request: AuthenticatedRequest,
+    @Query() query: ExportQueryDto,
+    @Res({ passthrough: true }) response: Response,
+  ): Promise<StreamableFile> {
+    const file = await this.exportsService.exportDerogations(
       query,
       request.user,
     );

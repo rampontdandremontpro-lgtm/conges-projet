@@ -51,6 +51,8 @@ export const NAVIGATION = {
     { id: 'rh-derogations', label: 'Dérogations', to: '/app/rh-derogations', icon: 'shield', group: 'DEMANDES' },
 
     { id: 'rh-balances', label: 'Soldes collaborateurs', to: '/app/rh-balances', icon: 'wallet', group: 'ADMINISTRATION' },
+    { id: 'rh-exports', label: 'Exports', to: '/app/rh-exports', icon: 'download', group: 'ADMINISTRATION' },
+    { id: 'rh-pdf-documents', label: 'Documents', to: '/app/rh-pdf-documents', icon: 'doc', group: 'ADMINISTRATION' },
 
     { id: 'my-requests', label: 'Mes demandes', to: '/app/my-requests', icon: 'list', group: 'MON ESPACE' },
     { id: 'my-balance', label: 'Mon solde', to: '/app/my-balance', icon: 'wallet', group: 'MON ESPACE' },
@@ -63,8 +65,6 @@ export const NAVIGATION = {
     { id: 'rh-validators', label: 'Valideurs et remplacements', to: '/app/rh-validators', icon: 'users', group: 'PARAMÉTRAGE' },
 
     { id: 'rh-alerts', label: 'Alertes', to: '/app/rh-alerts', icon: 'alert', group: 'OUTILS' },
-    { id: 'rh-exports', label: 'Exports', to: '/app/rh-exports', icon: 'download', group: 'OUTILS' },
-    { id: 'rh-pdf-documents', label: 'Documents', to: '/app/rh-pdf-documents', icon: 'doc', group: 'OUTILS' },
     { id: 'notifications', label: 'Notifications', to: '/app/notifications', icon: 'bell', group: 'OUTILS' },
   ],
   [ROLES.DIRECTEUR]: [
