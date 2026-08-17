@@ -80,7 +80,7 @@ export const router = createBrowserRouter([
       {
         path: 'new-request/:id',
         element: (
-          <RoleRoute roles={[ROLES.COLLABORATEUR, ROLES.RESPONSABLE_SERVICE]}>
+          <RoleRoute roles={[ROLES.COLLABORATEUR, ROLES.RESPONSABLE_SERVICE, ROLES.RH]}>
             <NewRequest />
           </RoleRoute>
         ),
@@ -88,7 +88,7 @@ export const router = createBrowserRouter([
       {
         path: 'my-requests',
         element: (
-          <RoleRoute roles={[ROLES.COLLABORATEUR, ROLES.RESPONSABLE_SERVICE]}>
+          <RoleRoute roles={[ROLES.COLLABORATEUR, ROLES.RESPONSABLE_SERVICE, ROLES.RH]}>
             <MyRequestsPage />
           </RoleRoute>
         ),
@@ -96,7 +96,7 @@ export const router = createBrowserRouter([
       {
         path: 'my-requests/:source/:id',
         element: (
-          <RoleRoute roles={[ROLES.COLLABORATEUR, ROLES.RESPONSABLE_SERVICE]}>
+          <RoleRoute roles={[ROLES.COLLABORATEUR, ROLES.RESPONSABLE_SERVICE, ROLES.RH]}>
             <RequestDetailPage />
           </RoleRoute>
         ),
@@ -104,7 +104,7 @@ export const router = createBrowserRouter([
       {
         path: 'declare-absence',
         element: (
-          <RoleRoute roles={[ROLES.COLLABORATEUR, ROLES.RESPONSABLE_SERVICE]}>
+          <RoleRoute roles={[ROLES.COLLABORATEUR, ROLES.RESPONSABLE_SERVICE, ROLES.RH]}>
             <DeclareAbsencePage />
           </RoleRoute>
         ),
@@ -112,7 +112,7 @@ export const router = createBrowserRouter([
       {
         path: 'declare-absence/:id',
         element: (
-          <RoleRoute roles={[ROLES.COLLABORATEUR, ROLES.RESPONSABLE_SERVICE]}>
+          <RoleRoute roles={[ROLES.COLLABORATEUR, ROLES.RESPONSABLE_SERVICE, ROLES.RH]}>
             <DeclareAbsencePage />
           </RoleRoute>
         ),
@@ -120,7 +120,7 @@ export const router = createBrowserRouter([
       {
         path: 'my-balance',
         element: (
-          <RoleRoute roles={[ROLES.RESPONSABLE_SERVICE]}>
+          <RoleRoute roles={[ROLES.RESPONSABLE_SERVICE, ROLES.RH]}>
             <ManagerMyBalancePage />
           </RoleRoute>
         ),
@@ -128,7 +128,7 @@ export const router = createBrowserRouter([
       {
         path: 'my-documents',
         element: (
-          <RoleRoute roles={[ROLES.COLLABORATEUR, ROLES.RESPONSABLE_SERVICE]}>
+          <RoleRoute roles={[ROLES.COLLABORATEUR, ROLES.RESPONSABLE_SERVICE, ROLES.RH]}>
             <DocumentsPage />
           </RoleRoute>
         ),
@@ -152,7 +152,7 @@ export const router = createBrowserRouter([
       {
         path: 'history',
         element: (
-          <RoleRoute roles={[ROLES.COLLABORATEUR, ROLES.RESPONSABLE_SERVICE]}>
+          <RoleRoute roles={[ROLES.COLLABORATEUR, ROLES.RESPONSABLE_SERVICE, ROLES.RH]}>
             <HistoryPage />
           </RoleRoute>
         ),

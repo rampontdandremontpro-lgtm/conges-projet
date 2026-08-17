@@ -200,7 +200,7 @@ function HistoryRow({ movement, onOpenRequest }) {
 export function HistoryPage() {
   const navigate = useNavigate()
   const { user } = useAuth()
-  const backNavigation = user?.role === ROLES.RESPONSABLE_SERVICE
+  const backNavigation = [ROLES.RESPONSABLE_SERVICE, ROLES.RH].includes(user?.role)
     ? { to: '/app/my-balance', label: 'Retour à Mon solde' }
     : user?.role === ROLES.COLLABORATEUR
       ? { to: '/app/dashboard', label: 'Retour au Tableau de bord' }

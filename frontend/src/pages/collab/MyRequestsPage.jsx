@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 
 import { MyRequestCard } from '@/components/collab/requests/MyRequestCard'
 import { getRequestStatusLabel } from '@/components/collab/requests/RequestStatusBadge'
@@ -150,6 +150,7 @@ function EmptyState({ globalEmpty, hasSearch, onCreate }) {
 
 export function MyRequestsPage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const [searchParams] = useSearchParams()
   const [filter, setFilter] = useState('all')
   const [busyKey, setBusyKey] = useState(null)
@@ -259,6 +260,21 @@ export function MyRequestsPage() {
     const timer = window.setTimeout(() => setFeedback(null), 4500)
     return () => window.clearTimeout(timer)
   }, [feedback])
+
+  useEffect(() => {
+    const flash = location.state?.flash
+    if (!flash?.message) return
+
+    setFeedback({
+      kind: flash.kind === 'error' ? 'error' : 'success',
+      message: flash.message,
+    })
+
+    navigate(
+      { pathname: location.pathname, search: location.search },
+      { replace: true, state: null },
+    )
+  }, [location.pathname, location.search, location.state, navigate])
 
   const openItem = (item) => {
     if (item.status === 'BROUILLON') {

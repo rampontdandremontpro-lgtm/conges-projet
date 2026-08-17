@@ -24,6 +24,7 @@ const INITIAL_RESOURCES = {
 export function useNewRequestResources(months, setSelection) {
   const [resources, setResources] = useState(INITIAL_RESOURCES)
   const [todayIso, setTodayIso] = useState(() => todayISO())
+  const [holidayRefreshKey, setHolidayRefreshKey] = useState(0)
   const fetchedYears = useRef(new Set())
 
   useEffect(() => {
@@ -34,12 +35,16 @@ export function useNewRequestResources(months, setSelection) {
       })
     }
     const timer = window.setInterval(refreshToday, 60_000)
-    window.addEventListener('focus', refreshToday)
-    document.addEventListener('visibilitychange', refreshToday)
+    const refreshVisibleData = () => {
+      refreshToday()
+      setHolidayRefreshKey((value) => value + 1)
+    }
+    window.addEventListener('focus', refreshVisibleData)
+    document.addEventListener('visibilitychange', refreshVisibleData)
     return () => {
       window.clearInterval(timer)
-      window.removeEventListener('focus', refreshToday)
-      document.removeEventListener('visibilitychange', refreshToday)
+      window.removeEventListener('focus', refreshVisibleData)
+      document.removeEventListener('visibilitychange', refreshVisibleData)
     }
   }, [])
 
@@ -72,7 +77,13 @@ export function useNewRequestResources(months, setSelection) {
     fetchAll()
       .then((data) => {
         if (cancelled) return
-        setResources({ loading: false, error: false, holidays: [], ...data })
+        setResources((previous) => ({
+          ...previous,
+          ...data,
+          loading: false,
+          error: false,
+          holidays: previous.holidays,
+        }))
         const defaultLeaveType =
           data.leaveTypes.find((type) => type.deductsPaidLeaveBalance) ??
           data.leaveTypes[0] ??
@@ -94,13 +105,20 @@ export function useNewRequestResources(months, setSelection) {
 
   const retryResources = useCallback(() => {
     setResources((previous) => ({ ...previous, loading: true, error: false }))
+    setHolidayRefreshKey((value) => value + 1)
     fetchAll()
       .then((data) => {
         const defaultLeaveType =
           data.leaveTypes.find((type) => type.deductsPaidLeaveBalance) ??
           data.leaveTypes[0] ??
           null
-        setResources({ loading: false, error: false, holidays: [], ...data })
+        setResources((previous) => ({
+          ...previous,
+          ...data,
+          loading: false,
+          error: false,
+          holidays: previous.holidays,
+        }))
         setSelection((previous) => ({
           ...previous,
           leaveTypeId: previous.leaveTypeId ?? defaultLeaveType?.id ?? null,
@@ -117,38 +135,47 @@ export function useNewRequestResources(months, setSelection) {
     if (missing.length === 0) return undefined
 
     let cancelled = false
-    Promise.all(missing.map((year) => getHolidays(year)))
-      .then((results) => {
-        if (cancelled) return
-        missing.forEach((year) => fetchedYears.current.add(year))
-        const incoming = results.flat()
-        setResources((previous) => {
-          const merged = [...previous.holidays]
-          const priority = (holiday) =>
-            holiday?.holidayType === 'FERMETURE_GMES' ? 2 : 1
+    Promise.allSettled(
+      missing.map(async (year) => ({ year, holidays: await getHolidays(year) })),
+    ).then((results) => {
+      if (cancelled) return
 
-          for (const holiday of incoming) {
-            const date = String(holiday?.date ?? '').slice(0, 10)
-            if (!date) continue
+      const incoming = []
+      for (const result of results) {
+        if (result.status !== 'fulfilled') continue
+        fetchedYears.current.add(result.value.year)
+        incoming.push(...result.value.holidays)
+      }
 
-            const index = merged.findIndex(
-              (existing) => String(existing?.date ?? '').slice(0, 10) === date,
-            )
-            if (index === -1) {
-              merged.push(holiday)
-            } else if (priority(holiday) > priority(merged[index])) {
-              merged[index] = holiday
-            }
+      if (incoming.length === 0) return
+
+      setResources((previous) => {
+        const merged = [...previous.holidays]
+        const priority = (holiday) =>
+          holiday?.holidayType === 'FERMETURE_GMES' ? 2 : 1
+
+        for (const holiday of incoming) {
+          const date = String(holiday?.date ?? '').slice(0, 10)
+          if (!date) continue
+
+          const index = merged.findIndex(
+            (existing) => String(existing?.date ?? '').slice(0, 10) === date,
+          )
+          if (index === -1) {
+            merged.push(holiday)
+          } else if (priority(holiday) > priority(merged[index])) {
+            merged[index] = holiday
           }
-          return { ...previous, holidays: merged }
-        })
+        }
+
+        return { ...previous, holidays: merged }
       })
-      .catch(() => undefined)
+    })
 
     return () => {
       cancelled = true
     }
-  }, [months])
+  }, [holidayRefreshKey, months])
 
   const setDerogations = useCallback((derogations) => {
     setResources((previous) => ({ ...previous, derogations }))

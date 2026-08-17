@@ -56,6 +56,11 @@ export const NAVIGATION = {
     { id: 'rh-balances', label: 'Soldes collaborateurs', to: '/app/rh-balances', icon: 'wallet', group: 'ADMINISTRATION' },
     { id: 'rh-balance-movements', label: 'Mouvements et corrections', to: '/app/rh-balance-movements', icon: 'refresh', group: 'ADMINISTRATION' },
 
+    { id: 'my-requests', label: 'Mes demandes', to: '/app/my-requests', icon: 'list', group: 'MON ESPACE' },
+    { id: 'my-balance', label: 'Mon solde', to: '/app/my-balance', icon: 'wallet', group: 'MON ESPACE' },
+    { id: 'declare-absence', label: 'Déclarer une absence', to: '/app/declare-absence', icon: 'calendar', group: 'MON ESPACE' },
+    { id: 'my-documents', label: 'Mes documents', to: '/app/my-documents', icon: 'doc', group: 'MON ESPACE' },
+
     { id: 'rh-leave-types', label: 'Types de congés/absences', to: '/app/rh-leave-types', icon: 'file', group: 'PARAMÉTRAGE' },
     { id: 'rh-holidays', label: 'Jours fériés et fermetures', to: '/app/rh-holidays', icon: 'calendar', group: 'PARAMÉTRAGE' },
     { id: 'rh-summer-period', label: 'Période estivale', to: '/app/rh-summer-period', icon: 'sun', group: 'PARAMÉTRAGE' },
@@ -63,7 +68,7 @@ export const NAVIGATION = {
 
     { id: 'rh-alerts', label: 'Alertes', to: '/app/rh-alerts', icon: 'alert', group: 'OUTILS' },
     { id: 'rh-exports', label: 'Exports', to: '/app/rh-exports', icon: 'download', group: 'OUTILS' },
-    { id: 'rh-pdf-documents', label: 'Documents PDF', to: '/app/rh-pdf-documents', icon: 'doc', group: 'OUTILS' },
+    { id: 'rh-pdf-documents', label: 'Documents', to: '/app/rh-pdf-documents', icon: 'doc', group: 'OUTILS' },
     { id: 'notifications', label: 'Notifications', to: '/app/notifications', icon: 'bell', group: 'OUTILS' },
   ],
   [ROLES.DIRECTEUR]: [

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 
 import { Toast } from '@/components/ui/Toast'
@@ -52,6 +52,7 @@ export function NewRequest() {
   })
   const { resources, todayIso, retryResources, setDerogations } =
     useNewRequestResources(months, setSelection)
+  const previousEditIdRef = useRef(editId)
 
   const [saving, setSaving] = useState(false)
   const [submitting, setSubmitting] = useState(false)
@@ -71,6 +72,34 @@ export function NewRequest() {
     const timer = window.setTimeout(() => setToast(null), 5200)
     return () => window.clearTimeout(timer)
   }, [toast])
+
+  useEffect(() => {
+    const wasEditing = Boolean(previousEditIdRef.current)
+
+    if (wasEditing && !isEditMode) {
+      const defaultLeaveType =
+        resources.leaveTypes.find((type) => type.deductsPaidLeaveBalance) ??
+        resources.leaveTypes[0] ??
+        null
+      const first = currentMonth()
+
+      setDraft(null)
+      setSelection({
+        leaveTypeId: defaultLeaveType?.id ?? null,
+        startDate: null,
+        endDate: null,
+        startPeriod: 'MATIN',
+        endPeriod: 'APRES_MIDI',
+      })
+      setMonths([first, nextMonthOf(first)])
+      setSignatureOpen(false)
+      setToast(null)
+      setEditError(false)
+      setEditLoading(false)
+    }
+
+    previousEditIdRef.current = editId
+  }, [editId, isEditMode, resources.leaveTypes])
 
   useEffect(() => {
     if (!isEditMode) {
@@ -226,8 +255,21 @@ export function NewRequest() {
     setSaving(true)
     try {
       const wasExistingDraft = Boolean(draft)
-      await persistCurrentRequest()
-      showToast('success', wasExistingDraft ? 'Brouillon mis à jour.' : 'Brouillon enregistré.')
+      const saved = await persistCurrentRequest()
+      notifyAppDataChanged({
+        source: 'leave-request',
+        action: wasExistingDraft ? 'updated' : 'draft-saved',
+        id: saved.id,
+      })
+      navigate('/app/my-requests', {
+        replace: true,
+        state: {
+          flash: {
+            kind: 'success',
+            message: wasExistingDraft ? 'Modifications enregistrées.' : 'Brouillon enregistré.',
+          },
+        },
+      })
     } catch (error) {
       showToast('error', errorMessage(error))
     } finally {
@@ -250,8 +292,15 @@ export function NewRequest() {
       await submitLeaveRequest(request.id, { signatureType, signatureData })
       notifyAppDataChanged({ source: 'leave-request', action: 'submitted', id: request.id })
       setSignatureOpen(false)
-      showToast('success', 'Demande soumise pour validation.')
-      window.setTimeout(() => navigate('/app/my-requests'), 900)
+      navigate('/app/my-requests', {
+        replace: true,
+        state: {
+          flash: {
+            kind: 'success',
+            message: 'Demande soumise avec succès.',
+          },
+        },
+      })
     } catch (error) {
       showToast('error', errorMessage(error))
       setSubmitting(false)

@@ -136,10 +136,20 @@ export function DeclareAbsencePage() {
           certifiedAccurate: false,
         })
       } else {
-        setForm((current) => ({
-          ...current,
-          leaveTypeId: current.leaveTypeId ?? data[0]?.id ?? null,
-        }))
+        setDraft(null)
+        setPendingFiles([])
+        setUploadedDocuments([])
+        setFeedback(null)
+        setForm({
+          leaveTypeId: data[0]?.id ?? null,
+          startDate: todayISO(),
+          endDate: todayISO(),
+          startPeriod: 'MATIN',
+          endPeriod: 'APRES_MIDI',
+          durationHours: '',
+          comment: '',
+          certifiedAccurate: false,
+        })
       }
     } catch {
       setLoadError(true)
@@ -321,9 +331,25 @@ export function DeclareAbsencePage() {
 
     setSaving(true)
     try {
+      const wasExistingDraft = Boolean(draft)
       const saved = await persistDraft()
       await uploadPendingFiles(saved.id)
-      showFeedback('success', draft ? 'Brouillon mis à jour.' : 'Brouillon enregistré.')
+      notifyAppDataChanged({
+        source: 'absence-declaration',
+        action: wasExistingDraft ? 'updated' : 'draft-saved',
+        id: saved.id,
+      })
+      navigate('/app/my-requests', {
+        replace: true,
+        state: {
+          flash: {
+            kind: 'success',
+            message: wasExistingDraft
+              ? 'Modifications enregistrées.'
+              : 'Brouillon d’absence enregistré.',
+          },
+        },
+      })
     } catch (error) {
       showFeedback('error', errorMessage(error))
     } finally {
@@ -358,8 +384,15 @@ export function DeclareAbsencePage() {
       await uploadPendingFiles(saved.id)
       await submitAbsenceDeclaration(saved.id, { certifiedAccurate: true })
       notifyAppDataChanged({ source: 'absence-declaration', action: 'submitted', id: saved.id })
-      showFeedback('success', 'Absence transmise à la RH.')
-      window.setTimeout(() => navigate('/app/my-requests'), 900)
+      navigate('/app/my-requests', {
+        replace: true,
+        state: {
+          flash: {
+            kind: 'success',
+            message: 'Déclaration transmise à la RH.',
+          },
+        },
+      })
     } catch (error) {
       showFeedback('error', errorMessage(error))
       setSubmitting(false)
