@@ -97,6 +97,12 @@ export class DocumentsController {
     return this.documentsService.findMy(request.user);
   }
 
+  @Get('management/library')
+  @Roles(UserRole.RH)
+  findLibraryForManagement(@Query() query: DocumentQueryDto) {
+    return this.documentsService.findLibraryForManagement(query);
+  }
+
   @Get('management')
   @Roles(UserRole.RH)
   findForManagement(@Query() query: DocumentQueryDto) {

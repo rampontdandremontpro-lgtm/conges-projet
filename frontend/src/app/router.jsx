@@ -28,6 +28,7 @@ import { RhAbsencesPage } from '@/pages/rh/AbsencesPage'
 import { RhDerogationsPage } from '@/pages/rh/DerogationsPage'
 import { RhBalancesPage } from '@/pages/rh/BalancesPage'
 import { RhExportsPage } from '@/pages/rh/ExportsPage'
+import { RhDocumentsPage } from '@/pages/rh/DocumentsPage'
 import { NEW_REQUEST_ROLES, ROLES } from '@/config/navigation'
 import { RoleRoute } from '@/auth/RoleRoute'
 
@@ -97,6 +98,14 @@ export const router = createBrowserRouter([
         element: (
           <RoleRoute roles={[ROLES.RH]}>
             <RhExportsPage />
+          </RoleRoute>
+        ),
+      },
+      {
+        path: 'rh-pdf-documents',
+        element: (
+          <RoleRoute roles={[ROLES.RH]}>
+            <RhDocumentsPage />
           </RoleRoute>
         ),
       },

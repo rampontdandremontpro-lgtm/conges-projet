@@ -146,14 +146,15 @@
 }
 
 .rh-balances-filters label::after {
-  content: "⌄";
+  content: "";
   position: absolute;
-  right: 14px;
-  bottom: 13px;
-  color: #5f80a9;
-  font-size: 16px;
-  font-weight: 900;
-  line-height: 1;
+  right: 16px;
+  bottom: 18px;
+  width: 7px;
+  height: 7px;
+  border-right: 2px solid #5f80a9;
+  border-bottom: 2px solid #5f80a9;
+  transform: rotate(45deg);
   pointer-events: none;
 }
 
@@ -162,6 +163,8 @@
   min-width: 210px;
   min-height: 46px;
   appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
   padding: 0 42px 0 15px;
   border: 1px solid #d5e2f1;
   border-radius: 13px;

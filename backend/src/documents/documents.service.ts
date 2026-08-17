@@ -33,7 +33,10 @@ import {
   LeaveRequestStatus,
 } from '../leave-requests/leave-request.entity';
 import { UserRole } from '../users/user.entity';
-import { DocumentQueryDto } from './dto/document-query.dto';
+import {
+  DocumentQueryDto,
+  type DocumentLibraryCategory,
+} from './dto/document-query.dto';
 import {
   Document,
   DocumentKind,
@@ -63,6 +66,27 @@ export interface DocumentMetadataResponse {
   uploadedAt: Date;
   verifiedAt: Date | null;
   deletedAt: Date | null;
+}
+
+
+export interface RhDocumentLibraryItem extends DocumentMetadataResponse {
+  category: DocumentLibraryCategory;
+  employee: {
+    id: number;
+    nom: string;
+    prenom: string;
+  } | null;
+  service: {
+    id: number;
+    name: string;
+  } | null;
+  source: {
+    type: 'ABSENCE' | 'CONGE' | 'ANNULATION';
+    id: number | null;
+    label: string;
+    startDate: string | null;
+    endDate: string | null;
+  };
 }
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -308,6 +332,156 @@ export class DocumentsService {
     return documents.map((document) =>
       this.toMetadata(document),
     );
+  }
+
+
+  async findLibraryForManagement(
+    query: DocumentQueryDto,
+  ): Promise<RhDocumentLibraryItem[]> {
+    const qb = this.documentRepository
+      .createQueryBuilder('document')
+      .leftJoinAndSelect('document.leaveRequest', 'leaveRequest')
+      .leftJoinAndSelect('leaveRequest.employee', 'leaveEmployee')
+      .leftJoinAndSelect('leaveRequest.service', 'leaveService')
+      .leftJoinAndSelect('leaveRequest.leaveType', 'leaveType')
+      .leftJoinAndSelect(
+        'document.absenceDeclaration',
+        'absenceDeclaration',
+      )
+      .leftJoinAndSelect(
+        'absenceDeclaration.employee',
+        'absenceEmployee',
+      )
+      .leftJoinAndSelect(
+        'absenceDeclaration.service',
+        'absenceService',
+      )
+      .leftJoinAndSelect(
+        'absenceDeclaration.leaveType',
+        'absenceType',
+      )
+      .where('document.status NOT IN (:...hiddenStatuses)', {
+        hiddenStatuses: [
+          DocumentStatus.ARCHIVE,
+          DocumentStatus.SUPPRIME,
+        ],
+      })
+      .orderBy('document.uploadedAt', 'DESC');
+
+    if (query.status) {
+      qb.andWhere('document.status = :status', {
+        status: query.status,
+      });
+    }
+
+    if (query.category === 'JUSTIFICATIFS') {
+      qb.andWhere('document.documentKind = :documentKind', {
+        documentKind: DocumentKind.JUSTIFICATIF,
+      });
+    } else if (query.category === 'CONGES') {
+      qb.andWhere('document.documentKind = :documentKind', {
+        documentKind: DocumentKind.PDF_VALIDATION,
+      });
+    } else if (query.category === 'ANNULATIONS') {
+      qb.andWhere('document.documentKind = :documentKind', {
+        documentKind: DocumentKind.PDF_ANNULATION,
+      });
+    }
+
+    if (query.serviceId) {
+      qb.andWhere(
+        '(leaveRequest.serviceId = :serviceId OR absenceDeclaration.serviceId = :serviceId)',
+        { serviceId: query.serviceId },
+      );
+    }
+
+    if (query.employeeId) {
+      qb.andWhere(
+        '(leaveRequest.employeeId = :employeeId OR absenceDeclaration.employeeId = :employeeId)',
+        { employeeId: query.employeeId },
+      );
+    }
+
+    if (query.startDate) {
+      qb.andWhere('DATE(document.uploadedAt) >= :startDate', {
+        startDate: query.startDate,
+      });
+    }
+
+    if (query.endDate) {
+      qb.andWhere('DATE(document.uploadedAt) <= :endDate', {
+        endDate: query.endDate,
+      });
+    }
+
+    const documents = await qb.getMany();
+
+    return documents.map((document) => {
+      const leaveRequest = document.leaveRequest;
+      const absenceDeclaration = document.absenceDeclaration;
+
+      const employee =
+        leaveRequest?.employee ?? absenceDeclaration?.employee ?? null;
+      const service =
+        leaveRequest?.service ?? absenceDeclaration?.service ?? null;
+
+      let category: DocumentLibraryCategory = 'JUSTIFICATIFS';
+      let sourceType: RhDocumentLibraryItem['source']['type'] = 'CONGE';
+      let sourceLabel = 'Demande de congé';
+      let sourceId: number | null = document.leaveRequestId;
+      let startDate: string | null = leaveRequest?.startDate ?? null;
+      let endDate: string | null = leaveRequest?.endDate ?? null;
+
+      if (document.documentKind === DocumentKind.PDF_VALIDATION) {
+        category = 'CONGES';
+        sourceType = 'CONGE';
+        sourceLabel = leaveRequest?.leaveType?.name ?? 'Congé validé';
+      } else if (document.documentKind === DocumentKind.PDF_ANNULATION) {
+        category = 'ANNULATIONS';
+        sourceType = 'ANNULATION';
+        sourceLabel = leaveRequest?.leaveType?.name
+          ? `Annulation · ${leaveRequest.leaveType.name}`
+          : 'Annulation de congé';
+      } else if (absenceDeclaration) {
+        category = 'JUSTIFICATIFS';
+        sourceType = 'ABSENCE';
+        sourceId = absenceDeclaration.id;
+        sourceLabel = absenceDeclaration.leaveType?.name ?? 'Absence';
+        startDate = absenceDeclaration.startDate;
+        endDate = absenceDeclaration.endDate;
+      } else {
+        category = 'JUSTIFICATIFS';
+        sourceType = 'CONGE';
+        sourceLabel = leaveRequest?.leaveType?.name
+          ? `Justificatif · ${leaveRequest.leaveType.name}`
+          : 'Justificatif de congé';
+      }
+
+      return {
+        ...this.toMetadata(document),
+        category,
+        employee: employee
+          ? {
+              id: employee.id,
+              nom: employee.nom,
+              prenom: employee.prenom,
+            }
+          : null,
+        service: service
+          ? {
+              id: service.id,
+              name: service.name,
+            }
+          : null,
+        source: {
+          type: sourceType,
+          id: sourceId,
+          label: sourceLabel,
+          startDate,
+          endDate,
+        },
+      };
+    });
   }
 
   async accept(
