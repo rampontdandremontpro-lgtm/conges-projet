@@ -23,7 +23,7 @@ import {
   AbsenceDeclaration,
   AbsenceDeclarationStatus,
 } from '../absence-declarations/absence-declaration.entity';
-import { Holiday } from '../holidays/holiday.entity';
+import { HolidaysService } from '../holidays/holidays.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import {
@@ -40,6 +40,7 @@ export class UsersService {
     private readonly userRepository: Repository<User>,
     private readonly servicesService: ServicesService,
     private readonly presenceService: PresenceService,
+    private readonly holidaysService: HolidaysService,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -257,17 +258,10 @@ export class UsersService {
           })
           .getMany();
 
-    const holidays = await manager
-      .getRepository(Holiday)
-      .createQueryBuilder('holiday')
-      .where('holiday.isActive = :isActive', { isActive: true })
-      .andWhere('holiday.date BETWEEN :monthStart AND :monthEnd', {
-        monthStart,
-        monthEnd,
-      })
-      .orderBy('holiday.date', 'ASC')
-      .addOrderBy('holiday.holidayType', 'ASC')
-      .getMany();
+    const holidays = await this.holidaysService.findCalendarBetween(
+      monthStart,
+      monthEnd,
+    );
 
     const days: Array<{
       date: string;

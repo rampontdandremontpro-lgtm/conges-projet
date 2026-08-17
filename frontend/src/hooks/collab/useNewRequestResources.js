@@ -124,9 +124,20 @@ export function useNewRequestResources(months, setSelection) {
         const incoming = results.flat()
         setResources((previous) => {
           const merged = [...previous.holidays]
+          const priority = (holiday) =>
+            holiday?.holidayType === 'FERMETURE_GMES' ? 2 : 1
+
           for (const holiday of incoming) {
-            if (!merged.some((existing) => existing.date === holiday.date)) {
+            const date = String(holiday?.date ?? '').slice(0, 10)
+            if (!date) continue
+
+            const index = merged.findIndex(
+              (existing) => String(existing?.date ?? '').slice(0, 10) === date,
+            )
+            if (index === -1) {
               merged.push(holiday)
+            } else if (priority(holiday) > priority(merged[index])) {
+              merged[index] = holiday
             }
           }
           return { ...previous, holidays: merged }

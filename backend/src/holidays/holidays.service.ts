@@ -17,6 +17,7 @@ import { Holiday, HolidayType } from './holiday.entity';
 const OFFICIAL_API_BASE_URL =
   'https://calendrier.api.gouv.fr/jours-feries';
 const OFFICIAL_API_SOURCE = 'calendrier.api.gouv.fr';
+const LEGAL_FALLBACK_SOURCE = 'code-travail-fallback';
 
 export interface HolidaySyncResult {
   year: number;
@@ -32,6 +33,8 @@ export interface HolidaySyncResult {
 
 @Injectable()
 export class HolidaysService {
+  private readonly officialDaysCache = new Map<string, Promise<Record<string, string>>>();
+
   constructor(
     @InjectRepository(Holiday)
     private readonly holidayRepository: Repository<Holiday>,
@@ -202,20 +205,34 @@ export class HolidaysService {
   }
 
   async findAllActive(year?: number): Promise<Holiday[]> {
-    const where = year
-      ? {
-          date: Between(`${year}-01-01`, `${year}-12-31`),
-          isActive: true,
-        }
-      : { isActive: true };
+    if (!year) {
+      return this.holidayRepository.find({
+        where: { isActive: true },
+        order: { date: 'ASC', holidayType: 'ASC' },
+      });
+    }
 
-    return this.holidayRepository.find({
-      where,
-      order: {
-        date: 'ASC',
-        holidayType: 'ASC',
+    this.validateYear(year);
+
+    const databaseDays = await this.holidayRepository.find({
+      where: {
+        date: Between(`${year}-01-01`, `${year}-12-31`),
+        isActive: true,
       },
+      order: { date: 'ASC', holidayType: 'ASC' },
     });
+
+    const officialDays = await this.getMartiniqueCalendarDays(year);
+
+    const closures = databaseDays.filter(
+      (holiday) => holiday.holidayType === HolidayType.FERMETURE_GMES,
+    );
+
+    return [...officialDays, ...closures].sort((a, b) =>
+      `${a.date}-${a.holidayType}`.localeCompare(
+        `${b.date}-${b.holidayType}`,
+      ),
+    );
   }
 
   async findAllForManagement(year?: number): Promise<Holiday[]> {
@@ -313,14 +330,185 @@ export class HolidaysService {
     startDate: string,
     endDate: string,
   ): Promise<Holiday[]> {
-    return this.holidayRepository.find({
-      where: {
-        date: Between(startDate, endDate),
-        deductible: false,
-        isActive: true,
-      },
-      order: { date: 'ASC' },
+    if (
+      !/^\d{4}-\d{2}-\d{2}$/.test(startDate) ||
+      !/^\d{4}-\d{2}-\d{2}$/.test(endDate)
+    ) {
+      throw new BadRequestException(
+        'Les dates doivent être fournies au format AAAA-MM-JJ.',
+      );
+    }
+
+    if (endDate < startDate) {
+      throw new BadRequestException(
+        'La date de fin doit être postérieure ou égale à la date de début.',
+      );
+    }
+
+    const startYear = Number(startDate.slice(0, 4));
+    const endYear = Number(endDate.slice(0, 4));
+    const years = Array.from(
+      { length: endYear - startYear + 1 },
+      (_, index) => startYear + index,
+    );
+
+    const days = (
+      await Promise.all(years.map((year) => this.findAllActive(year)))
+    ).flat()
+      .filter(
+        (holiday) =>
+          holiday.date >= startDate &&
+          holiday.date <= endDate &&
+          holiday.deductible === false &&
+          holiday.isActive,
+      );
+
+    const byDateAndType = new Map<string, Holiday>();
+    for (const holiday of days) {
+      byDateAndType.set(`${holiday.date}|${holiday.holidayType}`, holiday);
+    }
+
+    return [...byDateAndType.values()].sort((a, b) =>
+      `${a.date}-${a.holidayType}`.localeCompare(`${b.date}-${b.holidayType}`),
+    );
+  }
+
+  async findCalendarBetween(
+    startDate: string,
+    endDate: string,
+  ): Promise<Holiday[]> {
+    const startYear = Number(startDate.slice(0, 4));
+    const endYear = Number(endDate.slice(0, 4));
+    const years = Array.from(
+      { length: endYear - startYear + 1 },
+      (_, index) => startYear + index,
+    );
+
+    return (
+      await Promise.all(years.map((year) => this.findAllActive(year)))
+    )
+      .flat()
+      .filter((holiday) => holiday.date >= startDate && holiday.date <= endDate)
+      .sort((a, b) =>
+        `${a.date}-${a.holidayType}`.localeCompare(
+          `${b.date}-${b.holidayType}`,
+        ),
+      );
+  }
+
+  private async getMartiniqueCalendarDays(year: number): Promise<Holiday[]> {
+    try {
+      const [martiniqueDays, metropolitanDays] = await Promise.all([
+        this.fetchOfficialDaysCached('martinique', year),
+        this.fetchOfficialDaysCached('metropole', year),
+      ]);
+      const metropolitanDates = new Set(Object.keys(metropolitanDays));
+
+      return Object.entries(martiniqueDays).map(([date, name]) =>
+        this.holidayRepository.create({
+          date,
+          name,
+          holidayType: metropolitanDates.has(date)
+            ? HolidayType.NATIONAL
+            : HolidayType.MARTINIQUE,
+          deductible: false,
+          source: OFFICIAL_API_SOURCE,
+          createdById: null,
+          isActive: true,
+        }),
+      );
+    } catch {
+      return this.buildMartiniqueLegalFallback(year);
+    }
+  }
+
+  private fetchOfficialDaysCached(
+    zone: 'martinique' | 'metropole',
+    year: number,
+  ): Promise<Record<string, string>> {
+    const key = `${zone}:${year}`;
+    const cached = this.officialDaysCache.get(key);
+    if (cached) {
+      return cached;
+    }
+
+    const request = this.fetchOfficialDays(zone, year).catch((error) => {
+      this.officialDaysCache.delete(key);
+      throw error;
     });
+    this.officialDaysCache.set(key, request);
+    return request;
+  }
+
+  private buildMartiniqueLegalFallback(year: number): Holiday[] {
+    const easterSunday = this.calculateGregorianEasterSunday(year);
+    const dateFromEaster = (days: number): string => {
+      const date = new Date(easterSunday.getTime());
+      date.setUTCDate(date.getUTCDate() + days);
+      return date.toISOString().slice(0, 10);
+    };
+
+    const national: Array<[string, string]> = [
+      [`${year}-01-01`, '1er janvier'],
+      [dateFromEaster(1), 'Lundi de Pâques'],
+      [`${year}-05-01`, '1er mai'],
+      [`${year}-05-08`, '8 mai'],
+      [dateFromEaster(39), 'Ascension'],
+      [dateFromEaster(50), 'Lundi de Pentecôte'],
+      [`${year}-07-14`, '14 juillet'],
+      [`${year}-08-15`, 'Assomption'],
+      [`${year}-11-01`, 'Toussaint'],
+      [`${year}-11-11`, '11 novembre'],
+      [`${year}-12-25`, 'Jour de Noël'],
+    ];
+
+    const local: Array<[string, string]> = [
+      [`${year}-05-22`, "Abolition de l'esclavage"],
+    ];
+
+    return [
+      ...national.map(([date, name]) =>
+        this.holidayRepository.create({
+          date,
+          name,
+          holidayType: HolidayType.NATIONAL,
+          deductible: false,
+          source: LEGAL_FALLBACK_SOURCE,
+          createdById: null,
+          isActive: true,
+        }),
+      ),
+      ...local.map(([date, name]) =>
+        this.holidayRepository.create({
+          date,
+          name,
+          holidayType: HolidayType.MARTINIQUE,
+          deductible: false,
+          source: LEGAL_FALLBACK_SOURCE,
+          createdById: null,
+          isActive: true,
+        }),
+      ),
+    ];
+  }
+
+  private calculateGregorianEasterSunday(year: number): Date {
+    const a = year % 19;
+    const b = Math.floor(year / 100);
+    const c = year % 100;
+    const d = Math.floor(b / 4);
+    const e = b % 4;
+    const f = Math.floor((b + 8) / 25);
+    const g = Math.floor((b - f + 1) / 3);
+    const h = (19 * a + b - d - g + 15) % 30;
+    const i = Math.floor(c / 4);
+    const k = c % 4;
+    const l = (32 + 2 * e + 2 * i - h - k) % 7;
+    const m = Math.floor((a + 11 * h + 22 * l) / 451);
+    const month = Math.floor((h + l - 7 * m + 114) / 31);
+    const day = ((h + l - 7 * m + 114) % 31) + 1;
+
+    return new Date(Date.UTC(year, month - 1, day));
   }
 
   private async fetchOfficialDays(
