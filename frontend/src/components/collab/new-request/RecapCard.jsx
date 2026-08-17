@@ -55,6 +55,8 @@ export function RecapCard({
   onSubmit,
   onRequestDerogation,
   editingExisting = false,
+  preparationMode = false,
+  preparedForName = '',
 }) {
   const [derogationFormOpen, setDerogationFormOpen] = useState(false)
   const [derogationReason, setDerogationReason] = useState('')
@@ -88,6 +90,7 @@ export function RecapCard({
         : `${startLabel} → ${endLabel}`
 
   const derogationAllowed =
+    !preparationMode &&
     notice &&
     draftClean &&
     !notice.isNoticeCompliant &&
@@ -274,7 +277,7 @@ export function RecapCard({
             </section>
           )}
 
-          {derogation && (
+          {!preparationMode && derogation && (
             <section className="nr-recap__block">
               <h4 className="nr-recap__subtitle">Dérogation RH</h4>
               <span
@@ -342,7 +345,7 @@ export function RecapCard({
           <div className="nr-recap__actions">
             <button
               type="button"
-              className="nr-btn nr-btn--secondary"
+              className={preparationMode ? 'nr-btn nr-btn--primary' : 'nr-btn nr-btn--secondary'}
               onClick={onSaveDraft}
               disabled={!periodComplete || saving || submitting}
             >
@@ -350,6 +353,8 @@ export function RecapCard({
                 <>
                   <span className="nr-spinner" /> Enregistrement…
                 </>
+              ) : preparationMode ? (
+                'Préparer le brouillon'
               ) : editingExisting ? (
                 'Enregistrer les modifications'
               ) : draftClean ? (
@@ -358,21 +363,29 @@ export function RecapCard({
                 'Enregistrer en brouillon'
               )}
             </button>
-            <button
-              type="button"
-              className="nr-btn nr-btn--primary"
-              onClick={onSubmit}
-              disabled={!submitAllowed || saving || submitting}
-            >
-              {submitting ? (
-                <>
-                  <span className="nr-spinner" /> Soumission…
-                </>
-              ) : (
-                'Signer et soumettre'
-              )}
-            </button>
-            {submitHint && !submitting && <p className="nr-recap__hint">{submitHint}</p>}
+            {!preparationMode && (
+              <button
+                type="button"
+                className="nr-btn nr-btn--primary"
+                onClick={onSubmit}
+                disabled={!submitAllowed || saving || submitting}
+              >
+                {submitting ? (
+                  <>
+                    <span className="nr-spinner" /> Soumission…
+                  </>
+                ) : (
+                  'Signer et soumettre'
+                )}
+              </button>
+            )}
+            {preparationMode ? (
+              <p className="nr-recap__hint nr-recap__hint--prep">
+                {preparedForName || 'Le collaborateur'} retrouvera ce brouillon dans Mes demandes. Il pourra le vérifier, le modifier si nécessaire, puis le signer et le soumettre lui-même.
+              </p>
+            ) : (
+              submitHint && !submitting && <p className="nr-recap__hint">{submitHint}</p>
+            )}
           </div>
         </div>
       )}

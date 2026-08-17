@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 
 import { Icon } from '@/components/ui/Icon'
 import {
@@ -134,7 +134,7 @@ function EmptyState({ filtered }) {
   )
 }
 
-function NotificationCard({ item, onRead, busy }) {
+function NotificationCard({ item, onRead, onOpenDraft, busy }) {
   const unread = !item.readAt
   const visual = notificationVisual(item.type)
 
@@ -159,7 +159,12 @@ function NotificationCard({ item, onRead, busy }) {
       </div>
 
       <div className="notifications-page-card__action">
-        {unread ? (
+        {item.type === 'LEAVE_REQUEST_PREPARED_BY_RH' && item.leaveRequestId ? (
+          <button type="button" disabled={busy} onClick={() => onOpenDraft(item)}>
+            <Icon name="chevronRight" size={15} />
+            Ouvrir le brouillon
+          </button>
+        ) : unread ? (
           <button
             type="button"
             disabled={busy}
@@ -180,6 +185,7 @@ function NotificationCard({ item, onRead, busy }) {
 }
 
 export function NotificationsPage() {
+  const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const [filter, setFilter] = useState('all')
   const [items, setItems] = useState([])
@@ -264,6 +270,20 @@ export function NotificationsPage() {
         ),
       )
       notifyHeader()
+    } catch {
+      await load()
+    } finally {
+      setBusyId(null)
+    }
+  }
+
+  const handleOpenDraft = async (item) => {
+    if (!item.leaveRequestId || busyId) return
+    setBusyId(item.id)
+    try {
+      if (!item.readAt) await markNotificationRead(item.id)
+      notifyHeader()
+      navigate(`/app/new-request/${item.leaveRequestId}`)
     } catch {
       await load()
     } finally {

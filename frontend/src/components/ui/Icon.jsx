@@ -155,6 +155,25 @@ const ICON_PATHS = {
       <path d="M12 16v-4M12 8h.01" />
     </>
   ),
+  search: (
+    <>
+      <circle cx="11" cy="11" r="7" />
+      <path d="m20 20-4-4" />
+    </>
+  ),
+  filter: (
+    <>
+      <path d="M4 5h16" />
+      <path d="M7 12h10" />
+      <path d="M10 19h4" />
+    </>
+  ),
+  eye: (
+    <>
+      <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12z" />
+      <circle cx="12" cy="12" r="2.5" />
+    </>
+  ),
   sparkles: (
     <>
       <path d="M12 3l1.9 5.7L19.6 10l-5.7 1.9L12 17.6l-1.9-5.7L4.4 10l5.7-1.3z" />

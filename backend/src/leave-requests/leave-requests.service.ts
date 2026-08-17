@@ -210,8 +210,29 @@ export class LeaveRequestsService {
         startDate: savedRequest.startDate,
         endDate: savedRequest.endDate,
         deductedDays: savedRequest.deductedDays,
+        preparedForAnotherEmployee:
+          savedRequest.employeeId !== authenticatedUser.id,
       },
     });
+
+    if (
+      authenticatedUser.role === UserRole.RH &&
+      savedRequest.employeeId !== authenticatedUser.id
+    ) {
+      try {
+        await this.notificationsService.create({
+          userId: savedRequest.employeeId,
+          type: 'LEAVE_REQUEST_PREPARED_BY_RH',
+          title: 'Demande préparée par la RH',
+          message: `La RH a préparé un brouillon de congé du ${savedRequest.startDate} au ${savedRequest.endDate}. Vérifiez les informations, puis signez et soumettez la demande depuis Mes demandes.`,
+          leaveRequestId: savedRequest.id,
+        });
+      } catch (error) {
+        this.logger.warn(
+          `Le brouillon ${savedRequest.id} a été créé, mais la notification au collaborateur n'a pas pu être envoyée : ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
+    }
 
     return this.findOwnedRequest(savedRequest.id, employee.id);
   }
@@ -428,6 +449,17 @@ export class LeaveRequestsService {
       );
     }
 
+    if (
+      requestedEmployeeId !== undefined &&
+      requestedEmployeeId !== authenticatedUser.id &&
+      authenticatedUser.role === UserRole.RH &&
+      employee.role !== UserRole.COLLABORATEUR
+    ) {
+      throw new ForbiddenException(
+        'La RH peut préparer une demande uniquement pour un utilisateur ayant le rôle Collaborateur.',
+      );
+    }
+
     return employee;
   }
 
@@ -439,6 +471,7 @@ export class LeaveRequestsService {
         employeeId: authenticatedUser.id,
       },
       relations: {
+        createdBy: true,
         leaveType: true,
         service: true,
       },
@@ -446,6 +479,23 @@ export class LeaveRequestsService {
         createdAt: 'DESC',
       },
     });
+  }
+
+  async findAllForRh(): Promise<LeaveRequest[]> {
+    return this.leaveRequestRepository
+      .createQueryBuilder('leaveRequest')
+      .leftJoinAndSelect('leaveRequest.employee', 'employee')
+      .leftJoinAndSelect('leaveRequest.createdBy', 'createdBy')
+      .leftJoinAndSelect('leaveRequest.leaveType', 'leaveType')
+      .leftJoinAndSelect('leaveRequest.service', 'service')
+      .leftJoinAndSelect('leaveRequest.finalDecider', 'finalDecider')
+      .where('leaveRequest.status != :draftStatus', {
+        draftStatus: LeaveRequestStatus.BROUILLON,
+      })
+      .orderBy('leaveRequest.submittedAt', 'DESC')
+      .addOrderBy('leaveRequest.createdAt', 'DESC')
+      .addOrderBy('leaveRequest.id', 'DESC')
+      .getMany();
   }
 
   async findMyRequest(

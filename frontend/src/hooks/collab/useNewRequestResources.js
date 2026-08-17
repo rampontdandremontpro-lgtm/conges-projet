@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
-import { getMyLeaveBalances, getPublicSettings } from '@/services/dashboard'
+import { getEmployeeLeaveBalances, getMyLeaveBalances, getPublicSettings } from '@/services/dashboard'
 import {
   getHolidays,
   getLeaveTypes,
@@ -21,7 +21,8 @@ const INITIAL_RESOURCES = {
   derogations: [],
 }
 
-export function useNewRequestResources(months, setSelection) {
+export function useNewRequestResources(months, setSelection, options = {}) {
+  const { balanceEmployeeId, includeDerogations = true } = options
   const [resources, setResources] = useState(INITIAL_RESOURCES)
   const [todayIso, setTodayIso] = useState(() => todayISO())
   const [holidayRefreshKey, setHolidayRefreshKey] = useState(0)
@@ -49,12 +50,19 @@ export function useNewRequestResources(months, setSelection) {
   }, [])
 
   const fetchAll = useCallback(async () => {
+    const balancePromise = balanceEmployeeId === null
+      ? Promise.resolve([])
+      : balanceEmployeeId !== undefined
+        ? getEmployeeLeaveBalances(balanceEmployeeId)
+        : getMyLeaveBalances()
+    const derogationsPromise = includeDerogations ? getMyDerogations() : Promise.resolve([])
+
     const [leaveTypes, settings, seasonal, derogations, balances] = await Promise.all([
       getLeaveTypes(),
       getPublicSettings(),
       getSeasonalPeriod(),
-      getMyDerogations(),
-      getMyLeaveBalances(),
+      derogationsPromise,
+      balancePromise,
     ])
     const filtered = leaveTypes.filter(
       (type) =>
@@ -70,10 +78,17 @@ export function useNewRequestResources(months, setSelection) {
       seasonal,
       derogations,
     }
-  }, [])
+  }, [balanceEmployeeId, includeDerogations])
 
   useEffect(() => {
     let cancelled = false
+    setResources((previous) => ({
+      ...previous,
+      loading: true,
+      error: false,
+      balances: balanceEmployeeId !== undefined ? [] : previous.balances,
+      derogations: includeDerogations ? previous.derogations : [],
+    }))
     fetchAll()
       .then((data) => {
         if (cancelled) return
@@ -101,7 +116,7 @@ export function useNewRequestResources(months, setSelection) {
     return () => {
       cancelled = true
     }
-  }, [fetchAll, setSelection])
+  }, [balanceEmployeeId, fetchAll, includeDerogations, setSelection])
 
   const retryResources = useCallback(() => {
     setResources((previous) => ({ ...previous, loading: true, error: false }))

@@ -43,6 +43,11 @@ function normalizeLeaveRequest(request) {
     duration: Number(request.deductedDays) || 0,
     durationUnit: 'j',
     status: request.status,
+    preparedByRh: Boolean(
+      request.status === 'BROUILLON' &&
+      request.createdBy?.role === 'RH' &&
+      Number(request.createdById) !== Number(request.employeeId)
+    ),
     sortDate: request.createdAt || request.updatedAt || request.submittedAt || request.startDate,
   }
 }

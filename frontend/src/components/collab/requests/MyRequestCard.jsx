@@ -61,7 +61,10 @@ export function MyRequestCard({ item, busy = false, onOpen, onAction }) {
       <div className="my-request-card__content">
         <div className="my-request-card__topline">
           <h2 className="my-request-card__title">{item.type}</h2>
-          <RequestStatusBadge status={item.status} />
+          <div className="my-request-card__badges">
+            {item.preparedByRh && <span className="my-request-card__prepared">Préparée par la RH</span>}
+            <RequestStatusBadge status={item.status} />
+          </div>
         </div>
 
         <p className="my-request-card__meta">

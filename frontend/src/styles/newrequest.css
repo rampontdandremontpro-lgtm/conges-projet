@@ -3,3 +3,8 @@
 @import './collab/new-request/03-recap-actions.css';
 @import './collab/new-request/04-modal-signature-feedback.css';
 @import './collab/new-request/05-responsive.css';
+
+.nr-prepared-by-rh { margin-bottom: 16px; border: 1px solid #cfe7f7; background: #f1f9ff; border-radius: 13px; padding: 12px 14px; display: flex; align-items: flex-start; gap: 10px; color: #315c7a; }
+.nr-prepared-by-rh__icon { width: 32px; height: 32px; flex: 0 0 32px; border-radius: 9px; display: grid; place-items: center; background: #dff2ff; color: #1677bd; }
+.nr-prepared-by-rh strong { display: block; color: #184f75; font-size: 12.5px; margin-bottom: 3px; }
+.nr-prepared-by-rh p { margin: 0; color: #66849a; font-size: 11.5px; line-height: 1.5; }

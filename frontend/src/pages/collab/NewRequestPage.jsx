@@ -328,9 +328,23 @@ export function NewRequest() {
     selection.startDate && selection.endDate && selectedType
       ? `${selectedType.name} — du ${selection.startDate} au ${selection.endDate}`
       : ''
+  const preparedByRh = Boolean(
+    draft?.status === 'BROUILLON' &&
+    draft?.createdBy?.role === 'RH' &&
+    Number(draft?.createdById) !== Number(draft?.employeeId)
+  )
 
   return (
     <div className="nr-page">
+      {preparedByRh && !editLoading && (
+        <div className="nr-prepared-by-rh" role="status">
+          <span className="nr-prepared-by-rh__icon"><Icon name="info" size={18} /></span>
+          <div>
+            <strong>Cette demande a été préparée par la RH.</strong>
+            <p>Vérifiez les dates et le type de congé. Vous pouvez modifier le brouillon si nécessaire ; vous seul pouvez ensuite le signer et le soumettre.</p>
+          </div>
+        </div>
+      )}
       {resources.loading || editLoading ? (
         <div aria-busy="true">
           <div className="dash-card nr-skeleton-card nr-skeleton-card--types" />

@@ -93,6 +93,12 @@ export class LeaveRequestsController {
     );
   }
 
+  @Get('management/all')
+  @Roles(UserRole.RH)
+  findAllForRh() {
+    return this.leaveRequestsService.findAllForRh();
+  }
+
   @Get('pending')
   @Roles(
     UserRole.RESPONSABLE_SERVICE,

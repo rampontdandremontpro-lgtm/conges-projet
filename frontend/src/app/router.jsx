@@ -21,6 +21,10 @@ import { ManagerRequestDecisionPage } from '@/pages/manager/RequestDecisionPage'
 import { ManagerAlertsPage } from '@/pages/manager/AlertsPage'
 import { ManagerPresencePage } from '@/pages/manager/PresencePage'
 import { ManagerMyBalancePage } from '@/pages/manager/MyBalancePage'
+import { RhAllRequestsPage } from '@/pages/rh/AllRequestsPage'
+import { RhPrepareRequestPage } from '@/pages/rh/PrepareRequestPage'
+import { RhRequestsPage } from '@/pages/rh/RequestsPage'
+import { RhRequestDecisionPage } from '@/pages/rh/RequestDecisionPage'
 import { NEW_REQUEST_ROLES, ROLES } from '@/config/navigation'
 import { RoleRoute } from '@/auth/RoleRoute'
 
@@ -37,6 +41,38 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <Navigate to="/app/dashboard" replace /> },
       { path: 'dashboard', element: <DashboardGate /> },
+      {
+        path: 'rh-all-requests',
+        element: (
+          <RoleRoute roles={[ROLES.RH]}>
+            <RhAllRequestsPage />
+          </RoleRoute>
+        ),
+      },
+      {
+        path: 'rh-prepare-request',
+        element: (
+          <RoleRoute roles={[ROLES.RH]}>
+            <RhPrepareRequestPage />
+          </RoleRoute>
+        ),
+      },
+      {
+        path: 'rh-requests',
+        element: (
+          <RoleRoute roles={[ROLES.RH]}>
+            <RhRequestsPage />
+          </RoleRoute>
+        ),
+      },
+      {
+        path: 'rh-requests/:id',
+        element: (
+          <RoleRoute roles={[ROLES.RH]}>
+            <RhRequestDecisionPage />
+          </RoleRoute>
+        ),
+      },
       {
         path: 'requests',
         element: (

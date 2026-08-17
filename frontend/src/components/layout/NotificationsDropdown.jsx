@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 
 import { Icon } from '@/components/ui/Icon'
 import { useClickOutside } from '@/hooks/useClickOutside'
@@ -50,6 +51,7 @@ function formatNotificationTime(value) {
 }
 
 export function NotificationsDropdown() {
+  const navigate = useNavigate()
   const [open, setOpen] = useState(false)
   const [items, setItems] = useState([])
   const [unreadCount, setUnreadCount] = useState(0)
@@ -209,7 +211,13 @@ export function NotificationsDropdown() {
                     <button
                       type="button"
                       className="notification-item__button"
-                      onClick={() => handleMarkRead(item)}
+                      onClick={async () => {
+                        await handleMarkRead(item)
+                        if (item.type === 'LEAVE_REQUEST_PREPARED_BY_RH' && item.leaveRequestId) {
+                          setOpen(false)
+                          navigate(`/app/new-request/${item.leaveRequestId}`)
+                        }
+                      }}
                       aria-label={
                         unread ? `Marquer comme lue : ${item.title}` : `${item.title}, déjà lue`
                       }
