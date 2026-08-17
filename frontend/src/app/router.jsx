@@ -23,8 +23,9 @@ import { ManagerPresencePage } from '@/pages/manager/PresencePage'
 import { ManagerMyBalancePage } from '@/pages/manager/MyBalancePage'
 import { RhAllRequestsPage } from '@/pages/rh/AllRequestsPage'
 import { RhPrepareRequestPage } from '@/pages/rh/PrepareRequestPage'
-import { RhRequestsPage } from '@/pages/rh/RequestsPage'
 import { RhRequestDecisionPage } from '@/pages/rh/RequestDecisionPage'
+import { RhAbsencesPage } from '@/pages/rh/AbsencesPage'
+import { RhDerogationsPage } from '@/pages/rh/DerogationsPage'
 import { NEW_REQUEST_ROLES, ROLES } from '@/config/navigation'
 import { RoleRoute } from '@/auth/RoleRoute'
 
@@ -58,13 +59,32 @@ export const router = createBrowserRouter([
         ),
       },
       {
-        path: 'rh-requests',
+        path: 'rh-all-requests/:id',
         element: (
           <RoleRoute roles={[ROLES.RH]}>
-            <RhRequestsPage />
+            <RhRequestDecisionPage />
           </RoleRoute>
         ),
       },
+      {
+        path: 'rh-absences',
+        element: (
+          <RoleRoute roles={[ROLES.RH]}>
+            <RhAbsencesPage />
+          </RoleRoute>
+        ),
+      },
+      {
+        path: 'rh-derogations',
+        element: (
+          <RoleRoute roles={[ROLES.RH]}>
+            <RhDerogationsPage />
+          </RoleRoute>
+        ),
+      },
+      { path: 'rh-justificatifs', element: <Navigate to="/app/rh-absences" replace /> },
+      { path: 'rh-authorized-absences', element: <Navigate to="/app/rh-absences" replace /> },
+      { path: 'rh-requests', element: <Navigate to="/app/rh-all-requests" replace /> },
       {
         path: 'rh-requests/:id',
         element: (

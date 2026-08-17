@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import { Icon } from '@/components/ui/Icon'
 import { formatDays, formatRangeCompactFR } from '@/utils/format'
@@ -89,13 +89,16 @@ export function RecapCard({
         ? startLabel
         : `${startLabel} → ${endLabel}`
 
-  const derogationAllowed =
+  const derogationNeeded =
     !preparationMode &&
     notice &&
-    draftClean &&
     !notice.isNoticeCompliant &&
-    notice.isDerogationWindow &&
-    !derogation
+    notice.isDerogationWindow
+
+  const derogationAllowed = Boolean(
+    derogationNeeded &&
+      (!derogation || derogation.status === 'EXPIREE'),
+  )
 
   const submitAllowed =
     periodComplete &&
@@ -110,10 +113,22 @@ export function RecapCard({
           ? 'La date de départ est dépassée : la soumission est impossible.'
           : !notice.isDerogationWindow
             ? lateSubmissionMessage(notice.daysBeforeStart, derogationLastAllowedDay)
-            : draftClean
-              ? 'Une dérogation RH accordée est requise pour soumettre.'
-              : 'Enregistrez en brouillon pour pouvoir demander une dérogation RH.'
+            : derogation?.status === 'EN_ATTENTE_RH'
+              ? 'Votre demande de dérogation est en attente de décision RH.'
+              : derogation?.status === 'REFUSEE'
+                ? 'La dérogation a été refusée par la RH. Modifiez les dates si nécessaire.'
+                : 'Une dérogation RH accordée est requise pour soumettre.'
       : null
+
+  useEffect(() => {
+    if (derogationAllowed) {
+      return
+    }
+
+    setDerogationFormOpen(false)
+    setDerogationReason('')
+    setDerogationError(null)
+  }, [derogationAllowed])
 
   const handleDerogationSubmit = async () => {
     setDerogationError(null)
@@ -123,7 +138,7 @@ export function RecapCard({
     }
     setDerogationSending(true)
     try {
-      await onRequestDerogation({ leaveRequestId: draft.id, reason: derogationReason.trim() })
+      await onRequestDerogation({ reason: derogationReason.trim() })
       setDerogationFormOpen(false)
       setDerogationReason('')
     } catch {
@@ -293,9 +308,12 @@ export function RecapCard({
               type="button"
               className="nr-recap__derogation-cta"
               onClick={() => setDerogationFormOpen(true)}
+              disabled={saving || submitting}
             >
               <Icon name="alert" size={15} />
-              Demander une dérogation
+              {derogation?.status === 'EXPIREE'
+                ? 'Demander une nouvelle dérogation'
+                : 'Demander une dérogation'}
             </button>
           )}
 
@@ -334,7 +352,7 @@ export function RecapCard({
                   type="button"
                   className="nr-btn nr-btn--secondary"
                   onClick={handleDerogationSubmit}
-                  disabled={derogationSending || derogationReason.trim().length < 10}
+                  disabled={derogationSending || saving || submitting || derogationReason.trim().length < 10}
                 >
                   {derogationSending ? 'Envoi…' : 'Envoyer la demande'}
                 </button>

@@ -663,6 +663,14 @@ export class LeaveRequestsService {
           updateLeaveRequestDto.comment.trim() || null;
       }
 
+      const draftDerogationInvalidation =
+        !isSubmittedRequest
+          ? await this.derogationsService.invalidateForDraftChange(
+              manager,
+              { leaveRequest },
+            )
+          : null;
+
       let releasedReservation:
         | Awaited<
             ReturnType<
@@ -765,6 +773,7 @@ export class LeaveRequestsService {
             releasedReservations:
               releasedReservation?.releases ?? [],
             derogationPreparation,
+            draftDerogationInvalidation,
             requiresNewSignature: isSubmittedRequest,
           },
         },

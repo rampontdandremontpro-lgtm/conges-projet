@@ -47,12 +47,9 @@ export const NAVIGATION = {
   [ROLES.RH]: [
     { id: 'dashboard', label: 'Tableau de bord', to: '/app/dashboard', icon: 'dashboard', group: 'DEMANDES' },
     { id: 'rh-all-requests', label: 'Toutes les demandes', to: '/app/rh-all-requests', icon: 'doc', group: 'DEMANDES' },
-    { id: 'rh-requests', label: 'Demandes à traiter', to: '/app/rh-requests', icon: 'clock', group: 'DEMANDES' },
-    { id: 'rh-absences', label: 'Déclarations d’absence', to: '/app/rh-absences', icon: 'calendar', group: 'DEMANDES' },
-    { id: 'rh-justificatifs', label: 'Justificatifs à vérifier', to: '/app/rh-justificatifs', icon: 'file', group: 'DEMANDES' },
+    { id: 'rh-absences', label: 'Absences', to: '/app/rh-absences', icon: 'calendar', group: 'DEMANDES' },
     { id: 'rh-derogations', label: 'Dérogations', to: '/app/rh-derogations', icon: 'shield', group: 'DEMANDES' },
 
-    { id: 'rh-authorized-absences', label: 'Absences autorisées', to: '/app/rh-authorized-absences', icon: 'check', group: 'ADMINISTRATION' },
     { id: 'rh-balances', label: 'Soldes collaborateurs', to: '/app/rh-balances', icon: 'wallet', group: 'ADMINISTRATION' },
     { id: 'rh-balance-movements', label: 'Mouvements et corrections', to: '/app/rh-balance-movements', icon: 'refresh', group: 'ADMINISTRATION' },
 

@@ -1,0 +1,667 @@
+.page-container.rh-absences-page {
+  --rh-absence-blue: #1c72f2;
+  --rh-absence-navy: #0e315b;
+  --rh-absence-orange: #ff7218;
+  --rh-absence-muted: #7f95b3;
+  width: min(100%, 1420px);
+  margin: 0 auto;
+  padding: 22px 26px 34px;
+}
+
+.rh-absences-feedback {
+  display: flex;
+  min-height: 46px;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 14px;
+  padding: 10px 14px;
+  border: 1px solid;
+  border-radius: 13px;
+  font-size: 13px;
+  font-weight: 700;
+}
+.rh-absences-feedback span { flex: 1; }
+.rh-absences-feedback button { border: 0; background: transparent; color: currentColor; font-size: 19px; }
+.rh-absences-feedback--success { border-color: #c9ebd9; background: #edf9f3; color: #16714b; }
+.rh-absences-feedback--error { border-color: #f4ced3; background: #fff2f3; color: #ae4050; }
+
+.rh-absences-card {
+  overflow: hidden;
+  border: 1px solid #dfe8f3;
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 10px 30px rgba(26, 61, 104, .06);
+}
+
+.rh-absences-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 20px 22px 17px;
+}
+.rh-absences-toolbar h2 { margin: 0; color: var(--rh-absence-navy); font-size: 18px; font-weight: 800; }
+.rh-absences-toolbar p { margin: 4px 0 0; color: #8ba0bd; font-size: 12.5px; }
+.rh-absences-create {
+  display: inline-flex;
+  min-height: 43px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 9px 16px;
+  border-radius: 12px;
+  background: var(--rh-absence-orange);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 800;
+  box-shadow: 0 7px 16px rgba(255, 114, 24, .18);
+}
+.rh-absences-create:hover { background: #ef6410; }
+
+.rh-absences-tabs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 22px 16px;
+  border-bottom: 1px solid #edf2f7;
+}
+.rh-absences-tab {
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 13px;
+  border-radius: 10px;
+  color: #5b7599;
+  font-size: 12.5px;
+  font-weight: 750;
+}
+.rh-absences-tab span {
+  display: grid;
+  min-width: 20px;
+  height: 20px;
+  place-items: center;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: #edf3fa;
+  color: #7e96b8;
+  font-size: 10px;
+}
+.rh-absences-tab:hover { background: #f5f8fc; }
+.rh-absences-tab.is-active { background: var(--rh-absence-blue); color: #fff; box-shadow: 0 5px 11px rgba(28, 114, 242, .17); }
+.rh-absences-tab.is-active span { background: rgba(255,255,255,.2); color: #fff; }
+
+.rh-absences-table-wrap { overflow-x: auto; }
+.rh-absences-table { min-width: 1160px; }
+.rh-absences-row {
+  display: grid;
+  grid-template-columns: minmax(230px, 1.45fr) minmax(160px, 1fr) 100px 100px 76px minmax(145px, .95fr) minmax(150px, .95fr) 38px;
+  align-items: center;
+  column-gap: 12px;
+  width: 100%;
+}
+.rh-absences-row--header {
+  min-height: 49px;
+  padding: 0 22px;
+  background: #f7f9fc;
+  color: #8b9fbc;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: .03em;
+  text-transform: uppercase;
+}
+.rh-absences-row--data {
+  min-height: 76px;
+  padding: 10px 22px;
+  border-top: 1px solid #edf2f7;
+  background: #fff;
+  color: #355679;
+  text-align: left;
+  font-size: 12.7px;
+  transition: background .16s ease;
+}
+.rh-absences-row--data:hover { background: #f9fbfe; }
+.rh-absences-person { display: flex; min-width: 0; align-items: center; gap: 12px; }
+.rh-absences-avatar { display: grid; width: 43px; height: 43px; flex: 0 0 43px; place-items: center; border-radius: 12px; background: #eaf4ff; color: #1764cf; font-size: 11.5px; font-weight: 850; }
+.rh-absences-person > span:last-child { min-width: 0; }
+.rh-absences-person strong { display: block; overflow: hidden; color: #17385f; font-size: 13.2px; font-weight: 850; text-overflow: ellipsis; white-space: nowrap; }
+.rh-absences-person small { display: block; overflow: hidden; margin-top: 2px; color: #8ca0bc; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.rh-absences-type { overflow: hidden; color: #284a72; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
+.rh-absences-duration { color: #183d68; font-weight: 850; }
+.rh-absences-created-by { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rh-absences-eye { display: grid; width: 30px; height: 30px; place-items: center; border-radius: 9px; color: #a5b8d1; }
+.rh-absences-row--data:hover .rh-absences-eye { background: #edf4ff; color: var(--rh-absence-blue); }
+
+.rh-absence-status { display: inline-flex; min-height: 27px; align-items: center; justify-content: center; padding: 4px 9px; border: 1px solid transparent; border-radius: 999px; white-space: nowrap; font-size: 10.8px; font-weight: 800; }
+.rh-absence-status--pending, .rh-absence-status--declared { border-color: #ffd18a; background: #fff8e8; color: #b9690a; }
+.rh-absence-status--waiting { border-color: #f6d5a4; background: #fff8ee; color: #a86613; }
+.rh-absence-status--rejected { border-color: #ffc5cd; background: #fff1f3; color: #cb4055; }
+.rh-absence-status--approved { border-color: #a5e8cf; background: #ebfaf3; color: #0b895b; }
+.rh-absence-status--cancelled { border-color: #d7e0eb; background: #f5f7fa; color: #6e819e; }
+.rh-absence-status--draft { border-color: #cbd8ee; background: #f1f6fd; color: #58739b; }
+.rh-absence-status--neutral { border-color: #dfe6ef; background: #f7f9fc; color: #6c809e; }
+
+.rh-absences-empty { display: flex; min-height: 310px; flex-direction: column; align-items: center; justify-content: center; gap: 7px; padding: 30px; color: #8095b2; text-align: center; }
+.rh-absences-empty__icon { display: grid; width: 54px; height: 54px; margin-bottom: 3px; place-items: center; border-radius: 16px; background: #eef4ff; color: var(--rh-absence-blue); }
+.rh-absences-empty strong { color: var(--rh-absence-navy); font-size: 14px; }
+.rh-absences-empty span:not(.rh-absences-empty__icon) { font-size: 12px; }
+.rh-absences-empty button { margin-top: 5px; padding: 8px 12px; border-radius: 10px; background: #eef4ff; color: var(--rh-absence-blue); font-weight: 750; }
+.rh-absences-skeleton { min-height: 76px; border-top: 1px solid #edf2f7; background: linear-gradient(90deg, #fff 0%, #f7f9fc 50%, #fff 100%); background-size: 200% 100%; animation: rhAbsenceSkeleton 1.2s ease-in-out infinite; }
+@keyframes rhAbsenceSkeleton { 0% { background-position: 100% 0; } 100% { background-position: -100% 0; } }
+
+.rh-absences-footer { display: flex; min-height: 58px; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 22px; border-top: 1px solid #edf2f7; color: #8197b5; font-size: 11.5px; }
+.rh-absences-pagination { display: flex; align-items: center; gap: 9px; }
+.rh-absences-pagination button { display: grid; width: 33px; height: 33px; place-items: center; border: 1px solid #dce6f2; border-radius: 10px; color: #5f789c; }
+.rh-absences-pagination button:disabled { opacity: .4; }
+.rh-absences-pagination span { min-width: 48px; text-align: center; color: #526b90; font-weight: 750; }
+
+.rh-absence-drawer-backdrop { position: fixed; inset: 0; z-index: 100; display: flex; justify-content: flex-end; background: rgba(8, 29, 54, .34); backdrop-filter: blur(1.5px); }
+.rh-absence-drawer { width: min(94vw, 610px); height: 100%; overflow-y: auto; padding: 24px; background: #fff; box-shadow: -18px 0 45px rgba(8, 32, 63, .17); animation: rhAbsenceDrawerIn .18s ease-out; }
+@keyframes rhAbsenceDrawerIn { from { transform: translateX(28px); opacity: .55; } to { transform: translateX(0); opacity: 1; } }
+.rh-absence-drawer__header { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; padding-bottom: 19px; border-bottom: 1px solid #edf2f7; }
+.rh-absence-drawer__eyebrow { display: block; margin-bottom: 5px; color: #87a0c0; font-size: 9.5px; font-weight: 850; letter-spacing: .07em; }
+.rh-absence-drawer__header h2 { margin: 0; color: #102f58; font-size: 21px; font-weight: 850; }
+.rh-absence-drawer__header p { margin: 5px 0 0; color: #7d93b1; font-size: 12.5px; line-height: 1.45; }
+.rh-absence-drawer__close { display: grid; width: 36px; height: 36px; flex: 0 0 36px; place-items: center; border-radius: 11px; color: #8298b6; font-size: 24px; }
+.rh-absence-drawer__close:hover { background: #f2f6fa; color: #315177; }
+
+.rh-absence-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; padding-top: 20px; }
+.rh-absence-field--full { grid-column: 1 / -1; }
+.rh-absence-field { display: flex; min-width: 0; flex-direction: column; gap: 7px; }
+.rh-absence-field > span, .rh-absence-mode legend { color: #557291; font-size: 10.5px; font-weight: 850; letter-spacing: .055em; text-transform: uppercase; }
+.rh-absence-field small { font-size: 9.5px; font-weight: 650; text-transform: none; letter-spacing: 0; }
+.rh-absence-field input, .rh-absence-field select, .rh-absence-field textarea {
+  width: 100%;
+  border: 1px solid #dce6f2;
+  border-radius: 12px;
+  background: #fff;
+  color: #24476e;
+  font: inherit;
+  font-size: 13px;
+  outline: none;
+  transition: border-color .16s ease, box-shadow .16s ease;
+}
+.rh-absence-field input, .rh-absence-field select { min-height: 44px; padding: 0 13px; }
+.rh-absence-field textarea { resize: vertical; min-height: 105px; padding: 12px 13px; line-height: 1.45; }
+.rh-absence-field input:focus, .rh-absence-field select:focus, .rh-absence-field textarea:focus { border-color: #9ec4fb; box-shadow: 0 0 0 3px rgba(28,114,242,.08); }
+.rh-absence-type-info, .rh-absence-form__error { grid-column: 1 / -1; display: flex; align-items: flex-start; gap: 8px; padding: 10px 12px; border-radius: 11px; font-size: 11.7px; line-height: 1.4; }
+.rh-absence-type-info { background: #f1f7ff; color: #4d6f98; }
+.rh-absence-form__error { border: 1px solid #f3ccd3; background: #fff1f3; color: #a83e50; }
+
+.rh-absence-mode { margin: 0; padding: 0; border: 0; }
+.rh-absence-mode legend { margin-bottom: 8px; }
+.rh-absence-mode > div { display: inline-flex; overflow: hidden; border: 1px solid #dce6f2; border-radius: 12px; background: #f7f9fc; }
+.rh-absence-mode button { min-height: 39px; padding: 7px 15px; color: #617b9d; font-size: 12px; font-weight: 750; }
+.rh-absence-mode button.is-active { background: var(--rh-absence-blue); color: #fff; }
+
+.rh-absence-upload { display: flex; min-height: 68px; flex-direction: row; align-items: center; gap: 11px; padding: 11px 13px; border: 1px dashed #c7d9ef; border-radius: 13px; background: #f8fbff; cursor: pointer; }
+.rh-absence-upload input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.rh-absence-upload__icon { display: grid; width: 38px; height: 38px; flex: 0 0 38px; place-items: center; border-radius: 11px; background: #eaf3ff; color: var(--rh-absence-blue); }
+.rh-absence-upload strong { display: block; color: #294b72; font-size: 12.5px; }
+.rh-absence-upload small { display: block; margin-top: 2px; color: #8ca1bd; font-size: 10.5px; }
+
+.rh-absence-form__actions { display: flex; justify-content: flex-end; gap: 10px; padding-top: 5px; }
+.rh-absence-button { display: inline-flex; min-height: 42px; align-items: center; justify-content: center; gap: 7px; padding: 8px 15px; border-radius: 11px; font-size: 12.5px; font-weight: 800; }
+.rh-absence-button:disabled { opacity: .55; cursor: default; }
+.rh-absence-button--primary { background: var(--rh-absence-blue); color: #fff; }
+.rh-absence-button--primary:hover:not(:disabled) { background: #145fce; }
+.rh-absence-button--secondary { border: 1px solid #dce6f2; background: #fff; color: #587394; }
+.rh-absence-button--danger { border: 1px solid #ffc7d0; background: #fff4f5; color: #c63f53; }
+
+.rh-absence-detail-status { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 18px 0 14px; }
+.rh-absence-detail-status > strong { color: #284a71; font-size: 13.5px; }
+.rh-absence-detail-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); overflow: hidden; border: 1px solid #e4ebf4; border-radius: 14px; }
+.rh-absence-detail-grid > div { min-height: 72px; padding: 12px 13px; border-right: 1px solid #e4ebf4; border-bottom: 1px solid #e4ebf4; }
+.rh-absence-detail-grid > div:nth-child(2n) { border-right: 0; }
+.rh-absence-detail-grid > div:nth-last-child(-n+2) { border-bottom: 0; }
+.rh-absence-detail-grid small, .rh-absence-detail-comment small { display: block; margin-bottom: 5px; color: #8ca1bd; font-size: 9.5px; font-weight: 850; letter-spacing: .045em; text-transform: uppercase; }
+.rh-absence-detail-grid strong { color: #294a70; font-size: 12.5px; line-height: 1.35; }
+.rh-absence-detail-comment { margin-top: 14px; padding: 13px; border-radius: 12px; background: #f7f9fc; }
+.rh-absence-detail-comment p { margin: 0; color: #405e81; font-size: 12.5px; line-height: 1.5; }
+.rh-absence-detail-notice { display: flex; align-items: flex-start; gap: 8px; margin-top: 14px; padding: 11px 12px; border-radius: 12px; font-size: 11.8px; line-height: 1.45; }
+.rh-absence-detail-notice--blue { background: #eef6ff; color: #3d689b; }
+.rh-absence-detail-notice--orange { background: #fff7e9; color: #9a6517; }
+.rh-absence-detail-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 9px; margin-top: 18px; padding-top: 17px; border-top: 1px solid #edf2f7; }
+
+@media (max-width: 900px) {
+  .page-container.rh-absences-page { padding: 16px; }
+  .rh-absences-toolbar { align-items: stretch; flex-direction: column; }
+  .rh-absences-create { align-self: flex-start; }
+  .rh-absences-tabs { overflow-x: auto; }
+  .rh-absences-tab { flex: 0 0 auto; }
+}
+
+@media (max-width: 620px) {
+  .page-container.rh-absences-page { padding: 12px; }
+  .rh-absences-card { border-radius: 16px; }
+  .rh-absence-drawer { width: 100%; padding: 18px; }
+  .rh-absence-form { grid-template-columns: 1fr; }
+  .rh-absence-field--full { grid-column: auto; }
+  .rh-absence-type-info, .rh-absence-form__error { grid-column: auto; }
+  .rh-absence-form__actions { flex-direction: column-reverse; }
+  .rh-absence-button { width: 100%; }
+  .rh-absence-detail-grid { grid-template-columns: 1fr; }
+  .rh-absence-detail-grid > div { border-right: 0; border-bottom: 1px solid #e4ebf4 !important; }
+  .rh-absence-detail-grid > div:last-child { border-bottom: 0 !important; }
+}
+
+
+/* Ajustements grand écran : la vue RH utilise toute la largeur disponible. */
+.page-container.rh-absences-page {
+  max-width: none;
+  width: 100%;
+  margin: 0;
+  padding: 26px 28px 38px;
+}
+
+.rh-absences-card {
+  width: 100%;
+  border-radius: 22px;
+}
+
+.rh-absences-table {
+  min-width: 1080px;
+}
+
+.rh-absences-toolbar {
+  padding: 24px 26px 20px;
+}
+
+.rh-absences-toolbar h2 {
+  font-size: 21px;
+}
+
+.rh-absences-toolbar p {
+  margin-top: 5px;
+  font-size: 13.5px;
+}
+
+.rh-absences-create {
+  min-height: 46px;
+  padding: 10px 18px;
+  font-size: 13.5px;
+}
+
+.rh-absences-tabs {
+  gap: 8px;
+  padding: 0 26px 18px;
+}
+
+.rh-absences-tab {
+  min-height: 41px;
+  padding: 8px 14px;
+  font-size: 13.2px;
+}
+
+.rh-absences-row--header {
+  min-height: 52px;
+  padding: 0 26px;
+  font-size: 11px;
+}
+
+.rh-absences-row--data {
+  min-height: 82px;
+  padding: 12px 26px;
+  font-size: 13.6px;
+}
+
+.rh-absences-avatar {
+  width: 46px;
+  height: 46px;
+  flex-basis: 46px;
+  font-size: 12px;
+}
+
+.rh-absences-person strong {
+  font-size: 14.2px;
+}
+
+.rh-absences-person small {
+  margin-top: 3px;
+  font-size: 11.7px;
+}
+
+.rh-absence-status {
+  min-height: 29px;
+  padding: 5px 10px;
+  font-size: 11.4px;
+}
+
+.rh-absences-footer {
+  min-height: 62px;
+  padding: 10px 26px;
+  font-size: 12.2px;
+}
+
+.rh-absence-drawer--detail {
+  width: min(95vw, 690px);
+  padding: 28px;
+}
+
+.rh-absence-drawer--detail .rh-absence-drawer__header h2 {
+  font-size: 23px;
+}
+
+.rh-absence-drawer--detail .rh-absence-drawer__header p {
+  font-size: 13.5px;
+}
+
+.rh-absence-detail-status > strong {
+  font-size: 14.5px;
+}
+
+.rh-absence-detail-grid > div {
+  min-height: 78px;
+  padding: 14px 15px;
+}
+
+.rh-absence-detail-grid small,
+.rh-absence-detail-comment small {
+  font-size: 10px;
+}
+
+.rh-absence-detail-grid strong {
+  font-size: 13.4px;
+}
+
+.rh-absence-detail-comment p {
+  font-size: 13.3px;
+}
+
+.rh-absence-detail-notice {
+  font-size: 12.5px;
+}
+
+.rh-absence-detail-notice--red {
+  border: 1px solid #ffd0d6;
+  background: #fff2f4;
+  color: #ad344a;
+}
+
+/* Vérification du justificatif directement depuis le détail de l'absence. */
+.rh-absence-documents {
+  margin-top: 16px;
+  padding: 16px;
+  border: 1px solid #dce8f7;
+  border-radius: 15px;
+  background: #f8fbff;
+}
+
+.rh-absence-documents__heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 13px;
+}
+
+.rh-absence-documents__heading > div:first-child {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 11px;
+}
+
+.rh-absence-documents__icon {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+  place-items: center;
+  border-radius: 11px;
+  background: #e9f3ff;
+  color: var(--rh-absence-blue);
+}
+
+.rh-absence-documents__heading h3 {
+  margin: 0;
+  color: #173b67;
+  font-size: 14.5px;
+  font-weight: 850;
+}
+
+.rh-absence-documents__heading p {
+  margin: 3px 0 0;
+  color: #7f96b4;
+  font-size: 11.6px;
+  line-height: 1.35;
+}
+
+.rh-absence-documents__ready {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 9px;
+  border: 1px solid #a9e5cc;
+  border-radius: 999px;
+  background: #ecfaf4;
+  color: #087d54;
+  font-size: 10.8px;
+  font-weight: 800;
+}
+
+.rh-absence-documents__state {
+  display: flex;
+  min-height: 58px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px;
+  border: 1px dashed #cfdeef;
+  border-radius: 12px;
+  background: #fff;
+  color: #7189a8;
+  font-size: 12.2px;
+  text-align: center;
+}
+
+.rh-absence-documents__state--error {
+  border-color: #f2cbd2;
+  background: #fff7f8;
+  color: #b33e51;
+}
+
+.rh-absence-documents__state button {
+  color: var(--rh-absence-blue);
+  font-weight: 800;
+}
+
+.rh-absence-documents__list {
+  display: grid;
+  gap: 10px;
+}
+
+.rh-absence-document-card {
+  overflow: hidden;
+  border: 1px solid #dfe8f4;
+  border-radius: 13px;
+  background: #fff;
+}
+
+.rh-absence-document-card__main {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 13px;
+}
+
+.rh-absence-document-card__file {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border-radius: 10px;
+  background: #eef4ff;
+  color: #1769dd;
+}
+
+.rh-absence-document-card__main strong {
+  display: block;
+  overflow: hidden;
+  color: #23486f;
+  font-size: 12.8px;
+  font-weight: 820;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rh-absence-document-card__main small {
+  display: block;
+  margin-top: 2px;
+  color: #8aa0bb;
+  font-size: 10.6px;
+}
+
+.rh-absence-document-status {
+  display: inline-flex;
+  min-height: 25px;
+  align-items: center;
+  padding: 4px 8px;
+  border: 1px solid;
+  border-radius: 999px;
+  font-size: 10.2px;
+  font-weight: 820;
+}
+
+.rh-absence-document-status--pending {
+  border-color: #ffd38d;
+  background: #fff8e8;
+  color: #a9650c;
+}
+
+.rh-absence-document-status--accepted {
+  border-color: #a8e5cd;
+  background: #ecfaf4;
+  color: #087f55;
+}
+
+.rh-absence-document-status--rejected {
+  border-color: #ffc6cf;
+  background: #fff2f4;
+  color: #c03d53;
+}
+
+.rh-absence-document-card__reason {
+  margin: 0 13px 11px;
+  padding: 9px 10px;
+  border-radius: 9px;
+  background: #fff3f5;
+  color: #a84354;
+  font-size: 11.3px;
+  line-height: 1.4;
+}
+
+.rh-absence-document-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  padding: 0 13px 12px;
+}
+
+.rh-absence-button--document-accept {
+  border: 1px solid #a9e2cb;
+  background: #eefaf5;
+  color: #087f55;
+}
+
+.rh-absence-button--document-accept:hover:not(:disabled) {
+  background: #e1f6ed;
+}
+
+.rh-absence-button--document-reject {
+  border: 1px solid #ffc7cf;
+  background: #fff5f6;
+  color: #bd3e52;
+}
+
+.rh-absence-button--document-reject:hover:not(:disabled) {
+  background: #ffebee;
+}
+
+.rh-absence-document-reject-form {
+  margin: 0 13px 13px;
+  padding: 12px;
+  border: 1px solid #f4ccd3;
+  border-radius: 11px;
+  background: #fff8f9;
+}
+
+.rh-absence-document-reject-form label {
+  display: block;
+  margin-bottom: 6px;
+  color: #874554;
+  font-size: 10.5px;
+  font-weight: 850;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.rh-absence-document-reject-form textarea {
+  width: 100%;
+  min-height: 82px;
+  resize: vertical;
+  padding: 10px 11px;
+  border: 1px solid #e8bdc5;
+  border-radius: 10px;
+  background: #fff;
+  color: #5c3c44;
+  font: inherit;
+  font-size: 12.3px;
+  outline: none;
+}
+
+.rh-absence-document-reject-form textarea:focus {
+  border-color: #dc8797;
+  box-shadow: 0 0 0 3px rgba(204, 72, 96, .08);
+}
+
+.rh-absence-document-reject-form > div {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 9px;
+}
+
+@media (min-width: 1280px) {
+  .rh-absences-table {
+    min-width: 0;
+  }
+
+  .rh-absences-row {
+    grid-template-columns:
+      minmax(220px, 1.5fr)
+      minmax(150px, 1fr)
+      100px
+      100px
+      76px
+      minmax(132px, .85fr)
+      minmax(145px, .9fr)
+      38px;
+  }
+}
+
+@media (max-width: 760px) {
+  .rh-absence-documents__heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .rh-absence-document-card__main {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .rh-absence-document-status {
+    grid-column: 2;
+    justify-self: flex-start;
+  }
+
+  .rh-absence-document-card__actions {
+    flex-direction: column;
+  }
+
+  .rh-absence-document-card__actions .rh-absence-button {
+    width: 100%;
+  }
+}

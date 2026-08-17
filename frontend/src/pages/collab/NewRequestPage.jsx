@@ -167,15 +167,27 @@ export function NewRequest() {
   )
   const dirty = !draftMatchesSelection
 
-  const derogation = useMemo(
-    () =>
-      draft
-        ? resources.derogations.find(
-            (item) => item.leaveRequestId === draft.id,
-          ) ?? null
-        : null,
-    [draft, resources.derogations],
-  )
+  const derogation = useMemo(() => {
+    if (!draft) {
+      return null
+    }
+
+    return (
+      resources.derogations.find(
+        (item) =>
+          Number(item.leaveRequestId) === Number(draft.id) &&
+          Number(item.leaveTypeId) === Number(selection.leaveTypeId) &&
+          item.requestedStartDate === selection.startDate &&
+          item.requestedEndDate === selection.endDate,
+      ) ?? null
+    )
+  }, [
+    draft,
+    resources.derogations,
+    selection.endDate,
+    selection.leaveTypeId,
+    selection.startDate,
+  ])
 
   const handlePick = (iso) => {
     setSelection((prev) => {
@@ -307,16 +319,38 @@ export function NewRequest() {
     }
   }
 
-  const handleRequestDerogation = async ({ leaveRequestId, reason }) => {
+  const handleRequestDerogation = async ({ reason }) => {
+    if (
+      !selection.leaveTypeId ||
+      !selection.startDate ||
+      !selection.endDate ||
+      saving ||
+      submitting
+    ) {
+      return false
+    }
+
+    setSaving(true)
     try {
-      await requestDerogation({ leaveRequestId, reason })
+      const saved = await persistCurrentRequest()
+      await requestDerogation({ leaveRequestId: saved.id, reason })
       const updated = await getMyDerogations()
       setDerogations(updated)
-      showToast('success', 'Dérogation demandée — la RH va examiner votre demande.')
+      notifyAppDataChanged({
+        source: 'derogation',
+        action: 'requested',
+        id: saved.id,
+      })
+      showToast(
+        'success',
+        'Dérogation demandée — votre brouillon a été enregistré et la RH va examiner votre demande.',
+      )
       return true
     } catch (error) {
       showToast('error', errorMessage(error))
       throw error
+    } finally {
+      setSaving(false)
     }
   }
 

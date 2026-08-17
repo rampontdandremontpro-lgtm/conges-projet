@@ -103,61 +103,6 @@ function LoadingRows() {
   ))
 }
 
-function RequestDetailsModal({ request, onClose }) {
-  if (!request) return null
-
-  const meta = statusMeta(request.status)
-
-  return (
-    <div className="rh-request-modal-backdrop" role="presentation" onMouseDown={onClose}>
-      <section
-        className="rh-request-modal"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="rh-request-modal-title"
-        onMouseDown={(event) => event.stopPropagation()}
-      >
-        <header className="rh-request-modal__header">
-          <div>
-            <span className="rh-request-modal__eyebrow">DEMANDE N°{request.id}</span>
-            <h2 id="rh-request-modal-title">
-              {request.employee?.prenom} {request.employee?.nom}
-            </h2>
-            <p>{request.service?.name ?? 'Service non renseigné'}</p>
-          </div>
-          <button type="button" className="rh-request-modal__close" onClick={onClose} aria-label="Fermer">×</button>
-        </header>
-
-        <div className="rh-request-modal__status-row">
-          <span className={`rh-request-status rh-request-status--${meta.tone}`}>{meta.label}</span>
-          <strong>{request.leaveType?.name ?? 'Congé'}</strong>
-        </div>
-
-        <div className="rh-request-modal__grid">
-          <div><small>Début</small><strong>{formatDateNumericFR(request.startDate)}</strong></div>
-          <div><small>Fin</small><strong>{formatDateNumericFR(request.endDate)}</strong></div>
-          <div><small>Durée</small><strong>{formatDays(Number(request.deductedDays) || 0)} j</strong></div>
-          <div><small>Soumise le</small><strong>{formatDateTime(request.submittedAt)}</strong></div>
-          <div><small>Décision le</small><strong>{formatDateTime(request.decisionAt)}</strong></div>
-          <div><small>Décideur</small><strong>{request.finalDecider ? `${request.finalDecider.prenom} ${request.finalDecider.nom}` : '—'}</strong></div>
-        </div>
-
-        <div className="rh-request-modal__comment">
-          <small>COMMENTAIRE DU COLLABORATEUR</small>
-          <p>{request.comment?.trim() || 'Aucun commentaire.'}</p>
-        </div>
-
-        {request.refusalComment && (
-          <div className="rh-request-modal__comment rh-request-modal__comment--refused">
-            <small>MOTIF DU REFUS</small>
-            <p>{request.refusalComment}</p>
-          </div>
-        )}
-      </section>
-    </div>
-  )
-}
-
 export function RhAllRequestsPage() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -169,7 +114,6 @@ export function RhAllRequestsPage() {
   const [serviceFilter, setServiceFilter] = useState('all')
   const [typeFilter, setTypeFilter] = useState('all')
   const [page, setPage] = useState(1)
-  const [selectedRequest, setSelectedRequest] = useState(null)
   const [feedback, setFeedback] = useState(null)
 
   const load = useCallback(async () => {
@@ -366,7 +310,7 @@ export function RhAllRequestsPage() {
                     className="rh-all-requests-row rh-all-requests-row--data"
                     role="row"
                     key={request.id}
-                    onClick={() => setSelectedRequest(request)}
+                    onClick={() => navigate(`/app/rh-all-requests/${request.id}`)}
                   >
                     <span className="rh-all-requests-person">
                       <span className="rh-all-requests-avatar">{initials(request.employee)}</span>
@@ -410,7 +354,6 @@ export function RhAllRequestsPage() {
         )}
       </section>
 
-      <RequestDetailsModal request={selectedRequest} onClose={() => setSelectedRequest(null)} />
     </PageContainer>
   )
 }
