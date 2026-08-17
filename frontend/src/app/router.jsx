@@ -26,6 +26,7 @@ import { RhPrepareRequestPage } from '@/pages/rh/PrepareRequestPage'
 import { RhRequestDecisionPage } from '@/pages/rh/RequestDecisionPage'
 import { RhAbsencesPage } from '@/pages/rh/AbsencesPage'
 import { RhDerogationsPage } from '@/pages/rh/DerogationsPage'
+import { RhBalancesPage } from '@/pages/rh/BalancesPage'
 import { NEW_REQUEST_ROLES, ROLES } from '@/config/navigation'
 import { RoleRoute } from '@/auth/RoleRoute'
 
@@ -82,6 +83,15 @@ export const router = createBrowserRouter([
           </RoleRoute>
         ),
       },
+      {
+        path: 'rh-balances',
+        element: (
+          <RoleRoute roles={[ROLES.RH]}>
+            <RhBalancesPage />
+          </RoleRoute>
+        ),
+      },
+      { path: 'rh-balance-movements', element: <Navigate to="/app/rh-balances" replace /> },
       { path: 'rh-justificatifs', element: <Navigate to="/app/rh-absences" replace /> },
       { path: 'rh-authorized-absences', element: <Navigate to="/app/rh-absences" replace /> },
       { path: 'rh-requests', element: <Navigate to="/app/rh-all-requests" replace /> },

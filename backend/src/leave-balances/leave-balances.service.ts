@@ -255,6 +255,72 @@ export class LeaveBalancesService {
     return this.getBalanceView(balanceId);
   }
 
+  async getManagementOverview() {
+    const employees = (await this.usersService.findAll())
+      .filter((employee) => employee.role !== UserRole.ADMIN && employee.isActive)
+      .sort((first, second) => {
+        const lastName = first.nom.localeCompare(second.nom, 'fr', { sensitivity: 'base' });
+        return lastName !== 0
+          ? lastName
+          : first.prenom.localeCompare(second.prenom, 'fr', { sensitivity: 'base' });
+      });
+
+    const employeeIds = new Set(employees.map((employee) => employee.id));
+    const balances = (await this.leaveBalanceRepository.find())
+      .filter((balance) => employeeIds.has(balance.employeeId));
+
+    return employees.map((employee) => {
+      const employeeBalances = balances.filter(
+        (balance) => balance.employeeId === employee.id,
+      );
+      const referencePeriods = [
+        ...new Set(employeeBalances.map((balance) => balance.referencePeriod)),
+      ].sort((first, second) => second.localeCompare(first));
+      const referencePeriod = referencePeriods[0] ?? null;
+      const scoped = referencePeriod
+        ? employeeBalances.filter(
+            (balance) => balance.referencePeriod === referencePeriod,
+          )
+        : [];
+      const usable = scoped.find(
+        (balance) => balance.counterType === LeaveBalanceCounterType.N_MINUS_1,
+      ) ?? null;
+      const acquisition = scoped.find(
+        (balance) => balance.counterType === LeaveBalanceCounterType.N,
+      ) ?? null;
+
+      const usableDays = this.round(usable?.availableDays ?? 0);
+      const acquisitionDays = this.round(acquisition?.acquiredDays ?? 0);
+      const reservedDays = this.round(usable?.reservedDays ?? 0);
+      const availableAfterReservations = this.round(
+        usableDays - reservedDays,
+      );
+
+      return {
+        employee: {
+          id: employee.id,
+          nom: employee.nom,
+          prenom: employee.prenom,
+          email: employee.email,
+          role: employee.role,
+          isActive: employee.isActive,
+          service: employee.service
+            ? { id: employee.service.id, name: employee.service.name }
+            : null,
+        },
+        referencePeriod,
+        usableDays,
+        acquisitionDays,
+        reservedDays,
+        availableAfterReservations,
+        hasBalances: scoped.length > 0,
+        updatedAt: scoped
+          .map((balance) => balance.updatedAt)
+          .sort((first, second) => second.getTime() - first.getTime())[0] ?? null,
+      };
+    });
+  }
+
   async getEmployeeBalances(
     employeeId: number,
     query: LeaveBalanceQueryDto,

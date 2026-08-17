@@ -1,7 +1,6 @@
 import { Type } from 'class-transformer';
 import {
   IsNumber,
-  IsOptional,
   IsString,
   Length,
   Max,
@@ -19,8 +18,7 @@ export class CorrectLeaveBalanceDto {
   @Max(99999.99)
   days!: number;
 
-  @IsOptional()
   @IsString()
   @Length(3, 1000)
-  reason?: string;
+  reason!: string;
 }

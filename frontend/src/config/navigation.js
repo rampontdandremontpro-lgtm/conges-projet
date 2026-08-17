@@ -51,7 +51,6 @@ export const NAVIGATION = {
     { id: 'rh-derogations', label: 'Dérogations', to: '/app/rh-derogations', icon: 'shield', group: 'DEMANDES' },
 
     { id: 'rh-balances', label: 'Soldes collaborateurs', to: '/app/rh-balances', icon: 'wallet', group: 'ADMINISTRATION' },
-    { id: 'rh-balance-movements', label: 'Mouvements et corrections', to: '/app/rh-balance-movements', icon: 'refresh', group: 'ADMINISTRATION' },
 
     { id: 'my-requests', label: 'Mes demandes', to: '/app/my-requests', icon: 'list', group: 'MON ESPACE' },
     { id: 'my-balance', label: 'Mon solde', to: '/app/my-balance', icon: 'wallet', group: 'MON ESPACE' },

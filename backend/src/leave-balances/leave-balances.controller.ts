@@ -40,6 +40,12 @@ export class LeaveBalancesController {
     private readonly referencePeriodService: ReferencePeriodService,
   ) {}
 
+  @Get('management')
+  @Roles(UserRole.RH)
+  getManagementOverview() {
+    return this.leaveBalancesService.getManagementOverview();
+  }
+
   @Get('my/history')
   @Roles(
     UserRole.COLLABORATEUR,
