@@ -332,3 +332,9 @@
     font-size: 12.2px;
   }
 }
+
+
+/* Même espacement supérieur que les pages principales de gestion. */
+.page-container.rh-derogations-page {
+  padding-top: 0;
+}

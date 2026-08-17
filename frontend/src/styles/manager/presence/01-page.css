@@ -293,3 +293,9 @@
 .manager-presence-toolbar--top .manager-presence-filters {
   order: 1;
 }
+
+
+/* Même espacement supérieur que la page Demandes à traiter. */
+.manager-presence-page {
+  padding-top: 0;
+}

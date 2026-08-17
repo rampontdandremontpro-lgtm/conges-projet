@@ -317,3 +317,144 @@
 
 .manager-alerts-page { width: min(100%, 1080px); }
 .manager-alerts-toolbar__left { display: flex; align-items: center; gap: 10px; min-width: 0; }
+
+
+/* Ajustements 2026-08 : lisibilité renforcée et calendrier plein écran. */
+.manager-alerts-page {
+  width: min(100%, 1160px);
+  padding-top: 30px;
+}
+
+.manager-alerts-toolbar__left {
+  gap: 12px;
+}
+
+.manager-alerts-filter {
+  min-height: 44px;
+  padding: 9px 15px;
+  font-size: 13.5px;
+}
+
+.manager-alerts-filter__count {
+  min-width: 23px;
+  height: 23px;
+  font-size: 11.2px;
+}
+
+.manager-alerts-summary {
+  min-height: 54px;
+  padding: 10px 16px;
+  font-size: 13.5px;
+}
+
+.manager-alerts-summary__icon {
+  width: 36px;
+  height: 36px;
+}
+
+.manager-alerts-summary strong {
+  font-size: 18px;
+}
+
+.manager-alerts-info {
+  padding: 13px 16px;
+  font-size: 13px;
+}
+
+.manager-overlap-card__request {
+  min-height: 88px;
+  padding: 20px 23px;
+}
+
+.manager-overlap-card__avatar {
+  width: 52px;
+  height: 52px;
+  font-size: 13.5px;
+}
+
+.manager-overlap-card__topline > strong {
+  font-size: 16px;
+}
+
+.manager-overlap-card__request-meta {
+  font-size: 13px;
+}
+
+.manager-overlap-card__overlaps {
+  padding: 18px 23px 21px;
+}
+
+.manager-overlap-card__section-title strong {
+  font-size: 13px;
+}
+
+.manager-overlap-card__section-title small {
+  font-size: 11.5px;
+}
+
+.manager-overlap-person {
+  min-height: 68px;
+  padding: 12px 14px;
+}
+
+.manager-overlap-person__avatar {
+  width: 40px;
+  height: 40px;
+  font-size: 11px;
+}
+
+.manager-overlap-person__identity strong {
+  font-size: 13px;
+}
+
+.manager-overlap-person__identity small,
+.manager-overlap-person__period {
+  font-size: 11.5px;
+}
+
+.manager-overlap-card__presence-warning {
+  margin: 0 23px 21px;
+  padding: 13px 14px;
+  font-size: 12px;
+}
+
+/* En vue calendrier, on exploite davantage la largeur disponible. */
+.manager-alerts-page--calendar {
+  width: min(100%, 1220px);
+  padding-top: 22px;
+  padding-bottom: 30px;
+}
+
+.manager-alerts-page--calendar .manager-alerts-toolbar {
+  margin-bottom: 12px;
+}
+
+.manager-alerts-page--calendar .manager-alerts-info {
+  margin-bottom: 12px;
+  padding-block: 10px;
+}
+
+.manager-alerts-page--calendar .manager-calendar-card {
+  padding: 18px;
+}
+
+.manager-alerts-page--calendar .manager-calendar-head {
+  margin-bottom: 11px;
+}
+
+.manager-alerts-page--calendar .manager-month-planning__legend {
+  margin-top: 9px;
+}
+
+@media (min-width: 1200px) {
+  .manager-alerts-page--calendar .manager-month-planning-wrap {
+    overflow-x: hidden;
+  }
+}
+
+
+/* Même espacement supérieur que la page Demandes à traiter. */
+.manager-alerts-page,
+.manager-alerts-page--calendar {
+  padding-top: 0;
+}

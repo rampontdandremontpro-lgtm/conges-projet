@@ -346,3 +346,98 @@
   .rh-export-card { padding: 19px 16px; border-radius: 16px; }
   .rh-export-split-actions { grid-template-columns: 1fr; }
 }
+
+
+/* Boutons d'export : contraste renforcé et cohérence avec la couleur de chaque carte. */
+.rh-export-format-group {
+  gap: 12px;
+}
+
+.rh-export-format {
+  position: relative;
+  width: 100%;
+  min-height: 46px;
+  padding: 0 16px;
+  border-radius: 12px;
+  font-size: 12.5px;
+  letter-spacing: .01em;
+  box-shadow: none;
+  transition:
+    transform .15s ease,
+    box-shadow .15s ease,
+    border-color .15s ease,
+    background .15s ease,
+    color .15s ease;
+}
+
+.rh-export-format svg {
+  flex: 0 0 auto;
+}
+
+.rh-export-format--csv {
+  border: 1px solid color-mix(in srgb, var(--export-accent) 38%, #d8e5f2);
+  background: color-mix(in srgb, var(--export-soft) 70%, #ffffff);
+  color: var(--export-deep);
+}
+
+.rh-export-format--csv:hover:not(:disabled) {
+  border-color: var(--export-accent);
+  background: var(--export-soft);
+  box-shadow: 0 7px 16px color-mix(in srgb, var(--export-accent) 12%, transparent);
+}
+
+.rh-export-format--excel {
+  border: 1px solid var(--export-accent);
+  background: var(--export-accent);
+  color: #fff;
+  box-shadow: 0 8px 18px color-mix(in srgb, var(--export-accent) 22%, transparent);
+}
+
+.rh-export-format--excel:hover:not(:disabled) {
+  background: var(--export-deep);
+  border-color: var(--export-deep);
+  box-shadow: 0 10px 20px color-mix(in srgb, var(--export-accent) 28%, transparent);
+}
+
+.rh-export-format:hover:not(:disabled) {
+  transform: translateY(-2px);
+}
+
+.rh-export-format:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.rh-export-format:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 4px color-mix(in srgb, var(--export-accent) 15%, transparent),
+    0 8px 18px color-mix(in srgb, var(--export-accent) 18%, transparent);
+}
+
+/* Sous-blocs de la carte Soldes : boutons plus confortables sans alourdir. */
+.rh-export-split-actions > div {
+  padding: 14px;
+}
+
+.rh-export-split-actions > div > span {
+  margin-bottom: 11px;
+  font-size: 11px;
+}
+
+.rh-export-split-actions .rh-export-format {
+  min-height: 42px;
+  padding-inline: 12px;
+  font-size: 11.8px;
+}
+
+@media (min-width: 1500px) {
+  .rh-export-format {
+    min-height: 48px;
+    font-size: 13px;
+  }
+
+  .rh-export-split-actions .rh-export-format {
+    min-height: 44px;
+    font-size: 12.2px;
+  }
+}

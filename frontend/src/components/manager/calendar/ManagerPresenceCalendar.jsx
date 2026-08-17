@@ -167,7 +167,9 @@ export function ManagerPresenceCalendar({ data, month, filter, onMonthChange }) 
                 ) : (
                   <>
                     <strong>{day?.morningPresent ?? total}/{total}</strong>
-                    <small>{day?.morningPresent === day?.afternoonPresent ? 'M/AM' : `AM ${day?.afternoonPresent ?? total}/${total}`}</small>
+                    {day?.morningPresent !== day?.afternoonPresent && (
+                      <small>AM {day?.afternoonPresent ?? total}/{total}</small>
+                    )}
                   </>
                 )}
               </div>

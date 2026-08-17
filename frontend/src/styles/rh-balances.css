@@ -467,3 +467,9 @@
     min-height: 44px;
   }
 }
+
+
+/* Même espacement supérieur que les pages principales de gestion. */
+.page-container.rh-balances-page {
+  padding-top: 0;
+}

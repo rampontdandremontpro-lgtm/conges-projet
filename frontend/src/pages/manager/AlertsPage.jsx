@@ -202,29 +202,31 @@ export function ManagerAlertsPage() {
   }
 
   return (
-    <div className="manager-alerts-page">
+    <div className={`manager-alerts-page${viewMode === 'calendar' ? ' manager-alerts-page--calendar' : ''}`}>
       <div className="manager-alerts-toolbar">
         <div className="manager-alerts-toolbar__left">
-          <div className="manager-alerts-filters" role="tablist" aria-label="Filtres des chevauchements">
-            {FILTERS.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                role="tab"
-                aria-selected={filter === item.id}
-                className={`manager-alerts-filter${filter === item.id ? ' is-active' : ''}`}
-                onClick={() => setFilter(item.id)}
-              >
-                <span>{item.label}</span>
-                <span className="manager-alerts-filter__count">{counts[item.id]}</span>
-              </button>
-            ))}
-          </div>
-
           <button type="button" className={`manager-view-toggle${viewMode === 'calendar' ? ' is-active' : ''}`} onClick={toggleCalendar}>
             <Icon name={viewMode === 'calendar' ? 'list' : 'calendar'} size={16} />
             {viewMode === 'calendar' ? 'Vue liste' : 'Vue calendrier'}
           </button>
+
+          {viewMode === 'list' && (
+            <div className="manager-alerts-filters" role="tablist" aria-label="Filtres des chevauchements">
+              {FILTERS.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={filter === item.id}
+                  className={`manager-alerts-filter${filter === item.id ? ' is-active' : ''}`}
+                  onClick={() => setFilter(item.id)}
+                >
+                  <span>{item.label}</span>
+                  <span className="manager-alerts-filter__count">{counts[item.id]}</span>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="manager-alerts-summary">

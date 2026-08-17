@@ -142,8 +142,8 @@ export function ManagerAlertsCalendar({
   })), [events, monthDays])
 
   const gridStyle = {
-    gridTemplateColumns: `170px repeat(${monthDays.length}, minmax(28px, 1fr))`,
-    minWidth: `${170 + (monthDays.length * 29)}px`,
+    gridTemplateColumns: `170px repeat(${monthDays.length}, minmax(27px, 1fr))`,
+    minWidth: `${170 + (monthDays.length * 28)}px`,
   }
 
   return (
