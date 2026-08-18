@@ -25,6 +25,11 @@ export async function createLeaveRequest(payload) {
   return data
 }
 
+export async function createDirectorLeaveRequest(payload) {
+  const { data } = await apiClient.post('/leave-requests/director', payload)
+  return data
+}
+
 export async function updateLeaveRequest(id, payload) {
   const { data } = await apiClient.patch(`/leave-requests/${id}`, payload)
   return data
