@@ -32,6 +32,7 @@ import { RhDocumentsPage } from '@/pages/rh/DocumentsPage'
 import { RhLeaveTypesPage } from '@/pages/rh/LeaveTypesPage'
 import { RhHolidaysPage } from '@/pages/rh/HolidaysPage'
 import { RhSummerPeriodPage } from '@/pages/rh/SummerPeriodPage'
+import { RhValidatorsPage } from '@/pages/rh/ValidatorsPage'
 import { NEW_REQUEST_ROLES, ROLES } from '@/config/navigation'
 import { RoleRoute } from '@/auth/RoleRoute'
 
@@ -133,6 +134,14 @@ export const router = createBrowserRouter([
         element: (
           <RoleRoute roles={[ROLES.RH]}>
             <RhSummerPeriodPage />
+          </RoleRoute>
+        ),
+      },
+      {
+        path: 'rh-validators',
+        element: (
+          <RoleRoute roles={[ROLES.RH]}>
+            <RhValidatorsPage />
           </RoleRoute>
         ),
       },
