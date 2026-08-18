@@ -441,3 +441,9 @@
     font-size: 12.2px;
   }
 }
+
+
+/* Même espacement supérieur que les autres pages RH de gestion. */
+.rh-exports-page {
+  padding-top: 0;
+}

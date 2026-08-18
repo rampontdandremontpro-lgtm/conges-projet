@@ -53,7 +53,7 @@ export function Header() {
     /^\/app\/requests\/\d+$/.test(pathname) ||
     /^\/app\/rh-(?:all-requests|requests)\/\d+$/.test(pathname)
   const showSearch = !hideSearch
-  const searchEnabled = ['/app/my-requests', '/app/notifications', '/app/requests', '/app/alerts', '/app/service-presence', '/app/rh-all-requests', '/app/rh-absences', '/app/rh-derogations', '/app/rh-balances', '/app/rh-pdf-documents'].includes(pathname)
+  const searchEnabled = ['/app/my-requests', '/app/notifications', '/app/requests', '/app/alerts', '/app/service-presence', '/app/rh-all-requests', '/app/rh-absences', '/app/rh-derogations', '/app/rh-balances', '/app/rh-pdf-documents', '/app/rh-leave-types'].includes(pathname)
   const searchValue = searchEnabled ? searchParams.get('q') ?? '' : undefined
 
   const handleSearchChange = (event) => {

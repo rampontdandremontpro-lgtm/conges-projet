@@ -29,6 +29,7 @@ import { RhDerogationsPage } from '@/pages/rh/DerogationsPage'
 import { RhBalancesPage } from '@/pages/rh/BalancesPage'
 import { RhExportsPage } from '@/pages/rh/ExportsPage'
 import { RhDocumentsPage } from '@/pages/rh/DocumentsPage'
+import { RhLeaveTypesPage } from '@/pages/rh/LeaveTypesPage'
 import { NEW_REQUEST_ROLES, ROLES } from '@/config/navigation'
 import { RoleRoute } from '@/auth/RoleRoute'
 
@@ -106,6 +107,14 @@ export const router = createBrowserRouter([
         element: (
           <RoleRoute roles={[ROLES.RH]}>
             <RhDocumentsPage />
+          </RoleRoute>
+        ),
+      },
+      {
+        path: 'rh-leave-types',
+        element: (
+          <RoleRoute roles={[ROLES.RH]}>
+            <RhLeaveTypesPage />
           </RoleRoute>
         ),
       },
