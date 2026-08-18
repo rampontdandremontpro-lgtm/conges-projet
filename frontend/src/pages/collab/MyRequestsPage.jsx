@@ -4,12 +4,15 @@ import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { MyRequestCard } from '@/components/collab/requests/MyRequestCard'
 import { getRequestStatusLabel } from '@/components/collab/requests/RequestStatusBadge'
 import { Icon } from '@/components/ui/Icon'
+import { PaginationBar } from '@/components/ui/PaginationBar'
 import { getMyDocuments } from '@/services/documents'
 import { getMyAbsenceDeclarations, getMyLeaveRequests } from '@/services/myRequests'
 import { deleteAbsenceDraft, deleteLeaveDraft, downloadCancellationPdf, downloadPendingSummaryPdf, downloadValidationPdf } from '@/services/requestDetails'
 import { formatDays, formatRangeNumericFR } from '@/utils/format'
 
 import '@/styles/requests.css'
+
+const PAGE_SIZE = 8
 
 const FILTERS = [
   { key: 'all', label: 'Toutes' },
@@ -158,6 +161,7 @@ export function MyRequestsPage() {
   const location = useLocation()
   const [searchParams] = useSearchParams()
   const [filter, setFilter] = useState('all')
+  const [page, setPage] = useState(1)
   const [busyKey, setBusyKey] = useState(null)
   const [feedback, setFeedback] = useState(null)
   const [state, setState] = useState({
@@ -256,6 +260,16 @@ export function MyRequestsPage() {
     () => items.filter((item) => matchesFilter(item, filter) && matchesSearch(item, searchQuery)),
     [filter, items, searchQuery],
   )
+
+  useEffect(() => setPage(1), [filter, searchQuery])
+
+  const totalPages = Math.max(1, Math.ceil(filteredItems.length / PAGE_SIZE))
+  const safePage = Math.min(page, totalPages)
+  const pageItems = filteredItems.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE)
+
+  useEffect(() => {
+    if (page !== safePage) setPage(safePage)
+  }, [page, safePage])
 
   const totalFailure = !state.loading && state.leaveError && state.absenceError
   const partialFailure = !state.loading && !totalFailure && (state.leaveError || state.absenceError || state.documentsError)
@@ -424,11 +438,22 @@ export function MyRequestsPage() {
           onCreate={() => navigate('/app/new-request')}
         />
       ) : (
-        <div className="my-requests-list">
-          {filteredItems.map((item) => (
-            <MyRequestCard key={item.key} item={item} busy={busyKey === item.key} onOpen={openItem} onAction={handleCardAction} />
-          ))}
-        </div>
+        <>
+          <div className="my-requests-list">
+            {pageItems.map((item) => (
+              <MyRequestCard key={item.key} item={item} busy={busyKey === item.key} onOpen={openItem} onAction={handleCardAction} />
+            ))}
+          </div>
+          <div className="my-requests-pagination-footer">
+            <span>{filteredItems.length} demande{filteredItems.length > 1 ? 's' : ''}</span>
+            <PaginationBar
+              page={safePage}
+              pageSize={PAGE_SIZE}
+              totalItems={filteredItems.length}
+              onPageChange={setPage}
+            />
+          </div>
+        </>
       )}
     </section>
   )

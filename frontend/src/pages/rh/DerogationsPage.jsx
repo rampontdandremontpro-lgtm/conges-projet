@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 
 import { Icon } from '@/components/ui/Icon'
+import { PaginationBar } from '@/components/ui/PaginationBar'
 import { PageContainer } from '@/components/ui/PageContainer'
 import {
   decideRhDerogation,
@@ -385,6 +386,8 @@ export function RhDerogationsPage() {
     [filter, query, state.items],
   )
 
+  useEffect(() => setPage(1), [query])
+
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const safePage = Math.min(page, totalPages)
   const visibleItems = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE)
@@ -489,17 +492,12 @@ export function RhDerogationsPage() {
         {!state.loading && !state.error && (
           <div className="rh-derogations-footer">
             <span>{filtered.length} dérogation{filtered.length > 1 ? 's' : ''}</span>
-            {totalPages > 1 && (
-              <div className="rh-derogations-pagination">
-                <button type="button" disabled={safePage <= 1} onClick={() => setPage((value) => Math.max(1, value - 1))}>
-                  <Icon name="chevronLeft" size={15} />
-                </button>
-                <span>{safePage} / {totalPages}</span>
-                <button type="button" disabled={safePage >= totalPages} onClick={() => setPage((value) => Math.min(totalPages, value + 1))}>
-                  <Icon name="chevronRight" size={15} />
-                </button>
-              </div>
-            )}
+            <PaginationBar
+              page={safePage}
+              pageSize={PAGE_SIZE}
+              totalItems={filtered.length}
+              onPageChange={setPage}
+            />
           </div>
         )}
       </section>

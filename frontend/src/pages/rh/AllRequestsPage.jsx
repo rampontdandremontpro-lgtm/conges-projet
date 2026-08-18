@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 
 import { Icon } from '@/components/ui/Icon'
+import { PaginationBar } from '@/components/ui/PaginationBar'
 import { PageContainer } from '@/components/ui/PageContainer'
 import { getRhAllRequests } from '@/services/rhAllRequests'
 import { formatDateNumericFR, formatDays } from '@/utils/format'
@@ -339,17 +340,12 @@ export function RhAllRequestsPage() {
               {filteredRequests.length} demande{filteredRequests.length > 1 ? 's' : ''}
               {filteredRequests.length !== state.requests.length ? ` sur ${state.requests.length}` : ''}
             </span>
-            {totalPages > 1 && (
-              <div className="rh-all-requests-pagination">
-                <button type="button" onClick={() => setPage((current) => Math.max(1, current - 1))} disabled={safePage === 1} aria-label="Page précédente">
-                  <Icon name="chevronLeft" size={16} />
-                </button>
-                <span>{safePage} / {totalPages}</span>
-                <button type="button" onClick={() => setPage((current) => Math.min(totalPages, current + 1))} disabled={safePage === totalPages} aria-label="Page suivante">
-                  <Icon name="chevronRight" size={16} />
-                </button>
-              </div>
-            )}
+            <PaginationBar
+              page={safePage}
+              pageSize={PAGE_SIZE}
+              totalItems={filteredRequests.length}
+              onPageChange={setPage}
+            />
           </footer>
         )}
       </section>

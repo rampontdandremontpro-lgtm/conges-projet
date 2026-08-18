@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 
 import { Icon } from '@/components/ui/Icon'
+import { PaginationBar } from '@/components/ui/PaginationBar'
 import { PageContainer } from '@/components/ui/PageContainer'
 import {
   createRhLeaveType,
@@ -519,13 +520,12 @@ export function RhLeaveTypesPage() {
 
             <div className="rh-leave-types-footer">
               <span>{filtered.length} type{filtered.length > 1 ? 's' : ''}</span>
-              {pageCount > 1 && (
-                <div className="rh-leave-types-pagination">
-                  <button type="button" onClick={() => setPage((value) => Math.max(1, value - 1))} disabled={page === 1}><Icon name="chevronLeft" size={16} /></button>
-                  <span>{page} / {pageCount}</span>
-                  <button type="button" onClick={() => setPage((value) => Math.min(pageCount, value + 1))} disabled={page === pageCount}><Icon name="chevronRight" size={16} /></button>
-                </div>
-              )}
+              <PaginationBar
+                page={page}
+                pageSize={PAGE_SIZE}
+                totalItems={filtered.length}
+                onPageChange={setPage}
+              />
             </div>
           </>
         )}

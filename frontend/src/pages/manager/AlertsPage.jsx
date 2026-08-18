@@ -4,6 +4,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { ManagerOverlapAlertCard } from '@/components/manager/alerts/ManagerOverlapAlertCard'
 import { ManagerAlertsCalendar } from '@/components/manager/calendar/ManagerAlertsCalendar'
 import { Icon } from '@/components/ui/Icon'
+import { PaginationBar } from '@/components/ui/PaginationBar'
 import { getManagerServicePresenceCalendar } from '@/services/managerDashboard'
 import {
   getManagerPendingRequests,
@@ -17,6 +18,8 @@ import {
 } from '@/utils/managerCalendar'
 
 import '@/styles/manager-alerts.css'
+
+const LIST_PAGE_SIZE = 6
 
 const FILTERS = [
   { id: 'all', label: 'Toutes' },
@@ -84,6 +87,7 @@ export function ManagerAlertsPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const [filter, setFilter] = useState('all')
+  const [page, setPage] = useState(1)
   const [viewMode, setViewMode] = useState('list')
   const [calendarMonth, setCalendarMonth] = useState(getCurrentMonthKey())
   const [state, setState] = useState({ loading: true, error: false, alerts: [] })
@@ -153,16 +157,24 @@ export function ManagerAlertsPage() {
     multiple: state.alerts.filter(({ availability }) => (availability?.overlaps?.length ?? 0) > 1).length,
   }), [state.alerts])
 
-  const visibleAlerts = useMemo(() => {
-    const query = searchParams.get('q') ?? ''
+  const query = searchParams.get('q') ?? ''
 
-    return state.alerts.filter(({ request, availability }) => {
+  const visibleAlerts = useMemo(() => state.alerts.filter(({ request, availability }) => {
       if (filter === 'leave' && !includesSource(availability, 'DEMANDE_CONGE')) return false
       if (filter === 'absence' && !includesSource(availability, 'DECLARATION_ABSENCE')) return false
       if (filter === 'multiple' && (availability?.overlaps?.length ?? 0) <= 1) return false
       return matchesSearch(request, availability, query)
-    })
-  }, [filter, searchParams, state.alerts])
+    }), [filter, query, state.alerts])
+
+  useEffect(() => setPage(1), [filter, query])
+
+  const totalPages = Math.max(1, Math.ceil(visibleAlerts.length / LIST_PAGE_SIZE))
+  const safePage = Math.min(page, totalPages)
+  const pageAlerts = visibleAlerts.slice((safePage - 1) * LIST_PAGE_SIZE, safePage * LIST_PAGE_SIZE)
+
+  useEffect(() => {
+    if (page !== safePage) setPage(safePage)
+  }, [page, safePage])
 
   useEffect(() => {
     if (viewMode !== 'calendar' || visibleAlerts.length === 0) return
@@ -182,8 +194,6 @@ export function ManagerAlertsPage() {
     () => state.alerts.reduce((sum, item) => sum + (item.availability?.overlaps?.length ?? 0), 0),
     [state.alerts],
   )
-  const query = searchParams.get('q') ?? ''
-
   const toggleCalendar = () => {
     if (viewMode === 'calendar') {
       setViewMode('list')
@@ -284,16 +294,27 @@ export function ManagerAlertsPage() {
           />
         )
       ) : (
-        <div className="manager-alerts-list">
-          {visibleAlerts.map(({ request, availability }) => (
-            <ManagerOverlapAlertCard
-              key={request.id}
-              request={request}
-              availability={availability}
-              onOpen={(id) => navigate(`/app/requests/${id}`)}
+        <>
+          <div className="manager-alerts-list">
+            {pageAlerts.map(({ request, availability }) => (
+              <ManagerOverlapAlertCard
+                key={request.id}
+                request={request}
+                availability={availability}
+                onOpen={(id) => navigate(`/app/requests/${id}`)}
+              />
+            ))}
+          </div>
+          <div className="manager-alerts-pagination-footer">
+            <span>{visibleAlerts.length} alerte{visibleAlerts.length > 1 ? 's' : ''}</span>
+            <PaginationBar
+              page={safePage}
+              pageSize={LIST_PAGE_SIZE}
+              totalItems={visibleAlerts.length}
+              onPageChange={setPage}
             />
-          ))}
-        </div>
+          </div>
+        </>
       )}
     </div>
   )

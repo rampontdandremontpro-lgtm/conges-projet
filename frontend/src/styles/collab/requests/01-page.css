@@ -446,3 +446,21 @@
 
 .my-request-card__badges { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; justify-content: flex-end; }
 .my-request-card__prepared { display: inline-flex; align-items: center; min-height: 24px; padding: 3px 8px; border-radius: 999px; background: #edf7ff; border: 1px solid #cfe9fb; color: #2876aa; font-size: 10.5px; font-weight: 800; white-space: nowrap; }
+
+
+.my-requests-pagination-footer {
+  display: flex;
+  min-height: 58px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 14px;
+  padding: 10px 14px;
+  border: 1px solid var(--requests-border);
+  border-radius: 15px;
+  background: rgba(255, 255, 255, .9);
+  color: var(--requests-muted);
+  font-size: 12px;
+  font-weight: 700;
+  box-shadow: 0 1px 2px rgba(10, 30, 69, .025);
+}

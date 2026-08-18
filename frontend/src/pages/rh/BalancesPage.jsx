@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 
 import { Icon } from '@/components/ui/Icon'
+import { PaginationBar } from '@/components/ui/PaginationBar'
 import { PageContainer } from '@/components/ui/PageContainer'
 import {
   correctRhBalance,
@@ -451,13 +452,12 @@ export function RhBalancesPage() {
 
             <div className="rh-balances-footer">
               <span>{filtered.length} collaborateur{filtered.length > 1 ? 's' : ''}</span>
-              {pageCount > 1 && (
-                <div className="rh-balances-pagination">
-                  <button type="button" disabled={safePage <= 1} onClick={() => setPage((value) => Math.max(1, value - 1))}><Icon name="chevronLeft" size={16} /></button>
-                  <span>{safePage} / {pageCount}</span>
-                  <button type="button" disabled={safePage >= pageCount} onClick={() => setPage((value) => Math.min(pageCount, value + 1))}><Icon name="chevronRight" size={16} /></button>
-                </div>
-              )}
+              <PaginationBar
+                page={safePage}
+                pageSize={PAGE_SIZE}
+                totalItems={filtered.length}
+                onPageChange={setPage}
+              />
             </div>
           </>
         )}

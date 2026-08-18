@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 
 import { ManagerRequestCard } from '@/components/manager/requests/ManagerRequestCard'
 import { Icon } from '@/components/ui/Icon'
+import { PaginationBar } from '@/components/ui/PaginationBar'
 import {
   getManagerPendingRequests,
   getManagerRequestAvailability,
@@ -10,6 +11,8 @@ import {
 import { formatDays, formatRangeNumericFR } from '@/utils/format'
 
 import '@/styles/manager-requests.css'
+
+const PAGE_SIZE = 8
 
 const FILTERS = [
   { id: 'all', label: 'Toutes' },
@@ -70,6 +73,7 @@ export function ManagerRequestsPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const [filter, setFilter] = useState('all')
+  const [page, setPage] = useState(1)
   const [state, setState] = useState({
     loading: true,
     error: false,
@@ -140,10 +144,9 @@ export function ManagerRequestsPage() {
     }
   }, [state.availabilityById, state.requests])
 
-  const visibleRequests = useMemo(() => {
-    const query = searchParams.get('q') ?? ''
+  const query = searchParams.get('q') ?? ''
 
-    return state.requests.filter((request) => {
+  const visibleRequests = useMemo(() => state.requests.filter((request) => {
       const availability = state.availabilityById[request.id]
       const hasAlert = Boolean(
         availability?.minimumPresenceBreached || availability?.overlaps?.length,
@@ -154,10 +157,17 @@ export function ManagerRequestsPage() {
       if (filter === 'standard' && request.isUrgent) return false
 
       return matchesSearch(request, availability, query)
-    })
-  }, [filter, searchParams, state.availabilityById, state.requests])
+    }), [filter, query, state.availabilityById, state.requests])
 
-  const query = searchParams.get('q') ?? ''
+  useEffect(() => setPage(1), [filter, query])
+
+  const totalPages = Math.max(1, Math.ceil(visibleRequests.length / PAGE_SIZE))
+  const safePage = Math.min(page, totalPages)
+  const pageRequests = visibleRequests.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE)
+
+  useEffect(() => {
+    if (page !== safePage) setPage(safePage)
+  }, [page, safePage])
 
   return (
     <div className="manager-requests-page">
@@ -208,16 +218,27 @@ export function ManagerRequestsPage() {
           <strong>{query ? 'Aucune demande ne correspond à votre recherche.' : 'Aucune demande dans cette catégorie.'}</strong>
         </div>
       ) : (
-        <div className="manager-requests-list">
-          {visibleRequests.map((request) => (
-            <ManagerRequestCard
-              key={request.id}
-              request={request}
-              availability={state.availabilityById[request.id]}
-              onOpen={(id) => navigate(`/app/requests/${id}`)}
+        <>
+          <div className="manager-requests-list">
+            {pageRequests.map((request) => (
+              <ManagerRequestCard
+                key={request.id}
+                request={request}
+                availability={state.availabilityById[request.id]}
+                onOpen={(id) => navigate(`/app/requests/${id}`)}
+              />
+            ))}
+          </div>
+          <div className="manager-requests-pagination-footer">
+            <span>{visibleRequests.length} demande{visibleRequests.length > 1 ? 's' : ''}</span>
+            <PaginationBar
+              page={safePage}
+              pageSize={PAGE_SIZE}
+              totalItems={visibleRequests.length}
+              onPageChange={setPage}
             />
-          ))}
-        </div>
+          </div>
+        </>
       )}
     </div>
   )

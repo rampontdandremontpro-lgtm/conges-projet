@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 
 import { DocumentPreviewModal } from '@/components/collab/documents/DocumentPreviewModal'
 import { Icon } from '@/components/ui/Icon'
+import { PaginationBar } from '@/components/ui/PaginationBar'
 import { PageContainer } from '@/components/ui/PageContainer'
 import {
   downloadRhDocument,
@@ -210,10 +211,15 @@ export function RhDocumentsPage() {
   }, [state.documents])
 
   const maxPage = Math.max(1, Math.ceil(documentsAfterTabAndSearch.length / PAGE_SIZE))
+  const safePage = Math.min(page, maxPage)
   const pageDocuments = documentsAfterTabAndSearch.slice(
-    (page - 1) * PAGE_SIZE,
-    page * PAGE_SIZE,
+    (safePage - 1) * PAGE_SIZE,
+    safePage * PAGE_SIZE,
   )
+
+  useEffect(() => {
+    if (page !== safePage) setPage(safePage)
+  }, [page, safePage])
 
   const resetFilters = () => {
     setServiceId('')
@@ -471,25 +477,12 @@ export function RhDocumentsPage() {
               {documentsAfterTabAndSearch.length} document{documentsAfterTabAndSearch.length > 1 ? 's' : ''}
             </span>
 
-            {maxPage > 1 && (
-              <div className="rh-documents-pagination">
-                <button
-                  type="button"
-                  disabled={page <= 1}
-                  onClick={() => setPage((current) => Math.max(1, current - 1))}
-                >
-                  <Icon name="chevronLeft" size={16} />
-                </button>
-                <span>{page} / {maxPage}</span>
-                <button
-                  type="button"
-                  disabled={page >= maxPage}
-                  onClick={() => setPage((current) => Math.min(maxPage, current + 1))}
-                >
-                  <Icon name="chevronRight" size={16} />
-                </button>
-              </div>
-            )}
+            <PaginationBar
+              page={safePage}
+              pageSize={PAGE_SIZE}
+              totalItems={documentsAfterTabAndSearch.length}
+              onPageChange={setPage}
+            />
           </div>
         )}
       </section>

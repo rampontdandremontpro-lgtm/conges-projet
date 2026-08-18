@@ -458,3 +458,21 @@
 .manager-alerts-page--calendar {
   padding-top: 0;
 }
+
+
+.manager-alerts-pagination-footer {
+  display: flex;
+  min-height: 58px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 14px;
+  padding: 10px 14px;
+  border: 1px solid var(--ma-border);
+  border-radius: 15px;
+  background: rgba(255, 255, 255, .9);
+  color: var(--ma-muted);
+  font-size: 12px;
+  font-weight: 700;
+  box-shadow: 0 1px 2px rgba(10, 30, 69, .025);
+}

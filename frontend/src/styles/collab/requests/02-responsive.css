@@ -85,3 +85,12 @@
     white-space: normal;
   }
 }
+
+
+@media (max-width: 640px) {
+  .my-requests-pagination-footer {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 9px;
+  }
+}

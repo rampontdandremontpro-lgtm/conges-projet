@@ -299,3 +299,10 @@
 .manager-presence-page {
   padding-top: 0;
 }
+
+
+.manager-presence-pagination {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 14px;
+}

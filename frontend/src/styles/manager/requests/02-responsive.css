@@ -32,3 +32,12 @@
   .manager-decision-modal__footer { flex-direction: column-reverse; }
   .manager-decision-btn { width: 100%; }
 }
+
+
+@media (max-width: 640px) {
+  .manager-requests-pagination-footer {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 9px;
+  }
+}

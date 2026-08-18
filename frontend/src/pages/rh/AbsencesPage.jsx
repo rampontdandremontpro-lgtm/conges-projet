@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 
 import { DocumentPreviewModal } from '@/components/collab/documents/DocumentPreviewModal'
 import { Icon } from '@/components/ui/Icon'
+import { PaginationBar } from '@/components/ui/PaginationBar'
 import { PageContainer } from '@/components/ui/PageContainer'
 import {
   acceptRhAbsenceDocument,
@@ -846,6 +847,7 @@ export function RhAbsencesPage() {
     [managedDeclarations, search, statusFilter],
   )
 
+  useEffect(() => setPage(1), [search])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const safePage = Math.min(page, totalPages)
@@ -988,13 +990,12 @@ export function RhAbsencesPage() {
 
         <div className="rh-absences-footer">
           <span>{filtered.length} absence{filtered.length > 1 ? 's' : ''}</span>
-          {totalPages > 1 && (
-            <div className="rh-absences-pagination">
-              <button type="button" disabled={safePage <= 1} onClick={() => setPage((current) => Math.max(1, current - 1))}><Icon name="chevronLeft" size={16} /></button>
-              <span>{safePage} / {totalPages}</span>
-              <button type="button" disabled={safePage >= totalPages} onClick={() => setPage((current) => Math.min(totalPages, current + 1))}><Icon name="chevronRight" size={16} /></button>
-            </div>
-          )}
+          <PaginationBar
+            page={safePage}
+            pageSize={PAGE_SIZE}
+            totalItems={filtered.length}
+            onPageChange={setPage}
+          />
         </div>
       </section>
 

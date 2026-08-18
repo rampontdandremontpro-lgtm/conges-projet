@@ -644,3 +644,10 @@
 .document-preview-button--primary:not(:disabled):hover {
   background: var(--documents-blue-hover);
 }
+
+
+.documents-pagination {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
+}

@@ -4,6 +4,7 @@ import { useSearchParams } from 'react-router-dom'
 import { ManagerPresenceCalendar } from '@/components/manager/calendar/ManagerPresenceCalendar'
 import { ManagerPresenceMemberCard } from '@/components/manager/presence/ManagerPresenceMemberCard'
 import { Icon } from '@/components/ui/Icon'
+import { PaginationBar } from '@/components/ui/PaginationBar'
 import {
   getManagerServicePresence,
   getManagerServicePresenceCalendar,
@@ -11,6 +12,8 @@ import {
 import { getCurrentMonthKey, shiftMonthKey } from '@/utils/managerCalendar'
 
 import '@/styles/manager-presence.css'
+
+const PAGE_SIZE = 8
 
 const FILTERS = [
   { id: 'all', label: 'Tous' },
@@ -46,6 +49,7 @@ function countSlotPresent(members, slotName) {
 export function ManagerPresencePage() {
   const [searchParams] = useSearchParams()
   const [filter, setFilter] = useState('all')
+  const [page, setPage] = useState(1)
   const [viewMode, setViewMode] = useState('calendar')
   const [calendarMonth, setCalendarMonth] = useState(getCurrentMonthKey())
   const [state, setState] = useState({ loading: true, error: false, data: null })
@@ -130,6 +134,26 @@ export function ManagerPresencePage() {
       return normalizedQuery.split(/\s+/).every((token) => searchable.includes(token))
     })
   }, [filter, members, query, service?.name])
+
+  useEffect(() => {
+    setPage(1)
+  }, [filter, query])
+
+  useEffect(() => {
+    if (viewMode === 'list') setPage(1)
+  }, [viewMode])
+
+
+  const totalMemberPages = Math.max(1, Math.ceil(visibleMembers.length / PAGE_SIZE))
+  const safeMemberPage = Math.min(page, totalMemberPages)
+  const paginatedMembers = useMemo(() => {
+    const start = (safeMemberPage - 1) * PAGE_SIZE
+    return visibleMembers.slice(start, start + PAGE_SIZE)
+  }, [safeMemberPage, visibleMembers])
+
+  useEffect(() => {
+    if (page > totalMemberPages) setPage(totalMemberPages)
+  }, [page, totalMemberPages])
 
   const calendarData = useMemo(() => {
     if (!calendarState.data || !query) return calendarState.data
@@ -256,13 +280,21 @@ export function ManagerPresencePage() {
               </div>
             ) : (
               <div className="manager-presence-members">
-                {visibleMembers.map((member) => (
+                {paginatedMembers.map((member) => (
                   <ManagerPresenceMemberCard
                     key={member.id}
                     member={member}
                     currentPeriod={state.data?.currentPeriod}
                   />
                 ))}
+              </div>
+              <div className="manager-presence-pagination">
+                <PaginationBar
+                  page={safeMemberPage}
+                  pageSize={PAGE_SIZE}
+                  totalItems={visibleMembers.length}
+                  onPageChange={setPage}
+                />
               </div>
             )}
           </div>

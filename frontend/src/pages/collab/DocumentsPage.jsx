@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 
 import { DocumentPreviewModal } from '@/components/collab/documents/DocumentPreviewModal'
 import { Icon } from '@/components/ui/Icon'
+import { PaginationBar } from '@/components/ui/PaginationBar'
 import {
   deleteMyDocument,
   downloadOfficialPdf,
@@ -16,6 +18,7 @@ import { formatDateNumericFR, formatRangeNumericFR } from '@/utils/format'
 
 import '@/styles/documents.css'
 
+const PAGE_SIZE = 8
 const MAX_FILE_SIZE = 10 * 1024 * 1024
 const ALLOWED_MIME_TYPES = new Set(['application/pdf', 'image/jpeg', 'image/png'])
 const ALLOWED_EXTENSIONS = ['.pdf', '.jpg', '.jpeg', '.png']
@@ -76,6 +79,14 @@ function statusMeta(status) {
     tone: 'neutral',
     icon: 'info',
   }
+}
+
+function normalize(value) {
+  return String(value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLocaleLowerCase('fr-FR')
+    .trim()
 }
 
 function LoadingState() {
@@ -271,7 +282,9 @@ function PdfCard({ document, context, busy, onDownload, onPreview }) {
 }
 
 export function DocumentsPage() {
+  const [searchParams] = useSearchParams()
   const [tab, setTab] = useState('justificatifs')
+  const [page, setPage] = useState(1)
   const [state, setState] = useState({
     loading: true,
     documents: [],
@@ -486,7 +499,44 @@ export function DocumentsPage() {
     )
   }
 
+  const query = searchParams.get('q') ?? ''
   const visibleDocuments = tab === 'justificatifs' ? justificatifs : pdfs
+
+  const filteredDocuments = useMemo(() => {
+    const normalizedQuery = normalize(query)
+    if (!normalizedQuery) return visibleDocuments
+
+    return visibleDocuments.filter((document) => {
+      const context = contextLabel(document, leaveRequestsById, absencesById)
+      const meta = document.documentKind === 'JUSTIFICATIF' ? statusMeta(document.status) : null
+      const searchable = normalize([
+        document.originalName,
+        document.mimeType,
+        document.documentKind,
+        context.title,
+        context.range,
+        meta?.label,
+        document.status,
+      ].join(' '))
+
+      return normalizedQuery.split(/\s+/).every((token) => searchable.includes(token))
+    })
+  }, [absencesById, leaveRequestsById, query, visibleDocuments])
+
+  const totalPages = Math.max(1, Math.ceil(filteredDocuments.length / PAGE_SIZE))
+  const safePage = Math.min(page, totalPages)
+  const paginatedDocuments = useMemo(() => {
+    const start = (safePage - 1) * PAGE_SIZE
+    return filteredDocuments.slice(start, start + PAGE_SIZE)
+  }, [filteredDocuments, safePage])
+
+  useEffect(() => {
+    setPage(1)
+  }, [query, tab])
+
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages)
+  }, [page, totalPages])
 
   return (
     <section className="documents-page">
@@ -539,11 +589,19 @@ export function DocumentsPage() {
           <p>Les informations sont momentanément indisponibles.</p>
           <button type="button" onClick={load}>Réessayer</button>
         </div>
-      ) : visibleDocuments.length === 0 ? (
-        <EmptyState tab={tab} />
+      ) : filteredDocuments.length === 0 ? (
+        query ? (
+          <div className="documents-empty">
+            <span className="documents-empty__icon" aria-hidden="true"><Icon name="search" size={26} /></span>
+            <strong>Aucun document ne correspond à votre recherche.</strong>
+            <p>Modifiez les mots-clés saisis dans la barre de recherche.</p>
+          </div>
+        ) : (
+          <EmptyState tab={tab} />
+        )
       ) : (
         <div className="documents-list">
-          {visibleDocuments.map((document) => {
+          {paginatedDocuments.map((document) => {
             const context = contextLabel(document, leaveRequestsById, absencesById)
             return tab === 'justificatifs' ? (
               <JustificatifCard
@@ -566,6 +624,17 @@ export function DocumentsPage() {
               />
             )
           })}
+        </div>
+      )}
+
+      {!state.loading && !state.error && filteredDocuments.length > 0 && (
+        <div className="documents-pagination">
+          <PaginationBar
+            page={safePage}
+            pageSize={PAGE_SIZE}
+            totalItems={filteredDocuments.length}
+            onPageChange={setPage}
+          />
         </div>
       )}
 

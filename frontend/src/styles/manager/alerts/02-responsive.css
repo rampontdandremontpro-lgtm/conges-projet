@@ -24,3 +24,12 @@
   .manager-alerts-toolbar__left { align-items: stretch; flex-direction: column; }
   .manager-alerts-toolbar__left .manager-view-toggle { align-self: flex-start; }
 }
+
+
+@media (max-width: 640px) {
+  .manager-alerts-pagination-footer {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 9px;
+  }
+}
