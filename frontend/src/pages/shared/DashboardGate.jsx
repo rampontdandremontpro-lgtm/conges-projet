@@ -4,6 +4,7 @@ import { Preview } from '@/pages/shared/Preview'
 import { DashboardCollaborateur } from '@/pages/collab/DashboardPage'
 import { DashboardResponsable } from '@/pages/manager/DashboardPage'
 import { DashboardRh } from '@/pages/rh/DashboardPage'
+import { DashboardDirecteur } from '@/pages/director/DashboardPage'
 
 export function DashboardGate() {
   const { user } = useAuth()
@@ -17,6 +18,10 @@ export function DashboardGate() {
 
   if (user?.role === ROLES.RH) {
     return <DashboardRh />
+  }
+
+  if (user?.role === ROLES.DIRECTEUR) {
+    return <DashboardDirecteur />
   }
 
   return <Preview />

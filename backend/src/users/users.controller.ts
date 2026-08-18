@@ -69,6 +69,12 @@ export class UsersController {
     );
   }
 
+  @Get('management/global-presence')
+  @Roles(UserRole.DIRECTEUR)
+  getGlobalPresence() {
+    return this.usersService.getGlobalPresence();
+  }
+
   @Get('me/signature')
   @Roles(
     UserRole.COLLABORATEUR,

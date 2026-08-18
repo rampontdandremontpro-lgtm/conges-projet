@@ -958,6 +958,43 @@ export class LeaveRequestsService {
     return submittedRequest;
   }
 
+  async findPendingForDirector(
+    authenticatedUser: AuthenticatedUser,
+  ): Promise<LeaveRequest[]> {
+    const requests = await this.leaveRequestRepository.find({
+      where: {
+        status: LeaveRequestStatus.EN_ATTENTE_VALIDATION,
+      },
+      relations: {
+        employee: true,
+        createdBy: true,
+        leaveType: true,
+        service: true,
+        finalDecider: true,
+      },
+      order: {
+        submittedAt: 'ASC',
+        id: 'ASC',
+      },
+    });
+
+    const resolvedRecipients = await Promise.all(
+      requests.map(async (leaveRequest) => ({
+        leaveRequest,
+        recipientIds:
+          await this.validatorResolutionService.getDecisionRecipientIds(
+            leaveRequest,
+          ),
+      })),
+    );
+
+    return resolvedRecipients
+      .filter(({ recipientIds }) =>
+        recipientIds.includes(authenticatedUser.id),
+      )
+      .map(({ leaveRequest }) => leaveRequest);
+  }
+
   async findPendingForDecision(
     authenticatedUser: AuthenticatedUser,
   ): Promise<LeaveRequest[]> {

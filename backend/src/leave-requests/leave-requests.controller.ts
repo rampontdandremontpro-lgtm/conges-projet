@@ -79,6 +79,16 @@ export class LeaveRequestsController {
     return this.leaveRequestsService.findMyRequests(request.user);
   }
 
+  @Get('director/pending')
+  @Roles(UserRole.DIRECTEUR)
+  findPendingForDirector(
+    @Req() request: AuthenticatedRequest,
+  ) {
+    return this.leaveRequestsService.findPendingForDirector(
+      request.user,
+    );
+  }
+
   @Post(':id/submit')
   @HttpCode(HttpStatus.OK)
   submit(

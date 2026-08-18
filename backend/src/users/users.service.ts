@@ -129,6 +129,159 @@ export class UsersService {
       .getOne();
   }
 
+  async getGlobalPresence() {
+    const users = await this.userRepository.find({
+      where: { isActive: true },
+      relations: { service: true },
+      order: { nom: 'ASC', prenom: 'ASC' },
+    });
+
+    const members = users.filter(
+      (user) => user.role !== UserRole.ADMIN,
+    );
+    const currentPeriod = await this.presenceService.getCurrentSlot();
+
+    const resolvedMembers = await Promise.all(
+      members.map(async (member) => {
+        const dailyAvailability =
+          await this.presenceService.computeDailyAvailability(member.id);
+        const presenceStatus = currentPeriod === DayPeriod.MATIN
+          ? dailyAvailability.morning.status
+          : dailyAvailability.afternoon.status;
+
+        return {
+          id: member.id,
+          nom: member.nom,
+          prenom: member.prenom,
+          role: member.role,
+          serviceId: member.serviceId,
+          service: member.service
+            ? {
+                id: member.service.id,
+                name: member.service.name,
+                hasMinimumPresenceRule:
+                  member.service.hasMinimumPresenceRule,
+                minimumPresence:
+                  member.service.minimumPresence,
+              }
+            : null,
+          presenceStatus,
+          dailyAvailability,
+        };
+      }),
+    );
+
+    const summary = resolvedMembers.reduce(
+      (accumulator, member) => {
+        accumulator.total += 1;
+        if (member.presenceStatus === PresenceStatus.PRESENT) {
+          accumulator.present += 1;
+        } else if (member.presenceStatus === PresenceStatus.EN_VACANCES) {
+          accumulator.onLeave += 1;
+        } else if (member.presenceStatus === PresenceStatus.ABSENT) {
+          accumulator.absent += 1;
+        }
+        return accumulator;
+      },
+      { total: 0, present: 0, onLeave: 0, absent: 0 },
+    );
+
+    type ServicePresence = {
+      id: number | null;
+      name: string;
+      total: number;
+      present: number;
+      onLeave: number;
+      absent: number;
+      hasMinimumPresenceRule: boolean;
+      minimumPresence: number | null;
+      minimumRespected: boolean;
+    };
+
+    const serviceMap = new Map<string, ServicePresence>();
+
+    for (const member of resolvedMembers) {
+      const key = member.service
+        ? String(member.service.id)
+        : 'NO_SERVICE';
+      const current = serviceMap.get(key) ?? {
+        id: member.service?.id ?? null,
+        name: member.service?.name ?? 'Direction',
+        total: 0,
+        present: 0,
+        onLeave: 0,
+        absent: 0,
+        hasMinimumPresenceRule:
+          member.service?.hasMinimumPresenceRule ?? false,
+        minimumPresence:
+          member.service?.hasMinimumPresenceRule
+            ? member.service.minimumPresence ?? 0
+            : null,
+        minimumRespected: true,
+      };
+
+      current.total += 1;
+      if (member.presenceStatus === PresenceStatus.PRESENT) {
+        current.present += 1;
+      } else if (
+        member.presenceStatus === PresenceStatus.EN_VACANCES
+      ) {
+        current.onLeave += 1;
+      } else if (member.presenceStatus === PresenceStatus.ABSENT) {
+        current.absent += 1;
+      }
+
+      serviceMap.set(key, current);
+    }
+
+    const services = [...serviceMap.values()]
+      .map((service) => ({
+        ...service,
+        minimumRespected:
+          !service.hasMinimumPresenceRule ||
+          service.minimumPresence === null ||
+          service.present >= service.minimumPresence,
+      }))
+      .sort((left, right) => {
+        if (left.minimumRespected !== right.minimumRespected) {
+          return left.minimumRespected ? 1 : -1;
+        }
+        return left.name.localeCompare(right.name, 'fr');
+      });
+
+    return {
+      date:
+        resolvedMembers[0]?.dailyAvailability.date ??
+        new Intl.DateTimeFormat('en-CA', {
+          timeZone: 'America/Martinique',
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+        }).format(new Date()),
+      currentPeriod,
+      summary: {
+        ...summary,
+        percentage:
+          summary.total > 0
+            ? Math.round((summary.present / summary.total) * 100)
+            : 100,
+        servicesBelowMinimum: services.filter(
+          (service) => !service.minimumRespected,
+        ).length,
+      },
+      services,
+      members: resolvedMembers.map((member) => ({
+        id: member.id,
+        nom: member.nom,
+        prenom: member.prenom,
+        role: member.role,
+        serviceId: member.serviceId,
+        serviceName: member.service?.name ?? null,
+        presenceStatus: member.presenceStatus,
+      })),
+    };
+  }
+
   async getOwnServicePresence(id: number) {
     const currentUser = await this.findOne(id);
 
