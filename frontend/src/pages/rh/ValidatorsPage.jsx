@@ -291,7 +291,7 @@ function ReplacementDrawer({ mode, item, users, onClose, onSaved }) {
         endDate: form.endDate,
         reason: form.reason.trim() || undefined,
       })
-      onSaved('Remplacement temporaire créé.')
+      onSaved('Valideur temporaire créé.')
     } catch (error) {
       setFeedback(errorMessage(error))
     } finally {
@@ -305,7 +305,7 @@ function ReplacementDrawer({ mode, item, users, onClose, onSaved }) {
     setFeedback('')
     try {
       await disableRhValidatorReplacement(item.id)
-      onSaved('Remplacement temporaire désactivé.')
+      onSaved('Valideur temporaire désactivé.')
     } catch (error) {
       setFeedback(errorMessage(error))
     } finally {
@@ -319,12 +319,12 @@ function ReplacementDrawer({ mode, item, users, onClose, onSaved }) {
 
   return (
     <div className="rh-validators-overlay" role="presentation" onMouseDown={onClose}>
-      <aside className="rh-validators-drawer rh-validators-drawer--replacement" role="dialog" aria-modal="true" aria-label={isCreate ? 'Nouveau remplacement temporaire' : 'Détail du remplacement'} onMouseDown={(event) => event.stopPropagation()}>
+      <aside className="rh-validators-drawer rh-validators-drawer--replacement" role="dialog" aria-modal="true" aria-label={isCreate ? 'Nouveau valideur temporaire' : 'Détail du valideur temporaire'} onMouseDown={(event) => event.stopPropagation()}>
         <div className="rh-validators-drawer__head">
           <div>
-            <small>{isCreate ? 'REMPLACEMENT TEMPORAIRE' : `REMPLACEMENT N°${item?.id}`}</small>
-            <h2>{isCreate ? 'Nouveau remplacement' : fullName(item?.employee)}</h2>
-            <p>{isCreate ? 'Désigner temporairement un autre valideur pour un collaborateur.' : item?.employee?.service?.name ?? 'Collaborateur interne'}</p>
+            <small>{isCreate ? 'VALIDEUR TEMPORAIRE' : `VALIDEUR TEMPORAIRE N°${item?.id}`}</small>
+            <h2>{isCreate ? 'Nouveau valideur temporaire' : fullName(item?.employee)}</h2>
+            <p>{isCreate ? 'Désigner temporairement un valideur pour un collaborateur.' : item?.employee?.service?.name ?? 'Collaborateur interne'}</p>
           </div>
           <button type="button" aria-label="Fermer" onClick={onClose}>×</button>
         </div>
@@ -347,7 +347,7 @@ function ReplacementDrawer({ mode, item, users, onClose, onSaved }) {
               </label>
 
               <label className="rh-validators-form__wide">
-                <span>Remplaçant</span>
+                <span>Valideur temporaire</span>
                 <select value={form.replacementValidatorId} onChange={(event) => setForm((current) => ({ ...current, replacementValidatorId: event.target.value }))} disabled={saving}>
                   {validators.length === 0 ? <option value="">Aucun valideur éligible</option> : validators.map((user) => (
                     <option key={user.id} value={user.id}>{fullName(user)} — {roleLabel(user.role)}</option>
@@ -376,7 +376,7 @@ function ReplacementDrawer({ mode, item, users, onClose, onSaved }) {
             <div className="rh-validators-form__actions">
               <button type="button" className="rh-validators-btn rh-validators-btn--secondary" onClick={onClose} disabled={saving}>Annuler</button>
               <button type="submit" className="rh-validators-btn rh-validators-btn--primary" disabled={saving || !form.employeeId || !form.replacementValidatorId}>
-                <Icon name="check" size={16} /> {saving ? 'Création…' : 'Créer le remplacement'}
+                <Icon name="check" size={16} /> {saving ? 'Création…' : 'Créer le valideur temporaire'}
               </button>
             </div>
           </form>
@@ -394,7 +394,7 @@ function ReplacementDrawer({ mode, item, users, onClose, onSaved }) {
               </article>
               <Icon name="arrowRight" size={22} />
               <article>
-                <small>Remplaçant</small>
+                <small>Valideur temporaire</small>
                 <div><UserAvatar user={item?.replacementValidator} size="large" /><span><strong>{fullName(item?.replacementValidator)}</strong><small>{roleLabel(item?.replacementValidator?.role)}</small></span></div>
               </article>
             </div>
@@ -403,7 +403,7 @@ function ReplacementDrawer({ mode, item, users, onClose, onSaved }) {
               <div><small>Date de début</small><strong>{formatDate(item?.startDate)}</strong></div>
               <div><small>Date de fin</small><strong>{formatDate(item?.endDate)}</strong></div>
               <div><small>Créé par la RH</small><strong>{fullName(item?.createdByRh)}</strong></div>
-              <div><small>État du remplaçant</small><strong>{item?.replacementValidator?.isActive ? 'Utilisateur actif' : 'Utilisateur inactif'}</strong></div>
+              <div><small>État du valideur temporaire</small><strong>{item?.replacementValidator?.isActive ? 'Utilisateur actif' : 'Utilisateur inactif'}</strong></div>
             </div>
 
             <div className="rh-validators-detail__reason">
@@ -412,7 +412,7 @@ function ReplacementDrawer({ mode, item, users, onClose, onSaved }) {
             </div>
 
             {status?.tone === 'danger' && (
-              <div className="rh-validators-detail__warning"><Icon name="alert" size={17} />Ce remplacement est inopérant car le remplaçant n’est plus actif ou éligible. Le circuit normal reprend automatiquement.</div>
+              <div className="rh-validators-detail__warning"><Icon name="alert" size={17} />Ce valideur temporaire est inopérant car l’utilisateur n’est plus actif ou éligible. Le circuit normal reprend automatiquement.</div>
             )}
 
             {feedback && <div className="rh-validators-form__error"><Icon name="alert" size={16} />{feedback}</div>}
@@ -421,7 +421,7 @@ function ReplacementDrawer({ mode, item, users, onClose, onSaved }) {
               <button type="button" className="rh-validators-btn rh-validators-btn--secondary" onClick={onClose}>Fermer</button>
               {canDisable && (
                 <button type="button" className="rh-validators-btn rh-validators-btn--danger" onClick={disable} disabled={saving}>
-                  <Icon name="alert" size={16} /> {saving ? 'Désactivation…' : 'Désactiver le remplacement'}
+                  <Icon name="alert" size={16} /> {saving ? 'Désactivation…' : 'Désactiver le valideur temporaire'}
                 </button>
               )}
             </div>
@@ -692,18 +692,18 @@ export function RhValidatorsPage() {
       {feedback && <div className="rh-validators-feedback"><Icon name="info" size={16} />{feedback}</div>}
 
       <div className="rh-validators-toolbar">
-        <div className="rh-validators-tabs" role="tablist" aria-label="Gestion des valideurs et remplacements">
+        <div className="rh-validators-tabs" role="tablist" aria-label="Gestion des valideurs">
           <button type="button" role="tab" aria-selected={tab === 'validators'} className={tab === 'validators' ? 'is-active' : ''} onClick={() => setTab('validators')}>
             <Icon name="shield" size={17} /> Valideurs de secours
           </button>
           <button type="button" role="tab" aria-selected={tab === 'replacements'} className={tab === 'replacements' ? 'is-active' : ''} onClick={() => setTab('replacements')}>
-            <Icon name="refresh" size={17} /> Remplacements temporaires
+            <Icon name="refresh" size={17} /> Valideurs temporaires
           </button>
         </div>
 
         {tab === 'replacements' && (
           <button type="button" className="rh-validators-new-replacement" onClick={() => setReplacementDrawer({ mode: 'create', item: null })}>
-            <Icon name="plus" size={17} /> Nouveau remplacement
+            <Icon name="plus" size={17} /> Nouveau valideur temporaire
           </button>
         )}
       </div>
@@ -711,7 +711,7 @@ export function RhValidatorsPage() {
       {state.loading ? (
         <div className="rh-validators-state"><div className="rh-validators-spinner" /><strong>Chargement de la configuration…</strong></div>
       ) : state.error ? (
-        <div className="rh-validators-state rh-validators-state--error"><Icon name="alert" size={26} /><strong>Impossible de charger les valideurs et remplacements.</strong><button type="button" onClick={() => load()}>Réessayer</button></div>
+        <div className="rh-validators-state rh-validators-state--error"><Icon name="alert" size={26} /><strong>Impossible de charger la configuration des valideurs.</strong><button type="button" onClick={() => load()}>Réessayer</button></div>
       ) : tab === 'validators' ? (
         <section className="rh-validator-services-section">
           {paginatedServices.length === 0 ? (
@@ -736,7 +736,7 @@ export function RhValidatorsPage() {
       ) : (
         <section className="rh-validator-replacements-section">
           <div className="rh-validator-replacements-meta">
-            <div className="rh-validator-replacement-filters" role="tablist" aria-label="Filtres des remplacements">
+            <div className="rh-validator-replacement-filters" role="tablist" aria-label="Filtres des valideurs temporaires">
               {REPLACEMENT_FILTERS.map((filter) => (
                 <button key={filter.id} type="button" role="tab" aria-selected={replacementFilter === filter.id} className={replacementFilter === filter.id ? 'is-active' : ''} onClick={() => setReplacementFilter(filter.id)}>
                   {filter.label}<span>{replacementCounts[filter.id]}</span>
@@ -747,12 +747,12 @@ export function RhValidatorsPage() {
           </div>
 
           {paginatedReplacements.length === 0 ? (
-            <div className="rh-validators-state"><Icon name="refresh" size={28} /><strong>Aucun remplacement temporaire</strong><span>Les remplacements correspondant aux critères apparaîtront ici.</span></div>
+            <div className="rh-validators-state"><Icon name="refresh" size={28} /><strong>Aucun valideur temporaire</strong><span>Les valideurs temporaires correspondant aux critères apparaîtront ici.</span></div>
           ) : (
             <div className="rh-validator-replacement-table">
               <div className="rh-validator-replacement-row rh-validator-replacement-row--head">
                 <span>Collaborateur</span>
-                <span>Remplaçant</span>
+                <span>Valideur temporaire</span>
                 <span>Période</span>
                 <span>Timeline</span>
                 <span>Motif</span>

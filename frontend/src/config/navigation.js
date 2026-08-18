@@ -62,9 +62,8 @@ export const NAVIGATION = {
     { id: 'rh-leave-types', label: 'Types de congés/absences', to: '/app/rh-leave-types', icon: 'file', group: 'PARAMÉTRAGE' },
     { id: 'rh-holidays', label: 'Jours fériés et fermetures', to: '/app/rh-holidays', icon: 'calendar', group: 'PARAMÉTRAGE' },
     { id: 'rh-summer-period', label: 'Période estivale', to: '/app/rh-summer-period', icon: 'sun', group: 'PARAMÉTRAGE' },
-    { id: 'rh-validators', label: 'Valideurs et remplacements', to: '/app/rh-validators', icon: 'users', group: 'PARAMÉTRAGE' },
+    { id: 'rh-validators', label: 'Valideurs', to: '/app/rh-validators', icon: 'users', group: 'PARAMÉTRAGE' },
 
-    { id: 'rh-alerts', label: 'Alertes', to: '/app/rh-alerts', icon: 'alert', group: 'OUTILS' },
     { id: 'notifications', label: 'Notifications', to: '/app/notifications', icon: 'bell', group: 'OUTILS' },
   ],
   [ROLES.DIRECTEUR]: [
