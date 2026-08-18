@@ -101,6 +101,34 @@
   cursor: pointer;
 }
 .rh-derogations-row--body:hover { background: #f9fbfe; }
+
+.rh-derogations-row--head > span:first-child,
+.rh-derogations-row--body > span:first-child {
+  text-align: left;
+}
+
+.rh-derogations-row--head > span:not(:first-child),
+.rh-derogations-row--body > span:not(:first-child) {
+  width: 100%;
+  text-align: center;
+}
+
+.rh-derogations-row--body > .rh-derogations-person {
+  justify-content: flex-start;
+}
+
+.rh-derogations-row--body > span:not(:first-child) {
+  justify-self: center;
+}
+
+.rh-derogations-row--body > span:nth-child(7) {
+  display: flex;
+  justify-content: center;
+}
+
+.rh-derogations-eye {
+  justify-self: center;
+}
 .rh-derogations-row--body:last-child { border-bottom: 0; }
 .rh-derogations-person { display: flex; min-width: 0; align-items: center; gap: 11px; }
 .rh-derogations-person > span:last-child { min-width: 0; }

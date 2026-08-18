@@ -420,7 +420,7 @@
 
 /* En vue calendrier, on exploite davantage la largeur disponible. */
 .manager-alerts-page--calendar {
-  width: min(100%, 1220px);
+  width: min(100%, 1320px);
   padding-top: 22px;
   padding-bottom: 30px;
 }
@@ -435,7 +435,7 @@
 }
 
 .manager-alerts-page--calendar .manager-calendar-card {
-  padding: 18px;
+  padding: 22px;
 }
 
 .manager-alerts-page--calendar .manager-calendar-head {

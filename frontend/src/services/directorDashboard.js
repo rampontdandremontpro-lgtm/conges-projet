@@ -43,7 +43,7 @@ function buildAttentionItems(requests, presence) {
       id: 'rh-requests',
       tone: 'warning',
       text: `${rhRequests.length} demande${rhRequests.length > 1 ? 's' : ''} RH attend${rhRequests.length > 1 ? 'ent' : ''} votre décision.`,
-      to: '/app/director-requests',
+      to: '/app/director-all-requests',
     })
   }
 
@@ -55,7 +55,7 @@ function buildAttentionItems(requests, presence) {
       id: 'relay-requests',
       tone: 'info',
       text: `${relayRequests.length} demande${relayRequests.length > 1 ? 's' : ''} nécessite${relayRequests.length > 1 ? 'nt' : ''} actuellement un relais de validation.`,
-      to: '/app/director-requests',
+      to: '/app/director-all-requests',
     })
   }
 
@@ -111,7 +111,7 @@ export async function getDirectorDashboardData() {
     presence,
     attention: buildAttentionItems(requests, presence),
     partialErrors: [
-      requestsResult.status === 'rejected' ? 'demandes à traiter' : null,
+      requestsResult.status === 'rejected' ? 'décisions' : null,
       presenceResult.status === 'rejected' ? 'présence globale' : null,
     ].filter(Boolean),
   }

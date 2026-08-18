@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useLocation, useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 
 import { SignatureModal } from '@/components/collab/new-request/SignatureModal'
 import { ManagerRefusalModal } from '@/components/manager/requests/ManagerRefusalModal'
@@ -13,7 +13,7 @@ import {
 import { formatDateNumericFR, formatDays, formatRangeNumericFR } from '@/utils/format'
 
 import '@/styles/manager/requests/index.css'
-import '@/styles/director/requests.css'
+import '@/styles/director/request-detail.css'
 
 function formatDateTime(value) {
   if (!value) return '—'
@@ -34,22 +34,28 @@ function periodLabel(value) {
   return value === 'APRES_MIDI' ? 'Après-midi' : 'Matin'
 }
 
-function circuitLabel(request) {
-  const kind = request?.decisionAccess?.kind
-  const reason = request?.decisionAccess?.reason ?? ''
+function treatmentLabel(request) {
+  const accessKind = request?.decisionAccess?.kind
+  const treatmentKind = request?.treatment?.kind
 
-  if (kind === 'RELAIS') {
-    return reason.toLocaleLowerCase('fr-FR').includes('délai')
-      ? `Relais après ${request?.service?.takeoverDelayDays ?? 7} jours`
-      : 'Relais · valideur de premier niveau indisponible'
-  }
-  if (kind === 'REMPLACEMENT') return 'Valideur temporaire'
-  if (kind === 'URGENCE' || request?.isUrgent) return 'Intervention urgente'
-  if (request?.employee?.role === 'RH') return 'Demande RH · Directeur seul'
-  if (request?.employee?.role === 'RESPONSABLE_SERVICE') return 'Demande Responsable · Directeur / RH'
-  if (request?.service?.serviceType === 'EXTERNE') return 'Collaborateur externe · Directeur / RH'
+  if (accessKind === 'URGENCE' || request?.isUrgent) return 'Intervention urgente'
+  if (accessKind === 'REMPLACEMENT' || treatmentKind === 'VALIDATEUR_TEMPORAIRE') return 'Valideur temporaire'
+  if (accessKind === 'SECOURS') return 'Valideur de secours'
+
+  if (treatmentKind === 'RESPONSABLE_SERVICE') return 'Responsable de service'
+  if (treatmentKind === 'VALIDATEUR_SECOURS_DIRECTEUR') return 'Valideur de secours / Directeur'
+  if (treatmentKind === 'RELAIS_DIRECTEUR') return 'Directeur en relais'
+  if (treatmentKind === 'DIRECTEUR_SEUL') return 'Directeur seul'
+  if (treatmentKind === 'DIRECTEUR_RH') return 'Directeur / RH'
+  if (treatmentKind === 'SANS_VALIDATION') return 'Sans validation'
+
+  if (request?.employee?.role === 'RH') return 'Directeur seul'
+  if (request?.employee?.role === 'RESPONSABLE_SERVICE') return 'Directeur / RH'
+  if (request?.service?.serviceType === 'EXTERNE') return 'Directeur / RH'
   if (request?.service?.validationMode === 'DIRECTEUR_SEUL') return 'Directeur seul'
-  return 'Circuit Directeur / RH'
+  if (request?.service?.validationMode === 'DIRECTEUR_ET_RH') return 'Directeur / RH'
+  if (request?.service?.validationMode === 'RESPONSABLE_PUIS_RELAIS') return 'Responsable de service'
+  return 'Selon le paramétrage du service'
 }
 
 function requestStatusMeta(status) {
@@ -66,9 +72,7 @@ function requestStatusMeta(status) {
 export function DirectorRequestDecisionPage() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const location = useLocation()
-  const consultationMode = location.pathname.startsWith('/app/director-all-requests/')
-  const backPath = consultationMode ? '/app/director-all-requests' : '/app/director-requests'
+  const backPath = '/app/director-all-requests'
   const [state, setState] = useState({ loading: true, error: null, request: null, availability: null })
   const [showSignature, setShowSignature] = useState(false)
   const [showRefusal, setShowRefusal] = useState(false)
@@ -196,7 +200,7 @@ export function DirectorRequestDecisionPage() {
     return (
       <div className="manager-request-detail-page">
         <button type="button" className="manager-request-back" onClick={() => navigate(backPath)}>
-          <Icon name="chevronLeft" size={16} /> {consultationMode ? 'Retour à toutes les demandes' : 'Retour aux demandes'}
+          <Icon name="chevronLeft" size={16} /> Retour à toutes les demandes
         </button>
         <div className="manager-request-detail-state manager-request-detail-state--error">
           <Icon name="alert" size={26} />
@@ -212,7 +216,6 @@ export function DirectorRequestDecisionPage() {
   const availability = state.availability
   const overlapCount = availability?.overlaps?.length ?? 0
   const canDecide =
-    !consultationMode &&
     request.status === 'EN_ATTENTE_VALIDATION' &&
     Boolean(request.decisionAccess) &&
     !request.finalDeciderId &&
@@ -222,7 +225,7 @@ export function DirectorRequestDecisionPage() {
   return (
     <div className="manager-request-detail-page director-request-detail-page">
       <button type="button" className="manager-request-back" onClick={() => navigate(backPath)}>
-        <Icon name="chevronLeft" size={16} /> {consultationMode ? 'Retour à toutes les demandes' : 'Retour aux demandes'}
+        <Icon name="chevronLeft" size={16} /> Retour à toutes les demandes
       </button>
 
       {feedback && (
@@ -250,7 +253,13 @@ export function DirectorRequestDecisionPage() {
             )}
           </div>
           <p>{request.leaveType?.name ?? 'Demande de congé'} · {request.service?.name ?? 'Service non renseigné'}</p>
-          <span className="director-request-circuit"><Icon name="shield" size={13} /> {circuitLabel(request)}</span>
+          <span className="director-request-treatment">
+            <span className="director-request-treatment__icon"><Icon name="shield" size={13} /></span>
+            <span className="director-request-treatment__text">
+              <small>Traitement</small>
+              <strong>{treatmentLabel(request)}</strong>
+            </span>
+          </span>
         </div>
       </section>
 
@@ -370,16 +379,6 @@ export function DirectorRequestDecisionPage() {
                 <Icon name={readonlyStatus.icon} size={12} />
                 {readonlyStatus.label}
               </span>
-
-              {consultationMode && request.status === 'EN_ATTENTE_VALIDATION' && request.decisionAccess && (
-                <button
-                  type="button"
-                  className="manager-request-action manager-request-action--validate director-request-open-decision"
-                  onClick={() => navigate(`/app/director-requests/${request.id}`)}
-                >
-                  <Icon name="list" size={15} /> Ouvrir dans Demandes à traiter
-                </button>
-              )}
 
               {request.decisionAt && (
                 <div className="manager-request-actions-card__decision-meta">

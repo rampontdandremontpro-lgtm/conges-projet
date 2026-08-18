@@ -60,24 +60,6 @@
 }
 .manager-requests-filter.is-active .manager-requests-filter__count { background: rgba(255,255,255,.22); color: #fff; }
 
-.manager-requests-summary {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  color: var(--mr-muted);
-  font-size: 13px;
-}
-.manager-requests-summary strong { color: var(--mr-navy); }
-.manager-requests-summary__icon {
-  display: grid;
-  place-items: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 11px;
-  background: #eef4ff;
-  color: var(--mr-blue);
-}
-
 .manager-requests-list { display: flex; flex-direction: column; gap: 12px; }
 
 .manager-requests-card {

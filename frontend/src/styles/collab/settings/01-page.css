@@ -295,6 +295,43 @@
   gap: 14px;
 }
 
+.settings-password-input {
+  position: relative;
+}
+
+.settings-password-input input {
+  width: 100%;
+  padding-right: 46px;
+}
+
+.settings-password-visibility {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  display: inline-grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: #758ba9;
+  cursor: pointer;
+  transform: translateY(-50%);
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.settings-password-visibility:hover,
+.settings-password-visibility:focus-visible {
+  background: #edf4fd;
+  color: var(--settings-blue);
+  outline: none;
+}
+
+.settings-password-visibility:focus-visible {
+  box-shadow: 0 0 0 3px rgba(27, 110, 243, .1);
+}
+
 .settings-security-note {
   display: flex;
   align-items: flex-start;

@@ -25,6 +25,11 @@ export function SettingsPage() {
   const [feedback, setFeedback] = useState(null)
   const [password, setPassword] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' })
   const [passwordSaving, setPasswordSaving] = useState(false)
+  const [passwordVisibility, setPasswordVisibility] = useState({
+    current: false,
+    next: false,
+    confirm: false,
+  })
 
   const loadSignature = useCallback(async () => {
     if (!canSign) return
@@ -135,43 +140,76 @@ export function SettingsPage() {
         <form className="settings-password-form" onSubmit={handlePasswordSubmit}>
           <div className="settings-field">
             <label htmlFor="current-password">Mot de passe actuel</label>
-            <input
-              id="current-password"
-              type="password"
-              autoComplete="current-password"
-              value={password.currentPassword}
-              onChange={(event) => setPassword((current) => ({ ...current, currentPassword: event.target.value }))}
-              required
-            />
+            <div className="settings-password-input">
+              <input
+                id="current-password"
+                type={passwordVisibility.current ? 'text' : 'password'}
+                autoComplete="current-password"
+                value={password.currentPassword}
+                onChange={(event) => setPassword((current) => ({ ...current, currentPassword: event.target.value }))}
+                required
+              />
+              <button
+                type="button"
+                className="settings-password-visibility"
+                onClick={() => setPasswordVisibility((current) => ({ ...current, current: !current.current }))}
+                aria-label={passwordVisibility.current ? 'Masquer le mot de passe actuel' : 'Afficher le mot de passe actuel'}
+                title={passwordVisibility.current ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
+              >
+                <Icon name={passwordVisibility.current ? 'eyeOff' : 'eye'} size={18} />
+              </button>
+            </div>
           </div>
 
           <div className="settings-password-grid">
             <div className="settings-field">
               <label htmlFor="new-password">Nouveau mot de passe</label>
-              <input
-                id="new-password"
-                type="password"
-                autoComplete="new-password"
-                minLength={12}
-                maxLength={64}
-                value={password.newPassword}
-                onChange={(event) => setPassword((current) => ({ ...current, newPassword: event.target.value }))}
-                required
-              />
+              <div className="settings-password-input">
+                <input
+                  id="new-password"
+                  type={passwordVisibility.next ? 'text' : 'password'}
+                  autoComplete="new-password"
+                  minLength={12}
+                  maxLength={64}
+                  value={password.newPassword}
+                  onChange={(event) => setPassword((current) => ({ ...current, newPassword: event.target.value }))}
+                  required
+                />
+                <button
+                  type="button"
+                  className="settings-password-visibility"
+                  onClick={() => setPasswordVisibility((current) => ({ ...current, next: !current.next }))}
+                  aria-label={passwordVisibility.next ? 'Masquer le nouveau mot de passe' : 'Afficher le nouveau mot de passe'}
+                  title={passwordVisibility.next ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
+                >
+                  <Icon name={passwordVisibility.next ? 'eyeOff' : 'eye'} size={18} />
+                </button>
+              </div>
               <small>12 caractères minimum.</small>
             </div>
             <div className="settings-field">
               <label htmlFor="confirm-password">Confirmer le nouveau mot de passe</label>
-              <input
-                id="confirm-password"
-                type="password"
-                autoComplete="new-password"
-                minLength={12}
-                maxLength={64}
-                value={password.confirmPassword}
-                onChange={(event) => setPassword((current) => ({ ...current, confirmPassword: event.target.value }))}
-                required
-              />
+              <div className="settings-password-input">
+                <input
+                  id="confirm-password"
+                  type={passwordVisibility.confirm ? 'text' : 'password'}
+                  autoComplete="new-password"
+                  minLength={12}
+                  maxLength={64}
+                  value={password.confirmPassword}
+                  onChange={(event) => setPassword((current) => ({ ...current, confirmPassword: event.target.value }))}
+                  required
+                />
+                <button
+                  type="button"
+                  className="settings-password-visibility"
+                  onClick={() => setPasswordVisibility((current) => ({ ...current, confirm: !current.confirm }))}
+                  aria-label={passwordVisibility.confirm ? 'Masquer la confirmation du mot de passe' : 'Afficher la confirmation du mot de passe'}
+                  title={passwordVisibility.confirm ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
+                >
+                  <Icon name={passwordVisibility.confirm ? 'eyeOff' : 'eye'} size={18} />
+                </button>
+              </div>
             </div>
           </div>
 

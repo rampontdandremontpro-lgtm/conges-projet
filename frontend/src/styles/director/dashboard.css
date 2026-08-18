@@ -1,7 +1,7 @@
 .page-container.director-dashboard-page {
   max-width: none;
   margin: 0;
-  padding: var(--space-6) 0 var(--space-8);
+  padding: 10px 0 var(--space-8);
 }
 
 .director-dashboard-grid {
@@ -519,7 +519,7 @@
 
 @media (min-width: 1400px) and (min-height: 820px) {
   .page-container.director-dashboard-page {
-    padding-top: 22px;
+    padding-top: 8px;
   }
 
   .director-decisions-card,

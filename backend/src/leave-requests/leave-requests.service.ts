@@ -481,8 +481,10 @@ export class LeaveRequestsService {
     });
   }
 
-  async findAllForRh(): Promise<LeaveRequest[]> {
-    return this.leaveRequestRepository
+  async findAllForManagement(
+    authenticatedUser: AuthenticatedUser,
+  ): Promise<LeaveRequest[]> {
+    const query = this.leaveRequestRepository
       .createQueryBuilder('leaveRequest')
       .leftJoinAndSelect('leaveRequest.employee', 'employee')
       .leftJoinAndSelect('leaveRequest.createdBy', 'createdBy')
@@ -491,7 +493,15 @@ export class LeaveRequestsService {
       .leftJoinAndSelect('leaveRequest.finalDecider', 'finalDecider')
       .where('leaveRequest.status != :draftStatus', {
         draftStatus: LeaveRequestStatus.BROUILLON,
-      })
+      });
+
+    if (authenticatedUser.role === UserRole.RH) {
+      query.andWhere('employee.role != :rhRole', {
+        rhRole: UserRole.RH,
+      });
+    }
+
+    return query
       .orderBy('leaveRequest.submittedAt', 'DESC')
       .addOrderBy('leaveRequest.createdAt', 'DESC')
       .addOrderBy('leaveRequest.id', 'DESC')
@@ -1025,11 +1035,43 @@ export class LeaveRequestsService {
       },
     });
 
-    if (
-      authenticatedUser.role === UserRole.DIRECTEUR ||
-      authenticatedUser.role === UserRole.RH
-    ) {
+    if (authenticatedUser.role === UserRole.DIRECTEUR) {
       return requests;
+    }
+
+    if (authenticatedUser.role === UserRole.RH) {
+      const pending: LeaveRequest[] = [];
+
+      for (const leaveRequest of requests) {
+        if (
+          leaveRequest.employee.role === UserRole.RH ||
+          leaveRequest.employeeId === authenticatedUser.id
+        ) {
+          continue;
+        }
+
+        try {
+          const decisionAccess =
+            await this.validatorResolutionService.resolveAccess(
+              leaveRequest,
+              authenticatedUser,
+            );
+
+          pending.push(
+            Object.assign(leaveRequest, { decisionAccess }),
+          );
+        } catch (error) {
+          if (
+            error instanceof ForbiddenException ||
+            error instanceof BadRequestException
+          ) {
+            continue;
+          }
+          throw error;
+        }
+      }
+
+      return pending;
     }
 
     if (
@@ -1087,11 +1129,77 @@ export class LeaveRequestsService {
       );
     }
 
-    if (
-      authenticatedUser.role === UserRole.DIRECTEUR ||
-      authenticatedUser.role === UserRole.RH
-    ) {
-      return leaveRequest;
+    const treatment =
+      await this.validatorResolutionService.describeTreatment(
+        leaveRequest,
+      );
+
+    if (authenticatedUser.role === UserRole.DIRECTEUR) {
+      let decisionAccess: DecisionAccess | null = null;
+
+      if (
+        leaveRequest.status ===
+        LeaveRequestStatus.EN_ATTENTE_VALIDATION
+      ) {
+        try {
+          decisionAccess =
+            await this.validatorResolutionService.resolveAccess(
+              leaveRequest,
+              authenticatedUser,
+            );
+        } catch (error) {
+          if (
+            error instanceof ForbiddenException ||
+            error instanceof BadRequestException
+          ) {
+            decisionAccess = null;
+          } else {
+            throw error;
+          }
+        }
+      }
+
+      return Object.assign(leaveRequest, {
+        treatment,
+        ...(decisionAccess ? { decisionAccess } : {}),
+      });
+    }
+
+    if (authenticatedUser.role === UserRole.RH) {
+      if (leaveRequest.employee.role === UserRole.RH) {
+        throw new ForbiddenException(
+          'Une demande déposée par la RH est visible et traitable uniquement par le Directeur.',
+        );
+      }
+
+      let decisionAccess: DecisionAccess | null = null;
+
+      if (
+        leaveRequest.status ===
+        LeaveRequestStatus.EN_ATTENTE_VALIDATION
+      ) {
+        try {
+          decisionAccess =
+            await this.validatorResolutionService.resolveAccess(
+              leaveRequest,
+              authenticatedUser,
+            );
+        } catch (error) {
+          if (
+            error instanceof ForbiddenException ||
+            error instanceof BadRequestException
+          ) {
+            decisionAccess = null;
+          } else {
+            throw error;
+          }
+        }
+      }
+
+      return Object.assign(leaveRequest, {
+        treatment,
+        ...(decisionAccess ? { decisionAccess } : {}),
+      });
     }
 
     if (
@@ -1113,7 +1221,7 @@ export class LeaveRequestsService {
             authenticatedUser.id,
           ))
       ) {
-        return leaveRequest;
+        return Object.assign(leaveRequest, { treatment });
       }
     }
 

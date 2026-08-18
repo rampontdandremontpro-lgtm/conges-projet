@@ -184,7 +184,11 @@ export function RhRequestDecisionPage() {
   const overlapCount = availability?.overlaps?.length ?? 0
   const status = requestStatusMeta(request)
   const isOwnRequest = String(request.employee?.id ?? '') === String(user?.id ?? '')
-  const canDecide = request.status === 'EN_ATTENTE_VALIDATION' && request.employee?.role !== 'RH' && !isOwnRequest
+  const canDecide =
+    request.status === 'EN_ATTENTE_VALIDATION' &&
+    request.employee?.role !== 'RH' &&
+    !isOwnRequest &&
+    Boolean(request.decisionAccess)
 
   return (
     <div className="manager-request-detail-page">
@@ -354,6 +358,10 @@ export function RhRequestDecisionPage() {
 
               {request.employee?.role === 'RH' && request.status === 'EN_ATTENTE_VALIDATION' && (
                 <p>Une demande déposée par la RH doit être traitée par le Directeur.</p>
+              )}
+
+              {request.status === 'EN_ATTENTE_VALIDATION' && request.employee?.role !== 'RH' && !isOwnRequest && !request.decisionAccess && (
+                <p>Cette demande relève actuellement de son valideur prévu. Pour un service géré par un Responsable, la RH ne peut intervenir que si elle est désignée comme valideur temporaire ou valideur de secours.</p>
               )}
 
               {request.decisionAt && (

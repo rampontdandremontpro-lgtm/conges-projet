@@ -188,13 +188,6 @@ export function ManagerRequestsPage() {
           ))}
         </div>
 
-        <div className="manager-requests-summary">
-          <span className="manager-requests-summary__icon"><Icon name="list" size={18} /></span>
-          <span>
-            <strong>{state.requests.length}</strong>
-            {state.requests.length > 1 ? ' demandes à traiter' : ' demande à traiter'}
-          </span>
-        </div>
       </div>
 
       {state.loading ? (

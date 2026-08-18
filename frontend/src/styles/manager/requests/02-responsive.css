@@ -9,7 +9,6 @@
   .manager-requests-toolbar { align-items: stretch; flex-direction: column; }
   .manager-requests-filters { width: 100%; }
   .manager-requests-filter { flex: 1 1 calc(50% - 6px); justify-content: center; }
-  .manager-requests-summary { justify-content: flex-end; }
   .manager-requests-card { padding: 15px; }
   .manager-requests-card__meta-grid { grid-template-columns: 1fr 1fr; }
   .manager-requests-card__meta-grid > span:last-child { grid-column: 1 / -1; }

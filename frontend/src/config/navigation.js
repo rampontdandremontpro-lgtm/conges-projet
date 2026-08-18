@@ -68,7 +68,6 @@ export const NAVIGATION = {
   ],
   [ROLES.DIRECTEUR]: [
     { id: 'dashboard', label: 'Tableau de bord', to: '/app/dashboard', icon: 'dashboard', group: 'DÉCISION' },
-    { id: 'director-requests', label: 'Demandes à traiter', to: '/app/director-requests', icon: 'list', group: 'DÉCISION' },
     { id: 'director-all-requests', label: 'Toutes les demandes', to: '/app/director-all-requests', icon: 'doc', group: 'DÉCISION' },
 
     { id: 'director-presence', label: 'Présence globale', to: '/app/director-presence', icon: 'users', group: 'PILOTAGE' },

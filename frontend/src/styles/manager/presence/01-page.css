@@ -67,8 +67,6 @@
 .manager-presence-filter.is-active { background: var(--mp-blue); color: #fff; }
 .manager-presence-filter > span { display: grid; min-width: 22px; height: 22px; place-items: center; padding: 0 5px; border-radius: 999px; background: #edf3fb; color: #6983a8; font-size: 11.5px; }
 .manager-presence-filter.is-active > span { background: rgba(255,255,255,.18); color: #fff; }
-.manager-presence-toolbar__label { display: inline-flex; align-items: center; gap: 7px; color: #7188a9; font-size: 11.5px; }
-
 .manager-presence-members { display: flex; flex-direction: column; gap: 12px; }
 .manager-presence-member-card { display: grid; grid-template-columns: minmax(240px, 1.2fr) auto minmax(320px, .9fr); align-items: center; gap: 18px; min-height: 98px; padding: 17px 20px; border-radius: 19px; }
 .manager-presence-member-card__identity { display: flex; min-width: 0; align-items: center; gap: 12px; }
@@ -103,7 +101,7 @@
 .manager-presence-member-skeleton__line--title { width: 26%; height: 12px; }
 @keyframes managerPresencePulse { 0% { background-position: 100% 0; } 100% { background-position: 0 0; } }
 
-.manager-presence-page { width: min(100%, 1120px); }
+.manager-presence-page { width: min(100%, 1280px); }
 .manager-presence-toolbar__left { display: flex; align-items: center; gap: 10px; min-width: 0; }
 
 

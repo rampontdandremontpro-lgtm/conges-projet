@@ -25,7 +25,7 @@
 
 .manager-calendar-card {
   width: 100%;
-  padding: 20px;
+  padding: 22px;
   border: 1px solid #dce5f0;
   border-radius: 20px;
   background: #ffffff;
@@ -57,7 +57,7 @@
 .manager-calendar-head__title strong {
   display: block;
   color: #153962;
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 900;
   text-transform: capitalize;
 }
@@ -65,7 +65,7 @@
   display: block;
   margin-top: 3px;
   color: #7b91af;
-  font-size: 10.5px;
+  font-size: 11.5px;
   line-height: 1.45;
 }
 .manager-calendar-nav {
@@ -143,13 +143,13 @@
   left: 0;
   z-index: 7;
   display: flex;
-  min-height: 58px;
+  min-height: 64px;
   align-items: center;
   padding: 0 14px;
   background: #dff1fb;
   color: #173d69;
   box-shadow: 5px 0 10px rgba(17, 54, 96, .035);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 900;
   letter-spacing: .04em;
   text-transform: uppercase;
@@ -157,7 +157,7 @@
 .manager-month-planning__day-head {
   position: relative;
   display: flex;
-  min-height: 58px;
+  min-height: 64px;
   flex-direction: column;
   align-items: center;
   justify-content: center;
@@ -166,7 +166,7 @@
   color: #54708f;
 }
 .manager-month-planning__day-head > span {
-  font-size: 8px;
+  font-size: 9px;
   font-weight: 800;
 }
 .manager-month-planning__day-head > strong {
@@ -206,7 +206,7 @@
   left: 0;
   z-index: 5;
   display: flex;
-  min-height: 52px;
+  min-height: 60px;
   align-items: center;
   gap: 8px;
   padding: 7px 10px;
@@ -215,12 +215,12 @@
 }
 .manager-month-planning__avatar {
   display: grid;
-  width: 31px;
-  height: 31px;
+  width: 35px;
+  height: 35px;
   flex: 0 0 auto;
   place-items: center;
   border-radius: 9px;
-  font-size: 8px;
+  font-size: 9px;
   font-weight: 900;
 }
 .manager-month-planning__person-copy {
@@ -239,14 +239,14 @@
   display: block;
   margin-top: 2px;
   color: #8da0b8;
-  font-size: 7.5px;
+  font-size: 8.5px;
 }
 
 .manager-month-planning__cell {
   position: relative;
   display: flex;
   min-width: 0;
-  min-height: 52px;
+  min-height: 60px;
   overflow: hidden;
   padding: 0;
   border-top: 0;
@@ -325,7 +325,7 @@ button.manager-month-planning__cell:hover {
   left: 0;
   z-index: 5;
   display: flex;
-  min-height: 43px;
+  min-height: 48px;
   align-items: center;
   padding: 0 12px;
   background: #eaf5fb;
@@ -338,7 +338,7 @@ button.manager-month-planning__cell:hover {
 }
 .manager-month-planning__footer-cell {
   display: flex;
-  min-height: 43px;
+  min-height: 48px;
   flex-direction: column;
   align-items: center;
   justify-content: center;
@@ -383,7 +383,7 @@ button.manager-month-planning__cell:hover {
   border-radius: 11px;
   background: #f7f9fc;
   color: #647d9f;
-  font-size: 9.5px;
+  font-size: 10.5px;
 }
 .manager-month-planning__legend > span {
   display: inline-flex;

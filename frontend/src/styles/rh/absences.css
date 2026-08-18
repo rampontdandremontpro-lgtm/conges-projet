@@ -121,6 +121,34 @@
   transition: background .16s ease;
 }
 .rh-absences-row--data:hover { background: #f9fbfe; }
+
+.rh-absences-row--header > span:first-child,
+.rh-absences-row--data > span:first-child {
+  text-align: left;
+}
+
+.rh-absences-row--header > span:not(:first-child),
+.rh-absences-row--data > span:not(:first-child) {
+  width: 100%;
+  text-align: center;
+}
+
+.rh-absences-row--data > .rh-absences-person {
+  justify-content: flex-start;
+}
+
+.rh-absences-row--data > span:not(:first-child) {
+  justify-self: center;
+}
+
+.rh-absences-row--data > span:nth-child(6) {
+  display: flex;
+  justify-content: center;
+}
+
+.rh-absences-eye {
+  justify-self: center;
+}
 .rh-absences-person { display: flex; min-width: 0; align-items: center; gap: 12px; }
 .rh-absences-avatar { display: grid; width: 43px; height: 43px; flex: 0 0 43px; place-items: center; border-radius: 12px; background: #eaf4ff; color: #1764cf; font-size: 11.5px; font-weight: 850; }
 .rh-absences-person > span:last-child { min-width: 0; }

@@ -42,6 +42,20 @@ export interface DecisionAccess {
   reason: string | null;
 }
 
+export type ValidationTreatmentKind =
+  | 'RESPONSABLE_SERVICE'
+  | 'VALIDATEUR_TEMPORAIRE'
+  | 'VALIDATEUR_SECOURS_DIRECTEUR'
+  | 'RELAIS_DIRECTEUR'
+  | 'DIRECTEUR_RH'
+  | 'DIRECTEUR_SEUL'
+  | 'SANS_VALIDATION';
+
+export interface ValidationTreatment {
+  kind: ValidationTreatmentKind;
+  reason: string | null;
+}
+
 export interface ValidatorResolution {
   primaryManagerId: number | null;
   replacement: ValidatorReplacement | null;
@@ -256,15 +270,15 @@ export class ValidatorResolutionService {
       const recipientIds = new Set<number>(
         resolution.backupValidatorIds,
       );
-      const relays = await userRepository.find({
+      const directors = await userRepository.find({
         where: {
-          role: In([UserRole.RH, UserRole.DIRECTEUR]),
+          role: UserRole.DIRECTEUR,
           isActive: true,
         },
         select: { id: true },
       });
-      for (const relay of relays) {
-        recipientIds.add(relay.id);
+      for (const director of directors) {
+        recipientIds.add(director.id);
       }
       return [...recipientIds];
     }
@@ -286,6 +300,71 @@ export class ValidatorResolutionService {
     });
 
     return validators.map((user) => user.id);
+  }
+
+  async describeTreatment(
+    leaveRequest: LeaveRequest,
+    options: ResolutionOptions = {},
+  ): Promise<ValidationTreatment> {
+    if (leaveRequest.employee.role === UserRole.RH) {
+      return { kind: 'DIRECTEUR_SEUL', reason: null };
+    }
+
+    if (leaveRequest.employee.role === UserRole.RESPONSABLE_SERVICE) {
+      return { kind: 'DIRECTEUR_RH', reason: null };
+    }
+
+    if (leaveRequest.service.serviceType === ServiceType.EXTERNE) {
+      return { kind: 'DIRECTEUR_RH', reason: null };
+    }
+
+    switch (leaveRequest.service.validationMode) {
+      case ValidationMode.DIRECTEUR_ET_RH:
+        return { kind: 'DIRECTEUR_RH', reason: null };
+
+      case ValidationMode.DIRECTEUR_SEUL:
+        return { kind: 'DIRECTEUR_SEUL', reason: null };
+
+      case ValidationMode.SANS_VALIDATION:
+        return { kind: 'SANS_VALIDATION', reason: null };
+
+      case ValidationMode.RESPONSABLE_PUIS_RELAIS: {
+        const resolution = await this.buildResolution(
+          leaveRequest,
+          options,
+        );
+
+        if (
+          resolution.firstLevelId !== null &&
+          resolution.firstLevelEligible &&
+          resolution.firstLevelPresent &&
+          !resolution.delayExpired
+        ) {
+          return resolution.replacement !== null
+            ? { kind: 'VALIDATEUR_TEMPORAIRE', reason: null }
+            : { kind: 'RESPONSABLE_SERVICE', reason: null };
+        }
+
+        if (resolution.backupValidatorIds.length > 0) {
+          return {
+            kind: 'VALIDATEUR_SECOURS_DIRECTEUR',
+            reason: resolution.delayExpired
+              ? `Le délai de ${leaveRequest.service.takeoverDelayDays} jour(s) est expiré.`
+              : 'Le valideur de premier niveau est indisponible.',
+          };
+        }
+
+        return {
+          kind: 'RELAIS_DIRECTEUR',
+          reason: resolution.delayExpired
+            ? `Le délai de ${leaveRequest.service.takeoverDelayDays} jour(s) est expiré.`
+            : 'Le valideur de premier niveau est indisponible.',
+        };
+      }
+
+      default:
+        return { kind: 'SANS_VALIDATION', reason: null };
+    }
   }
 
   async resolveAccess(
@@ -525,19 +604,37 @@ export class ValidatorResolutionService {
       );
     }
 
-    if (
-      authenticatedUser.role !== UserRole.DIRECTEUR &&
-      authenticatedUser.role !== UserRole.RH
-    ) {
-      throw new ForbiddenException(
-        'Cette demande relève du Responsable principal du service.',
-      );
-    }
-
     const firstLevelUnavailable =
       !resolution.firstLevelEligible ||
       !resolution.firstLevelBelongsToService ||
       !resolution.firstLevelPresent;
+
+    const relayOpen =
+      firstLevelUnavailable || resolution.delayExpired;
+
+    if (authenticatedUser.role === UserRole.RH) {
+      if (
+        relayOpen &&
+        resolution.backupValidatorIds.includes(authenticatedUser.id)
+      ) {
+        return {
+          kind: 'SECOURS',
+          reason: resolution.delayExpired
+            ? `Le délai de ${leaveRequest.service.takeoverDelayDays} jour(s) calendaires accordé au valideur de premier niveau est expiré.`
+            : 'Le valideur de premier niveau est absent ou indisponible.',
+        };
+      }
+
+      throw new ForbiddenException(
+        'Pour ce service, la RH ne peut traiter la demande que si elle est désignée comme valideur temporaire ou valideur de secours.',
+      );
+    }
+
+    if (authenticatedUser.role !== UserRole.DIRECTEUR) {
+      throw new ForbiddenException(
+        'Cette demande relève du Responsable principal du service.',
+      );
+    }
 
     if (firstLevelUnavailable) {
       return {
@@ -581,7 +678,7 @@ export class ValidatorResolutionService {
     }
 
     throw new ForbiddenException(
-      `Le valideur de premier niveau reste prioritaire jusqu’au ${takeoverAt.toISOString()}. Une intervention anticipée du Directeur ou de la RH doit être déclarée comme urgente et motivée.`,
+      `Le valideur de premier niveau reste prioritaire jusqu’au ${takeoverAt.toISOString()}. Une intervention anticipée du Directeur doit être déclarée comme urgente et motivée.`,
     );
   }
 }

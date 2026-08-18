@@ -16,7 +16,6 @@
   .manager-presence-day-card__slots { width: 100%; }
   .manager-presence-filters { width: 100%; overflow-x: auto; }
   .manager-presence-filter { flex: 0 0 auto; }
-  .manager-presence-toolbar__label { align-self: flex-end; }
 }
 
 @media (max-width: 520px) {

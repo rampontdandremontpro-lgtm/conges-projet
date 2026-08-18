@@ -105,8 +105,12 @@ export class LeaveRequestsController {
 
   @Get('management/all')
   @Roles(UserRole.RH, UserRole.DIRECTEUR)
-  findAllForRh() {
-    return this.leaveRequestsService.findAllForRh();
+  findAllForManagement(
+    @Req() request: AuthenticatedRequest,
+  ) {
+    return this.leaveRequestsService.findAllForManagement(
+      request.user,
+    );
   }
 
   @Get('pending')

@@ -33,7 +33,6 @@ import { RhLeaveTypesPage } from '@/pages/rh/LeaveTypesPage'
 import { RhHolidaysPage } from '@/pages/rh/HolidaysPage'
 import { RhSummerPeriodPage } from '@/pages/rh/SummerPeriodPage'
 import { RhValidatorsPage } from '@/pages/rh/ValidatorsPage'
-import { DirectorRequestsPage } from '@/pages/director/RequestsPage'
 import { DirectorAllRequestsPage } from '@/pages/director/AllRequestsPage'
 import { DirectorRequestDecisionPage } from '@/pages/director/RequestDecisionPage'
 import { NEW_REQUEST_ROLES, ROLES } from '@/config/navigation'
@@ -52,22 +51,6 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <Navigate to="/app/dashboard" replace /> },
       { path: 'dashboard', element: <DashboardGate /> },
-      {
-        path: 'director-requests',
-        element: (
-          <RoleRoute roles={[ROLES.DIRECTEUR]}>
-            <DirectorRequestsPage />
-          </RoleRoute>
-        ),
-      },
-      {
-        path: 'director-requests/:id',
-        element: (
-          <RoleRoute roles={[ROLES.DIRECTEUR]}>
-            <DirectorRequestDecisionPage />
-          </RoleRoute>
-        ),
-      },
       {
         path: 'director-all-requests',
         element: (

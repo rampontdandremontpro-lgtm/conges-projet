@@ -78,9 +78,9 @@ function DecisionsCard({ decisions, onNavigate }) {
         </div>
       </div>
 
-      <button type="button" className="director-primary-action" onClick={() => onNavigate('/app/director-requests')}>
+      <button type="button" className="director-primary-action" onClick={() => onNavigate('/app/director-all-requests')}>
         <Icon name="list" size={17} />
-        <span>Voir les demandes à traiter</span>
+        <span>Voir les demandes en attente</span>
         <Icon name="arrowRight" size={15} />
       </button>
     </section>
@@ -143,7 +143,7 @@ function PrioritiesCard({ requests, onNavigate }) {
     <section className="dash-card director-priorities-card">
       <header className="dash-card__header">
         <h2 className="dash-card__title dash-card__title--lg">Demandes prioritaires</h2>
-        <button type="button" className="dash-card__view-all" onClick={() => onNavigate('/app/director-requests')}>
+        <button type="button" className="dash-card__view-all" onClick={() => onNavigate('/app/director-all-requests')}>
           Voir tout <Icon name="arrowRight" size={14} />
         </button>
       </header>
@@ -161,7 +161,7 @@ function PrioritiesCard({ requests, onNavigate }) {
               type="button"
               className="director-priority-row"
               key={request.id}
-              onClick={() => onNavigate(`/app/director-requests/${request.id}`)}
+              onClick={() => onNavigate(`/app/director-all-requests/${request.id}`)}
             >
               <span className="director-priority-avatar">{initials(request.employee)}</span>
               <span className="director-priority-main">

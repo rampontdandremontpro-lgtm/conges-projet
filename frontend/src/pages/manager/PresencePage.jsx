@@ -241,14 +241,6 @@ export function ManagerPresencePage() {
               )}
             </div>
 
-            <div className="manager-presence-toolbar__label">
-              <Icon name={viewMode === 'calendar' ? 'calendar' : 'users'} size={16} />
-              <span>
-                {viewMode === 'calendar'
-                  ? 'Vue mensuelle du service'
-                  : `${visibleMembers.length} membre${visibleMembers.length > 1 ? 's' : ''} affiché${visibleMembers.length > 1 ? 's' : ''}`}
-              </span>
-            </div>
           </div>
 
           <div className="manager-presence-main-view">
