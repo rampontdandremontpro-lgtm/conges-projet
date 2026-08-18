@@ -45,15 +45,58 @@ export class HolidaysService {
     authenticatedUser: AuthenticatedUser,
     createHolidayDto: CreateHolidayDto,
   ): Promise<Holiday> {
+    if (createHolidayDto.holidayType !== HolidayType.FERMETURE_GMES) {
+      throw new BadRequestException(
+        'Les jours fériés officiels sont gérés automatiquement. Seules les fermetures GMES peuvent être ajoutées manuellement.',
+      );
+    }
+
+    const year = Number(createHolidayDto.date.slice(0, 4));
+    const officialDay = (await this.getMartiniqueCalendarDays(year)).find(
+      (holiday) => holiday.date === createHolidayDto.date,
+    );
+
+    if (officialDay) {
+      throw new ConflictException(
+        `La date sélectionnée correspond déjà au jour férié « ${officialDay.name} ».`,
+      );
+    }
+
     const existingHoliday = await this.holidayRepository.findOneBy({
       date: createHolidayDto.date,
       holidayType: createHolidayDto.holidayType,
     });
 
     if (existingHoliday) {
-      throw new ConflictException(
-        'Un jour de ce type existe déjà à la date sélectionnée.',
+      if (existingHoliday.isActive) {
+        throw new ConflictException(
+          'Une fermeture GMES existe déjà à la date sélectionnée.',
+        );
+      }
+
+      existingHoliday.name = createHolidayDto.name.trim();
+      existingHoliday.deductible = false;
+      existingHoliday.source = createHolidayDto.source?.trim() || 'GMES';
+      existingHoliday.createdById = authenticatedUser.id;
+      existingHoliday.isActive = true;
+
+      const reactivatedHoliday = await this.holidayRepository.save(
+        existingHoliday,
       );
+
+      await this.auditService.record({
+        actorId: authenticatedUser.id,
+        action: 'HOLIDAY_REACTIVATED',
+        resourceType: 'HOLIDAY',
+        resourceId: reactivatedHoliday.id,
+        newValue: {
+          date: reactivatedHoliday.date,
+          name: reactivatedHoliday.name,
+          holidayType: reactivatedHoliday.holidayType,
+        },
+      });
+
+      return this.findOne(reactivatedHoliday.id);
     }
 
     const holiday = this.holidayRepository.create({
@@ -269,7 +312,29 @@ export class HolidaysService {
     updateHolidayDto: UpdateHolidayDto,
   ): Promise<Holiday> {
     const holiday = await this.findOne(id);
+
+    this.ensureManualClosure(holiday);
+
+    if (
+      updateHolidayDto.holidayType !== undefined &&
+      updateHolidayDto.holidayType !== HolidayType.FERMETURE_GMES
+    ) {
+      throw new BadRequestException(
+        'Une fermeture GMES ne peut pas être transformée en jour férié officiel.',
+      );
+    }
+
     const date = updateHolidayDto.date ?? holiday.date;
+    const year = Number(date.slice(0, 4));
+    const officialDay = (await this.getMartiniqueCalendarDays(year)).find(
+      (day) => day.date === date,
+    );
+
+    if (officialDay) {
+      throw new ConflictException(
+        `La date sélectionnée correspond déjà au jour férié « ${officialDay.name} ».`,
+      );
+    }
     const holidayType =
       updateHolidayDto.holidayType ?? holiday.holidayType;
 
@@ -310,6 +375,7 @@ export class HolidaysService {
 
   async disable(id: number): Promise<Holiday> {
     const holiday = await this.findOne(id);
+    this.ensureManualClosure(holiday);
     holiday.isActive = false;
 
     await this.holidayRepository.save(holiday);
@@ -319,6 +385,7 @@ export class HolidaysService {
 
   async enable(id: number): Promise<Holiday> {
     const holiday = await this.findOne(id);
+    this.ensureManualClosure(holiday);
     holiday.isActive = true;
 
     await this.holidayRepository.save(holiday);
@@ -563,6 +630,14 @@ export class HolidaysService {
       );
     } finally {
       clearTimeout(timeout);
+    }
+  }
+
+  private ensureManualClosure(holiday: Holiday): void {
+    if (holiday.holidayType !== HolidayType.FERMETURE_GMES) {
+      throw new BadRequestException(
+        'Les jours fériés officiels sont protégés et ne peuvent pas être modifiés ou désactivés manuellement.',
+      );
     }
   }
 

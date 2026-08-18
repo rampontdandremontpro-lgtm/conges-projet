@@ -1,0 +1,73 @@
+/*
+ * Typographie commune des badges métier colorés.
+ * On vise les statuts/informations métier, pas les compteurs de navigation.
+ */
+
+.status-badge,
+.alert-pill,
+.dash-card__status-ok,
+.manager-presence-status,
+.manager-team-status,
+.manager-overlap-badge,
+.manager-requests-badge,
+.manager-presence-threshold-badge,
+.manager-presence-member-card__status,
+.manager-presence-day-card__status,
+.manager-request-actions-card__agreement-badge,
+.rh-workload-status,
+.rh-absent-status,
+.rh-alert-pill--danger,
+.rh-alert-pill--warning,
+.rh-alert-pill--info,
+.rh-request-status,
+.rh-absence-status,
+.rh-absence-document-status,
+.rh-derogation-status,
+.rh-documents-status,
+.rh-holidays-badge,
+.rh-holidays-status,
+.rh-leave-types-badge,
+.rh-leave-types-status,
+.rh-leave-types-treatment,
+.document-status,
+.my-requests-status,
+.nr-derogation-badge,
+.settings-card__status {
+  font-size: 12px !important;
+  line-height: 1.2;
+}
+
+@media (max-width: 760px) {
+  .status-badge,
+  .alert-pill,
+  .dash-card__status-ok,
+  .manager-presence-status,
+  .manager-team-status,
+  .manager-overlap-badge,
+  .manager-requests-badge,
+  .manager-presence-threshold-badge,
+  .manager-presence-member-card__status,
+  .manager-presence-day-card__status,
+  .manager-request-actions-card__agreement-badge,
+  .rh-workload-status,
+  .rh-absent-status,
+  .rh-alert-pill--danger,
+  .rh-alert-pill--warning,
+  .rh-alert-pill--info,
+  .rh-request-status,
+  .rh-absence-status,
+  .rh-absence-document-status,
+  .rh-derogation-status,
+  .rh-documents-status,
+  .rh-holidays-badge,
+  .rh-holidays-status,
+  .rh-leave-types-badge,
+  .rh-leave-types-status,
+  .rh-leave-types-treatment,
+  .document-status,
+  .my-requests-status,
+  .nr-derogation-badge,
+  .settings-card__status {
+    font-size: 11.5px !important;
+  }
+}
