@@ -36,6 +36,7 @@ import { RhValidatorsPage } from '@/pages/rh/ValidatorsPage'
 import { DirectorAllRequestsPage } from '@/pages/director/AllRequestsPage'
 import { DirectorRequestDecisionPage } from '@/pages/director/RequestDecisionPage'
 import { DirectorPresencePage } from '@/pages/director/PresencePage'
+import { DirectorStatisticsPage } from '@/pages/director/StatisticsPage'
 import { NEW_REQUEST_ROLES, ROLES } from '@/config/navigation'
 import { RoleRoute } from '@/auth/RoleRoute'
 
@@ -73,6 +74,14 @@ export const router = createBrowserRouter([
         element: (
           <RoleRoute roles={[ROLES.DIRECTEUR]}>
             <DirectorPresencePage />
+          </RoleRoute>
+        ),
+      },
+      {
+        path: 'director-statistics',
+        element: (
+          <RoleRoute roles={[ROLES.DIRECTEUR]}>
+            <DirectorStatisticsPage />
           </RoleRoute>
         ),
       },
