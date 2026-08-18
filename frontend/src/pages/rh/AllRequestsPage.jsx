@@ -4,7 +4,7 @@ import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { Icon } from '@/components/ui/Icon'
 import { PaginationBar } from '@/components/ui/PaginationBar'
 import { PageContainer } from '@/components/ui/PageContainer'
-import { getRhAllRequests } from '@/services/rhAllRequests'
+import { getRhAllRequestFilterOptions, getRhAllRequests } from '@/services/rhAllRequests'
 import { formatDateNumericFR, formatDays } from '@/utils/format'
 
 import '@/styles/rh/all-requests.css'
@@ -108,7 +108,12 @@ export function RhAllRequestsPage() {
   const navigate = useNavigate()
   const location = useLocation()
   const [searchParams, setSearchParams] = useSearchParams()
-  const [state, setState] = useState({ loading: true, error: false, requests: [] })
+  const [state, setState] = useState({
+    loading: true,
+    error: false,
+    requests: [],
+    filterOptions: { services: [], leaveTypes: [] },
+  })
   const [statusFilter, setStatusFilter] = useState('all')
   const search = searchParams.get('q') ?? ''
   const [filtersOpen, setFiltersOpen] = useState(false)
@@ -120,10 +125,18 @@ export function RhAllRequestsPage() {
   const load = useCallback(async () => {
     setState((current) => ({ ...current, loading: true, error: false }))
     try {
-      const requests = await getRhAllRequests()
-      setState({ loading: false, error: false, requests })
+      const [requests, filterOptions] = await Promise.all([
+        getRhAllRequests(),
+        getRhAllRequestFilterOptions().catch(() => ({ services: [], leaveTypes: [] })),
+      ])
+      setState({ loading: false, error: false, requests, filterOptions })
     } catch {
-      setState({ loading: false, error: true, requests: [] })
+      setState({
+        loading: false,
+        error: true,
+        requests: [],
+        filterOptions: { services: [], leaveTypes: [] },
+      })
     }
   }, [])
 
@@ -164,19 +177,25 @@ export function RhAllRequestsPage() {
 
   const services = useMemo(() => {
     const values = new Map()
+    state.filterOptions.services.forEach((service) => {
+      if (service?.id && service?.name) values.set(String(service.id), service.name)
+    })
     state.requests.forEach((request) => {
       if (request.service?.id && request.service?.name) values.set(String(request.service.id), request.service.name)
     })
     return [...values.entries()].sort((left, right) => left[1].localeCompare(right[1], 'fr'))
-  }, [state.requests])
+  }, [state.filterOptions.services, state.requests])
 
   const leaveTypes = useMemo(() => {
     const values = new Map()
+    state.filterOptions.leaveTypes.forEach((leaveType) => {
+      if (leaveType?.id && leaveType?.name) values.set(String(leaveType.id), leaveType.name)
+    })
     state.requests.forEach((request) => {
       if (request.leaveType?.id && request.leaveType?.name) values.set(String(request.leaveType.id), request.leaveType.name)
     })
     return [...values.entries()].sort((left, right) => left[1].localeCompare(right[1], 'fr'))
-  }, [state.requests])
+  }, [state.filterOptions.leaveTypes, state.requests])
 
   const counts = useMemo(() => ({
     all: state.requests.length,
@@ -234,7 +253,7 @@ export function RhAllRequestsPage() {
               className={`rh-all-requests-filter-button${filtersOpen ? ' is-active' : ''}`}
               onClick={() => setFiltersOpen((current) => !current)}
             >
-              <Icon name="filter" size={15} /> Filtrer
+              <Icon name="filter" size={15} /> Filtres
             </button>
             <button type="button" className="rh-all-requests-new" onClick={() => navigate('/app/rh-prepare-request')}>
               <Icon name="plus" size={17} /> Saisir une demande
@@ -254,7 +273,7 @@ export function RhAllRequestsPage() {
             <label>
               <span>Type de congé</span>
               <select value={typeFilter} onChange={(event) => setTypeFilter(event.target.value)}>
-                <option value="all">Tous les types</option>
+                <option value="all">Tous les types de congés</option>
                 {leaveTypes.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
               </select>
             </label>

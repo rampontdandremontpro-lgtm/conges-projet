@@ -48,9 +48,7 @@ function buildAttentionItems(requests, presence) {
   }
 
   const relayRequests = requests.filter(
-    (request) =>
-      request.employee?.role === 'COLLABORATEUR' &&
-      request.service?.validationMode === 'RESPONSABLE_PUIS_RELAIS',
+    (request) => request.decisionAccess?.kind === 'RELAIS',
   )
   if (relayRequests.length > 0) {
     items.push({

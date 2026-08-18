@@ -988,11 +988,21 @@ export class LeaveRequestsService {
       })),
     );
 
-    return resolvedRecipients
-      .filter(({ recipientIds }) =>
-        recipientIds.includes(authenticatedUser.id),
-      )
-      .map(({ leaveRequest }) => leaveRequest);
+    const directorRequests = resolvedRecipients.filter(({ recipientIds }) =>
+      recipientIds.includes(authenticatedUser.id),
+    );
+
+    return Promise.all(
+      directorRequests.map(async ({ leaveRequest }) => {
+        const decisionAccess =
+          await this.validatorResolutionService.resolveAccess(
+            leaveRequest,
+            authenticatedUser,
+          );
+
+        return Object.assign(leaveRequest, { decisionAccess });
+      }),
+    );
   }
 
   async findPendingForDecision(

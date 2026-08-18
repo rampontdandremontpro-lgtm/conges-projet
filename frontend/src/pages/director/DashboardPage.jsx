@@ -161,7 +161,7 @@ function PrioritiesCard({ requests, onNavigate }) {
               type="button"
               className="director-priority-row"
               key={request.id}
-              onClick={() => onNavigate('/app/director-requests')}
+              onClick={() => onNavigate(`/app/director-requests/${request.id}`)}
             >
               <span className="director-priority-avatar">{initials(request.employee)}</span>
               <span className="director-priority-main">
