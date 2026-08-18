@@ -11,7 +11,7 @@ import {
 } from '@/services/managerDashboard'
 import { getCurrentMonthKey, shiftMonthKey } from '@/utils/managerCalendar'
 
-import '@/styles/manager-presence.css'
+import '@/styles/manager/presence/index.css'
 
 const PAGE_SIZE = 8
 
@@ -279,23 +279,25 @@ export function ManagerPresencePage() {
                 <strong>{query ? 'Aucun membre ne correspond à votre recherche.' : 'Aucun membre dans cette catégorie.'}</strong>
               </div>
             ) : (
-              <div className="manager-presence-members">
-                {paginatedMembers.map((member) => (
-                  <ManagerPresenceMemberCard
-                    key={member.id}
-                    member={member}
-                    currentPeriod={state.data?.currentPeriod}
+              <>
+                <div className="manager-presence-members">
+                  {paginatedMembers.map((member) => (
+                    <ManagerPresenceMemberCard
+                      key={member.id}
+                      member={member}
+                      currentPeriod={state.data?.currentPeriod}
+                    />
+                  ))}
+                </div>
+                <div className="manager-presence-pagination">
+                  <PaginationBar
+                    page={safeMemberPage}
+                    pageSize={PAGE_SIZE}
+                    totalItems={visibleMembers.length}
+                    onPageChange={setPage}
                   />
-                ))}
-              </div>
-              <div className="manager-presence-pagination">
-                <PaginationBar
-                  page={safeMemberPage}
-                  pageSize={PAGE_SIZE}
-                  totalItems={visibleMembers.length}
-                  onPageChange={setPage}
-                />
-              </div>
+                </div>
+              </>
             )}
           </div>
 

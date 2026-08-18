@@ -9,8 +9,7 @@ import {
 } from '@/services/rhRequests'
 import { formatDays, formatRangeNumericFR } from '@/utils/format'
 
-import '@/styles/manager-requests.css'
-import '@/styles/manager-request-detail.css'
+import '@/styles/manager/requests/index.css'
 
 const FILTERS = [
   { id: 'all', label: 'Toutes' },

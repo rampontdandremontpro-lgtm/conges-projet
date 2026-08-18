@@ -13,8 +13,8 @@ import { getRhEligibleCollaborators } from '@/services/rhPrepareRequest'
 import { currentMonth, errorMessage, nextMonthOf, prevMonthOf, selectPrimaryBalance } from '@/utils/newRequest'
 import { notifyAppDataChanged } from '@/utils/dataRefresh'
 
-import '@/styles/newrequest.css'
-import '@/styles/rh-prepare-request.css'
+import '@/styles/collab/new-request/index.css'
+import '@/styles/rh/prepare-request.css'
 
 export function RhPrepareRequestPage() {
   const navigate = useNavigate()

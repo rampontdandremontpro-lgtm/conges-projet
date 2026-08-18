@@ -11,7 +11,7 @@ import {
   updateRhLeaveType,
 } from '@/services/rhLeaveTypes'
 
-import '@/styles/rh-leave-types.css'
+import '@/styles/rh/leave-types.css'
 
 const PAGE_SIZE = 8
 

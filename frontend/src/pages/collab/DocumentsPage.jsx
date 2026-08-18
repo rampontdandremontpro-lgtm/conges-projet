@@ -16,7 +16,7 @@ import {
 import { getMyAbsenceDeclarations, getMyLeaveRequests } from '@/services/myRequests'
 import { formatDateNumericFR, formatRangeNumericFR } from '@/utils/format'
 
-import '@/styles/documents.css'
+import '@/styles/collab/documents/index.css'
 
 const PAGE_SIZE = 8
 const MAX_FILE_SIZE = 10 * 1024 * 1024

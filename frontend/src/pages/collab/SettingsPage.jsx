@@ -10,7 +10,7 @@ import {
   saveMySignature,
 } from '@/services/profile'
 
-import '@/styles/settings.css'
+import '@/styles/collab/settings/index.css'
 
 function errorMessage(error, fallback) {
   const message = error.response?.data?.message

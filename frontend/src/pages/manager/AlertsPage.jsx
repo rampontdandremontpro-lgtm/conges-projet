@@ -17,7 +17,7 @@ import {
   shiftMonthKey,
 } from '@/utils/managerCalendar'
 
-import '@/styles/manager-alerts.css'
+import '@/styles/manager/alerts/index.css'
 
 const LIST_PAGE_SIZE = 6
 

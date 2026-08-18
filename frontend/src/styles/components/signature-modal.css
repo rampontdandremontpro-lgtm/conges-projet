@@ -1,5 +1,5 @@
-@import './collab/new-request/03-recap-actions.css';
-@import './collab/new-request/04-modal-signature-feedback.css';
+@import '../collab/new-request/03-recap-actions.css';
+@import '../collab/new-request/04-modal-signature-feedback.css';
 
 /*
  * La modale de signature est réutilisée hors de la page Nouvelle demande

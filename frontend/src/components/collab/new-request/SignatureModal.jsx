@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 
-import '@/styles/signature-modal.css'
+import '@/styles/components/signature-modal.css'
 
 import { Icon } from '@/components/ui/Icon'
 import { getMySignature } from '@/services/profile'

@@ -10,7 +10,7 @@ import {
 } from '@/services/managerRequests'
 import { formatDays, formatRangeNumericFR } from '@/utils/format'
 
-import '@/styles/manager-requests.css'
+import '@/styles/manager/requests/index.css'
 
 const PAGE_SIZE = 8
 

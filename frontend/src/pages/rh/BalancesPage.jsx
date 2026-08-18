@@ -12,7 +12,7 @@ import {
 } from '@/services/rhBalances'
 import { formatDays } from '@/utils/format'
 
-import '@/styles/rh-balances.css'
+import '@/styles/rh/balances.css'
 
 const PAGE_SIZE = 8
 

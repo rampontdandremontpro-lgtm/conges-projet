@@ -21,7 +21,7 @@ import { formatDateNumericFR, formatDays, formatRangeNumericFR, todayISO } from 
 import { errorMessage } from '@/utils/newRequest'
 import { notifyAppDataChanged } from '@/utils/dataRefresh'
 
-import '@/styles/request-detail.css'
+import '@/styles/collab/request-detail/index.css'
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024
 const ALLOWED_MIME_TYPES = new Set(['application/pdf', 'image/jpeg', 'image/png'])

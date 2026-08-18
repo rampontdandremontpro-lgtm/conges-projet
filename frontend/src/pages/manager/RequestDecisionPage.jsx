@@ -12,7 +12,7 @@ import {
 } from '@/services/managerRequests'
 import { formatDateNumericFR, formatDays, formatRangeNumericFR } from '@/utils/format'
 
-import '@/styles/manager-request-detail.css'
+import '@/styles/manager/requests/index.css'
 
 function formatDateTime(value) {
   if (!value) return '—'

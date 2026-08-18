@@ -15,8 +15,8 @@ import {
 import { buildBalanceSummary } from '@/utils/balanceSummary'
 import { todayISO } from '@/utils/format'
 
-import '@/styles/dashboard.css'
-import '@/styles/manager-my-balance.css'
+import '@/styles/collab/dashboard/index.css'
+import '@/styles/manager/my-balance/index.css'
 
 function computeNextLeave(requests) {
   if (!requests || requests.length === 0) return null

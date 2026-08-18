@@ -26,7 +26,7 @@ import { useNewRequestResources } from '@/hooks/collab/useNewRequestResources'
 import { getLeaveRequest } from '@/services/requestDetails'
 import { notifyAppDataChanged } from '@/utils/dataRefresh'
 
-import '@/styles/newrequest.css'
+import '@/styles/collab/new-request/index.css'
 
 function monthFromIso(iso) {
   const [year, month] = String(iso).slice(0, 10).split('-').map(Number)

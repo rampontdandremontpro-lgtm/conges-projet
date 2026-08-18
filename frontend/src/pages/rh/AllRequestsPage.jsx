@@ -7,7 +7,7 @@ import { PageContainer } from '@/components/ui/PageContainer'
 import { getRhAllRequests } from '@/services/rhAllRequests'
 import { formatDateNumericFR, formatDays } from '@/utils/format'
 
-import '@/styles/rh-all-requests.css'
+import '@/styles/rh/all-requests.css'
 
 const PAGE_SIZE = 8
 

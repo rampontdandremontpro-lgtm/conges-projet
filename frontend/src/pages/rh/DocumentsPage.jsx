@@ -13,8 +13,8 @@ import {
 } from '@/services/rhDocuments'
 import { formatDateNumericFR } from '@/utils/format'
 
-import '@/styles/documents.css'
-import '@/styles/rh-documents.css'
+import '@/styles/collab/documents/index.css'
+import '@/styles/rh/documents.css'
 
 const PAGE_SIZE = 8
 

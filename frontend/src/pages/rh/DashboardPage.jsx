@@ -10,8 +10,8 @@ import { RhAbsentsCard } from '@/components/rh/dashboard/RhAbsentsCard'
 import { RhAlertsCard } from '@/components/rh/dashboard/RhAlertsCard'
 import { getRhDashboardData } from '@/services/rhDashboard'
 
-import '@/styles/dashboard.css'
-import '@/styles/rh-dashboard.css'
+import '@/styles/collab/dashboard/index.css'
+import '@/styles/rh/dashboard.css'
 
 const INITIAL_STATE = {
   loading: true,

@@ -8,7 +8,7 @@ import {
   markNotificationRead,
 } from '@/services/notifications'
 
-import '@/styles/notifications.css'
+import '@/styles/collab/notifications/index.css'
 
 const FILTERS = [
   { key: 'all', label: 'Toutes' },

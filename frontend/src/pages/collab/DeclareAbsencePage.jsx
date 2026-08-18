@@ -18,7 +18,7 @@ import { getAbsenceDeclaration, getAbsenceDocuments } from '@/services/requestDe
 
 import { notifyAppDataChanged } from '@/utils/dataRefresh'
 
-import '@/styles/absence.css'
+import '@/styles/collab/absence/index.css'
 
 const MAX_FILES = 5
 const MAX_FILE_SIZE = 10 * 1024 * 1024

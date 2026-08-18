@@ -24,8 +24,8 @@ import {
 import { triggerBlobDownload } from '@/services/documents'
 import { formatDateNumericFR, formatDays, todayISO } from '@/utils/format'
 
-import '@/styles/documents.css'
-import '@/styles/rh-absences.css'
+import '@/styles/collab/documents/index.css'
+import '@/styles/rh/absences.css'
 
 const PAGE_SIZE = 8
 const MAX_FILE_SIZE = 10 * 1024 * 1024

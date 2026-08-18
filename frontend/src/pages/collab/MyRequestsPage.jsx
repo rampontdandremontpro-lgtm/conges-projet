@@ -10,7 +10,7 @@ import { getMyAbsenceDeclarations, getMyLeaveRequests } from '@/services/myReque
 import { deleteAbsenceDraft, deleteLeaveDraft, downloadCancellationPdf, downloadPendingSummaryPdf, downloadValidationPdf } from '@/services/requestDetails'
 import { formatDays, formatRangeNumericFR } from '@/utils/format'
 
-import '@/styles/requests.css'
+import '@/styles/collab/requests/index.css'
 
 const PAGE_SIZE = 8
 

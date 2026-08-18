@@ -11,7 +11,7 @@ import {
   getManagerServicePresence,
 } from '@/services/managerDashboard'
 
-import '@/styles/manager-dashboard.css'
+import '@/styles/manager/dashboard/index.css'
 
 export function DashboardResponsable() {
   const navigate = useNavigate()

@@ -11,7 +11,7 @@ import { getMyLeaveBalances, getMyLeaveRequests, getPublicSettings } from '@/ser
 import { todayISO } from '@/utils/format'
 import { buildBalanceSummary } from '@/utils/balanceSummary'
 
-import '@/styles/dashboard.css'
+import '@/styles/collab/dashboard/index.css'
 
 function computeNextLeave(requests) {
   if (!requests || requests.length === 0) return null

@@ -8,7 +8,7 @@ import { Icon } from '@/components/ui/Icon'
 import { getMyBalanceHistory } from '@/services/balances'
 import { formatDays } from '@/utils/format'
 
-import '@/styles/history.css'
+import '@/styles/collab/history/index.css'
 
 const HIDDEN_MOVEMENT_TYPES = new Set(['RESERVATION', 'LIBERATION_RESERVATION'])
 

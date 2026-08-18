@@ -4,7 +4,7 @@ import { Icon } from '@/components/ui/Icon'
 import { PageContainer } from '@/components/ui/PageContainer'
 import { downloadRhExport, getRhExportsOverview } from '@/services/rhExports'
 
-import '@/styles/rh-exports.css'
+import '@/styles/rh/exports.css'
 
 function dateInputValue(year, month, day) {
   return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`

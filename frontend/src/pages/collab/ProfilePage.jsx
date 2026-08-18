@@ -6,7 +6,7 @@ import { ROLE_LABELS } from '@/config/navigation'
 import { getMyProfile } from '@/services/profile'
 import { formatDateFR, parseISO, todayISO } from '@/utils/format'
 
-import '@/styles/profile.css'
+import '@/styles/collab/profile/index.css'
 
 const PRESENCE_LABELS = {
   PRESENT: 'Présent',

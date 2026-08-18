@@ -11,7 +11,7 @@ import {
 } from '@/services/rhDerogations'
 import { formatDateNumericFR, formatDays } from '@/utils/format'
 
-import '@/styles/rh-derogations.css'
+import '@/styles/rh/derogations.css'
 
 const PAGE_SIZE = 8
 
