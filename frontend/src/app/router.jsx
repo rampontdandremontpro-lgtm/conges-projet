@@ -34,6 +34,7 @@ import { RhHolidaysPage } from '@/pages/rh/HolidaysPage'
 import { RhSummerPeriodPage } from '@/pages/rh/SummerPeriodPage'
 import { RhValidatorsPage } from '@/pages/rh/ValidatorsPage'
 import { DirectorRequestsPage } from '@/pages/director/RequestsPage'
+import { DirectorAllRequestsPage } from '@/pages/director/AllRequestsPage'
 import { DirectorRequestDecisionPage } from '@/pages/director/RequestDecisionPage'
 import { NEW_REQUEST_ROLES, ROLES } from '@/config/navigation'
 import { RoleRoute } from '@/auth/RoleRoute'
@@ -61,6 +62,22 @@ export const router = createBrowserRouter([
       },
       {
         path: 'director-requests/:id',
+        element: (
+          <RoleRoute roles={[ROLES.DIRECTEUR]}>
+            <DirectorRequestDecisionPage />
+          </RoleRoute>
+        ),
+      },
+      {
+        path: 'director-all-requests',
+        element: (
+          <RoleRoute roles={[ROLES.DIRECTEUR]}>
+            <DirectorAllRequestsPage />
+          </RoleRoute>
+        ),
+      },
+      {
+        path: 'director-all-requests/:id',
         element: (
           <RoleRoute roles={[ROLES.DIRECTEUR]}>
             <DirectorRequestDecisionPage />

@@ -17,6 +17,11 @@ export async function getDirectorRequestFilterOptions() {
   return { services, leaveTypes }
 }
 
+export async function getDirectorAllRequests() {
+  const { data } = await apiClient.get('/leave-requests/management/all')
+  return Array.isArray(data) ? data : []
+}
+
 export async function getDirectorPendingRequests() {
   const { data } = await apiClient.get('/leave-requests/director/pending')
   return Array.isArray(data) ? data : []

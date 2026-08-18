@@ -104,7 +104,7 @@ export class LeaveRequestsController {
   }
 
   @Get('management/all')
-  @Roles(UserRole.RH)
+  @Roles(UserRole.RH, UserRole.DIRECTEUR)
   findAllForRh() {
     return this.leaveRequestsService.findAllForRh();
   }

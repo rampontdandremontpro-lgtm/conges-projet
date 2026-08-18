@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 
 import { SignatureModal } from '@/components/collab/new-request/SignatureModal'
 import { ManagerRefusalModal } from '@/components/manager/requests/ManagerRefusalModal'
@@ -52,9 +52,23 @@ function circuitLabel(request) {
   return 'Circuit Directeur / RH'
 }
 
+function requestStatusMeta(status) {
+  if (status === 'EN_ATTENTE_VALIDATION') return { label: 'En attente', tone: 'pending', icon: 'clock' }
+  if (status === 'VALIDEE') return { label: 'Validée', tone: 'approved', icon: 'check' }
+  if (status === 'REFUSEE') return { label: 'Refusée', tone: 'refused', icon: 'alert' }
+  if (status === 'ANNULATION_EN_ATTENTE_ACCORD') return { label: 'Annulation en attente', tone: 'pending', icon: 'clock' }
+  if (status === 'ANNULEE_APRES_VALIDATION') return { label: 'Annulée après validation', tone: 'cancelled', icon: 'alert' }
+  if (status === 'ANNULEE') return { label: 'Annulée', tone: 'cancelled', icon: 'alert' }
+  if (status === 'EXPIREE_NON_VALIDEE') return { label: 'Expirée', tone: 'cancelled', icon: 'clock' }
+  return { label: status || 'Traitée', tone: 'pending', icon: 'clock' }
+}
+
 export function DirectorRequestDecisionPage() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
+  const consultationMode = location.pathname.startsWith('/app/director-all-requests/')
+  const backPath = consultationMode ? '/app/director-all-requests' : '/app/director-requests'
   const [state, setState] = useState({ loading: true, error: null, request: null, availability: null })
   const [showSignature, setShowSignature] = useState(false)
   const [showRefusal, setShowRefusal] = useState(false)
@@ -139,7 +153,7 @@ export function DirectorRequestDecisionPage() {
         minimumPresenceJustification: minimumPresenceJustification.trim() || undefined,
       })
       window.dispatchEvent(new Event('gmes:data-changed'))
-      navigate('/app/director-requests', {
+      navigate(backPath, {
         replace: true,
         state: { flash: { kind: 'success', message: 'Demande validée avec succès.' } },
       })
@@ -158,7 +172,7 @@ export function DirectorRequestDecisionPage() {
     try {
       await refuseDirectorRequest(id, comment ? { comment } : {})
       window.dispatchEvent(new Event('gmes:data-changed'))
-      navigate('/app/director-requests', {
+      navigate(backPath, {
         replace: true,
         state: { flash: { kind: 'success', message: 'Demande refusée.' } },
       })
@@ -181,8 +195,8 @@ export function DirectorRequestDecisionPage() {
   if (state.error || !state.request) {
     return (
       <div className="manager-request-detail-page">
-        <button type="button" className="manager-request-back" onClick={() => navigate('/app/director-requests')}>
-          <Icon name="chevronLeft" size={16} /> Retour aux demandes
+        <button type="button" className="manager-request-back" onClick={() => navigate(backPath)}>
+          <Icon name="chevronLeft" size={16} /> {consultationMode ? 'Retour à toutes les demandes' : 'Retour aux demandes'}
         </button>
         <div className="manager-request-detail-state manager-request-detail-state--error">
           <Icon name="alert" size={26} />
@@ -197,12 +211,18 @@ export function DirectorRequestDecisionPage() {
   const request = state.request
   const availability = state.availability
   const overlapCount = availability?.overlaps?.length ?? 0
-  const canDecide = request.status === 'EN_ATTENTE_VALIDATION' && !request.finalDeciderId && !request.lockedAt
+  const canDecide =
+    !consultationMode &&
+    request.status === 'EN_ATTENTE_VALIDATION' &&
+    Boolean(request.decisionAccess) &&
+    !request.finalDeciderId &&
+    !request.lockedAt
+  const readonlyStatus = requestStatusMeta(request.status)
 
   return (
     <div className="manager-request-detail-page director-request-detail-page">
-      <button type="button" className="manager-request-back" onClick={() => navigate('/app/director-requests')}>
-        <Icon name="chevronLeft" size={16} /> Retour aux demandes
+      <button type="button" className="manager-request-back" onClick={() => navigate(backPath)}>
+        <Icon name="chevronLeft" size={16} /> {consultationMode ? 'Retour à toutes les demandes' : 'Retour aux demandes'}
       </button>
 
       {feedback && (
@@ -221,10 +241,12 @@ export function DirectorRequestDecisionPage() {
           <span className="manager-request-detail-hero__eyebrow">DEMANDE DE CONGÉ N°{request.id}</span>
           <div className="manager-request-detail-hero__titleline">
             <h2>{employeeName}</h2>
-            {request.isUrgent ? (
+            {request.status === 'EN_ATTENTE_VALIDATION' && request.isUrgent ? (
               <span className="manager-requests-badge manager-requests-badge--urgent"><Icon name="alert" size={12} /> Urgente</span>
             ) : (
-              <span className="manager-requests-badge manager-requests-badge--pending"><Icon name="clock" size={12} /> En attente</span>
+              <span className={`manager-requests-badge manager-requests-badge--${readonlyStatus.tone}`}>
+                <Icon name={readonlyStatus.icon} size={12} /> {readonlyStatus.label}
+              </span>
             )}
           </div>
           <p>{request.leaveType?.name ?? 'Demande de congé'} · {request.service?.name ?? 'Service non renseigné'}</p>
@@ -344,10 +366,20 @@ export function DirectorRequestDecisionPage() {
             </>
           ) : (
             <div className="manager-request-actions-card__readonly">
-              <span className={`manager-requests-badge manager-requests-badge--${request.status === 'VALIDEE' ? 'approved' : request.status === 'REFUSEE' ? 'refused' : 'pending'}`}>
-                <Icon name={request.status === 'VALIDEE' ? 'check' : request.status === 'REFUSEE' ? 'alert' : 'clock'} size={12} />
-                {request.status === 'VALIDEE' ? 'Validée' : request.status === 'REFUSEE' ? 'Refusée' : 'Traitée'}
+              <span className={`manager-requests-badge manager-requests-badge--${readonlyStatus.tone}`}>
+                <Icon name={readonlyStatus.icon} size={12} />
+                {readonlyStatus.label}
               </span>
+
+              {consultationMode && request.status === 'EN_ATTENTE_VALIDATION' && request.decisionAccess && (
+                <button
+                  type="button"
+                  className="manager-request-action manager-request-action--validate director-request-open-decision"
+                  onClick={() => navigate(`/app/director-requests/${request.id}`)}
+                >
+                  <Icon name="list" size={15} /> Ouvrir dans Demandes à traiter
+                </button>
+              )}
 
               {request.decisionAt && (
                 <div className="manager-request-actions-card__decision-meta">
