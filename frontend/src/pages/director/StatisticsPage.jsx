@@ -238,7 +238,7 @@ function DonutChart({ rows }) {
 }
 
 function ServiceBars({ rows }) {
-  const visible = rows.filter((row) => Number(row.activeEmployees ?? 0) > 0)
+  const visible = rows
 
   if (visible.length === 0) {
     return <div className="director-stat-empty">Aucun service ne correspond aux filtres.</div>
@@ -270,40 +270,6 @@ function ServiceBars({ rows }) {
   )
 }
 
-function MonthlyBars({ rows, dataType }) {
-  const maxValue = Math.max(1, ...rows.flatMap((row) => [row.leaveRequests ?? 0, row.absenceDeclarations ?? 0]))
-
-  if (rows.length === 0) {
-    return <div className="director-stat-empty">Aucune donnée sur cette période.</div>
-  }
-
-  return (
-    <div className="director-monthly-bars">
-      {rows.map((row, index) => (
-        <div className="director-monthly-bars__item" key={row.monthKey} style={{ '--month-delay': `${100 + index * 55}ms` }}>
-          <div className="director-monthly-bars__columns">
-            {dataType !== 'ABSENCE' && (
-              <span
-                className="director-monthly-bars__bar director-monthly-bars__bar--leave"
-                style={{ height: `${Math.max(4, (Number(row.leaveRequests ?? 0) / maxValue) * 100)}%` }}
-                title={`${row.leaveRequests ?? 0} congé(s)`}
-              />
-            )}
-            {dataType !== 'LEAVE' && (
-              <span
-                className="director-monthly-bars__bar director-monthly-bars__bar--absence"
-                style={{ height: `${Math.max(4, (Number(row.absenceDeclarations ?? 0) / maxValue) * 100)}%` }}
-                title={`${row.absenceDeclarations ?? 0} absence(s)`}
-              />
-            )}
-          </div>
-          <strong>{monthLabel(row.monthKey)}</strong>
-        </div>
-      ))}
-    </div>
-  )
-}
-
 export function DirectorStatisticsPage() {
   const defaultPeriod = resolvePresetPeriod('year')
   const [periodPreset, setPeriodPreset] = useState('year')
@@ -312,6 +278,7 @@ export function DirectorStatisticsPage() {
   const [serviceFilter, setServiceFilter] = useState('all')
   const [roleFilter, setRoleFilter] = useState('all')
   const [dataType, setDataType] = useState('ALL')
+  const [serviceScope, setServiceScope] = useState('INTERNE')
   const [services, setServices] = useState([])
   const [state, setState] = useState({ loading: true, error: false, data: null })
 
@@ -358,10 +325,45 @@ export function DirectorStatisticsPage() {
     return () => window.removeEventListener('gmes:data-changed', refresh)
   }, [load])
 
+  useEffect(() => {
+    if (serviceFilter === 'all') return
+
+    const selectedService = services.find((service) => String(service.id) === serviceFilter)
+    if (!selectedService) return
+
+    setServiceScope(
+      selectedService.serviceType === 'EXTERNE' || selectedService.externalCompanyName
+        ? 'EXTERNE'
+        : 'INTERNE',
+    )
+  }, [serviceFilter, services])
+
   const totals = state.data?.totals ?? {}
   const byService = state.data?.byService ?? []
   const byLeaveType = state.data?.byLeaveType ?? []
   const byMonth = state.data?.byMonth ?? []
+  const visibleServiceRows = useMemo(() => {
+    if (serviceFilter !== 'all') return byService
+
+    const typeByServiceId = new Map(
+      services.map((service) => [
+        String(service.id),
+        service.serviceType === 'EXTERNE' || service.externalCompanyName ? 'EXTERNE' : 'INTERNE',
+      ]),
+    )
+
+    return byService.filter((row) => {
+      const type = typeByServiceId.get(String(row.serviceId))
+        ?? (String(row.serviceName ?? '').includes(' — ') ? 'EXTERNE' : 'INTERNE')
+      return type === serviceScope
+    })
+  }, [byService, serviceFilter, serviceScope, services])
+
+  const changeServiceScope = (scope) => {
+    setServiceScope(scope)
+    if (serviceFilter !== 'all') setServiceFilter('all')
+  }
+
   const periodInvalid = periodPreset === 'custom' && (!customStartDate || !customEndDate || customStartDate > customEndDate)
   const resultsKey = `${periodPreset}-${customStartDate}-${customEndDate}-${serviceFilter}-${roleFilter}-${dataType}`
 
@@ -388,7 +390,7 @@ export function DirectorStatisticsPage() {
           </>
         )}
 
-        <label className="director-stat-filter director-stat-filter--select">
+        <label className="director-stat-filter director-stat-filter--select director-stat-filter--service">
           <span>Service</span>
           <select value={serviceFilter} onChange={(event) => setServiceFilter(event.target.value)}>
             <option value="all">Tous les services</option>
@@ -451,9 +453,26 @@ export function DirectorStatisticsPage() {
                   <h2>Présence par service</h2>
                   <p>Taux de présence sur la période sélectionnée</p>
                 </div>
-                <span className="director-stat-card__badge">Données réelles</span>
+                <div className="director-stat-service-toggle" role="group" aria-label="Type de services">
+                  <button
+                    type="button"
+                    className={serviceScope === 'INTERNE' ? 'is-active' : ''}
+                    onClick={() => changeServiceScope('INTERNE')}
+                  >
+                    <Icon name="building" size={15} />
+                    Service interne
+                  </button>
+                  <button
+                    type="button"
+                    className={serviceScope === 'EXTERNE' ? 'is-active' : ''}
+                    onClick={() => changeServiceScope('EXTERNE')}
+                  >
+                    <Icon name="users" size={15} />
+                    Service externe
+                  </button>
+                </div>
               </header>
-              <ServiceBars rows={byService} />
+              <ServiceBars rows={visibleServiceRows} />
             </section>
 
             <section className="director-stat-card director-stat-card--donut">
@@ -481,19 +500,6 @@ export function DirectorStatisticsPage() {
             <LineChart rows={byMonth} dataType={dataType} />
           </section>
 
-          <section className="director-stat-card director-stat-card--monthly">
-            <header className="director-stat-card__header">
-              <div>
-                <h2>Congés et absences par mois</h2>
-                <p>Volume mensuel des dossiers</p>
-              </div>
-              <div className="director-stat-legend">
-                {dataType !== 'ABSENCE' && <span className="director-stat-legend__leave">Congés</span>}
-                {dataType !== 'LEAVE' && <span className="director-stat-legend__absence">Absences</span>}
-              </div>
-            </header>
-            <MonthlyBars rows={byMonth} dataType={dataType} />
-          </section>
         </div>
       ))}
     </div>

@@ -1,11 +1,12 @@
 import { useState } from 'react'
-import { Outlet } from 'react-router-dom'
+import { Outlet, useLocation } from 'react-router-dom'
 
 import { Header } from '@/components/layout/Header'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { PageContainer } from '@/components/ui/PageContainer'
 
 export function AppLayout() {
+  const location = useLocation()
   const [collapsed] = useState(
     () => window.matchMedia('(max-width: 1024px) and (min-width: 768px)').matches,
   )
@@ -34,7 +35,9 @@ export function AppLayout() {
         <Header />
         <main className="app-shell__content">
           <PageContainer>
-            <Outlet />
+            <div className="app-page-motion" key={location.pathname}>
+              <Outlet />
+            </div>
           </PageContainer>
         </main>
       </div>

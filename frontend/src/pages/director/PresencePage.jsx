@@ -80,7 +80,7 @@ function filteredCalendarData(data, { query, serviceId, role }) {
 }
 
 export function DirectorPresencePage() {
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [calendarMonth, setCalendarMonth] = useState(getCurrentMonthKey())
   const [serviceFilter, setServiceFilter] = useState('all')
   const [roleFilter, setRoleFilter] = useState('all')
@@ -157,6 +157,19 @@ export function DirectorPresencePage() {
     setCalendarMonth((current) => exactMonth ?? shiftMonthKey(current, offset))
   }
 
+  const filtersAreActive = serviceFilter !== 'all' || roleFilter !== 'all' || Boolean(query.trim())
+
+  const resetFilters = () => {
+    setServiceFilter('all')
+    setRoleFilter('all')
+
+    if (query.trim()) {
+      const nextParams = new URLSearchParams(searchParams)
+      nextParams.delete('q')
+      setSearchParams(nextParams, { replace: true })
+    }
+  }
+
   return (
     <div className="manager-presence-page manager-presence-page--calendar director-presence-page">
       {state.loading && !state.data ? (
@@ -195,6 +208,16 @@ export function DirectorPresencePage() {
                 ))}
               </select>
             </label>
+
+            <button
+              type="button"
+              className="director-presence-filters__reset"
+              disabled={!filtersAreActive}
+              onClick={resetFilters}
+            >
+              <Icon name="refresh" size={15} />
+              <span>Réinitialiser</span>
+            </button>
           </div>
 
           <ManagerPresenceCalendar

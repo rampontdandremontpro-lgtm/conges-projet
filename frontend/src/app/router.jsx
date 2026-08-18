@@ -86,6 +86,14 @@ export const router = createBrowserRouter([
         ),
       },
       {
+        path: 'director-exports',
+        element: (
+          <RoleRoute roles={[ROLES.DIRECTEUR]}>
+            <RhExportsPage />
+          </RoleRoute>
+        ),
+      },
+      {
         path: 'rh-all-requests',
         element: (
           <RoleRoute roles={[ROLES.RH]}>
