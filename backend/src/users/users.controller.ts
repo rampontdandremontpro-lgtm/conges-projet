@@ -75,6 +75,14 @@ export class UsersController {
     return this.usersService.getGlobalPresence();
   }
 
+  @Get('management/global-presence/calendar')
+  @Roles(UserRole.DIRECTEUR)
+  getGlobalPresenceCalendar(
+    @Query('month') month?: string,
+  ) {
+    return this.usersService.getGlobalPresenceCalendar(month);
+  }
+
   @Get('me/signature')
   @Roles(
     UserRole.COLLABORATEUR,

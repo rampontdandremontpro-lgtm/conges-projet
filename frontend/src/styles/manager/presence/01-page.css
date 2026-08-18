@@ -304,3 +304,26 @@
   justify-content: flex-end;
   margin-top: 14px;
 }
+
+.manager-presence-page--calendar {
+  width: min(calc(100vw - var(--sidebar-width) - 64px), 1540px);
+  max-width: none;
+  margin-left: 50%;
+  transform: translateX(-50%);
+}
+
+.manager-presence-page--calendar .manager-calendar-card {
+  padding: 26px;
+}
+
+.manager-presence-page--calendar .manager-presence-main-view {
+  width: 100%;
+}
+
+@media (max-width: 1024px) {
+  .manager-presence-page--calendar {
+    width: 100%;
+    margin-left: 0;
+    transform: none;
+  }
+}

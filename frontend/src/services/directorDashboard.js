@@ -116,3 +116,16 @@ export async function getDirectorDashboardData() {
     ].filter(Boolean),
   }
 }
+
+export async function getDirectorGlobalPresenceCalendar(month) {
+  const response = await apiClient.get('/users/management/global-presence/calendar', {
+    params: { month },
+  })
+
+  return response.data
+}
+
+export async function getDirectorPresenceServices() {
+  const response = await apiClient.get('/services')
+  return Array.isArray(response.data) ? response.data : []
+}

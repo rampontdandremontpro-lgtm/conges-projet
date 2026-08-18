@@ -35,6 +35,7 @@ import { RhSummerPeriodPage } from '@/pages/rh/SummerPeriodPage'
 import { RhValidatorsPage } from '@/pages/rh/ValidatorsPage'
 import { DirectorAllRequestsPage } from '@/pages/director/AllRequestsPage'
 import { DirectorRequestDecisionPage } from '@/pages/director/RequestDecisionPage'
+import { DirectorPresencePage } from '@/pages/director/PresencePage'
 import { NEW_REQUEST_ROLES, ROLES } from '@/config/navigation'
 import { RoleRoute } from '@/auth/RoleRoute'
 
@@ -64,6 +65,14 @@ export const router = createBrowserRouter([
         element: (
           <RoleRoute roles={[ROLES.DIRECTEUR]}>
             <DirectorRequestDecisionPage />
+          </RoleRoute>
+        ),
+      },
+      {
+        path: 'director-presence',
+        element: (
+          <RoleRoute roles={[ROLES.DIRECTEUR]}>
+            <DirectorPresencePage />
           </RoleRoute>
         ),
       },

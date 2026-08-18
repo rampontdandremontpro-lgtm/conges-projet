@@ -16,6 +16,18 @@ const STATUS_LABELS = {
   ABSENT: 'Absence',
 }
 
+const ROLE_LABELS = {
+  COLLABORATEUR: 'Collaborateur',
+  RESPONSABLE_SERVICE: 'Responsable de service',
+  RH: 'RH',
+  DIRECTEUR: 'Directeur',
+}
+
+function memberSubtitle(member) {
+  const role = ROLE_LABELS[member?.role] ?? 'Collaborateur'
+  return member?.serviceName ? `${role} · ${member.serviceName}` : role
+}
+
 function initials(person) {
   return `${person?.prenom?.[0] ?? ''}${person?.nom?.[0] ?? ''}`.toUpperCase()
 }
@@ -64,19 +76,19 @@ export function ManagerPresenceCalendar({ data, month, filter, onMonthChange }) 
   )
   const total = data?.totalMembers ?? data?.members?.length ?? 0
   const threshold = data?.service?.minimumPresence ?? null
+  const isGlobal = !data?.service
   const gridStyle = {
-    gridTemplateColumns: `170px repeat(${monthDays.length}, minmax(28px, 1fr))`,
-    minWidth: `${170 + (monthDays.length * 29)}px`,
+    gridTemplateColumns: `190px repeat(${monthDays.length}, minmax(38px, 1fr))`,
+    minWidth: `${190 + (monthDays.length * 38)}px`,
   }
 
   return (
     <section className="manager-calendar-card manager-calendar-card--monthly">
       <div className="manager-calendar-head">
         <div className="manager-calendar-head__title">
-          <span className="manager-calendar-head__icon"><Icon name="calendar" size={18} /></span>
           <div>
             <strong>{formatMonthLabel(month)}</strong>
-            <small>Planning mensuel de l’équipe.</small>
+            <small>{isGlobal ? 'Planning mensuel de tous les services.' : 'Planning mensuel de l’équipe.'}</small>
           </div>
         </div>
         <div className="manager-calendar-nav">
@@ -88,7 +100,7 @@ export function ManagerPresenceCalendar({ data, month, filter, onMonthChange }) 
 
       <div className="manager-month-planning-wrap">
         <div className="manager-month-planning" style={gridStyle}>
-          <div className="manager-month-planning__corner">Équipe</div>
+          <div className="manager-month-planning__corner">{isGlobal ? 'Tous' : 'Équipe'}</div>
 
           {monthDays.map((date) => {
             const meta = getMonthDayMeta(date)
@@ -116,7 +128,7 @@ export function ManagerPresenceCalendar({ data, month, filter, onMonthChange }) 
                   <span className="manager-month-planning__avatar" style={{ background: personColor.soft, color: personColor.solid }}>{initials(member)}</span>
                   <span className="manager-month-planning__person-copy">
                     <strong>{member.prenom} {member.nom}</strong>
-                    <small>{member.role === 'RESPONSABLE_SERVICE' ? 'Responsable de service' : 'Collaborateur'}</small>
+                    <small>{memberSubtitle(member)}</small>
                   </span>
                 </div>
 

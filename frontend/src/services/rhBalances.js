@@ -23,3 +23,15 @@ export async function correctRhBalance(balanceId, days, reason) {
   window.dispatchEvent(new CustomEvent('gmes:data-changed', { detail: { source: 'leave-balances' } }))
   return data
 }
+
+export async function getRhBalanceFilterOptions() {
+  const [servicesResponse, usersResponse] = await Promise.all([
+    apiClient.get('/services'),
+    apiClient.get('/users'),
+  ])
+
+  return {
+    services: Array.isArray(servicesResponse.data) ? servicesResponse.data : [],
+    users: Array.isArray(usersResponse.data) ? usersResponse.data : [],
+  }
+}

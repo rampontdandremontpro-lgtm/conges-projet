@@ -57,7 +57,7 @@
 .manager-calendar-head__title strong {
   display: block;
   color: #153962;
-  font-size: 17px;
+  font-size: 19px;
   font-weight: 900;
   text-transform: capitalize;
 }
@@ -65,7 +65,7 @@
   display: block;
   margin-top: 3px;
   color: #7b91af;
-  font-size: 11.5px;
+  font-size: 12.5px;
   line-height: 1.45;
 }
 .manager-calendar-nav {
@@ -76,8 +76,8 @@
 }
 .manager-calendar-nav button {
   display: inline-flex;
-  min-width: 36px;
-  height: 36px;
+  min-width: 40px;
+  height: 40px;
   align-items: center;
   justify-content: center;
   padding: 0 10px;
@@ -143,13 +143,13 @@
   left: 0;
   z-index: 7;
   display: flex;
-  min-height: 64px;
+  min-height: 76px;
   align-items: center;
-  padding: 0 14px;
+  padding: 0 16px;
   background: #dff1fb;
   color: #173d69;
   box-shadow: 5px 0 10px rgba(17, 54, 96, .035);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 900;
   letter-spacing: .04em;
   text-transform: uppercase;
@@ -157,7 +157,7 @@
 .manager-month-planning__day-head {
   position: relative;
   display: flex;
-  min-height: 64px;
+  min-height: 76px;
   flex-direction: column;
   align-items: center;
   justify-content: center;
@@ -166,12 +166,12 @@
   color: #54708f;
 }
 .manager-month-planning__day-head > span {
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 800;
 }
 .manager-month-planning__day-head > strong {
   color: #173d69;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 900;
 }
 .manager-month-planning__day-head > i {
@@ -206,21 +206,21 @@
   left: 0;
   z-index: 5;
   display: flex;
-  min-height: 60px;
+  min-height: 76px;
   align-items: center;
-  gap: 8px;
-  padding: 7px 10px;
+  gap: 10px;
+  padding: 9px 12px;
   background: #fbfdff;
   box-shadow: 5px 0 10px rgba(17, 54, 96, .035);
 }
 .manager-month-planning__avatar {
   display: grid;
-  width: 35px;
-  height: 35px;
+  width: 40px;
+  height: 40px;
   flex: 0 0 auto;
   place-items: center;
-  border-radius: 9px;
-  font-size: 9px;
+  border-radius: 10px;
+  font-size: 10px;
   font-weight: 900;
 }
 .manager-month-planning__person-copy {
@@ -230,7 +230,7 @@
   display: block;
   overflow: hidden;
   color: #173b68;
-  font-size: 10.5px;
+  font-size: 11.5px;
   font-weight: 850;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -239,14 +239,14 @@
   display: block;
   margin-top: 2px;
   color: #8da0b8;
-  font-size: 8.5px;
+  font-size: 9.5px;
 }
 
 .manager-month-planning__cell {
   position: relative;
   display: flex;
   min-width: 0;
-  min-height: 60px;
+  min-height: 76px;
   overflow: hidden;
   padding: 0;
   border-top: 0;
@@ -309,13 +309,13 @@ button.manager-month-planning__cell:hover {
   top: 2px;
   right: 2px;
   display: grid;
-  width: 11px;
-  height: 11px;
+  width: 14px;
+  height: 14px;
   place-items: center;
   border-radius: 999px;
   background: #f59e0b;
   color: #ffffff;
-  font-size: 7px;
+  font-size: 8px;
   font-weight: 900;
   line-height: 1;
 }
@@ -325,20 +325,20 @@ button.manager-month-planning__cell:hover {
   left: 0;
   z-index: 5;
   display: flex;
-  min-height: 48px;
+  min-height: 56px;
   align-items: center;
-  padding: 0 12px;
+  padding: 0 14px;
   background: #eaf5fb;
   color: #214b79;
   box-shadow: 5px 0 10px rgba(17, 54, 96, .035);
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 900;
   letter-spacing: .03em;
   text-transform: uppercase;
 }
 .manager-month-planning__footer-cell {
   display: flex;
-  min-height: 48px;
+  min-height: 56px;
   flex-direction: column;
   align-items: center;
   justify-content: center;
@@ -347,12 +347,12 @@ button.manager-month-planning__cell:hover {
   color: #365b86;
 }
 .manager-month-planning__footer-cell strong {
-  font-size: 8.5px;
+  font-size: 10px;
   font-weight: 900;
 }
 .manager-month-planning__footer-cell small {
   color: #8ba0ba;
-  font-size: 6px;
+  font-size: 7px;
   font-weight: 700;
 }
 .manager-month-planning__footer-cell.is-weekend {
@@ -370,20 +370,20 @@ button.manager-month-planning__cell:hover {
   color: #ad570d;
 }
 .manager-month-planning--alerts .manager-month-planning__footer-cell strong {
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .manager-month-planning__legend {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 9px 15px;
-  margin-top: 12px;
-  padding: 10px 12px;
+  gap: 10px 18px;
+  margin-top: 14px;
+  padding: 12px 14px;
   border-radius: 11px;
   background: #f7f9fc;
   color: #647d9f;
-  font-size: 10.5px;
+  font-size: 11.5px;
 }
 .manager-month-planning__legend > span {
   display: inline-flex;

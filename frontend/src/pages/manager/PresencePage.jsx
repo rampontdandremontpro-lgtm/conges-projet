@@ -185,7 +185,7 @@ export function ManagerPresencePage() {
   }
 
   return (
-    <div className="manager-presence-page">
+    <div className={`manager-presence-page${viewMode === 'calendar' ? ' manager-presence-page--calendar' : ''}`}>
       {state.loading && !state.data ? (
         <>
           <div className="manager-presence-toolbar manager-presence-toolbar--top" aria-hidden="true">

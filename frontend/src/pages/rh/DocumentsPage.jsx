@@ -9,6 +9,7 @@ import {
   downloadRhDocument,
   fetchRhDocument,
   getRhDocumentLibrary,
+  getRhDocumentServices,
   getRhDocumentUsers,
 } from '@/services/rhDocuments'
 import { formatDateNumericFR } from '@/utils/format'
@@ -80,6 +81,7 @@ export function RhDocumentsPage() {
     error: false,
     documents: [],
     users: [],
+    services: [],
   })
   const [tab, setTab] = useState('all')
   const [serviceId, setServiceId] = useState('')
@@ -103,7 +105,7 @@ export function RhDocumentsPage() {
     }
 
     try {
-      const [documents, users] = await Promise.all([
+      const [documents, users, services] = await Promise.all([
         getRhDocumentLibrary({
           serviceId,
           employeeId,
@@ -112,6 +114,7 @@ export function RhDocumentsPage() {
           endDate,
         }),
         getRhDocumentUsers(),
+        getRhDocumentServices(),
       ])
 
       setState({
@@ -119,6 +122,7 @@ export function RhDocumentsPage() {
         error: false,
         documents: Array.isArray(documents) ? documents : [],
         users: Array.isArray(users) ? users : [],
+        services: Array.isArray(services) ? services : [],
       })
     } catch {
       if (!silent) {
@@ -150,22 +154,17 @@ export function RhDocumentsPage() {
     if (preview.blobUrl) URL.revokeObjectURL(preview.blobUrl)
   }, [preview.blobUrl])
 
-  const services = useMemo(() => {
-    const map = new Map()
-    state.users.forEach((user) => {
-      if (user?.service?.id && user?.service?.name) {
-        map.set(String(user.service.id), user.service.name)
-      }
-    })
-    return Array.from(map.entries())
-      .map(([id, name]) => ({ id, name }))
-      .sort((a, b) => a.name.localeCompare(b.name, 'fr'))
-  }, [state.users])
+  const services = useMemo(() => (
+    state.services
+      .filter((service) => service?.id && service?.name)
+      .map((service) => ({ id: String(service.id), name: service.name }))
+      .sort((left, right) => left.name.localeCompare(right.name, 'fr'))
+  ), [state.services])
 
   const employees = useMemo(() => (
     state.users
       .filter((user) => user?.role !== 'ADMIN')
-      .filter((user) => !serviceId || String(user.serviceId ?? '') === serviceId)
+      .filter((user) => !serviceId || String(user?.service?.id ?? user?.serviceId ?? '') === serviceId)
       .sort((a, b) => (
         `${a.nom ?? ''} ${a.prenom ?? ''}`.localeCompare(
           `${b.nom ?? ''} ${b.prenom ?? ''}`,

@@ -420,7 +420,10 @@
 
 /* En vue calendrier, on exploite davantage la largeur disponible. */
 .manager-alerts-page--calendar {
-  width: min(100%, 1320px);
+  width: min(calc(100vw - var(--sidebar-width) - 64px), 1540px);
+  max-width: none;
+  margin-left: 50%;
+  transform: translateX(-50%);
   padding-top: 22px;
   padding-bottom: 30px;
 }
@@ -435,7 +438,7 @@
 }
 
 .manager-alerts-page--calendar .manager-calendar-card {
-  padding: 22px;
+  padding: 26px;
 }
 
 .manager-alerts-page--calendar .manager-calendar-head {
@@ -446,11 +449,6 @@
   margin-top: 9px;
 }
 
-@media (min-width: 1200px) {
-  .manager-alerts-page--calendar .manager-month-planning-wrap {
-    overflow-x: hidden;
-  }
-}
 
 
 /* Même espacement supérieur que la page Demandes à traiter. */
@@ -475,4 +473,12 @@
   font-size: 12px;
   font-weight: 700;
   box-shadow: 0 1px 2px rgba(10, 30, 69, .025);
+}
+
+@media (max-width: 1024px) {
+  .manager-alerts-page--calendar {
+    width: 100%;
+    margin-left: 0;
+    transform: none;
+  }
 }

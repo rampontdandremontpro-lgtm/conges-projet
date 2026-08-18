@@ -282,6 +282,157 @@ export class UsersService {
     };
   }
 
+  async getGlobalPresenceCalendar(monthValue?: string) {
+    const month = this.normalizeCalendarMonth(monthValue);
+    const [year, monthNumber] = month.split('-').map(Number);
+    const monthStart = `${month}-01`;
+    const monthEndDate = new Date(Date.UTC(year, monthNumber, 0));
+    const monthEnd = monthEndDate.toISOString().slice(0, 10);
+
+    const members = (await this.userRepository.find({
+      where: { isActive: true },
+      relations: { service: true },
+      order: { nom: 'ASC', prenom: 'ASC' },
+    })).filter((user) => user.role !== UserRole.ADMIN);
+
+    members.sort((left, right) => {
+      const leftService = left.service?.name ?? 'Direction';
+      const rightService = right.service?.name ?? 'Direction';
+      const serviceOrder = leftService.localeCompare(rightService, 'fr');
+      if (serviceOrder !== 0) return serviceOrder;
+
+      const nameOrder = left.nom.localeCompare(right.nom, 'fr');
+      if (nameOrder !== 0) return nameOrder;
+      return left.prenom.localeCompare(right.prenom, 'fr');
+    });
+
+    const memberIds = members.map((member) => member.id);
+    const manager = this.dataSource.manager;
+
+    const leaves = memberIds.length === 0
+      ? []
+      : await manager
+          .getRepository(LeaveRequest)
+          .createQueryBuilder('request')
+          .where('request.employeeId IN (:...memberIds)', { memberIds })
+          .andWhere('request.startDate <= :monthEnd', { monthEnd })
+          .andWhere('request.endDate >= :monthStart', { monthStart })
+          .andWhere('request.status IN (:...statuses)', {
+            statuses: [
+              LeaveRequestStatus.VALIDEE,
+              LeaveRequestStatus.ANNULATION_EN_ATTENTE_ACCORD,
+            ],
+          })
+          .getMany();
+
+    const absences = memberIds.length === 0
+      ? []
+      : await manager
+          .getRepository(AbsenceDeclaration)
+          .createQueryBuilder('absence')
+          .where('absence.employeeId IN (:...memberIds)', { memberIds })
+          .andWhere('absence.startDate <= :monthEnd', { monthEnd })
+          .andWhere('absence.endDate >= :monthStart', { monthStart })
+          .andWhere('absence.status = :status', {
+            status: AbsenceDeclarationStatus.ENREGISTREE,
+          })
+          .getMany();
+
+    const holidays = await this.holidaysService.findCalendarBetween(
+      monthStart,
+      monthEnd,
+    );
+
+    const days: Array<{
+      date: string;
+      morningPresent: number;
+      afternoonPresent: number;
+      morningMinimumRespected: boolean;
+      afternoonMinimumRespected: boolean;
+      members: Array<{
+        id: number;
+        morningStatus: PresenceStatus;
+        afternoonStatus: PresenceStatus;
+      }>;
+    }> = [];
+
+    for (let day = 1; day <= monthEndDate.getUTCDate(); day += 1) {
+      const date = `${month}-${String(day).padStart(2, '0')}`;
+      let morningPresent = 0;
+      let afternoonPresent = 0;
+
+      const dayMembers = members.map((member) => {
+        const memberAbsences = absences.filter(
+          (absence) => absence.employeeId === member.id,
+        );
+        const memberLeaves = leaves.filter(
+          (leave) => leave.employeeId === member.id,
+        );
+
+        const resolveStatus = (period: DayPeriod): PresenceStatus => {
+          if (
+            memberAbsences.some((absence) =>
+              occupiesSlot(absence, date, period),
+            )
+          ) {
+            return PresenceStatus.ABSENT;
+          }
+
+          if (
+            memberLeaves.some((leave) =>
+              occupiesSlot(leave, date, period),
+            )
+          ) {
+            return PresenceStatus.EN_VACANCES;
+          }
+
+          return PresenceStatus.PRESENT;
+        };
+
+        const morningStatus = resolveStatus(DayPeriod.MATIN);
+        const afternoonStatus = resolveStatus(DayPeriod.APRES_MIDI);
+
+        if (morningStatus === PresenceStatus.PRESENT) morningPresent += 1;
+        if (afternoonStatus === PresenceStatus.PRESENT) afternoonPresent += 1;
+
+        return {
+          id: member.id,
+          morningStatus,
+          afternoonStatus,
+        };
+      });
+
+      days.push({
+        date,
+        morningPresent,
+        afternoonPresent,
+        morningMinimumRespected: true,
+        afternoonMinimumRespected: true,
+        members: dayMembers,
+      });
+    }
+
+    return {
+      month,
+      totalMembers: members.length,
+      members: members.map((member) => ({
+        id: member.id,
+        nom: member.nom,
+        prenom: member.prenom,
+        role: member.role,
+        serviceId: member.serviceId,
+        serviceName: member.service?.name ?? 'Direction',
+      })),
+      holidays: holidays.map((holiday) => ({
+        id: holiday.id,
+        date: holiday.date,
+        name: holiday.name,
+        holidayType: holiday.holidayType,
+      })),
+      days,
+    };
+  }
+
   async getOwnServicePresence(id: number) {
     const currentUser = await this.findOne(id);
 

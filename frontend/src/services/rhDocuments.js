@@ -51,3 +51,8 @@ export async function downloadRhDocument(document) {
   const { blob } = await fetchRhDocument(document)
   triggerBlobDownload(blob, document.originalName || 'document')
 }
+
+export async function getRhDocumentServices() {
+  const { data } = await apiClient.get('/services')
+  return Array.isArray(data) ? data : []
+}

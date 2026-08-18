@@ -6,6 +6,7 @@ import { PaginationBar } from '@/components/ui/PaginationBar'
 import { PageContainer } from '@/components/ui/PageContainer'
 import {
   correctRhBalance,
+  getRhBalanceFilterOptions,
   getRhBalancesOverview,
   getRhEmployeeBalanceHistory,
   getRhEmployeeBalances,
@@ -303,7 +304,9 @@ export function RhBalancesPage() {
   const [searchParams] = useSearchParams()
   const search = searchParams.get('q') ?? ''
   const [state, setState] = useState({ loading: true, error: false, rows: [] })
+  const [filterState, setFilterState] = useState({ services: [], users: [] })
   const [serviceFilter, setServiceFilter] = useState('all')
+  const [employeeFilter, setEmployeeFilter] = useState('all')
   const [reservationFilter, setReservationFilter] = useState('all')
   const [selected, setSelected] = useState(null)
   const [page, setPage] = useState(1)
@@ -319,9 +322,27 @@ export function RhBalancesPage() {
     }
   }, [])
 
+  const loadFilters = useCallback(async () => {
+    try {
+      const options = await getRhBalanceFilterOptions()
+      setFilterState({
+        services: Array.isArray(options.services) ? options.services : [],
+        users: Array.isArray(options.users) ? options.users : [],
+      })
+    } catch {
+      setFilterState({ services: [], users: [] })
+    }
+  }, [])
+
   useEffect(() => {
-    const timer = window.setTimeout(() => load(), 0)
-    const refresh = () => load({ silent: true })
+    const timer = window.setTimeout(() => {
+      load()
+      loadFilters()
+    }, 0)
+    const refresh = () => {
+      load({ silent: true })
+      loadFilters()
+    }
     window.addEventListener('focus', refresh)
     window.addEventListener('gmes:data-changed', refresh)
     return () => {
@@ -329,7 +350,7 @@ export function RhBalancesPage() {
       window.removeEventListener('focus', refresh)
       window.removeEventListener('gmes:data-changed', refresh)
     }
-  }, [load])
+  }, [load, loadFilters])
 
   useEffect(() => {
     if (!feedback) return undefined
@@ -337,18 +358,25 @@ export function RhBalancesPage() {
     return () => window.clearTimeout(timer)
   }, [feedback])
 
-  const services = useMemo(() => {
-    const map = new Map()
-    state.rows.forEach((row) => {
-      if (row.employee?.service?.id) map.set(String(row.employee.service.id), row.employee.service.name)
-    })
-    return [...map.entries()].sort((a, b) => a[1].localeCompare(b[1], 'fr'))
-  }, [state.rows])
+  const services = useMemo(() => (
+    filterState.services
+      .filter((service) => service?.id && service?.name)
+      .map((service) => ({ id: String(service.id), name: service.name }))
+      .sort((left, right) => left.name.localeCompare(right.name, 'fr'))
+  ), [filterState.services])
+
+  const employees = useMemo(() => (
+    filterState.users
+      .filter((user) => user?.role !== 'ADMIN' && user?.isActive !== false)
+      .filter((user) => serviceFilter === 'all' || String(user?.service?.id ?? user?.serviceId ?? '') === serviceFilter)
+      .sort((left, right) => (`${left.nom ?? ''} ${left.prenom ?? ''}`).localeCompare(`${right.nom ?? ''} ${right.prenom ?? ''}`, 'fr'))
+  ), [filterState.users, serviceFilter])
 
   const filtered = useMemo(() => {
     const needle = normalize(search)
     return state.rows.filter((row) => {
       if (serviceFilter !== 'all' && String(row.employee?.service?.id ?? '') !== serviceFilter) return false
+      if (employeeFilter !== 'all' && String(row.employee?.id ?? '') !== employeeFilter) return false
       if (reservationFilter === 'with' && Number(row.reservedDays ?? 0) <= 0) return false
       if (reservationFilter === 'without' && Number(row.reservedDays ?? 0) > 0) return false
       if (!needle) return true
@@ -361,9 +389,9 @@ export function RhBalancesPage() {
       ].join(' '))
       return needle.split(/\s+/).every((token) => haystack.includes(token))
     })
-  }, [state.rows, search, serviceFilter, reservationFilter])
+  }, [state.rows, search, serviceFilter, employeeFilter, reservationFilter])
 
-  useEffect(() => setPage(1), [search, serviceFilter, reservationFilter])
+  useEffect(() => setPage(1), [search, serviceFilter, employeeFilter, reservationFilter])
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const safePage = Math.min(page, pageCount)
@@ -387,9 +415,24 @@ export function RhBalancesPage() {
           <div className="rh-balances-filters">
             <label>
               <span>Service</span>
-              <select value={serviceFilter} onChange={(event) => setServiceFilter(event.target.value)}>
+              <select
+                value={serviceFilter}
+                onChange={(event) => {
+                  setServiceFilter(event.target.value)
+                  setEmployeeFilter('all')
+                }}
+              >
                 <option value="all">Tous les services</option>
-                {services.map(([id, name]) => <option value={id} key={id}>{name}</option>)}
+                {services.map((service) => <option value={service.id} key={service.id}>{service.name}</option>)}
+              </select>
+            </label>
+            <label>
+              <span>Collaborateur</span>
+              <select value={employeeFilter} onChange={(event) => setEmployeeFilter(event.target.value)}>
+                <option value="all">Tous les collaborateurs</option>
+                {employees.map((user) => (
+                  <option value={user.id} key={user.id}>{user.prenom} {user.nom}</option>
+                ))}
               </select>
             </label>
             <label>
