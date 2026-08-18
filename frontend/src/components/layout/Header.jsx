@@ -47,7 +47,7 @@ export function Header() {
   const [searchParams, setSearchParams] = useSearchParams()
   const title = headerTitle(pathname)
   const hideSearch =
-    ['/app/dashboard', '/app/new-request', '/app/rh-prepare-request', '/app/rh-exports', '/app/rh-holidays', '/app/history', '/app/my-balance', '/app/my-balances', '/app/declare-absence', '/app/profile', '/app/settings'].includes(pathname) ||
+    ['/app/dashboard', '/app/new-request', '/app/rh-prepare-request', '/app/rh-exports', '/app/rh-holidays', '/app/rh-summer-period', '/app/history', '/app/my-balance', '/app/my-balances', '/app/declare-absence', '/app/profile', '/app/settings'].includes(pathname) ||
     /^\/app\/(new-request|declare-absence)\/\d+$/.test(pathname) ||
     /^\/app\/my-requests\/(leave|absence)\/\d+$/.test(pathname) ||
     /^\/app\/requests\/\d+$/.test(pathname) ||
