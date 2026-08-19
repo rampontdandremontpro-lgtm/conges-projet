@@ -9,7 +9,7 @@ import {
   getDirectorRequestAvailability,
   refuseDirectorRequest,
   validateDirectorRequest,
-} from '@/services/directorRequests'
+} from '@/services/director/directorRequests'
 import { formatDateNumericFR, formatDays, formatRangeNumericFR } from '@/utils/format'
 
 import '@/styles/manager/requests/index.css'

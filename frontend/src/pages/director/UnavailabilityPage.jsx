@@ -8,7 +8,7 @@ import {
   cancelDirectorLeaveRequest,
   getDirectorAbsences,
   getDirectorLeaveRequests,
-} from '@/services/directorUnavailability'
+} from '@/services/director/directorUnavailability'
 import { formatDateFR, formatDays, formatRangeNumericFR, todayISO } from '@/utils/format'
 import { notifyAppDataChanged } from '@/utils/dataRefresh'
 

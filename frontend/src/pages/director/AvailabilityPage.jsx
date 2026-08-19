@@ -24,7 +24,7 @@ import {
   getDirectorLeaveRequest,
   updateDirectorAbsence,
   updateDirectorLeaveRequest,
-} from '@/services/directorUnavailability'
+} from '@/services/director/directorUnavailability'
 
 import '@/styles/collab/new-request/index.css'
 import '@/styles/director/availability.css'

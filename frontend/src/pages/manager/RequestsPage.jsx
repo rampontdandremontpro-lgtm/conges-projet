@@ -7,7 +7,7 @@ import { PaginationBar } from '@/components/ui/PaginationBar'
 import {
   getManagerPendingRequests,
   getManagerRequestAvailability,
-} from '@/services/managerRequests'
+} from '@/services/manager/managerRequests'
 import { formatDays, formatRangeNumericFR } from '@/utils/format'
 
 import '@/styles/manager/requests/index.css'

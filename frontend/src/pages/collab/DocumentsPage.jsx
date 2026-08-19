@@ -13,7 +13,7 @@ import {
   replaceMyDocument,
   triggerBlobDownload,
 } from '@/services/documents'
-import { getMyAbsenceDeclarations, getMyLeaveRequests } from '@/services/myRequests'
+import { getMyAbsenceDeclarations, getMyLeaveRequests } from '@/services/collab/myRequests'
 import { formatDateNumericFR, formatRangeNumericFR } from '@/utils/format'
 
 import '@/styles/collab/documents/index.css'

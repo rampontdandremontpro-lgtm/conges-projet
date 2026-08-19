@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { Icon } from '@/components/ui/Icon'
 import { PageContainer } from '@/components/ui/PageContainer'
-import { downloadRhExport, getRhExportsOverview } from '@/services/rhExports'
+import { downloadRhExport, getRhExportsOverview } from '@/services/rh/rhExports'
 
 import '@/styles/rh/exports.css'
 

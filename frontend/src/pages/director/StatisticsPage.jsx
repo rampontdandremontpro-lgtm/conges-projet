@@ -4,7 +4,7 @@ import { Icon } from '@/components/ui/Icon'
 import {
   getDirectorStatistics,
   getDirectorStatisticsServices,
-} from '@/services/directorStatistics'
+} from '@/services/director/directorStatistics'
 
 import '@/styles/director/statistics.css'
 

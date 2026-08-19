@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 
 import { Icon } from '@/components/ui/Icon'
 import { PageContainer } from '@/components/ui/PageContainer'
-import { getDirectorDashboardData } from '@/services/directorDashboard'
+import { getDirectorDashboardData } from '@/services/director/directorDashboard'
 
 import '@/styles/collab/dashboard/index.css'
 import '@/styles/director/dashboard.css'

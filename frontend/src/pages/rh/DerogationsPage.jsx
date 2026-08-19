@@ -8,7 +8,7 @@ import {
   decideRhDerogation,
   getRhDerogation,
   getRhDerogations,
-} from '@/services/rhDerogations'
+} from '@/services/rh/rhDerogations'
 import { formatDateNumericFR, formatDays } from '@/utils/format'
 
 import '@/styles/rh/derogations.css'

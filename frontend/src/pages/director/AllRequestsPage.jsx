@@ -7,7 +7,7 @@ import { PageContainer } from '@/components/ui/PageContainer'
 import {
   getDirectorAllRequests,
   getDirectorRequestFilterOptions,
-} from '@/services/directorRequests'
+} from '@/services/director/directorRequests'
 import { formatDateNumericFR, formatDays } from '@/utils/format'
 
 import '@/styles/director/all-requests.css'

@@ -16,7 +16,7 @@ import {
   requestLeaveCancellation,
   respondLeaveCancellation,
   uploadAbsenceJustificatif,
-} from '@/services/requestDetails'
+} from '@/services/collab/requestDetails'
 import { formatDateNumericFR, formatDays, formatRangeNumericFR, todayISO } from '@/utils/format'
 import { errorMessage } from '@/utils/newRequest'
 import { notifyAppDataChanged } from '@/utils/dataRefresh'

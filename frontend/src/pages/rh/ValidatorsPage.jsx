@@ -14,7 +14,7 @@ import {
   getRhValidatorReplacements,
   getRhValidatorServices,
   getRhValidatorUsers,
-} from '@/services/rhValidators'
+} from '@/services/rh/rhValidators'
 
 import '@/styles/rh/validators.css'
 

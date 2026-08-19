@@ -11,7 +11,7 @@ import {
   enableAdminUser,
   getAdminUsersData,
   updateAdminUser,
-} from '@/services/adminUsers'
+} from '@/services/admin/adminUsers'
 
 import '@/styles/admin/users.css'
 

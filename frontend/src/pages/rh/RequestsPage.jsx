@@ -6,7 +6,7 @@ import { Icon } from '@/components/ui/Icon'
 import {
   getRhPendingRequests,
   getRhRequestAvailability,
-} from '@/services/rhRequests'
+} from '@/services/rh/rhRequests'
 import { formatDays, formatRangeNumericFR } from '@/utils/format'
 
 import '@/styles/manager/requests/index.css'

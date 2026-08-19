@@ -4,8 +4,8 @@ import { useSearchParams } from 'react-router-dom'
 import { Icon } from '@/components/ui/Icon'
 import { PaginationBar } from '@/components/ui/PaginationBar'
 import { PageContainer } from '@/components/ui/PageContainer'
-import { getAdminAuditLogs } from '@/services/adminAuditLogs'
-import { getAdminUsersData } from '@/services/adminUsers'
+import { getAdminAuditLogs } from '@/services/admin/adminAuditLogs'
+import { getAdminUsersData } from '@/services/admin/adminUsers'
 
 import '@/styles/admin/technical-logs.css'
 

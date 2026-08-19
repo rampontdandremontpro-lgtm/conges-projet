@@ -9,7 +9,7 @@ import {
   getManagerRequestAvailability,
   refuseManagerRequest,
   validateManagerRequest,
-} from '@/services/managerRequests'
+} from '@/services/manager/managerRequests'
 import { formatDateNumericFR, formatDays, formatRangeNumericFR } from '@/utils/format'
 
 import '@/styles/manager/requests/index.css'

@@ -5,7 +5,7 @@ import { useAuth } from '@/auth/AuthContext'
 import { ROLES } from '@/config/navigation'
 
 import { Icon } from '@/components/ui/Icon'
-import { getMyBalanceHistory } from '@/services/balances'
+import { getMyBalanceHistory } from '@/services/collab/balances'
 import { formatDays } from '@/utils/format'
 
 import '@/styles/collab/history/index.css'

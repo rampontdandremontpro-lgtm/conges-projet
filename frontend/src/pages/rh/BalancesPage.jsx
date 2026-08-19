@@ -10,7 +10,7 @@ import {
   getRhBalancesOverview,
   getRhEmployeeBalanceHistory,
   getRhEmployeeBalances,
-} from '@/services/rhBalances'
+} from '@/services/rh/rhBalances'
 import { formatDays } from '@/utils/format'
 
 import '@/styles/rh/balances.css'

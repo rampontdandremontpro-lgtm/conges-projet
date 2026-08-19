@@ -6,8 +6,8 @@ import { getRequestStatusLabel } from '@/components/collab/requests/RequestStatu
 import { Icon } from '@/components/ui/Icon'
 import { PaginationBar } from '@/components/ui/PaginationBar'
 import { getMyDocuments } from '@/services/documents'
-import { getMyAbsenceDeclarations, getMyLeaveRequests } from '@/services/myRequests'
-import { deleteAbsenceDraft, deleteLeaveDraft, downloadCancellationPdf, downloadPendingSummaryPdf, downloadValidationPdf } from '@/services/requestDetails'
+import { getMyAbsenceDeclarations, getMyLeaveRequests } from '@/services/collab/myRequests'
+import { deleteAbsenceDraft, deleteLeaveDraft, downloadCancellationPdf, downloadPendingSummaryPdf, downloadValidationPdf } from '@/services/collab/requestDetails'
 import { formatDays, formatRangeNumericFR } from '@/utils/format'
 
 import '@/styles/collab/requests/index.css'

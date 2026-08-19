@@ -7,7 +7,7 @@ import { NextLeaveCard } from '@/components/collab/dashboard/NextLeaveCard'
 import { RecentRequestsCard } from '@/components/collab/dashboard/RecentRequestsCard'
 import { PlanLeaveCard } from '@/components/collab/dashboard/PlanLeaveCard'
 import { AlertsCard } from '@/components/collab/dashboard/AlertsCard'
-import { getMyLeaveBalances, getMyLeaveRequests, getPublicSettings } from '@/services/dashboard'
+import { getMyLeaveBalances, getMyLeaveRequests, getPublicSettings } from '@/services/collab/dashboard'
 import { todayISO } from '@/utils/format'
 import { buildBalanceSummary } from '@/utils/balanceSummary'
 

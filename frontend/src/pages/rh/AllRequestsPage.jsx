@@ -4,7 +4,7 @@ import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { Icon } from '@/components/ui/Icon'
 import { PaginationBar } from '@/components/ui/PaginationBar'
 import { PageContainer } from '@/components/ui/PageContainer'
-import { getRhAllRequestFilterOptions, getRhAllRequests } from '@/services/rhAllRequests'
+import { getRhAllRequestFilterOptions, getRhAllRequests } from '@/services/rh/rhAllRequests'
 import { formatDateNumericFR, formatDays } from '@/utils/format'
 
 import '@/styles/rh/all-requests.css'

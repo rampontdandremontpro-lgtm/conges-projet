@@ -11,7 +11,7 @@ import {
   getRhDocumentLibrary,
   getRhDocumentServices,
   getRhDocumentUsers,
-} from '@/services/rhDocuments'
+} from '@/services/rh/rhDocuments'
 import { formatDateNumericFR } from '@/utils/format'
 
 import '@/styles/collab/documents/index.css'

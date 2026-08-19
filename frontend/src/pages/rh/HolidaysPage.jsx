@@ -6,7 +6,7 @@ import {
   disableRhClosure,
   getRhHolidays,
   updateRhClosure,
-} from '@/services/rhHolidays'
+} from '@/services/rh/rhHolidays'
 import '@/styles/rh/holidays.css'
 
 const MARTINIQUE_TIME_ZONE = 'America/Martinique'

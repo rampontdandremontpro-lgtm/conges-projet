@@ -23,7 +23,7 @@ import {
   selectPrimaryBalance,
 } from '@/utils/newRequest'
 import { useNewRequestResources } from '@/hooks/collab/useNewRequestResources'
-import { getLeaveRequest } from '@/services/requestDetails'
+import { getLeaveRequest } from '@/services/collab/requestDetails'
 import { notifyAppDataChanged } from '@/utils/dataRefresh'
 
 import '@/styles/collab/new-request/index.css'

@@ -11,7 +11,7 @@ import {
   getRhRequestAvailability,
   refuseRhRequest,
   validateRhRequest,
-} from '@/services/rhRequests'
+} from '@/services/rh/rhRequests'
 import { formatDateNumericFR, formatDays, formatRangeNumericFR } from '@/utils/format'
 
 import '@/styles/manager/requests/index.css'

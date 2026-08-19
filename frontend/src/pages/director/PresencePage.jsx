@@ -6,7 +6,7 @@ import { Icon } from '@/components/ui/Icon'
 import {
   getDirectorGlobalPresenceCalendar,
   getDirectorPresenceServices,
-} from '@/services/directorDashboard'
+} from '@/services/director/directorDashboard'
 import { getCurrentMonthKey, shiftMonthKey } from '@/utils/managerCalendar'
 
 import '@/styles/manager/presence/index.css'

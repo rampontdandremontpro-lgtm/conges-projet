@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
-import { getEmployeeLeaveBalances, getMyLeaveBalances, getPublicSettings } from '@/services/dashboard'
+import { getEmployeeLeaveBalances, getMyLeaveBalances, getPublicSettings } from '@/services/collab/dashboard'
 import {
   getHolidays,
   getLeaveTypes,

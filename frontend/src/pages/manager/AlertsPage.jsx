@@ -5,11 +5,11 @@ import { ManagerOverlapAlertCard } from '@/components/manager/alerts/ManagerOver
 import { ManagerAlertsCalendar } from '@/components/manager/calendar/ManagerAlertsCalendar'
 import { Icon } from '@/components/ui/Icon'
 import { PaginationBar } from '@/components/ui/PaginationBar'
-import { getManagerServicePresenceCalendar } from '@/services/managerDashboard'
+import { getManagerServicePresenceCalendar } from '@/services/manager/managerDashboard'
 import {
   getManagerPendingRequests,
   getManagerRequestAvailability,
-} from '@/services/managerRequests'
+} from '@/services/manager/managerRequests'
 import { formatRangeNumericFR } from '@/utils/format'
 import {
   getCurrentMonthKey,

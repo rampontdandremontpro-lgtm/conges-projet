@@ -9,7 +9,7 @@ import { Icon } from '@/components/ui/Icon'
 import { Toast } from '@/components/ui/Toast'
 import { useNewRequestResources } from '@/hooks/collab/useNewRequestResources'
 import { createLeaveRequest } from '@/services/leaveRequests'
-import { getRhEligibleCollaborators } from '@/services/rhPrepareRequest'
+import { getRhEligibleCollaborators } from '@/services/rh/rhPrepareRequest'
 import { currentMonth, errorMessage, nextMonthOf, prevMonthOf, selectPrimaryBalance } from '@/utils/newRequest'
 import { notifyAppDataChanged } from '@/utils/dataRefresh'
 

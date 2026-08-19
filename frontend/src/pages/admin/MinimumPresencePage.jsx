@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { Icon } from '@/components/ui/Icon'
 import { PageContainer } from '@/components/ui/PageContainer'
-import { getAdminServicesData, updateAdminService } from '@/services/adminServices'
+import { getAdminServicesData, updateAdminService } from '@/services/admin/adminServices'
 
 import '@/styles/admin/minimum-presence.css'
 

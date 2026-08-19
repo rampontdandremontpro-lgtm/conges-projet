@@ -9,7 +9,7 @@ import { ManagerTeamCard } from '@/components/manager/dashboard/ManagerTeamCard'
 import {
   getManagerPendingRequests,
   getManagerServicePresence,
-} from '@/services/managerDashboard'
+} from '@/services/manager/managerDashboard'
 
 import '@/styles/manager/dashboard/index.css'
 

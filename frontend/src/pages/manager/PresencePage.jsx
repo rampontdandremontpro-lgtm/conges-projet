@@ -8,7 +8,7 @@ import { PaginationBar } from '@/components/ui/PaginationBar'
 import {
   getManagerServicePresence,
   getManagerServicePresenceCalendar,
-} from '@/services/managerDashboard'
+} from '@/services/manager/managerDashboard'
 import { getCurrentMonthKey, shiftMonthKey } from '@/utils/managerCalendar'
 
 import '@/styles/manager/presence/index.css'

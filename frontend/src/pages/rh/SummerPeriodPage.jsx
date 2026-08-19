@@ -4,7 +4,7 @@ import { Icon } from '@/components/ui/Icon'
 import {
   getRhSummerPeriodConfiguration,
   updateRhSummerPeriodConfiguration,
-} from '@/services/rhSummerPeriod'
+} from '@/services/rh/rhSummerPeriod'
 import '@/styles/rh/summer-period.css'
 
 const SLIDER_MIN = 30

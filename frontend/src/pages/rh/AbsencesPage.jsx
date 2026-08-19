@@ -20,7 +20,7 @@ import {
   rejectRhAbsenceDocument,
   submitRhAbsence,
   uploadRhAbsenceDocument,
-} from '@/services/rhAbsences'
+} from '@/services/rh/rhAbsences'
 import { triggerBlobDownload } from '@/services/documents'
 import { formatDateNumericFR, formatDays, todayISO } from '@/utils/format'
 

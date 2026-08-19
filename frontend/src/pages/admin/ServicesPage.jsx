@@ -10,7 +10,7 @@ import {
   enableAdminService,
   getAdminServicesData,
   updateAdminService,
-} from '@/services/adminServices'
+} from '@/services/admin/adminServices'
 
 import '@/styles/admin/services.css'
 

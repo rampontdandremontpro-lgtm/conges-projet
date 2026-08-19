@@ -8,7 +8,7 @@ import { RhPresenceCard } from '@/components/rh/dashboard/RhPresenceCard'
 import { RhPriorityCard } from '@/components/rh/dashboard/RhPriorityCard'
 import { RhAbsentsCard } from '@/components/rh/dashboard/RhAbsentsCard'
 import { RhAlertsCard } from '@/components/rh/dashboard/RhAlertsCard'
-import { getRhDashboardData } from '@/services/rhDashboard'
+import { getRhDashboardData } from '@/services/rh/rhDashboard'
 
 import '@/styles/collab/dashboard/index.css'
 import '@/styles/rh/dashboard.css'

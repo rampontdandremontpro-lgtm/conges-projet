@@ -11,7 +11,7 @@ import {
   getMyLeaveBalances,
   getMyLeaveRequests,
   getPublicSettings,
-} from '@/services/dashboard'
+} from '@/services/collab/dashboard'
 import { buildBalanceSummary } from '@/utils/balanceSummary'
 import { todayISO } from '@/utils/format'
 

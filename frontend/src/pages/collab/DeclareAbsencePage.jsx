@@ -14,7 +14,7 @@ import {
 } from '@/services/absenceDeclarations'
 import { formatDateNumericFR, todayISO } from '@/utils/format'
 import { errorMessage } from '@/utils/newRequest'
-import { getAbsenceDeclaration, getAbsenceDocuments } from '@/services/requestDetails'
+import { getAbsenceDeclaration, getAbsenceDocuments } from '@/services/collab/requestDetails'
 
 import { notifyAppDataChanged } from '@/utils/dataRefresh'
 

@@ -9,7 +9,7 @@ import {
   disableRhLeaveType,
   getRhLeaveTypes,
   updateRhLeaveType,
-} from '@/services/rhLeaveTypes'
+} from '@/services/rh/rhLeaveTypes'
 
 import '@/styles/rh/leave-types.css'
 
