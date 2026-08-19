@@ -77,10 +77,14 @@ export class SettingsService {
   }
 
   async findAll(): Promise<Setting[]> {
-    return this.settingRepository.find({
-      relations: { updatedBy: true },
-      order: { settingKey: 'ASC' },
-    });
+    return this.settingRepository
+      .createQueryBuilder('setting')
+      .leftJoinAndSelect('setting.updatedBy', 'updatedBy')
+      .where('setting.settingKey NOT LIKE :notificationPreferences', {
+        notificationPreferences: 'USER_NOTIFICATION_PREFERENCES_%',
+      })
+      .orderBy('setting.settingKey', 'ASC')
+      .getMany();
   }
 
   async findPublic(): Promise<Setting[]> {

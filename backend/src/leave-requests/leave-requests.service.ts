@@ -457,7 +457,7 @@ export class LeaveRequestsService {
       );
     }
 
-    let employee: User | null = null;
+    let employeeId = authenticatedUser.id;
     await this.dataSource.transaction(async (manager) => {
       const leaveRequest = await this.findRequestForUpdateLocked(manager, id);
 
@@ -533,7 +533,7 @@ export class LeaveRequestsService {
 
       await this.ensureNoPersonalOverlap(manager, leaveRequest);
       await manager.getRepository(LeaveRequest).save(leaveRequest);
-      employee = leaveRequest.employee;
+      employeeId = leaveRequest.employeeId;
 
       await this.notificationsService.createForActiveRoles(
         [UserRole.RH, UserRole.RESPONSABLE_SERVICE],
@@ -547,9 +547,7 @@ export class LeaveRequestsService {
       );
     });
 
-    if (employee) {
-      await this.presenceService.refreshUserStatus(employee.id);
-    }
+    await this.presenceService.refreshUserStatus(employeeId);
 
     return this.findOwnedRequest(id, authenticatedUser.id);
   }

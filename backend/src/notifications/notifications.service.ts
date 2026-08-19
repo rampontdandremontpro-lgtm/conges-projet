@@ -11,6 +11,7 @@ import {
 } from 'typeorm';
 
 import { LeaveRequest } from '../leave-requests/leave-request.entity';
+import { Setting } from '../settings/setting.entity';
 import { PresenceService } from '../presence/presence.service';
 import { Service, ValidationMode } from '../services/service.entity';
 import { PresenceStatus, User, UserRole } from '../users/user.entity';
@@ -20,6 +21,23 @@ import {
   NotificationChannel,
 } from './notification.entity';
 import { NotificationQueryDto } from './dto/notification-query.dto';
+import { UpdateNotificationPreferencesDto } from './dto/update-notification-preferences.dto';
+import {
+  getNotificationPreferenceDefinitions,
+  resolveNotificationPreferenceKey,
+} from './notification-preferences.catalog';
+
+const NOTIFICATION_PREFERENCES_KEY_PREFIX = 'USER_NOTIFICATION_PREFERENCES_';
+
+interface StoredNotificationPreference {
+  application: boolean;
+  email: boolean;
+}
+
+type StoredNotificationPreferences = Record<
+  string,
+  StoredNotificationPreference
+>;
 
 export interface CreateNotificationInput {
   userId: number;
@@ -41,6 +59,9 @@ export class NotificationsService {
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
 
+    @InjectRepository(Setting)
+    private readonly settingRepository: Repository<Setting>,
+
     private readonly presenceService: PresenceService,
 
     private readonly validatorResolutionService: ValidatorResolutionService,
@@ -49,14 +70,25 @@ export class NotificationsService {
   async create(
     input: CreateNotificationInput,
     manager?: EntityManager,
-  ): Promise<Notification> {
+  ): Promise<Notification | null> {
     const repository = manager
       ? manager.getRepository(Notification)
       : this.notificationRepository;
 
+    const channel = await this.resolveNotificationChannel(
+      input.userId,
+      input.type,
+      input.channel ?? NotificationChannel.APPLICATION,
+      manager,
+    );
+
+    if (channel === null) {
+      return null;
+    }
+
     const notification = repository.create({
       userId: input.userId,
-      channel: input.channel ?? NotificationChannel.APPLICATION,
+      channel,
       type: input.type.trim(),
       title: input.title.trim(),
       message: input.message.trim(),
@@ -79,9 +111,13 @@ export class NotificationsService {
     const results: Notification[] = [];
 
     for (const userId of uniqueUserIds) {
-      results.push(
-        await this.create({ ...input, userId }, manager),
+      const notification = await this.create(
+        { ...input, userId },
+        manager,
       );
+      if (notification) {
+        results.push(notification);
+      }
     }
 
     return results;
@@ -122,6 +158,12 @@ export class NotificationsService {
     const qb = this.notificationRepository
       .createQueryBuilder('notification')
       .where('notification.userId = :userId', { userId })
+      .andWhere('notification.channel IN (:...applicationChannels)', {
+        applicationChannels: [
+          NotificationChannel.APPLICATION,
+          NotificationChannel.LES_DEUX,
+        ],
+      })
       .orderBy('notification.createdAt', 'DESC')
       .take(200);
 
@@ -140,7 +182,14 @@ export class NotificationsService {
 
   async countUnread(userId: number): Promise<{ unreadCount: number }> {
     const unreadCount = await this.notificationRepository.count({
-      where: { userId, readAt: IsNull() },
+      where: {
+        userId,
+        readAt: IsNull(),
+        channel: In([
+          NotificationChannel.APPLICATION,
+          NotificationChannel.LES_DEUX,
+        ]),
+      },
     });
 
     return { unreadCount };
@@ -169,9 +218,192 @@ export class NotificationsService {
       .set({ readAt: new Date() })
       .where('user_id = :userId', { userId })
       .andWhere('read_at IS NULL')
+      .andWhere('channel IN (:...applicationChannels)', {
+        applicationChannels: [
+          NotificationChannel.APPLICATION,
+          NotificationChannel.LES_DEUX,
+        ],
+      })
       .execute();
 
     return { updated: result.affected ?? 0 };
+  }
+
+  async getMyPreferences(userId: number, role: UserRole) {
+    const stored = await this.readStoredPreferences(userId);
+    const preferences = getNotificationPreferenceDefinitions(role).map(
+      (definition) => ({
+        key: definition.key,
+        label: definition.label,
+        application:
+          stored[definition.key]?.application ??
+          definition.defaultApplication,
+        email:
+          stored[definition.key]?.email ??
+          definition.defaultEmail,
+      }),
+    );
+
+    return {
+      role,
+      emailDeliveryEnabled: false,
+      preferences,
+    };
+  }
+
+  async updateMyPreferences(
+    userId: number,
+    role: UserRole,
+    dto: UpdateNotificationPreferencesDto,
+  ) {
+    const definitions = getNotificationPreferenceDefinitions(role);
+    const allowedKeys = new Set(definitions.map((item) => item.key));
+    const current = await this.readStoredPreferences(userId);
+    const next: StoredNotificationPreferences = { ...current };
+
+    for (const item of dto.preferences) {
+      if (!allowedKeys.has(item.key)) {
+        continue;
+      }
+
+      next[item.key] = {
+        application: item.application,
+        email: item.email,
+      };
+    }
+
+    const repository = this.settingRepository;
+    const settingKey = this.preferenceSettingKey(userId);
+    let setting = await repository.findOneBy({ settingKey });
+
+    if (!setting) {
+      setting = repository.create({
+        settingKey,
+        settingValue: JSON.stringify(next),
+        description: 'Préférences personnelles de notification.',
+        updatedById: userId,
+        updatedBy: null,
+      });
+    } else {
+      setting.settingValue = JSON.stringify(next);
+      setting.description = 'Préférences personnelles de notification.';
+      setting.updatedById = userId;
+    }
+
+    await repository.save(setting);
+    return this.getMyPreferences(userId, role);
+  }
+
+  async resetMyPreferences(userId: number, role: UserRole) {
+    await this.settingRepository.delete({
+      settingKey: this.preferenceSettingKey(userId),
+    });
+    return this.getMyPreferences(userId, role);
+  }
+
+  private preferenceSettingKey(userId: number): string {
+    return `${NOTIFICATION_PREFERENCES_KEY_PREFIX}${userId}`;
+  }
+
+  private async readStoredPreferences(
+    userId: number,
+    manager?: EntityManager,
+  ): Promise<StoredNotificationPreferences> {
+    const repository = manager
+      ? manager.getRepository(Setting)
+      : this.settingRepository;
+    const setting = await repository.findOneBy({
+      settingKey: this.preferenceSettingKey(userId),
+    });
+
+    if (!setting?.settingValue?.trim()) {
+      return {};
+    }
+
+    try {
+      const parsed = JSON.parse(setting.settingValue) as unknown;
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+        return {};
+      }
+
+      const result: StoredNotificationPreferences = {};
+      for (const [key, value] of Object.entries(parsed)) {
+        if (
+          value &&
+          typeof value === 'object' &&
+          !Array.isArray(value) &&
+          typeof (value as StoredNotificationPreference).application ===
+            'boolean' &&
+          typeof (value as StoredNotificationPreference).email ===
+            'boolean'
+        ) {
+          result[key] = {
+            application: (value as StoredNotificationPreference)
+              .application,
+            email: (value as StoredNotificationPreference).email,
+          };
+        }
+      }
+      return result;
+    } catch {
+      return {};
+    }
+  }
+
+  private async resolveNotificationChannel(
+    userId: number,
+    notificationType: string,
+    fallbackChannel: NotificationChannel,
+    manager?: EntityManager,
+  ): Promise<NotificationChannel | null> {
+    const userRepository = manager
+      ? manager.getRepository(User)
+      : this.userRepository;
+    const user = await userRepository.findOne({
+      where: { id: userId },
+      select: { id: true, role: true },
+    });
+
+    if (!user) {
+      return fallbackChannel;
+    }
+
+    const preferenceKey = resolveNotificationPreferenceKey(
+      user.role,
+      notificationType,
+    );
+
+    if (!preferenceKey) {
+      return fallbackChannel;
+    }
+
+    const definition = getNotificationPreferenceDefinitions(user.role).find(
+      (item) => item.key === preferenceKey,
+    );
+
+    if (!definition) {
+      return fallbackChannel;
+    }
+
+    const stored = await this.readStoredPreferences(userId, manager);
+    const application =
+      stored[preferenceKey]?.application ??
+      definition.defaultApplication;
+    const email =
+      stored[preferenceKey]?.email ??
+      definition.defaultEmail;
+
+    if (!application && !email) {
+      return null;
+    }
+
+    if (application && email) {
+      return NotificationChannel.LES_DEUX;
+    }
+
+    return application
+      ? NotificationChannel.APPLICATION
+      : NotificationChannel.EMAIL;
   }
 
   async alreadyExists(data: {

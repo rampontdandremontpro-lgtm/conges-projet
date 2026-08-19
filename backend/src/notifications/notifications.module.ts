@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
+import { Setting } from '../settings/setting.entity';
 import { User } from '../users/user.entity';
 import { ValidatorsModule } from '../validators/validators.module';
 import { Notification } from './notification.entity';
@@ -9,7 +10,7 @@ import { NotificationsService } from './notifications.service';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Notification, User]),
+    TypeOrmModule.forFeature([Notification, User, Setting]),
     ValidatorsModule,
   ],
   controllers: [NotificationsController],

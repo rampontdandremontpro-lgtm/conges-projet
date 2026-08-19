@@ -1,4 +1,5 @@
 import {
+  Body,
   Controller,
   Get,
   Param,
@@ -16,6 +17,7 @@ import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { UserRole } from '../users/user.entity';
 import { NotificationQueryDto } from './dto/notification-query.dto';
+import { UpdateNotificationPreferencesDto } from './dto/update-notification-preferences.dto';
 import { NotificationsService } from './notifications.service';
 
 type AuthenticatedRequest = Request & { user: AuthenticatedUser };
@@ -33,6 +35,35 @@ export class NotificationsController {
   constructor(
     private readonly notificationsService: NotificationsService,
   ) {}
+
+
+  @Get('preferences')
+  getPreferences(@Req() request: AuthenticatedRequest) {
+    return this.notificationsService.getMyPreferences(
+      request.user.id,
+      request.user.role,
+    );
+  }
+
+  @Patch('preferences')
+  updatePreferences(
+    @Req() request: AuthenticatedRequest,
+    @Body() dto: UpdateNotificationPreferencesDto,
+  ) {
+    return this.notificationsService.updateMyPreferences(
+      request.user.id,
+      request.user.role,
+      dto,
+    );
+  }
+
+  @Patch('preferences/reset')
+  resetPreferences(@Req() request: AuthenticatedRequest) {
+    return this.notificationsService.resetMyPreferences(
+      request.user.id,
+      request.user.role,
+    );
+  }
 
   @Get('my')
   findMy(

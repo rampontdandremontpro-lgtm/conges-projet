@@ -20,3 +20,20 @@ export async function markAllNotificationsRead() {
   const response = await apiClient.patch('/notifications/my/read-all')
   return response.data
 }
+
+export async function getNotificationPreferences() {
+  const response = await apiClient.get('/notifications/preferences')
+  return response.data
+}
+
+export async function updateNotificationPreferences(preferences) {
+  const response = await apiClient.patch('/notifications/preferences', {
+    preferences,
+  })
+  return response.data
+}
+
+export async function resetNotificationPreferences() {
+  const response = await apiClient.patch('/notifications/preferences/reset')
+  return response.data
+}
