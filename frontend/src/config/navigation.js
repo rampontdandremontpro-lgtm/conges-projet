@@ -80,11 +80,19 @@ export const NAVIGATION = {
     { id: 'notifications', label: 'Notifications', to: '/app/notifications', icon: 'bell', group: 'OUTILS' },
   ],
   [ROLES.ADMIN]: [
-    { id: 'dashboard', label: 'Tableau de bord', to: '/app/dashboard', icon: 'dashboard' },
-    { id: 'organisation', label: 'Organisation', to: '/app/organisation', icon: 'building' },
-    { id: 'configuration', label: 'Configuration', to: '/app/configuration', icon: 'settings' },
-    { id: 'calendar', label: 'Calendrier', to: '/app/calendar', icon: 'calendar' },
-    { id: 'system', label: 'Système', to: '/app/system', icon: 'cpu' },
+    { id: 'dashboard', label: 'Tableau de bord', to: '/app/dashboard', icon: 'dashboard', group: 'PRINCIPAL' },
+
+    { id: 'admin-users', label: 'Utilisateurs', to: '/app/admin-users', icon: 'users', group: 'GESTION' },
+    { id: 'admin-services', label: 'Services', to: '/app/admin-services', icon: 'building', group: 'GESTION' },
+    { id: 'admin-validators', label: 'Valideurs', to: '/app/admin-validators', icon: 'shield', group: 'GESTION' },
+
+    { id: 'admin-leave-types', label: 'Types de congés / absences', to: '/app/admin-leave-types', icon: 'file', group: 'PARAMÉTRAGE' },
+    { id: 'admin-minimum-presence', label: 'Présence minimale', to: '/app/admin-minimum-presence', icon: 'chart', group: 'PARAMÉTRAGE' },
+    { id: 'admin-summer-period', label: 'Période estivale', to: '/app/admin-summer-period', icon: 'sun', group: 'PARAMÉTRAGE' },
+    { id: 'admin-holidays', label: 'Jours fériés / fermetures', to: '/app/admin-holidays', icon: 'calendar', group: 'PARAMÉTRAGE' },
+
+    { id: 'notifications', label: 'Notifications', to: '/app/notifications', icon: 'bell', group: 'OUTILS' },
+    { id: 'admin-technical-logs', label: 'Journaux techniques', to: '/app/admin-technical-logs', icon: 'cpu', group: 'OUTILS' },
   ],
 }
 

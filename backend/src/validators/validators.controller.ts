@@ -82,7 +82,7 @@ export class ValidatorsController {
   }
 
   @Post('validator-replacements')
-  @Roles(UserRole.RH)
+  @Roles(UserRole.ADMIN, UserRole.RH)
   createReplacement(
     @Body() dto: CreateValidatorReplacementDto,
     @Req() request: AuthenticatedRequest,
@@ -94,7 +94,7 @@ export class ValidatorsController {
   }
 
   @Get('validator-replacements')
-  @Roles(UserRole.RH)
+  @Roles(UserRole.ADMIN, UserRole.RH)
   listReplacements(
     @Query() query: ValidatorReplacementQueryDto,
   ) {
@@ -102,13 +102,13 @@ export class ValidatorsController {
   }
 
   @Get('validator-replacements/:id')
-  @Roles(UserRole.RH)
+  @Roles(UserRole.ADMIN, UserRole.RH)
   findReplacement(@Param('id', ParseIntPipe) id: number) {
     return this.validatorsService.findReplacement(id);
   }
 
   @Patch('validator-replacements/:id/disable')
-  @Roles(UserRole.RH)
+  @Roles(UserRole.ADMIN, UserRole.RH)
   disableReplacement(
     @Param('id', ParseIntPipe) id: number,
     @Req() request: AuthenticatedRequest,

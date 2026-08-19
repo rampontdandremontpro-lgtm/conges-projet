@@ -120,6 +120,38 @@ export const router = createBrowserRouter([
         ),
       },
       {
+        path: 'admin-validators',
+        element: (
+          <RoleRoute roles={[ROLES.ADMIN]}>
+            <RhValidatorsPage adminMode />
+          </RoleRoute>
+        ),
+      },
+      {
+        path: 'admin-leave-types',
+        element: (
+          <RoleRoute roles={[ROLES.ADMIN]}>
+            <RhLeaveTypesPage />
+          </RoleRoute>
+        ),
+      },
+      {
+        path: 'admin-summer-period',
+        element: (
+          <RoleRoute roles={[ROLES.ADMIN]}>
+            <RhSummerPeriodPage />
+          </RoleRoute>
+        ),
+      },
+      {
+        path: 'admin-holidays',
+        element: (
+          <RoleRoute roles={[ROLES.ADMIN]}>
+            <RhHolidaysPage />
+          </RoleRoute>
+        ),
+      },
+      {
         path: 'rh-all-requests',
         element: (
           <RoleRoute roles={[ROLES.RH]}>
@@ -334,7 +366,7 @@ export const router = createBrowserRouter([
       {
         path: 'notifications',
         element: (
-          <RoleRoute roles={[ROLES.COLLABORATEUR, ROLES.RESPONSABLE_SERVICE, ROLES.RH, ROLES.DIRECTEUR]}>
+          <RoleRoute roles={[ROLES.COLLABORATEUR, ROLES.RESPONSABLE_SERVICE, ROLES.RH, ROLES.DIRECTEUR, ROLES.ADMIN]}>
             <NotificationsPage />
           </RoleRoute>
         ),

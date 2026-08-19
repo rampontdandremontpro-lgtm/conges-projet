@@ -402,7 +402,7 @@ function ReplacementDrawer({ mode, item, users, onClose, onSaved }) {
             <div className="rh-validators-detail__grid">
               <div><small>Date de début</small><strong>{formatDate(item?.startDate)}</strong></div>
               <div><small>Date de fin</small><strong>{formatDate(item?.endDate)}</strong></div>
-              <div><small>Créé par la RH</small><strong>{fullName(item?.createdByRh)}</strong></div>
+              <div><small>Créé par</small><strong>{fullName(item?.createdByRh)}</strong></div>
               <div><small>État du valideur temporaire</small><strong>{item?.replacementValidator?.isActive ? 'Utilisateur actif' : 'Utilisateur inactif'}</strong></div>
             </div>
 
@@ -564,6 +564,7 @@ export function RhValidatorsPage() {
       if (!silent) setState((current) => ({ ...current, loading: false, error: true }))
     }
   }, [])
+
 
   useEffect(() => {
     const timer = window.setTimeout(() => load(), 0)
