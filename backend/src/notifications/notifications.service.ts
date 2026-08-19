@@ -12,9 +12,7 @@ import {
 
 import { LeaveRequest } from '../leave-requests/leave-request.entity';
 import { Setting } from '../settings/setting.entity';
-import { PresenceService } from '../presence/presence.service';
-import { Service, ValidationMode } from '../services/service.entity';
-import { PresenceStatus, User, UserRole } from '../users/user.entity';
+import { User, UserRole } from '../users/user.entity';
 import { ValidatorResolutionService } from '../validators/validator-resolution.service';
 import {
   Notification,
@@ -61,8 +59,6 @@ export class NotificationsService {
 
     @InjectRepository(Setting)
     private readonly settingRepository: Repository<Setting>,
-
-    private readonly presenceService: PresenceService,
 
     private readonly validatorResolutionService: ValidatorResolutionService,
   ) {}
@@ -139,6 +135,30 @@ export class NotificationsService {
     const recipients = await repository.find({
       where: {
         role: In(roles),
+        isActive: true,
+      },
+      select: { id: true },
+    });
+
+    return this.createForUsers(
+      recipients.map((recipient) => recipient.id),
+      input,
+      manager,
+    );
+  }
+
+  async createForServiceManagers(
+    serviceId: number,
+    input: Omit<CreateNotificationInput, 'userId'>,
+    manager?: EntityManager,
+  ): Promise<Notification[]> {
+    const repository = manager
+      ? manager.getRepository(User)
+      : this.userRepository;
+    const recipients = await repository.find({
+      where: {
+        serviceId,
+        role: UserRole.RESPONSABLE_SERVICE,
         isActive: true,
       },
       select: { id: true },
@@ -258,8 +278,14 @@ export class NotificationsService {
   ) {
     const definitions = getNotificationPreferenceDefinitions(role);
     const allowedKeys = new Set(definitions.map((item) => item.key));
-    const current = await this.readStoredPreferences(userId);
-    const next: StoredNotificationPreferences = { ...current };
+    const next: StoredNotificationPreferences = {};
+
+    for (const definition of definitions) {
+      next[definition.key] = {
+        application: definition.defaultApplication,
+        email: definition.defaultEmail,
+      };
+    }
 
     for (const item of dto.preferences) {
       if (!allowedKeys.has(item.key)) {
@@ -282,7 +308,6 @@ export class NotificationsService {
         settingValue: JSON.stringify(next),
         description: 'Préférences personnelles de notification.',
         updatedById: userId,
-        updatedBy: null,
       });
     } else {
       setting.settingValue = JSON.stringify(next);
@@ -389,21 +414,15 @@ export class NotificationsService {
     const application =
       stored[preferenceKey]?.application ??
       definition.defaultApplication;
-    const email =
-      stored[preferenceKey]?.email ??
-      definition.defaultEmail;
 
-    if (!application && !email) {
+    // L'envoi e-mail n'est pas encore activé dans l'application.
+    // Le choix e-mail reste stocké pour la prochaine étape, mais ne doit
+    // pas créer aujourd'hui de notification EMAIL invisible.
+    if (!application) {
       return null;
     }
 
-    if (application && email) {
-      return NotificationChannel.LES_DEUX;
-    }
-
-    return application
-      ? NotificationChannel.APPLICATION
-      : NotificationChannel.EMAIL;
+    return NotificationChannel.APPLICATION;
   }
 
   async alreadyExists(data: {
@@ -475,16 +494,24 @@ export class NotificationsService {
       manager,
     );
 
-    await this.createForUsers(
-      recipientIds,
-      {
-        type: 'LEAVE_REQUEST_SUBMITTED',
-        title: 'Nouvelle demande de congé',
-        message: `${leaveRequest.employee.prenom} ${leaveRequest.employee.nom} a soumis une demande du ${leaveRequest.startDate} au ${leaveRequest.endDate}.`,
-        leaveRequestId: leaveRequest.id,
-      },
-      manager,
-    );
+    for (const userId of recipientIds) {
+      const type = await this.resolveSubmittedRequestType(
+        userId,
+        leaveRequest.employee.role,
+        manager,
+      );
+
+      await this.create(
+        {
+          userId,
+          type,
+          title: 'Nouvelle demande de congé',
+          message: `${leaveRequest.employee.prenom} ${leaveRequest.employee.nom} a soumis une demande du ${leaveRequest.startDate} au ${leaveRequest.endDate}.`,
+          leaveRequestId: leaveRequest.id,
+        },
+        manager,
+      );
+    }
   }
 
   async reevaluateRecipientsForRequest(
@@ -500,31 +527,72 @@ export class NotificationsService {
     let created = 0;
 
     for (const userId of recipientIds) {
-      const exists = await this.alreadyExistsSince({
+      const type = await this.resolveSubmittedRequestType(
         userId,
-        type: 'LEAVE_REQUEST_SUBMITTED',
-        leaveRequestId: leaveRequest.id,
-        since,
-      });
+        leaveRequest.employee.role,
+        manager,
+      );
+      const exists =
+        (await this.alreadyExistsSince({
+          userId,
+          type,
+          leaveRequestId: leaveRequest.id,
+          since,
+        })) ||
+        (type !== 'LEAVE_REQUEST_SUBMITTED' &&
+          (await this.alreadyExistsSince({
+            userId,
+            type: 'LEAVE_REQUEST_SUBMITTED',
+            leaveRequestId: leaveRequest.id,
+            since,
+          })));
 
       if (exists) {
         continue;
       }
 
-      await this.create(
+      const notification = await this.create(
         {
           userId,
-          type: 'LEAVE_REQUEST_SUBMITTED',
+          type,
           title: 'Nouvelle demande de congé',
           message: `${leaveRequest.employee.prenom} ${leaveRequest.employee.nom} a soumis une demande du ${leaveRequest.startDate} au ${leaveRequest.endDate}.`,
           leaveRequestId: leaveRequest.id,
         },
         manager,
       );
-      created += 1;
+      if (notification) {
+        created += 1;
+      }
     }
 
     return created;
+  }
+
+  private async resolveSubmittedRequestType(
+    recipientId: number,
+    employeeRole: UserRole,
+    manager?: EntityManager,
+  ): Promise<string> {
+    const repository = manager
+      ? manager.getRepository(User)
+      : this.userRepository;
+    const recipient = await repository.findOne({
+      where: { id: recipientId },
+      select: { id: true, role: true },
+    });
+
+    if (recipient?.role === UserRole.DIRECTEUR) {
+      if (employeeRole === UserRole.RH) {
+        return 'LEAVE_REQUEST_SUBMITTED_RH';
+      }
+
+      if (employeeRole === UserRole.RESPONSABLE_SERVICE) {
+        return 'LEAVE_REQUEST_SUBMITTED_MANAGER';
+      }
+    }
+
+    return 'LEAVE_REQUEST_SUBMITTED';
   }
 
   async notifyLeaveRequestDecision(

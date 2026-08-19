@@ -14,7 +14,9 @@ import {
 import type { AuthenticatedUser } from '../auth/jwt-payload.interface';
 import { AuditAction } from '../audit/audit-log.entity';
 import { AuditService } from '../audit/audit.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { SettingsService } from '../settings/settings.service';
+import { UserRole } from '../users/user.entity';
 import {
   calculateDerogationExpiry,
   evaluateSubmissionNotice,
@@ -50,6 +52,7 @@ export class DerogationsService {
     private readonly auditService: AuditService,
     private readonly dataSource: DataSource,
     private readonly settingsService: SettingsService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async createDraft(
@@ -278,6 +281,30 @@ export class DerogationsService {
           expiresAt: derogation.expiresAt,
         },
       });
+
+      await this.notificationsService.createForActiveRoles(
+        [UserRole.RH],
+        {
+          type: 'DEROGATION_SUBMITTED_RH',
+          title: 'Nouvelle demande de dérogation',
+          message: `Une demande de dérogation a été soumise pour la période du ${leaveRequest.startDate} au ${leaveRequest.endDate}.`,
+          leaveRequestId: leaveRequest.id,
+          derogationId: derogation.id,
+        },
+        manager,
+      );
+
+      await this.notificationsService.createForActiveRoles(
+        [UserRole.DIRECTEUR],
+        {
+          type: 'DEROGATION_DIRECTOR_INFO',
+          title: 'Nouvelle dérogation',
+          message: `Une demande de dérogation a été soumise pour la période du ${leaveRequest.startDate} au ${leaveRequest.endDate}.`,
+          leaveRequestId: leaveRequest.id,
+          derogationId: derogation.id,
+        },
+        manager,
+      );
     });
 
     return this.findMyOne(id, authenticatedUser);
@@ -493,6 +520,24 @@ export class DerogationsService {
           expiresAt: derogation.expiresAt,
         },
       });
+
+      await this.notificationsService.create(
+        {
+          userId: derogation.employeeId,
+          type: isGranted
+            ? 'DEROGATION_APPROVED'
+            : 'DEROGATION_REFUSED',
+          title: isGranted
+            ? 'Dérogation accordée'
+            : 'Dérogation refusée',
+          message: isGranted
+            ? `Votre dérogation pour la période du ${leaveRequest.startDate} au ${leaveRequest.endDate} a été accordée.`
+            : `Votre dérogation pour la période du ${leaveRequest.startDate} au ${leaveRequest.endDate} a été refusée.`,
+          leaveRequestId: leaveRequest.id,
+          derogationId: derogation.id,
+        },
+        manager,
+      );
     });
 
     if (expiredDuringDecision) {

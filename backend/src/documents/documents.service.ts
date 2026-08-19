@@ -32,6 +32,7 @@ import {
   LeaveRequest,
   LeaveRequestStatus,
 } from '../leave-requests/leave-request.entity';
+import { NotificationsService } from '../notifications/notifications.service';
 import { UserRole } from '../users/user.entity';
 import {
   DocumentQueryDto,
@@ -144,6 +145,7 @@ export class DocumentsService {
     private readonly leaveRequestRepository: Repository<LeaveRequest>,
 
     private readonly absenceDeclarationsService: AbsenceDeclarationsService,
+    private readonly notificationsService: NotificationsService,
     private readonly dataSource: DataSource,
     configService: ConfigService,
   ) {
@@ -175,16 +177,30 @@ export class DocumentsService {
       folder: 'absence',
     });
 
-    if (
-      [
-        AbsenceDeclarationStatus.JUSTIFICATIF_EN_ATTENTE,
-        AbsenceDeclarationStatus.JUSTIFICATIF_REJETE,
-      ].includes(declaration.status)
-    ) {
+    const becomesReadyForReview = [
+      AbsenceDeclarationStatus.JUSTIFICATIF_EN_ATTENTE,
+      AbsenceDeclarationStatus.JUSTIFICATIF_REJETE,
+    ].includes(declaration.status);
+
+    if (becomesReadyForReview) {
       await this.absenceDeclarationsService.markDocumentReadyForReview(
         absenceDeclarationId,
       );
     }
+
+    await this.notificationsService.createForActiveRoles(
+      [UserRole.RH],
+      {
+        type: becomesReadyForReview
+          ? 'SUPPORTING_DOCUMENT_TO_REVIEW'
+          : 'SUPPORTING_DOCUMENT_RECEIVED',
+        title: becomesReadyForReview
+          ? 'Justificatif à vérifier'
+          : 'Nouveau justificatif reçu',
+        message: `${declaration.employee.prenom} ${declaration.employee.nom} a ajouté un justificatif à sa déclaration d’absence.`,
+        absenceDeclarationId,
+      },
+    );
 
     return this.toMetadata(document);
   }
@@ -217,6 +233,16 @@ export class DocumentsService {
       absenceDeclarationId: null,
       folder: 'leave-request',
     });
+
+    await this.notificationsService.createForActiveRoles(
+      [UserRole.RH],
+      {
+        type: 'SUPPORTING_DOCUMENT_RECEIVED',
+        title: 'Nouveau justificatif reçu',
+        message: `${leaveRequest.employee.prenom} ${leaveRequest.employee.nom} a ajouté un justificatif à sa demande de congé.`,
+        leaveRequestId,
+      },
+    );
 
     return this.toMetadata(document);
   }
@@ -517,7 +543,20 @@ export class DocumentsService {
       );
     }
 
-    return this.toMetadata(await this.findActiveOne(id));
+    const updatedDocument = await this.findActiveOne(id);
+    const owner = await this.resolveDocumentOwner(updatedDocument);
+    if (owner) {
+      await this.notificationsService.create({
+        userId: owner.employeeId,
+        type: 'SUPPORTING_DOCUMENT_ACCEPTED',
+        title: 'Justificatif accepté',
+        message: 'Votre justificatif a été accepté par la RH.',
+        leaveRequestId: updatedDocument.leaveRequestId,
+        absenceDeclarationId: updatedDocument.absenceDeclarationId,
+      });
+    }
+
+    return this.toMetadata(updatedDocument);
   }
 
   async reject(
@@ -560,7 +599,20 @@ export class DocumentsService {
       );
     }
 
-    return this.toMetadata(await this.findActiveOne(id));
+    const updatedDocument = await this.findActiveOne(id);
+    const owner = await this.resolveDocumentOwner(updatedDocument);
+    if (owner) {
+      await this.notificationsService.create({
+        userId: owner.employeeId,
+        type: 'SUPPORTING_DOCUMENT_REFUSED',
+        title: 'Justificatif refusé',
+        message: `Votre justificatif a été refusé par la RH.${reason.trim() ? ` Motif : ${reason.trim()}` : ''}`,
+        leaveRequestId: updatedDocument.leaveRequestId,
+        absenceDeclarationId: updatedDocument.absenceDeclarationId,
+      });
+    }
+
+    return this.toMetadata(updatedDocument);
   }
 
   async replace(
@@ -1009,6 +1061,32 @@ export class DocumentsService {
     throw new ForbiddenException(
       'Vous ne pouvez pas gérer ce justificatif.',
     );
+  }
+
+  private async resolveDocumentOwner(
+    document: Document,
+  ): Promise<{ employeeId: number } | null> {
+    if (document.leaveRequestId !== null) {
+      const leaveRequest = await this.leaveRequestRepository.findOne({
+        where: { id: document.leaveRequestId },
+        select: { id: true, employeeId: true },
+      });
+      return leaveRequest
+        ? { employeeId: leaveRequest.employeeId }
+        : null;
+    }
+
+    if (document.absenceDeclarationId !== null) {
+      const absence = await this.absenceDeclarationRepository.findOne({
+        where: { id: document.absenceDeclarationId },
+        select: { id: true, employeeId: true },
+      });
+      return absence
+        ? { employeeId: absence.employeeId }
+        : null;
+    }
+
+    return null;
   }
 
   private async findActiveOne(id: number): Promise<Document> {

@@ -390,6 +390,63 @@ export class AbsenceDeclarationsService {
           absenceDeclarationId: declaration.id,
         },
       );
+    } else {
+      await this.notificationsService.create({
+        userId: declaration.employeeId,
+        type: 'ABSENCE_DECLARATION_RECORDED',
+        title: 'Absence déclarée',
+        message: `Votre absence du ${declaration.startDate} au ${declaration.endDate} a bien été enregistrée.`,
+        absenceDeclarationId: declaration.id,
+      });
+
+      await this.notificationsService.createForActiveRoles(
+        [UserRole.RH],
+        {
+          type: 'ABSENCE_DECLARATION_SUBMITTED_RH',
+          title: 'Nouvelle déclaration d’absence',
+          message: `${declaration.employee.prenom} ${declaration.employee.nom} a déclaré une absence du ${declaration.startDate} au ${declaration.endDate}.`,
+          absenceDeclarationId: declaration.id,
+        },
+      );
+
+      if (declaration.serviceId) {
+        await this.notificationsService.createForServiceManagers(
+          declaration.serviceId,
+          {
+            type: 'ABSENCE_DECLARATION_SUBMITTED_MANAGER',
+            title: 'Nouvelle absence dans votre service',
+            message: `${declaration.employee.prenom} ${declaration.employee.nom} a déclaré une absence du ${declaration.startDate} au ${declaration.endDate}.`,
+            absenceDeclarationId: declaration.id,
+          },
+        );
+      }
+
+      if (
+        declaration.status === AbsenceDeclarationStatus.A_VERIFIER_PAR_RH
+      ) {
+        await this.notificationsService.createForActiveRoles(
+          [UserRole.RH],
+          {
+            type: 'ABSENCE_DECLARATION_TO_REVIEW',
+            title: 'Absence à vérifier',
+            message: `La déclaration d’absence de ${declaration.employee.prenom} ${declaration.employee.nom} est prête à être vérifiée.`,
+            absenceDeclarationId: declaration.id,
+          },
+        );
+      }
+
+      if (
+        declaration.status ===
+        AbsenceDeclarationStatus.JUSTIFICATIF_EN_ATTENTE
+      ) {
+        await this.notificationsService.create({
+          userId: declaration.employeeId,
+          type: 'SUPPORTING_DOCUMENT_REQUIRED',
+          title: 'Justificatif à fournir',
+          message: `Un justificatif doit être ajouté pour votre absence du ${declaration.startDate} au ${declaration.endDate}.`,
+          absenceDeclarationId: declaration.id,
+        });
+      }
     }
 
     return this.findAccessibleOne(id, authenticatedUser);
@@ -555,6 +612,26 @@ export class AbsenceDeclarationsService {
       declaration.employeeId,
     );
 
+    await this.notificationsService.create({
+      userId: declaration.employeeId,
+      type: 'ABSENCE_DECLARATION_AUTHORIZED',
+      title: 'Absence autorisée',
+      message: `Votre absence du ${declaration.startDate} au ${declaration.endDate} a été autorisée par la RH.`,
+      absenceDeclarationId: declaration.id,
+    });
+
+    if (declaration.serviceId) {
+      await this.notificationsService.createForServiceManagers(
+        declaration.serviceId,
+        {
+          type: 'ABSENCE_DECLARATION_DECISION_INFO',
+          title: 'Absence autorisée dans votre service',
+          message: `L’absence de ${declaration.employee.prenom} ${declaration.employee.nom} du ${declaration.startDate} au ${declaration.endDate} a été autorisée.`,
+          absenceDeclarationId: declaration.id,
+        },
+      );
+    }
+
     return this.findOneWithRelations(id);
   }
 
@@ -622,6 +699,10 @@ export class AbsenceDeclarationsService {
       );
     }
 
+    const cancelledByRh =
+      authenticatedUser.role === UserRole.RH &&
+      declaration.employeeId !== authenticatedUser.id;
+
     declaration.status = AbsenceDeclarationStatus.ANNULEE;
 
     await this.absenceDeclarationRepository.save(declaration);
@@ -629,6 +710,28 @@ export class AbsenceDeclarationsService {
     await this.presenceService.refreshUserStatus(
       declaration.employeeId,
     );
+
+    if (cancelledByRh) {
+      await this.notificationsService.create({
+        userId: declaration.employeeId,
+        type: 'ABSENCE_DECLARATION_REFUSED',
+        title: 'Absence refusée',
+        message: `Votre absence du ${declaration.startDate} au ${declaration.endDate} a été annulée par la RH.`,
+        absenceDeclarationId: declaration.id,
+      });
+
+      if (declaration.serviceId) {
+        await this.notificationsService.createForServiceManagers(
+          declaration.serviceId,
+          {
+            type: 'ABSENCE_DECLARATION_DECISION_INFO',
+            title: 'Absence refusée dans votre service',
+            message: `L’absence de ${declaration.employee.prenom} ${declaration.employee.nom} du ${declaration.startDate} au ${declaration.endDate} a été refusée.`,
+            absenceDeclarationId: declaration.id,
+          },
+        );
+      }
+    }
 
     return this.findAccessibleOne(id, authenticatedUser);
   }

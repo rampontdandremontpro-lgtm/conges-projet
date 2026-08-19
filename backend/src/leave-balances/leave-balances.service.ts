@@ -13,6 +13,7 @@ import {
 } from 'typeorm';
 
 import type { AuthenticatedUser } from '../auth/jwt-payload.interface';
+import { NotificationsService } from '../notifications/notifications.service';
 import { User, UserRole } from '../users/user.entity';
 import { UsersService } from '../users/users.service';
 import {
@@ -80,6 +81,7 @@ export class LeaveBalancesService {
     private readonly movementRepository: Repository<BalanceMovement>,
 
     private readonly usersService: UsersService,
+    private readonly notificationsService: NotificationsService,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -204,6 +206,8 @@ export class LeaveBalancesService {
     dto: CorrectLeaveBalanceDto,
   ): Promise<LeaveBalanceView> {
     const correction = this.round(dto.days);
+    let employeeId = 0;
+    let balanceAfterValue = 0;
 
     await this.dataSource.transaction(async (manager) => {
       const balance = await this.findBalanceForUpdate(
@@ -234,6 +238,8 @@ export class LeaveBalancesService {
 
       balance.acquiredDays = acquiredAfter;
       balance.availableDays = balanceAfter;
+      employeeId = balance.employeeId;
+      balanceAfterValue = balanceAfter;
 
       await manager.getRepository(LeaveBalance).save(balance);
 
@@ -251,6 +257,24 @@ export class LeaveBalancesService {
         reason: dto.reason?.trim() || null,
       });
     });
+
+    if (employeeId > 0) {
+      await this.notificationsService.create({
+        userId: employeeId,
+        type: 'BALANCE_CORRECTED',
+        title: 'Solde de congés corrigé',
+        message: `Votre solde de congés a été corrigé. Nouveau solde : ${balanceAfterValue} jour(s).`,
+      });
+
+      await this.notificationsService.createForActiveRoles(
+        [UserRole.RH],
+        {
+          type: 'BALANCE_CORRECTION_INFO',
+          title: 'Correction de solde effectuée',
+          message: `Une correction de solde a été enregistrée pour le collaborateur n°${employeeId}.`,
+        },
+      );
+    }
 
     return this.getBalanceView(balanceId);
   }

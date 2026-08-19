@@ -380,17 +380,6 @@ export class LeaveRequestsService {
         manager,
       );
 
-      await this.notificationsService.create(
-        {
-          userId: employee.id,
-          type: 'CONGE_DIRECTEUR_ENREGISTRE',
-          title: 'Congé enregistré',
-          message: `Votre congé du ${savedRequest.startDate} au ${savedRequest.endDate} a été enregistré.`,
-          leaveRequestId: savedRequest.id,
-        },
-        manager,
-      );
-
       await this.notificationsService.createForActiveRoles(
         [UserRole.RH, UserRole.RESPONSABLE_SERVICE],
         {
@@ -742,6 +731,12 @@ export class LeaveRequestsService {
       const oldStatus = leaveRequest.status;
       const isSubmittedRequest =
         oldStatus === LeaveRequestStatus.EN_ATTENTE_VALIDATION;
+      const previousDecisionRecipientIds = isSubmittedRequest
+        ? await this.notificationsService.getDecisionRecipientIds(
+            leaveRequest,
+            manager,
+          )
+        : [];
 
       const isOwner = leaveRequest.employeeId === authenticatedUser.id;
       const isCreator = leaveRequest.createdById === authenticatedUser.id;
@@ -972,6 +967,19 @@ export class LeaveRequestsService {
         },
         manager,
       );
+
+      if (isSubmittedRequest && previousDecisionRecipientIds.length > 0) {
+        await this.notificationsService.createForUsers(
+          previousDecisionRecipientIds,
+          {
+            type: 'LEAVE_REQUEST_MODIFIED',
+            title: 'Demande de congé modifiée',
+            message: `${leaveRequest.employee.prenom} ${leaveRequest.employee.nom} a modifié sa demande. Une nouvelle soumission sera nécessaire.`,
+            leaveRequestId: leaveRequest.id,
+          },
+          manager,
+        );
+      }
     });
 
     return this.findOwnedRequest(id, requestEmployeeId);
@@ -1144,6 +1152,16 @@ export class LeaveRequestsService {
       id,
       requestEmployeeId,
     );
+    if (submittedRequest.employee.role === UserRole.COLLABORATEUR) {
+      await this.notificationsService.create({
+        userId: submittedRequest.employeeId,
+        type: 'LEAVE_REQUEST_SUBMITTED_SELF',
+        title: 'Demande de congé soumise',
+        message: `Votre demande du ${submittedRequest.startDate} au ${submittedRequest.endDate} a bien été soumise.`,
+        leaveRequestId: submittedRequest.id,
+      });
+    }
+
     await this.notificationsService.notifyLeaveRequestSubmitted(
       submittedRequest,
     );
@@ -1746,6 +1764,13 @@ export class LeaveRequestsService {
       }
 
       const oldStatus = leaveRequest.status;
+      const previousDecisionRecipientIds =
+        oldStatus === LeaveRequestStatus.EN_ATTENTE_VALIDATION
+          ? await this.notificationsService.getDecisionRecipientIds(
+              leaveRequest,
+              manager,
+            )
+          : [];
       const reason = dto.reason?.trim() || null;
       let releasedReservation: Awaited<
         ReturnType<
@@ -1816,6 +1841,19 @@ export class LeaveRequestsService {
         },
         manager,
       );
+
+      if (previousDecisionRecipientIds.length > 0) {
+        await this.notificationsService.createForUsers(
+          previousDecisionRecipientIds,
+          {
+            type: 'LEAVE_REQUEST_CANCELLED',
+            title: 'Demande de congé annulée',
+            message: `${leaveRequest.employee.prenom} ${leaveRequest.employee.nom} a annulé sa demande du ${leaveRequest.startDate} au ${leaveRequest.endDate}.`,
+            leaveRequestId: leaveRequest.id,
+          },
+          manager,
+        );
+      }
     });
 
     return this.findOwnedRequest(id, requestEmployeeId);

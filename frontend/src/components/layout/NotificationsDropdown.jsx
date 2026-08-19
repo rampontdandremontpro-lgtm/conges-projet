@@ -90,13 +90,25 @@ export function NotificationsDropdown() {
   useEffect(() => {
     refreshUnreadCount()
 
+    const refreshIfVisible = () => {
+      if (document.visibilityState === 'visible') {
+        refreshUnreadCount()
+      }
+    }
+
     const handleWindowFocus = () => refreshUnreadCount()
+    const handleVisibilityChange = () => refreshIfVisible()
     const handleNotificationsUpdated = () => refreshUnreadCount()
+    const pollingId = window.setInterval(refreshIfVisible, 3000)
+
     window.addEventListener('focus', handleWindowFocus)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
     window.addEventListener('gmes:notifications-updated', handleNotificationsUpdated)
 
     return () => {
+      window.clearInterval(pollingId)
       window.removeEventListener('focus', handleWindowFocus)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
       window.removeEventListener('gmes:notifications-updated', handleNotificationsUpdated)
     }
   }, [refreshUnreadCount])
