@@ -796,19 +796,27 @@ export class UsersService {
     }
 
     let service: Service | null = user.service;
+    const requestedServiceId = updateUserDto.serviceId as
+      | number
+      | null
+      | undefined;
 
     if (
-      updateUserDto.serviceId !== undefined &&
-      updateUserDto.serviceId !== user.serviceId
+      requestedServiceId !== undefined &&
+      requestedServiceId !== user.serviceId
     ) {
-      service = await this.servicesService.findOne(
-        updateUserDto.serviceId,
-      );
-
-      if (!service.isActive) {
-        throw new BadRequestException(
-          'Le service sélectionné est désactivé.',
+      if (requestedServiceId === null) {
+        service = null;
+      } else {
+        service = await this.servicesService.findOne(
+          requestedServiceId,
         );
+
+        if (!service.isActive) {
+          throw new BadRequestException(
+            'Le service sélectionné est désactivé.',
+          );
+        }
       }
     }
 

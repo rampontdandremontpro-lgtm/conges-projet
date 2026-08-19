@@ -174,6 +174,18 @@ const ICON_PATHS = {
       <circle cx="12" cy="12" r="2.5" />
     </>
   ),
+  edit: (
+    <>
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1 1-4Z" />
+    </>
+  ),
+  ban: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <path d="m6.5 6.5 11 11" />
+    </>
+  ),
   eyeOff: (
     <>
       <path d="M3 3l18 18" />

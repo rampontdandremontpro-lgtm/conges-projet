@@ -39,6 +39,7 @@ import { DirectorPresencePage } from '@/pages/director/PresencePage'
 import { DirectorStatisticsPage } from '@/pages/director/StatisticsPage'
 import { DirectorAvailabilityPage } from '@/pages/director/AvailabilityPage'
 import { DirectorUnavailabilityPage } from '@/pages/director/UnavailabilityPage'
+import { AdminUsersPage } from '@/pages/admin/UsersPage'
 import { NEW_REQUEST_ROLES, ROLES } from '@/config/navigation'
 import { RoleRoute } from '@/auth/RoleRoute'
 
@@ -116,6 +117,14 @@ export const router = createBrowserRouter([
         element: (
           <RoleRoute roles={[ROLES.DIRECTEUR]}>
             <DirectorUnavailabilityPage />
+          </RoleRoute>
+        ),
+      },
+      {
+        path: 'admin-users',
+        element: (
+          <RoleRoute roles={[ROLES.ADMIN]}>
+            <AdminUsersPage />
           </RoleRoute>
         ),
       },

@@ -57,7 +57,7 @@ export function Header() {
     /^\/app\/rh-(?:all-requests|requests)\/\d+$/.test(pathname) ||
     /^\/app\/director-(?:all-requests|requests)\/\d+$/.test(pathname)
   const showSearch = !hideSearch
-  const searchEnabled = ['/app/my-requests', '/app/notifications', '/app/requests', '/app/alerts', '/app/service-presence', '/app/rh-all-requests', '/app/rh-absences', '/app/rh-derogations', '/app/rh-balances', '/app/rh-pdf-documents', '/app/rh-leave-types', '/app/admin-leave-types', '/app/rh-validators', '/app/director-all-requests', '/app/director-presence', '/app/director-unavailability', '/app/my-documents'].includes(pathname)
+  const searchEnabled = ['/app/my-requests', '/app/notifications', '/app/requests', '/app/alerts', '/app/service-presence', '/app/rh-all-requests', '/app/rh-absences', '/app/rh-derogations', '/app/rh-balances', '/app/rh-pdf-documents', '/app/rh-leave-types', '/app/admin-leave-types', '/app/admin-users', '/app/rh-validators', '/app/director-all-requests', '/app/director-presence', '/app/director-unavailability', '/app/my-documents'].includes(pathname)
   const searchValue = searchEnabled ? searchParams.get('q') ?? '' : undefined
 
   const handleSearchChange = (event) => {
