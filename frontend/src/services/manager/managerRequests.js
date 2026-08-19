@@ -1,5 +1,10 @@
 import { apiClient } from '@/services/apiClient'
 
+export async function getManagerAllRequests() {
+  const { data } = await apiClient.get('/leave-requests/management/all')
+  return Array.isArray(data) ? data : []
+}
+
 export async function getManagerPendingRequests() {
   const { data } = await apiClient.get('/leave-requests/pending')
   return data

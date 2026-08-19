@@ -673,11 +673,67 @@ export class LeaveRequestsService {
       });
     }
 
-    return query
+    if (
+      authenticatedUser.role === UserRole.RESPONSABLE_SERVICE
+    ) {
+      if (!authenticatedUser.serviceId) {
+        return [];
+      }
+
+      query.andWhere('leaveRequest.serviceId = :managerServiceId', {
+        managerServiceId: authenticatedUser.serviceId,
+      });
+    }
+
+    const requests = await query
       .orderBy('leaveRequest.submittedAt', 'DESC')
       .addOrderBy('leaveRequest.createdAt', 'DESC')
       .addOrderBy('leaveRequest.id', 'DESC')
       .getMany();
+
+    if (
+      authenticatedUser.role !==
+      UserRole.RESPONSABLE_SERVICE
+    ) {
+      return requests;
+    }
+
+    return Promise.all(
+      requests.map(async (leaveRequest) => {
+        if (
+          leaveRequest.status !==
+          LeaveRequestStatus.EN_ATTENTE_VALIDATION
+        ) {
+          return Object.assign(leaveRequest, {
+            hasAvailabilityAlert: false,
+            minimumPresenceBreached: false,
+            overlapCount: 0,
+          });
+        }
+
+        try {
+          const availability =
+            await this.serviceAvailabilityService.analyzeLeaveRequest(
+              leaveRequest,
+            );
+          const overlapCount = availability.overlaps.length;
+
+          return Object.assign(leaveRequest, {
+            hasAvailabilityAlert:
+              availability.minimumPresenceBreached || overlapCount > 0,
+            minimumPresenceBreached:
+              availability.minimumPresenceBreached,
+            overlapCount,
+          });
+        } catch {
+          return Object.assign(leaveRequest, {
+            hasAvailabilityAlert: false,
+            minimumPresenceBreached: false,
+            overlapCount: 0,
+          });
+        }
+      }),
+    );
   }
 
   async findMyRequest(
@@ -1408,22 +1464,42 @@ export class LeaveRequestsService {
       UserRole.RESPONSABLE_SERVICE
     ) {
       if (
-        leaveRequest.service.validationMode ===
-          ValidationMode.RESPONSABLE_PUIS_RELAIS &&
-        leaveRequest.employeeId !== authenticatedUser.id &&
-        ![
-          UserRole.RESPONSABLE_SERVICE,
-          UserRole.RH,
-          UserRole.DIRECTEUR,
-        ].includes(leaveRequest.employee.role) &&
-        (await this.validatorResolutionService
-          .isResponsableAuthorizedForRequest(
-            leaveRequest,
-            authenticatedUser.id,
-          ))
+        !authenticatedUser.serviceId ||
+        leaveRequest.serviceId !== authenticatedUser.serviceId
       ) {
-        return Object.assign(leaveRequest, { treatment });
+        throw new ForbiddenException(
+          'Cette demande ne relève pas de votre service.',
+        );
       }
+
+      let decisionAccess: DecisionAccess | null = null;
+
+      if (
+        leaveRequest.status ===
+        LeaveRequestStatus.EN_ATTENTE_VALIDATION
+      ) {
+        try {
+          decisionAccess =
+            await this.validatorResolutionService.resolveAccess(
+              leaveRequest,
+              authenticatedUser,
+            );
+        } catch (error) {
+          if (
+            error instanceof ForbiddenException ||
+            error instanceof BadRequestException
+          ) {
+            decisionAccess = null;
+          } else {
+            throw error;
+          }
+        }
+      }
+
+      return Object.assign(leaveRequest, {
+        treatment,
+        ...(decisionAccess ? { decisionAccess } : {}),
+      });
     }
 
     throw new ForbiddenException(

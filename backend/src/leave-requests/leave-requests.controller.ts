@@ -141,7 +141,11 @@ export class LeaveRequestsController {
   }
 
   @Get('management/all')
-  @Roles(UserRole.RH, UserRole.DIRECTEUR)
+  @Roles(
+    UserRole.RESPONSABLE_SERVICE,
+    UserRole.RH,
+    UserRole.DIRECTEUR,
+  )
   findAllForManagement(
     @Req() request: AuthenticatedRequest,
   ) {

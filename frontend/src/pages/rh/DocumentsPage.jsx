@@ -28,13 +28,15 @@ const TABS = [
 
 const CATEGORY_BY_KIND = {
   JUSTIFICATIF: 'justificatifs',
+  PDF_RECAPITULATIF: 'conges',
   PDF_VALIDATION: 'conges',
   PDF_ANNULATION: 'annulations',
 }
 
 const CATEGORY_META = {
   JUSTIFICATIF: { label: 'Justificatif', tone: 'blue', icon: 'file' },
-  PDF_VALIDATION: { label: 'Congé', tone: 'green', icon: 'doc' },
+  PDF_RECAPITULATIF: { label: 'Récapitulatif', tone: 'orange', icon: 'doc' },
+  PDF_VALIDATION: { label: 'Congé validé', tone: 'green', icon: 'doc' },
   PDF_ANNULATION: { label: 'Annulation', tone: 'orange', icon: 'refresh' },
 }
 

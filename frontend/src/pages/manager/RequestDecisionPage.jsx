@@ -32,6 +32,20 @@ function periodLabel(value) {
   return value === 'APRES_MIDI' ? 'Après-midi' : 'Matin'
 }
 
+const STATUS_META = {
+  EN_ATTENTE_VALIDATION: { label: 'En attente', tone: 'pending', icon: 'clock' },
+  VALIDEE: { label: 'Validée', tone: 'approved', icon: 'check' },
+  REFUSEE: { label: 'Refusée', tone: 'refused', icon: 'alert' },
+  ANNULEE: { label: 'Annulée', tone: 'cancelled', icon: 'refresh' },
+  ANNULATION_EN_ATTENTE_ACCORD: { label: 'Annulation en attente', tone: 'pending', icon: 'clock' },
+  ANNULEE_APRES_VALIDATION: { label: 'Annulée après validation', tone: 'cancelled', icon: 'refresh' },
+  EXPIREE_NON_VALIDEE: { label: 'Expirée', tone: 'cancelled', icon: 'clock' },
+}
+
+function getStatusMeta(status) {
+  return STATUS_META[status] ?? { label: status || '—', tone: 'pending', icon: 'clock' }
+}
+
 export function ManagerRequestDecisionPage() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -45,10 +59,10 @@ export function ManagerRequestDecisionPage() {
   const load = useCallback(async () => {
     setState((current) => ({ ...current, loading: true, error: null }))
     try {
-      const [request, availability] = await Promise.all([
-        getManagerRequest(id),
-        getManagerRequestAvailability(id),
-      ])
+      const request = await getManagerRequest(id)
+      const availability = request.status === 'EN_ATTENTE_VALIDATION'
+        ? await getManagerRequestAvailability(id).catch(() => null)
+        : null
       setState({ loading: false, error: null, request, availability })
     } catch (error) {
       setState({
@@ -145,6 +159,11 @@ export function ManagerRequestDecisionPage() {
   const request = state.request
   const availability = state.availability
   const overlapCount = availability?.overlaps?.length ?? 0
+  const hasAvailabilityAlert = Boolean(
+    availability?.minimumPresenceBreached || overlapCount > 0,
+  )
+  const requestStatus = getStatusMeta(request.status)
+  const canDecide = request.status === 'EN_ATTENTE_VALIDATION' && Boolean(request.decisionAccess)
 
   return (
     <div className="manager-request-detail-page">
@@ -168,10 +187,10 @@ export function ManagerRequestDecisionPage() {
           <span className="manager-request-detail-hero__eyebrow">DEMANDE DE CONGÉ N°{request.id}</span>
           <div className="manager-request-detail-hero__titleline">
             <h2>{employeeName}</h2>
-            {request.isUrgent ? (
+            {request.isUrgent && request.status === 'EN_ATTENTE_VALIDATION' ? (
               <span className="manager-requests-badge manager-requests-badge--urgent"><Icon name="alert" size={12} /> Urgente</span>
             ) : (
-              <span className="manager-requests-badge manager-requests-badge--pending"><Icon name="clock" size={12} /> En attente</span>
+              <span className={`manager-requests-badge manager-requests-badge--${requestStatus.tone}`}><Icon name={requestStatus.icon} size={12} /> {requestStatus.label}</span>
             )}
           </div>
           <p>{request.leaveType?.name ?? 'Demande de congé'} · {request.service?.name}</p>
@@ -212,7 +231,8 @@ export function ManagerRequestDecisionPage() {
             </div>
           </section>
 
-          <section className={`manager-request-detail-card manager-request-availability${availability?.minimumPresenceBreached ? ' is-warning' : ''}`}>
+          {request.status === 'EN_ATTENTE_VALIDATION' && (
+          <section className={`manager-request-detail-card manager-request-availability${hasAvailabilityAlert ? ' is-warning' : ''}`}>
             <div className="manager-request-detail-card__heading">
               <span className="manager-request-detail-card__icon"><Icon name="users" size={18} /></span>
               <div><h3>Disponibilité du service</h3><p>Contrôle des chevauchements et de la présence minimale.</p></div>
@@ -250,32 +270,48 @@ export function ManagerRequestDecisionPage() {
               <p className="manager-request-availability__empty">Les informations de disponibilité n’ont pas pu être chargées.</p>
             )}
           </section>
+          )}
         </div>
 
         <aside className="manager-request-actions-card">
-          <span className="manager-request-actions-card__eyebrow">ACTIONS DISPONIBLES</span>
+          <span className="manager-request-actions-card__eyebrow">
+            {canDecide ? 'ACTIONS DISPONIBLES' : 'CONSULTATION'}
+          </span>
           <h3>{request.leaveType?.name ?? 'Demande de congé'}</h3>
 
-          {availability?.minimumPresenceBreached && (
-            <label className="manager-request-actions-card__justification" htmlFor="minimum-presence-justification">
-              <span>Justification du dépassement</span>
-              <textarea
-                id="minimum-presence-justification"
-                rows={4}
-                maxLength={1500}
-                value={minimumPresenceJustification}
-                onChange={(event) => setMinimumPresenceJustification(event.target.value)}
-                placeholder="Expliquez pourquoi la demande peut être validée malgré le seuil…"
-              />
-            </label>
-          )}
+          {canDecide ? (
+            <>
+              {availability?.minimumPresenceBreached && (
+                <label className="manager-request-actions-card__justification" htmlFor="minimum-presence-justification">
+                  <span>Justification du dépassement</span>
+                  <textarea
+                    id="minimum-presence-justification"
+                    rows={4}
+                    maxLength={1500}
+                    value={minimumPresenceJustification}
+                    onChange={(event) => setMinimumPresenceJustification(event.target.value)}
+                    placeholder="Expliquez pourquoi la demande peut être validée malgré le seuil…"
+                  />
+                </label>
+              )}
 
-          <button type="button" className="manager-request-action manager-request-action--validate" onClick={handleValidate} disabled={submitting}>
-            <Icon name="check" size={16} /> Valider la demande
-          </button>
-          <button type="button" className="manager-request-action manager-request-action--refuse" onClick={() => setShowRefusal(true)} disabled={submitting}>
-            <Icon name="alert" size={16} /> Refuser la demande
-          </button>
+              <button type="button" className="manager-request-action manager-request-action--validate" onClick={handleValidate} disabled={submitting}>
+                <Icon name="check" size={16} /> Valider la demande
+              </button>
+              <button type="button" className="manager-request-action manager-request-action--refuse" onClick={() => setShowRefusal(true)} disabled={submitting}>
+                <Icon name="alert" size={16} /> Refuser la demande
+              </button>
+            </>
+          ) : (
+            <div className="manager-request-actions-card__readonly">
+              <span className={`manager-requests-badge manager-requests-badge--${requestStatus.tone}`}>{requestStatus.label}</span>
+              <p>
+                {request.status === 'EN_ATTENTE_VALIDATION'
+                  ? 'Cette demande appartient bien à votre service, mais elle est actuellement attribuée à un autre valideur.'
+                  : 'Cette demande est consultable dans l’historique de votre service. Aucune action de validation n’est disponible.'}
+              </p>
+            </div>
+          )}
         </aside>
       </div>
 

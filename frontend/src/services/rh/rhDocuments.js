@@ -35,9 +35,11 @@ export async function fetchRhDocument(document) {
     throw new Error('Ce document PDF n’est pas rattaché à une demande de congé.')
   }
 
-  const endpoint = document.documentKind === 'PDF_ANNULATION'
-    ? `/leave-requests/${document.leaveRequestId}/cancellation-pdf`
-    : `/leave-requests/${document.leaveRequestId}/pdf`
+  const endpoint = document.documentKind === 'PDF_RECAPITULATIF'
+    ? `/leave-requests/${document.leaveRequestId}/pending-summary-pdf`
+    : document.documentKind === 'PDF_ANNULATION'
+      ? `/leave-requests/${document.leaveRequestId}/cancellation-pdf`
+      : `/leave-requests/${document.leaveRequestId}/pdf`
 
   const response = await apiClient.get(endpoint, { responseType: 'blob' })
 

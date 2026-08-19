@@ -1,0 +1,18 @@
+.manager-service-requests-page .rh-all-requests-card {
+  width: 100%;
+}
+
+.manager-service-requests-filter-panel {
+  grid-template-columns: minmax(280px, 430px) auto;
+  justify-content: start;
+}
+
+.manager-service-requests-filter-panel .rh-all-requests-reset {
+  min-width: 132px;
+}
+
+@media (max-width: 760px) {
+  .manager-service-requests-filter-panel {
+    grid-template-columns: 1fr;
+  }
+}

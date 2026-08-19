@@ -70,7 +70,13 @@ export interface DocumentMetadataResponse {
 }
 
 
-export interface RhDocumentLibraryItem extends DocumentMetadataResponse {
+export type RhDocumentLibraryKind =
+  | DocumentKind
+  | 'PDF_RECAPITULATIF';
+
+export interface RhDocumentLibraryItem
+  extends Omit<DocumentMetadataResponse, 'documentKind'> {
+  documentKind: RhDocumentLibraryKind;
   category: DocumentLibraryCategory;
   employee: {
     id: number;
@@ -442,7 +448,7 @@ export class DocumentsService {
 
     const documents = await qb.getMany();
 
-    return documents.map((document) => {
+    const storedItems: RhDocumentLibraryItem[] = documents.map((document) => {
       const leaveRequest = document.leaveRequest;
       const absenceDeclaration = document.absenceDeclaration;
 
@@ -508,6 +514,157 @@ export class DocumentsService {
         },
       };
     });
+
+    const syntheticItems: RhDocumentLibraryItem[] = [];
+    const shouldIncludeConges =
+      !query.category || query.category === 'CONGES';
+    const shouldIncludePending =
+      !query.status || query.status === DocumentStatus.EN_ATTENTE;
+    const shouldIncludeValidated =
+      !query.status || query.status === DocumentStatus.ACCEPTE;
+
+    if (shouldIncludeConges && (shouldIncludePending || shouldIncludeValidated)) {
+      const requestQb = this.leaveRequestRepository
+        .createQueryBuilder('libraryRequest')
+        .leftJoinAndSelect('libraryRequest.employee', 'libraryEmployee')
+        .leftJoinAndSelect('libraryRequest.service', 'libraryService')
+        .leftJoinAndSelect('libraryRequest.leaveType', 'libraryLeaveType')
+        .where('libraryRequest.status IN (:...libraryStatuses)', {
+          libraryStatuses: [
+            LeaveRequestStatus.EN_ATTENTE_VALIDATION,
+            LeaveRequestStatus.VALIDEE,
+            LeaveRequestStatus.ANNULATION_EN_ATTENTE_ACCORD,
+            LeaveRequestStatus.ANNULEE_APRES_VALIDATION,
+          ],
+        });
+
+      if (query.serviceId) {
+        requestQb.andWhere('libraryRequest.serviceId = :libraryServiceId', {
+          libraryServiceId: query.serviceId,
+        });
+      }
+
+      if (query.employeeId) {
+        requestQb.andWhere('libraryRequest.employeeId = :libraryEmployeeId', {
+          libraryEmployeeId: query.employeeId,
+        });
+      }
+
+      const requests = await requestQb.getMany();
+      const validationDocumentRequestIds = new Set(
+        storedItems
+          .filter((item) => item.documentKind === DocumentKind.PDF_VALIDATION)
+          .map((item) => item.leaveRequestId)
+          .filter((id): id is number => id !== null),
+      );
+
+      const isInDateRange = (value: Date): boolean => {
+        const isoDate = value.toISOString().slice(0, 10);
+        if (query.startDate && isoDate < query.startDate) return false;
+        if (query.endDate && isoDate > query.endDate) return false;
+        return true;
+      };
+
+      for (const leaveRequest of requests) {
+        const employee = leaveRequest.employee;
+        const service = leaveRequest.service;
+
+        if (
+          leaveRequest.status === LeaveRequestStatus.EN_ATTENTE_VALIDATION &&
+          shouldIncludePending
+        ) {
+          const uploadedAt =
+            leaveRequest.submittedAt ?? leaveRequest.updatedAt ?? leaveRequest.createdAt;
+
+          if (isInDateRange(uploadedAt)) {
+            const year = uploadedAt.getFullYear();
+            syntheticItems.push({
+              id: -leaveRequest.id,
+              leaveRequestId: leaveRequest.id,
+              absenceDeclarationId: null,
+              documentKind: 'PDF_RECAPITULATIF',
+              originalName: `RECAP-${year}-${String(leaveRequest.id).padStart(6, '0')}.pdf`,
+              mimeType: 'application/pdf',
+              fileSize: null,
+              status: DocumentStatus.EN_ATTENTE,
+              uploadedById: leaveRequest.employeeId,
+              verifiedByRhId: null,
+              rejectionReason: null,
+              retentionUntil: null,
+              uploadedAt,
+              verifiedAt: null,
+              deletedAt: null,
+              category: 'CONGES',
+              employee: employee
+                ? { id: employee.id, nom: employee.nom, prenom: employee.prenom }
+                : null,
+              service: service
+                ? { id: service.id, name: service.name }
+                : null,
+              source: {
+                type: 'CONGE',
+                id: leaveRequest.id,
+                label: leaveRequest.leaveType?.name
+                  ? `Récapitulatif · ${leaveRequest.leaveType.name}`
+                  : 'Récapitulatif de demande',
+                startDate: leaveRequest.startDate,
+                endDate: leaveRequest.endDate,
+              },
+            });
+          }
+        }
+
+        if (
+          leaveRequest.status !== LeaveRequestStatus.EN_ATTENTE_VALIDATION &&
+          shouldIncludeValidated &&
+          !validationDocumentRequestIds.has(leaveRequest.id)
+        ) {
+          const uploadedAt =
+            leaveRequest.decisionAt ?? leaveRequest.updatedAt ?? leaveRequest.createdAt;
+
+          if (isInDateRange(uploadedAt)) {
+            const year = uploadedAt.getFullYear();
+            syntheticItems.push({
+              id: -1000000000 - leaveRequest.id,
+              leaveRequestId: leaveRequest.id,
+              absenceDeclarationId: null,
+              documentKind: DocumentKind.PDF_VALIDATION,
+              originalName: `CONGE-${year}-${String(leaveRequest.id).padStart(6, '0')}.pdf`,
+              mimeType: 'application/pdf',
+              fileSize: null,
+              status: DocumentStatus.ACCEPTE,
+              uploadedById:
+                leaveRequest.finalDeciderId ?? leaveRequest.employeeId,
+              verifiedByRhId: null,
+              rejectionReason: null,
+              retentionUntil: null,
+              uploadedAt,
+              verifiedAt: null,
+              deletedAt: null,
+              category: 'CONGES',
+              employee: employee
+                ? { id: employee.id, nom: employee.nom, prenom: employee.prenom }
+                : null,
+              service: service
+                ? { id: service.id, name: service.name }
+                : null,
+              source: {
+                type: 'CONGE',
+                id: leaveRequest.id,
+                label: leaveRequest.leaveType?.name ?? 'Congé validé',
+                startDate: leaveRequest.startDate,
+                endDate: leaveRequest.endDate,
+              },
+            });
+          }
+        }
+      }
+    }
+
+    return [...storedItems, ...syntheticItems].sort(
+      (left, right) =>
+        right.uploadedAt.getTime() - left.uploadedAt.getTime(),
+    );
   }
 
   async accept(

@@ -86,12 +86,18 @@ export class DocumentPdfService {
     const referenceNumber = storedDocument?.originalName
       ? storedDocument.originalName.replace(/\.pdf$/i, '')
       : this.createValidationReference(leaveRequest, generatedAt);
-    const storageKey =
-      storedDocument?.storageKey ??
-      this.createValidationStorageKey(referenceNumber, generatedAt);
+    const usesCurrentPdfDesign =
+      storedDocument?.storageKey?.includes('/premium-v1/') === true;
+    const storageKey = usesCurrentPdfDesign
+      ? storedDocument!.storageKey
+      : this.createValidationStorageKey(referenceNumber, generatedAt);
     const absolutePath = this.resolvePrivateStoragePath(storageKey);
 
-    if (storedDocument && (await this.fileExists(absolutePath))) {
+    if (
+      storedDocument &&
+      usesCurrentPdfDesign &&
+      (await this.fileExists(absolutePath))
+    ) {
       return storedDocument;
     }
 
@@ -118,6 +124,7 @@ export class DocumentPdfService {
 
       if (storedDocument) {
         storedDocument.originalName = `${referenceNumber}.pdf`;
+        storedDocument.storageKey = storageKey;
         storedDocument.mimeType = 'application/pdf';
         storedDocument.fileSize = pdfBuffer.length;
         storedDocument.status = DocumentStatus.ACCEPTE;
@@ -528,7 +535,7 @@ export class DocumentPdfService {
       const chunks: Buffer[] = [];
       const document = new PDFDocument({
         size: 'A4',
-        margins: { top: 44, right: 48, bottom: 60, left: 48 },
+        margins: { top: 0, right: 0, bottom: 0, left: 0 },
         info: {
           Title: `Récapitulatif provisoire ${referenceNumber}`,
           Author: 'GMES',
@@ -547,74 +554,44 @@ export class DocumentPdfService {
       });
 
       try {
-        if (existsSync(this.logoPath)) {
-          document.image(this.logoPath, 48, 38, { width: 72 });
-        } else {
-          document
-            .fillColor('#0b5fb3')
-            .font('Helvetica-Bold')
-            .fontSize(20)
-            .text('GMES', 48, 44);
-        }
+        const pageWidth = document.page.width;
+        const contentX = 30;
+        const contentWidth = pageWidth - contentX * 2;
 
-        document
-          .fillColor('#0b2347')
-          .font('Helvetica-Bold')
-          .fontSize(18)
-          .text('Récapitulatif de demande de congé', 150, 46, {
-            align: 'right',
-          });
+        this.drawPremiumPdfHeader(document, {
+          title: 'Récapitulatif de\ndemande de congé',
+          referenceNumber,
+          statusLabel: null,
+        });
 
-        document
-          .moveDown(2.6)
-          .roundedRect(48, 112, 499, 58, 10)
-          .fillAndStroke('#fff4e8', '#f76b1c');
-        document
-          .fillColor('#d65a12')
-          .font('Helvetica-Bold')
-          .fontSize(12)
-          .text(
-            'DEMANDE EN ATTENTE DE VALIDATION — DOCUMENT NON DÉFINITIF',
-            64,
-            128,
-            { width: 467, align: 'center' },
-          );
-        document
-          .fillColor('#6b7280')
-          .font('Helvetica')
-          .fontSize(8.5)
-          .text(
-            'Ce document est un récapitulatif provisoire. Il ne constitue pas une autorisation d’absence.',
-            64,
-            149,
-            { width: 467, align: 'center' },
-          );
+        this.drawPremiumWarningBanner(
+          document,
+          138,
+          contentX,
+          contentWidth,
+          'DEMANDE EN ATTENTE DE VALIDATION — DOCUMENT NON DÉFINITIF',
+          'Ce document est un récapitulatif provisoire. Il ne constitue pas une autorisation d’absence.',
+        );
 
-        document.y = 194;
-        document
-          .fillColor('#0b2347')
-          .font('Helvetica-Bold')
-          .fontSize(10)
-          .text(`Référence : ${referenceNumber}`)
-          .moveDown(0.4)
-          .font('Helvetica')
-          .fillColor('#64748b')
-          .fontSize(9)
-          .text('Statut : En attente de validation')
-          .moveDown(1.4);
-
-        this.drawSectionTitle(document, 'Collaborateur');
-        this.drawKeyValueRows(document, [
-          [
-            'Nom',
-            `${leaveRequest.employee.prenom} ${leaveRequest.employee.nom}`,
+        this.drawPremiumCard(document, {
+          x: contentX,
+          y: 221,
+          width: contentWidth,
+          title: 'Collaborateur',
+          icon: 'user',
+          rows: [
+            [
+              'Nom',
+              `${leaveRequest.employee.prenom} ${leaveRequest.employee.nom}`,
+            ],
+            ['Adresse e-mail', leaveRequest.employee.email],
+            ['Service', leaveRequest.service.name],
           ],
-          ['Adresse e-mail', leaveRequest.employee.email],
-          ['Service', leaveRequest.service.name],
-        ]);
+          height: 146,
+          rowHeight: 30,
+        });
 
-        this.drawSectionTitle(document, 'Demande');
-        this.drawKeyValueRows(document, [
+        const requestRows: Array<[string, string]> = [
           ['Type de congé', leaveRequest.leaveType.name],
           [
             'Date de début',
@@ -628,10 +605,7 @@ export class DocumentPdfService {
             'Jours ouvrables décomptés',
             this.formatDays(leaveRequest.deductedDays),
           ],
-          [
-            'Soumise le',
-            this.formatDateTime(leaveRequest.submittedAt),
-          ],
+          ['Soumise le', this.formatDateTime(leaveRequest.submittedAt)],
           [
             'Modification possible jusqu’au',
             leaveRequest.modificationDeadline
@@ -640,43 +614,50 @@ export class DocumentPdfService {
                 )
               : 'Non renseignée',
           ],
-        ]);
+        ];
 
         if (leaveRequest.comment) {
-          this.drawSectionTitle(document, 'Commentaire');
-          document
-            .fillColor('#334155')
-            .font('Helvetica')
-            .fontSize(9.5)
-            .text(leaveRequest.comment, { width: 499 })
-            .moveDown(1.2);
+          requestRows.push(['Commentaire', leaveRequest.comment]);
         }
+
+        this.drawPremiumCard(document, {
+          x: contentX,
+          y: 383,
+          width: contentWidth,
+          title: 'Demande',
+          icon: 'calendar',
+          rows: requestRows,
+          height: leaveRequest.comment ? 259 : 230,
+          rowHeight: 29,
+        });
 
         if (leaveRequest.realBalanceBefore !== null) {
-          this.drawSectionTitle(document, 'Solde au moment de la soumission');
-          this.drawKeyValueRows(document, [
-            [
-              'Solde réel',
-              this.formatOptionalDays(leaveRequest.realBalanceBefore),
+          this.drawPremiumCard(document, {
+            x: contentX,
+            y: leaveRequest.comment ? 658 : 628,
+            width: contentWidth,
+            title: 'Solde au moment de la soumission',
+            icon: 'balance',
+            rows: [
+              [
+                'Solde réel',
+                this.formatOptionalDays(leaveRequest.realBalanceBefore),
+              ],
+              [
+                'Solde potentiel avant réservation',
+                this.formatOptionalDays(leaveRequest.potentialBalanceBefore),
+              ],
             ],
-            [
-              'Solde potentiel avant réservation',
-              this.formatOptionalDays(
-                leaveRequest.potentialBalanceBefore,
-              ),
-            ],
-          ]);
+            height: 100,
+            rowHeight: 29,
+          });
         }
 
-        document
-          .moveDown(1.4)
-          .fillColor('#94a3b8')
-          .font('Helvetica')
-          .fontSize(8)
-          .text(
-            `Document provisoire généré le ${this.formatDateTime(generatedAt)} — ${referenceNumber}`,
-            { align: 'center' },
-          );
+        this.drawPremiumPdfFooter(document, {
+          referenceNumber,
+          generatedAt,
+          official: false,
+        });
 
         document.end();
       } catch (error) {
@@ -788,6 +769,7 @@ export class DocumentPdfService {
     return [
       'official-pdfs',
       'validation',
+      'premium-v1',
       String(generatedAt.getFullYear()),
       `${referenceNumber}.pdf`,
     ].join('/');
@@ -917,13 +899,7 @@ export class DocumentPdfService {
       const chunks: Buffer[] = [];
       const document = new PDFDocument({
         size: 'A4',
-        margins: {
-          top: 42,
-          right: 48,
-          bottom: 76,
-          left: 48,
-        },
-        bufferPages: true,
+        margins: { top: 0, right: 0, bottom: 0, left: 0 },
         info: {
           Title: `Demande de congé validée ${referenceNumber}`,
           Author: 'GMES',
@@ -942,86 +918,95 @@ export class DocumentPdfService {
       });
 
       try {
-        this.drawMainHeader(
-          document,
-          referenceNumber,
-        );
+        const pageWidth = document.page.width;
+        const contentX = 36;
+        const contentWidth = pageWidth - contentX * 2;
 
-        document.on('pageAdded', () => {
-          this.drawContinuationHeader(
-            document,
-            referenceNumber,
-          );
+        this.drawPremiumPdfHeader(document, {
+          title: 'Demande de congé\nvalidée',
+          referenceNumber,
+          statusLabel: 'Validée',
         });
 
-        this.drawSectionTitle(
-          document,
-          'Informations du collaborateur',
-        );
-        this.drawKeyValueRows(document, [
-          [
-            'Collaborateur',
-            `${leaveRequest.employee.prenom} ${leaveRequest.employee.nom}`,
+        this.drawPremiumCard(document, {
+          x: contentX,
+          y: 138,
+          width: contentWidth,
+          title: 'Informations du collaborateur',
+          icon: 'user',
+          rows: [
+            [
+              'Collaborateur',
+              `${leaveRequest.employee.prenom} ${leaveRequest.employee.nom}`,
+            ],
+            ['Adresse e-mail', leaveRequest.employee.email],
+            ['Service', leaveRequest.service.name],
+            [
+              'Statut professionnel',
+              this.formatEmploymentType(
+                leaveRequest.employee.employmentType,
+              ),
+            ],
           ],
-          ['Adresse e-mail', leaveRequest.employee.email],
-          ['Service', leaveRequest.service.name],
-          [
-            'Statut professionnel',
-            this.formatEmploymentType(
-              leaveRequest.employee.employmentType,
-            ),
-          ],
-        ]);
+          height: 119,
+          rowHeight: 21,
+        });
 
-        this.drawSectionTitle(document, 'Détails du congé');
-        this.drawKeyValueRows(document, [
-          ['Type de congé', leaveRequest.leaveType.name],
-          [
-            'Date de début',
-            `${this.formatDateOnly(leaveRequest.startDate)} — ${this.formatDayPeriod(leaveRequest.startPeriod)}`,
+        this.drawPremiumCard(document, {
+          x: contentX,
+          y: 269,
+          width: contentWidth,
+          title: 'Détails du congé',
+          icon: 'calendar',
+          rows: [
+            ['Type de congé', leaveRequest.leaveType.name],
+            [
+              'Date de début',
+              `${this.formatDateOnly(leaveRequest.startDate)} — ${this.formatDayPeriod(leaveRequest.startPeriod)}`,
+            ],
+            [
+              'Date de fin',
+              `${this.formatDateOnly(leaveRequest.endDate)} — ${this.formatDayPeriod(leaveRequest.endPeriod)}`,
+            ],
+            [
+              'Durée calendaire',
+              `${leaveRequest.calendarDuration} jour(s)`,
+            ],
+            [
+              'Jours ouvrables décomptés',
+              this.formatDays(leaveRequest.deductedDays),
+            ],
           ],
-          [
-            'Date de fin',
-            `${this.formatDateOnly(leaveRequest.endDate)} — ${this.formatDayPeriod(leaveRequest.endPeriod)}`,
-          ],
-          [
-            'Durée calendaire',
-            `${leaveRequest.calendarDuration} jour(s)`,
-          ],
-          [
-            'Jours ouvrables décomptés',
-            this.formatDays(leaveRequest.deductedDays),
-          ],
-        ]);
+          height: 137,
+          rowHeight: 21,
+        });
 
-        this.drawSectionTitle(document, 'Situation du solde');
-        this.drawKeyValueRows(document, [
-          [
-            'Solde réel avant validation',
-            this.formatOptionalDays(
-              leaveRequest.realBalanceBefore,
-            ),
+        this.drawPremiumCard(document, {
+          x: contentX,
+          y: 418,
+          width: contentWidth,
+          title: 'Situation du solde',
+          icon: 'balance',
+          rows: [
+            [
+              'Solde réel avant validation',
+              this.formatOptionalDays(leaveRequest.realBalanceBefore),
+            ],
+            [
+              'Solde potentiel avant validation',
+              this.formatOptionalDays(leaveRequest.potentialBalanceBefore),
+            ],
+            [
+              'Solde réel après validation',
+              this.formatOptionalDays(leaveRequest.realBalanceAfter),
+            ],
           ],
-          [
-            'Solde potentiel avant validation',
-            this.formatOptionalDays(
-              leaveRequest.potentialBalanceBefore,
-            ),
-          ],
-          [
-            'Solde réel après validation',
-            this.formatOptionalDays(
-              leaveRequest.realBalanceAfter,
-            ),
-          ],
-        ]);
+          height: 97,
+          rowHeight: 21,
+        });
 
-        this.drawSectionTitle(document, 'Traçabilité');
-        this.drawKeyValueRows(document, [
-          [
-            'Soumise le',
-            this.formatDateTime(leaveRequest.submittedAt),
-          ],
+        const traceabilityRows: Array<[string, string]> = [
+          ['Soumise le', this.formatDateTime(leaveRequest.submittedAt)],
           [
             'Décision enregistrée le',
             this.formatDateTime(leaveRequest.decisionAt),
@@ -1034,82 +1019,653 @@ export class DocumentPdfService {
             'Rôle du valideur',
             this.formatRole(leaveRequest.finalDeciderRole),
           ],
-        ]);
+        ];
 
-        if (leaveRequest.comment) {
-          this.ensureSpace(document, 90);
-          this.drawSectionTitle(document, 'Commentaire');
-          document
-            .font('Helvetica')
-            .fontSize(9.5)
-            .fillColor('#1F2937')
-            .text(leaveRequest.comment, {
-              align: 'justify',
-              lineGap: 2,
-            });
-          document.moveDown(0.8);
-        }
+        const traceHeight = 111;
+        this.drawPremiumCard(document, {
+          x: contentX,
+          y: 527,
+          width: contentWidth,
+          title: 'Traçabilité',
+          icon: 'document',
+          rows: traceabilityRows,
+          height: traceHeight,
+          rowHeight: 19,
+        });
 
-        if (leaveRequest.rhConfirmedDirectorAgreement) {
-          this.ensureSpace(document, 58);
-          const confirmationY = document.y;
-          const confirmationWidth =
-            document.page.width -
-            document.page.margins.left -
-            document.page.margins.right;
+        const signaturesY = 650;
+        this.drawPremiumSignatures(document, leaveRequest, signaturesY);
 
-          document
-            .roundedRect(
-              document.page.margins.left,
-              confirmationY,
-              confirmationWidth,
-              44,
-              5,
-            )
-            .fillAndStroke('#E8F4FB', '#0078B8');
-          document
-            .font('Helvetica-Bold')
-            .fontSize(9)
-            .fillColor('#013069')
-            .text(
-              'Validation RH avec confirmation de l’accord du Directeur',
-              document.page.margins.left + 12,
-              confirmationY + 8,
-              {
-                width: confirmationWidth - 24,
-              },
-            );
-          document
-            .font('Helvetica')
-            .fontSize(8.5)
-            .fillColor('#334155')
-            .text(
-              `Confirmation enregistrée le ${this.formatDateTime(leaveRequest.rhDirectorAgreementConfirmedAt)}.`,
-              document.page.margins.left + 12,
-              confirmationY + 24,
-              {
-                width: confirmationWidth - 24,
-              },
-            );
-          document.y = confirmationY + 54;
-        }
-
-        this.ensureSpace(document, 172);
-        this.drawSectionTitle(document, 'Signatures');
-        this.drawSignatures(document, leaveRequest);
-
-        this.addFooters(
-          document,
+        this.drawPremiumPdfFooter(document, {
           referenceNumber,
           generatedAt,
-          documentFingerprint,
-        );
+          official: true,
+          fingerprint: documentFingerprint,
+        });
 
         document.end();
       } catch (error) {
         rejectPromise(error);
       }
     });
+  }
+
+  private drawPremiumPdfHeader(
+    document: PDFKit.PDFDocument,
+    input: {
+      title: string;
+      referenceNumber: string;
+      statusLabel: string | null;
+    },
+  ): void {
+    const x = 24;
+    const y = 23;
+    const width = document.page.width - 48;
+    const height = 99;
+
+    this.drawPremiumShadow(document, x, y, width, height, 12);
+    document
+      .roundedRect(x, y, width, height, 12)
+      .fillAndStroke('#FFFFFF', '#D8E6F6');
+
+    document
+      .roundedRect(x, y, 12, height, 12)
+      .fill('#0B5DBB');
+    document.rect(x + 6, y, 12, height).fill('#0B5DBB');
+
+    const logoBoxWidth = 134;
+    document
+      .moveTo(x + logoBoxWidth, y)
+      .lineTo(x + logoBoxWidth, y + height)
+      .lineWidth(0.7)
+      .strokeColor('#DCE7F4')
+      .stroke();
+
+    if (existsSync(this.logoPath)) {
+      document.image(this.logoPath, x + 28, y + 9, {
+        fit: [76, 76],
+        align: 'center',
+        valign: 'center',
+      });
+    } else {
+      document
+        .font('Helvetica-Bold')
+        .fontSize(20)
+        .fillColor('#0B5DBB')
+        .text('GMES', x + 39, y + 38, { lineBreak: false });
+    }
+
+    const titleX = x + logoBoxWidth + 26;
+    const refAreaWidth = 164;
+    const titleWidth = width - logoBoxWidth - refAreaWidth - 48;
+
+    document
+      .font('Helvetica-Bold')
+      .fontSize(21)
+      .fillColor('#0B2347')
+      .text(input.title, titleX, y + 20, {
+        width: titleWidth,
+        lineGap: 0,
+      });
+
+    if (input.statusLabel) {
+      const badgeX = titleX;
+      const badgeY = y + 70;
+      document
+        .roundedRect(badgeX, badgeY, 68, 19, 5)
+        .fillAndStroke('#E6F8EC', '#86D5A0');
+      document.circle(badgeX + 12, badgeY + 9.5, 5.5).fill('#20A957');
+      document
+        .moveTo(badgeX + 8.7, badgeY + 9.5)
+        .lineTo(badgeX + 11.2, badgeY + 12)
+        .lineTo(badgeX + 15.6, badgeY + 7.2)
+        .lineWidth(1.2)
+        .strokeColor('#FFFFFF')
+        .stroke();
+      document
+        .font('Helvetica-Bold')
+        .fontSize(9)
+        .fillColor('#178A45')
+        .text(input.statusLabel, badgeX + 23, badgeY + 5.2, {
+          lineBreak: false,
+        });
+    }
+
+    const dividerX = x + width - refAreaWidth - 18;
+    document
+      .moveTo(dividerX, y + 18)
+      .lineTo(dividerX, y + height - 18)
+      .lineWidth(0.8)
+      .strokeColor('#CFE0F3')
+      .stroke();
+
+    const refX = dividerX + 24;
+    document
+      .font('Helvetica-Bold')
+      .fontSize(9.5)
+      .fillColor('#0B5DBB')
+      .text('RÉFÉRENCE', refX, y + 31, {
+        width: refAreaWidth - 40,
+        align: 'center',
+        lineBreak: false,
+      });
+
+    document
+      .roundedRect(refX + 2, y + 53, refAreaWidth - 44, 22, 4)
+      .fill('#064A98');
+    document
+      .font('Helvetica-Bold')
+      .fontSize(9.2)
+      .fillColor('#FFFFFF')
+      .text(input.referenceNumber, refX + 4, y + 59, {
+        width: refAreaWidth - 48,
+        align: 'center',
+        lineBreak: false,
+      });
+  }
+
+  private drawPremiumWarningBanner(
+    document: PDFKit.PDFDocument,
+    y: number,
+    x: number,
+    width: number,
+    title: string,
+    body: string,
+  ): void {
+    const height = 66;
+    document
+      .roundedRect(x, y, width, height, 10)
+      .fillAndStroke('#FFF8F1', '#F97316');
+
+    document
+      .circle(x + 38, y + height / 2, 18)
+      .lineWidth(1.5)
+      .strokeColor('#F97316')
+      .stroke();
+    document
+      .font('Helvetica-Bold')
+      .fontSize(20)
+      .fillColor('#F97316')
+      .text('!', x + 34.2, y + 21, { lineBreak: false });
+
+    document
+      .font('Helvetica-Bold')
+      .fontSize(11.5)
+      .fillColor('#E86112')
+      .text(title, x + 70, y + 17, {
+        width: width - 90,
+        lineBreak: false,
+      });
+
+    document
+      .font('Helvetica')
+      .fontSize(8.7)
+      .fillColor('#64748B')
+      .text(body, x + 70, y + 38, {
+        width: width - 90,
+        lineBreak: false,
+      });
+  }
+
+  private drawPremiumCard(
+    document: PDFKit.PDFDocument,
+    input: {
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+      title: string;
+      icon: 'user' | 'calendar' | 'balance' | 'document';
+      rows: Array<[string, string]>;
+      rowHeight: number;
+    },
+  ): void {
+    const headerHeight = 32;
+    this.drawPremiumShadow(
+      document,
+      input.x,
+      input.y,
+      input.width,
+      input.height,
+      9,
+    );
+
+    document
+      .roundedRect(
+        input.x,
+        input.y,
+        input.width,
+        input.height,
+        9,
+      )
+      .fillAndStroke('#FFFFFF', '#D7E4F3');
+
+    document
+      .roundedRect(
+        input.x,
+        input.y,
+        input.width,
+        headerHeight,
+        9,
+      )
+      .fill('#F5F9FE');
+    document
+      .rect(
+        input.x,
+        input.y + headerHeight - 9,
+        input.width,
+        9,
+      )
+      .fill('#F5F9FE');
+
+    this.drawPremiumSectionIcon(
+      document,
+      input.icon,
+      input.x + 17,
+      input.y + 3,
+    );
+
+    document
+      .font('Helvetica-Bold')
+      .fontSize(12.4)
+      .fillColor('#0B4F9C')
+      .text(input.title, input.x + 55, input.y + 10, {
+        width: input.width - 70,
+        lineBreak: false,
+      });
+
+    document
+      .moveTo(input.x, input.y + headerHeight)
+      .lineTo(input.x + input.width, input.y + headerHeight)
+      .lineWidth(0.6)
+      .strokeColor('#D8E6F5')
+      .stroke();
+
+    const startY = input.y + headerHeight + 5;
+    const labelX = input.x + 18;
+    const labelWidth = Math.min(176, input.width * 0.37);
+    const valueX = input.x + labelWidth + 24;
+    const valueWidth = input.width - (valueX - input.x) - 18;
+
+    input.rows.forEach(([label, value], index) => {
+      const rowY = startY + index * input.rowHeight;
+      const safeLabel = this.truncatePdfText(
+        document,
+        label,
+        labelWidth,
+        8.7,
+        'Helvetica-Bold',
+      );
+      const safeValue = this.truncatePdfText(
+        document,
+        value || 'Non renseigné',
+        valueWidth,
+        8.9,
+        'Helvetica',
+      );
+
+      document
+        .font('Helvetica-Bold')
+        .fontSize(8.7)
+        .fillColor('#334155')
+        .text(safeLabel, labelX, rowY + 6, {
+          width: labelWidth,
+          lineBreak: false,
+        });
+
+      document
+        .font('Helvetica')
+        .fontSize(8.9)
+        .fillColor('#334A67')
+        .text(safeValue, valueX, rowY + 6, {
+          width: valueWidth,
+          lineBreak: false,
+        });
+
+      if (index < input.rows.length - 1) {
+        document
+          .moveTo(input.x + 16, rowY + input.rowHeight)
+          .lineTo(input.x + input.width - 16, rowY + input.rowHeight)
+          .lineWidth(0.45)
+          .strokeColor('#D9E4F0')
+          .stroke();
+      }
+    });
+  }
+
+  private drawPremiumSectionIcon(
+    document: PDFKit.PDFDocument,
+    icon: 'user' | 'calendar' | 'balance' | 'document',
+    x: number,
+    y: number,
+  ): void {
+    document.roundedRect(x, y, 26, 26, 6).fill('#064F9E');
+    document.lineWidth(1.05).strokeColor('#FFFFFF');
+
+    if (icon === 'user') {
+      document.circle(x + 13, y + 8, 3.8).stroke();
+      document
+        .roundedRect(x + 7.6, y + 14, 10.8, 7, 3.5)
+        .stroke();
+      return;
+    }
+
+    if (icon === 'calendar') {
+      document.roundedRect(x + 6.5, y + 7, 13, 13, 2).stroke();
+      document.moveTo(x + 6.5, y + 11).lineTo(x + 19.5, y + 11).stroke();
+      document.moveTo(x + 10, y + 5.5).lineTo(x + 10, y + 9).stroke();
+      document.moveTo(x + 16, y + 5.5).lineTo(x + 16, y + 9).stroke();
+      return;
+    }
+
+    if (icon === 'balance') {
+      document.moveTo(x + 13, y + 5).lineTo(x + 13, y + 20.5).stroke();
+      document.moveTo(x + 7.5, y + 9).lineTo(x + 18.5, y + 9).stroke();
+      document.moveTo(x + 9, y + 9).lineTo(x + 6.8, y + 15).stroke();
+      document.moveTo(x + 17, y + 9).lineTo(x + 19.2, y + 15).stroke();
+      document.moveTo(x + 5.5, y + 15).lineTo(x + 8.3, y + 15).stroke();
+      document.moveTo(x + 17.7, y + 15).lineTo(x + 20.5, y + 15).stroke();
+      document.moveTo(x + 9, y + 21).lineTo(x + 17, y + 21).stroke();
+      return;
+    }
+
+    document.roundedRect(x + 7.2, y + 5.5, 11.5, 15.5, 2).stroke();
+    document.moveTo(x + 9.5, y + 10).lineTo(x + 16.5, y + 10).stroke();
+    document.moveTo(x + 9.5, y + 13.5).lineTo(x + 16.5, y + 13.5).stroke();
+    document.moveTo(x + 9.5, y + 17).lineTo(x + 15, y + 17).stroke();
+  }
+
+  private drawPremiumSignatures(
+    document: PDFKit.PDFDocument,
+    leaveRequest: LeaveRequest,
+    y: number,
+  ): void {
+    const x = 36;
+    const width = document.page.width - x * 2;
+    const gap = 22;
+    const boxWidth = (width - gap) / 2;
+    const boxHeight = 116;
+
+    this.drawPremiumSignatureCard(document, {
+      x,
+      y,
+      width: boxWidth,
+      height: boxHeight,
+      title: 'Signature du collaborateur',
+      signatureType: leaveRequest.employeeSignatureType!,
+      signatureData: leaveRequest.employeeSignatureData!,
+      signerName: `${leaveRequest.employee.prenom} ${leaveRequest.employee.nom}`,
+      signerRole: 'Collaborateur',
+      signedAt: leaveRequest.employeeSignedAt!,
+    });
+
+    this.drawPremiumSignatureCard(document, {
+      x: x + boxWidth + gap,
+      y,
+      width: boxWidth,
+      height: boxHeight,
+      title: 'Signature du valideur',
+      signatureType: leaveRequest.validatorSignatureType!,
+      signatureData: leaveRequest.validatorSignatureData!,
+      signerName: `${leaveRequest.finalDecider!.prenom} ${leaveRequest.finalDecider!.nom}`,
+      signerRole: this.formatRole(leaveRequest.finalDeciderRole),
+      signedAt: leaveRequest.validatorSignedAt!,
+    });
+  }
+
+  private drawPremiumSignatureCard(
+    document: PDFKit.PDFDocument,
+    input: {
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+      title: string;
+      signatureType: SignatureType;
+      signatureData: string;
+      signerName: string;
+      signerRole: string;
+      signedAt: Date;
+    },
+  ): void {
+    this.drawPremiumShadow(
+      document,
+      input.x,
+      input.y,
+      input.width,
+      input.height,
+      8,
+    );
+    document
+      .roundedRect(
+        input.x,
+        input.y,
+        input.width,
+        input.height,
+        8,
+      )
+      .fillAndStroke('#FFFFFF', '#CFE0F3');
+    document
+      .roundedRect(input.x, input.y, input.width, 25, 8)
+      .fill('#F4F8FD');
+    document
+      .rect(input.x, input.y + 17, input.width, 8)
+      .fill('#F4F8FD');
+
+    document
+      .font('Helvetica-Bold')
+      .fontSize(9.2)
+      .fillColor('#0B4F9C')
+      .text(input.title, input.x + 8, input.y + 8, {
+        width: input.width - 16,
+        align: 'center',
+        lineBreak: false,
+      });
+
+    const signatureY = input.y + 31;
+    const signatureHeight = 31;
+
+    if (input.signatureType === SignatureType.INITIALS) {
+      document
+        .font('Times-Italic')
+        .fontSize(27)
+        .fillColor('#0B5DBB')
+        .text(input.signatureData, input.x + 12, signatureY + 3, {
+          width: input.width - 24,
+          align: 'center',
+          lineBreak: false,
+        });
+    } else {
+      const imageBuffer = this.decodePngSignature(input.signatureData);
+      document.image(imageBuffer, input.x + 20, signatureY, {
+        fit: [input.width - 40, signatureHeight],
+        align: 'center',
+        valign: 'center',
+      });
+    }
+
+    document
+      .moveTo(input.x + 16, input.y + 67)
+      .lineTo(input.x + input.width - 16, input.y + 67)
+      .lineWidth(0.5)
+      .strokeColor('#CCD9E8')
+      .stroke();
+
+    document
+      .font('Helvetica-Bold')
+      .fontSize(8.8)
+      .fillColor('#0B2347')
+      .text(input.signerName, input.x + 10, input.y + 74, {
+        width: input.width - 20,
+        align: 'center',
+        lineBreak: false,
+      });
+    document
+      .font('Helvetica')
+      .fontSize(7.8)
+      .fillColor('#345B8A')
+      .text(input.signerRole, input.x + 10, input.y + 89, {
+        width: input.width - 20,
+        align: 'center',
+        lineBreak: false,
+      });
+    document
+      .font('Helvetica')
+      .fontSize(7.0)
+      .fillColor('#4E78A7')
+      .text(this.formatDateTime(input.signedAt), input.x + 10, input.y + 102, {
+        width: input.width - 20,
+        align: 'center',
+        lineBreak: false,
+      });
+  }
+
+  private drawPremiumPdfFooter(
+    document: PDFKit.PDFDocument,
+    input: {
+      referenceNumber: string;
+      generatedAt: Date;
+      official: boolean;
+      fingerprint?: string;
+    },
+  ): void {
+    const pageWidth = document.page.width;
+    const pageHeight = document.page.height;
+    const lineY = pageHeight - 67;
+
+    this.drawPremiumFooterWaves(document);
+
+    document
+      .moveTo(32, lineY)
+      .lineTo(pageWidth - 32, lineY)
+      .lineWidth(0.8)
+      .strokeColor('#0B5DBB')
+      .stroke();
+
+    document.circle(pageWidth / 2, lineY, 13).fillAndStroke('#FFFFFF', '#8DBBEA');
+    document
+      .moveTo(pageWidth / 2 - 5, lineY)
+      .lineTo(pageWidth / 2 - 1.5, lineY + 3.5)
+      .lineTo(pageWidth / 2 + 5.5, lineY - 4)
+      .lineWidth(1.4)
+      .strokeColor('#0B5DBB')
+      .stroke();
+
+    document
+      .font('Helvetica')
+      .fontSize(7.7)
+      .fillColor('#7186A1')
+      .text(
+        input.official
+          ? 'Document officiel généré par l’application de gestion des congés'
+          : `Document provisoire généré le ${this.formatDateTime(input.generatedAt)}`,
+        70,
+        lineY + 22,
+        {
+          width: pageWidth - 140,
+          align: 'center',
+          lineBreak: false,
+        },
+      );
+
+    document
+      .font('Helvetica-Bold')
+      .fontSize(8.8)
+      .fillColor('#0B4F9C')
+      .text(input.referenceNumber, 70, lineY + 39, {
+        width: pageWidth - 140,
+        align: 'center',
+        lineBreak: false,
+      });
+
+    if (input.official && input.fingerprint) {
+      document
+        .font('Helvetica')
+        .fontSize(4.8)
+        .fillColor('#B1C1D4')
+        .text(
+          `Empreinte ${input.fingerprint.slice(0, 20).toUpperCase()}`,
+          38,
+          pageHeight - 17,
+          {
+            width: 150,
+            lineBreak: false,
+          },
+        );
+    }
+  }
+
+  private drawPremiumFooterWaves(document: PDFKit.PDFDocument): void {
+    const width = document.page.width;
+    const height = document.page.height;
+
+    document
+      .moveTo(0, height - 28)
+      .bezierCurveTo(width * 0.28, height - 12, width * 0.6, height - 8, width, height - 38)
+      .lineTo(width, height)
+      .lineTo(0, height)
+      .closePath()
+      .fill('#D7E9FA');
+
+    document
+      .moveTo(0, height - 18)
+      .bezierCurveTo(width * 0.26, height - 3, width * 0.58, height + 1, width, height - 25)
+      .lineTo(width, height)
+      .lineTo(0, height)
+      .closePath()
+      .fill('#0B5DBB');
+
+    document
+      .moveTo(0, height - 9)
+      .bezierCurveTo(width * 0.22, height + 1, width * 0.46, height + 1, width * 0.72, height - 5)
+      .lineTo(0, height)
+      .closePath()
+      .fill('#06386E');
+  }
+
+  private drawPremiumShadow(
+    document: PDFKit.PDFDocument,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    radius: number,
+  ): void {
+    document
+      .roundedRect(x + 1.5, y + 2.2, width, height, radius)
+      .fill('#EDF2F7');
+  }
+
+  private truncatePdfText(
+    document: PDFKit.PDFDocument,
+    value: string,
+    maxWidth: number,
+    fontSize: number,
+    fontName: string,
+  ): string {
+    const source = String(value ?? 'Non renseigné');
+    document.font(fontName).fontSize(fontSize);
+
+    if (document.widthOfString(source) <= maxWidth) {
+      return source;
+    }
+
+    let low = 0;
+    let high = source.length;
+    let result = '…';
+
+    while (low <= high) {
+      const middle = Math.floor((low + high) / 2);
+      const candidate = `${source.slice(0, middle).trimEnd()}…`;
+      if (document.widthOfString(candidate) <= maxWidth) {
+        result = candidate;
+        low = middle + 1;
+      } else {
+        high = middle - 1;
+      }
+    }
+
+    return result;
   }
 
   private drawMainHeader(
