@@ -40,6 +40,7 @@ import { DirectorStatisticsPage } from '@/pages/director/StatisticsPage'
 import { DirectorAvailabilityPage } from '@/pages/director/AvailabilityPage'
 import { DirectorUnavailabilityPage } from '@/pages/director/UnavailabilityPage'
 import { AdminUsersPage } from '@/pages/admin/UsersPage'
+import { AdminServicesPage } from '@/pages/admin/ServicesPage'
 import { NEW_REQUEST_ROLES, ROLES } from '@/config/navigation'
 import { RoleRoute } from '@/auth/RoleRoute'
 
@@ -125,6 +126,14 @@ export const router = createBrowserRouter([
         element: (
           <RoleRoute roles={[ROLES.ADMIN]}>
             <AdminUsersPage />
+          </RoleRoute>
+        ),
+      },
+      {
+        path: 'admin-services',
+        element: (
+          <RoleRoute roles={[ROLES.ADMIN]}>
+            <AdminServicesPage />
           </RoleRoute>
         ),
       },
