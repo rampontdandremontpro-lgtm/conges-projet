@@ -42,6 +42,7 @@ import { DirectorUnavailabilityPage } from '@/pages/director/UnavailabilityPage'
 import { AdminUsersPage } from '@/pages/admin/UsersPage'
 import { AdminServicesPage } from '@/pages/admin/ServicesPage'
 import { AdminMinimumPresencePage } from '@/pages/admin/MinimumPresencePage'
+import { AdminTechnicalLogsPage } from '@/pages/admin/TechnicalLogsPage'
 import { NEW_REQUEST_ROLES, ROLES } from '@/config/navigation'
 import { RoleRoute } from '@/auth/RoleRoute'
 
@@ -143,6 +144,14 @@ export const router = createBrowserRouter([
         element: (
           <RoleRoute roles={[ROLES.ADMIN]}>
             <AdminMinimumPresencePage />
+          </RoleRoute>
+        ),
+      },
+      {
+        path: 'admin-technical-logs',
+        element: (
+          <RoleRoute roles={[ROLES.ADMIN]}>
+            <AdminTechnicalLogsPage />
           </RoleRoute>
         ),
       },
