@@ -325,6 +325,29 @@ export function AdminUsersPage() {
     return () => window.clearTimeout(timer)
   }, [feedback])
 
+  useEffect(() => {
+    const action = searchParams.get('action')
+    const status = searchParams.get('status')
+    let consumed = false
+
+    if (action === 'create') {
+      setDrawer({ mode: 'create', user: null })
+      consumed = true
+    }
+
+    if (status === 'INACTIVE' || status === 'ACTIVE') {
+      setFilters((current) => ({ ...current, status }))
+      consumed = true
+    }
+
+    if (consumed) {
+      const next = new URLSearchParams(searchParams)
+      next.delete('action')
+      next.delete('status')
+      setSearchParams(next, { replace: true })
+    }
+  }, [searchParams, setSearchParams])
+
   const query = normalize(searchParams.get('q'))
   const filtered = useMemo(() => state.users.filter((item) => {
     if (filters.role !== 'ALL' && item.role !== filters.role) return false

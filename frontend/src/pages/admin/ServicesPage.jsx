@@ -342,6 +342,36 @@ export function AdminServicesPage() {
     return () => window.clearTimeout(timer)
   }, [feedback])
 
+  useEffect(() => {
+    const action = searchParams.get('action')
+    const status = searchParams.get('status')
+    const manager = searchParams.get('manager')
+    let consumed = false
+
+    if (action === 'create') {
+      setDrawer({ mode: 'create', service: null })
+      consumed = true
+    }
+
+    if (status === 'INACTIVE' || status === 'ACTIVE') {
+      setFilters((current) => ({ ...current, status }))
+      consumed = true
+    }
+
+    if (manager === 'WITHOUT' || manager === 'WITH') {
+      setFilters((current) => ({ ...current, manager }))
+      consumed = true
+    }
+
+    if (consumed) {
+      const next = new URLSearchParams(searchParams)
+      next.delete('action')
+      next.delete('status')
+      next.delete('manager')
+      setSearchParams(next, { replace: true })
+    }
+  }, [searchParams, setSearchParams])
+
   const countsByService = useMemo(() => {
     const map = new Map()
     state.users.forEach((user) => {
