@@ -1,0 +1,406 @@
+/*
+ * Micro-animations adaptées des maquettes Figma.
+ * Ce fichier est volontairement séparé des animations métier existantes :
+ * il ne redéfinit aucun keyframe GMES déjà présent et n'altère ni calendriers,
+ * ni drawers/modales, ni graphiques, ni animations spécifiques de formulaire.
+ */
+
+@keyframes gmes-figma-list-rise {
+  from { transform: translateY(8px); }
+  to { transform: translateY(0); }
+}
+
+@keyframes gmes-figma-list-slide {
+  from { transform: translateX(-7px); }
+  to { transform: translateX(0); }
+}
+
+@keyframes gmes-figma-notification-in {
+  from {
+    opacity: .82;
+    transform: translateX(14px) scale(.994);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+@keyframes gmes-figma-progress-reveal {
+  from { transform: scaleX(.02); }
+  to { transform: scaleX(1); }
+}
+
+@keyframes gmes-figma-table-fade {
+  from { opacity: .42; }
+  to { opacity: 1; }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Collaborateur                                                              */
+/* -------------------------------------------------------------------------- */
+
+.my-requests-list > .my-request-card,
+.documents-list > .document-card:not(.document-card--skeleton),
+.history-page__list > .history-row:not(.history-row--skeleton),
+.recent-list > .recent-row--clickable {
+  animation: gmes-figma-list-rise 280ms cubic-bezier(.2, .72, .24, 1) backwards;
+}
+
+.notifications-page__list > .notifications-page-card:not(.notifications-page-card--skeleton) {
+  animation: gmes-figma-notification-in 260ms cubic-bezier(.2, .72, .24, 1) backwards;
+}
+
+.balance-progress__fill,
+.next-leave__progress-fill {
+  transform-origin: left center;
+  animation: gmes-figma-progress-reveal 720ms cubic-bezier(.2, .78, .2, 1) 80ms backwards;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Responsable de service                                                     */
+/* -------------------------------------------------------------------------- */
+
+.manager-requests-list > .manager-requests-card,
+.manager-alerts-list > .manager-overlap-card,
+.manager-request-list > .manager-request-row:not(.manager-request-row--loading),
+.manager-team-list > .manager-team-row,
+.manager-presence-page .manager-presence-member-card {
+  animation: gmes-figma-list-rise 290ms cubic-bezier(.2, .72, .24, 1) backwards;
+}
+
+.manager-presence-progress > span,
+.manager-presence-summary-card__progress > span {
+  transform-origin: left center;
+  animation: gmes-figma-progress-reveal 760ms cubic-bezier(.2, .78, .2, 1) 90ms backwards;
+}
+
+/* -------------------------------------------------------------------------- */
+/* RH                                                                         */
+/* -------------------------------------------------------------------------- */
+
+.rh-priority-list > .rh-priority-row,
+.rh-absents-list > .rh-absent-row,
+.rh-all-requests-row--data,
+.rh-balances-row--body,
+.rh-documents-row--body,
+.rh-absences-row--data,
+.rh-derogations-row--body,
+.rh-leave-types-row--body,
+.rh-holidays-row--body {
+  animation: gmes-figma-list-slide 270ms cubic-bezier(.2, .72, .24, 1) backwards;
+}
+
+.rh-export-card {
+  animation: gmes-figma-list-rise 320ms cubic-bezier(.2, .72, .24, 1) backwards;
+}
+
+.rh-presence-progress > span {
+  transform-origin: left center;
+  animation: gmes-figma-progress-reveal 760ms cubic-bezier(.2, .78, .2, 1) 90ms backwards;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Directeur                                                                  */
+/* -------------------------------------------------------------------------- */
+
+.director-priority-list > .director-priority-row,
+.director-services-list > .director-service-row,
+.director-attention-list > .director-attention-item,
+.director-all-requests-row--data,
+.director-unavailability-card {
+  animation: gmes-figma-list-rise 285ms cubic-bezier(.2, .72, .24, 1) backwards;
+}
+
+.director-presence-progress > span {
+  transform-origin: left center;
+  animation: gmes-figma-progress-reveal 760ms cubic-bezier(.2, .78, .2, 1) 90ms backwards;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Admin                                                                      */
+/* -------------------------------------------------------------------------- */
+
+.admin-users-row--body,
+.admin-services-row--body,
+.admin-logs-row--body,
+.admin-dashboard-activity-list > .admin-dashboard-activity-row,
+.admin-dashboard-quick-list > button,
+.admin-dashboard-attention-list > button {
+  animation: gmes-figma-list-rise 270ms cubic-bezier(.2, .72, .24, 1) backwards;
+}
+
+/* Tableaux : pas de translation verticale.
+   Cela évite de modifier temporairement la hauteur visuelle de la page
+   et donc l'apparition fugace de la barre de défilement verticale. */
+.director-all-requests-row--data,
+.admin-users-row--body,
+.admin-services-row--body,
+.admin-logs-row--body {
+  animation-name: gmes-figma-table-fade;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Stagger léger : listes et tableaux                                         */
+/* -------------------------------------------------------------------------- */
+
+:is(
+  .my-request-card,
+  .document-card,
+  .history-row,
+  .notifications-page-card,
+  .recent-row,
+  .manager-requests-card,
+  .manager-overlap-card,
+  .manager-request-row,
+  .manager-team-row,
+  .manager-presence-member-card,
+  .rh-priority-row,
+  .rh-absent-row,
+  .rh-all-requests-row--data,
+  .rh-balances-row--body,
+  .rh-documents-row--body,
+  .rh-absences-row--data,
+  .rh-derogations-row--body,
+  .rh-leave-types-row--body,
+  .rh-holidays-row--body,
+  .rh-export-card,
+  .director-priority-row,
+  .director-service-row,
+  .director-attention-item,
+  .director-all-requests-row--data,
+  .director-unavailability-card,
+  .admin-users-row--body,
+  .admin-services-row--body,
+  .admin-logs-row--body,
+  .admin-dashboard-activity-row
+):nth-child(2) { animation-delay: 32ms; }
+
+:is(
+  .my-request-card,
+  .document-card,
+  .history-row,
+  .notifications-page-card,
+  .recent-row,
+  .manager-requests-card,
+  .manager-overlap-card,
+  .manager-request-row,
+  .manager-team-row,
+  .manager-presence-member-card,
+  .rh-priority-row,
+  .rh-absent-row,
+  .rh-all-requests-row--data,
+  .rh-balances-row--body,
+  .rh-documents-row--body,
+  .rh-absences-row--data,
+  .rh-derogations-row--body,
+  .rh-leave-types-row--body,
+  .rh-holidays-row--body,
+  .rh-export-card,
+  .director-priority-row,
+  .director-service-row,
+  .director-attention-item,
+  .director-all-requests-row--data,
+  .director-unavailability-card,
+  .admin-users-row--body,
+  .admin-services-row--body,
+  .admin-logs-row--body,
+  .admin-dashboard-activity-row
+):nth-child(3) { animation-delay: 64ms; }
+
+:is(
+  .my-request-card,
+  .document-card,
+  .history-row,
+  .notifications-page-card,
+  .recent-row,
+  .manager-requests-card,
+  .manager-overlap-card,
+  .manager-request-row,
+  .manager-team-row,
+  .manager-presence-member-card,
+  .rh-priority-row,
+  .rh-absent-row,
+  .rh-all-requests-row--data,
+  .rh-balances-row--body,
+  .rh-documents-row--body,
+  .rh-absences-row--data,
+  .rh-derogations-row--body,
+  .rh-leave-types-row--body,
+  .rh-holidays-row--body,
+  .rh-export-card,
+  .director-priority-row,
+  .director-service-row,
+  .director-attention-item,
+  .director-all-requests-row--data,
+  .director-unavailability-card,
+  .admin-users-row--body,
+  .admin-services-row--body,
+  .admin-logs-row--body,
+  .admin-dashboard-activity-row
+):nth-child(4) { animation-delay: 96ms; }
+
+:is(
+  .my-request-card,
+  .document-card,
+  .history-row,
+  .notifications-page-card,
+  .recent-row,
+  .manager-requests-card,
+  .manager-overlap-card,
+  .manager-request-row,
+  .manager-team-row,
+  .manager-presence-member-card,
+  .rh-priority-row,
+  .rh-absent-row,
+  .rh-all-requests-row--data,
+  .rh-balances-row--body,
+  .rh-documents-row--body,
+  .rh-absences-row--data,
+  .rh-derogations-row--body,
+  .rh-leave-types-row--body,
+  .rh-holidays-row--body,
+  .rh-export-card,
+  .director-priority-row,
+  .director-service-row,
+  .director-attention-item,
+  .director-all-requests-row--data,
+  .director-unavailability-card,
+  .admin-users-row--body,
+  .admin-services-row--body,
+  .admin-logs-row--body,
+  .admin-dashboard-activity-row
+):nth-child(5) { animation-delay: 128ms; }
+
+:is(
+  .my-request-card,
+  .document-card,
+  .history-row,
+  .notifications-page-card,
+  .recent-row,
+  .manager-requests-card,
+  .manager-overlap-card,
+  .manager-request-row,
+  .manager-team-row,
+  .manager-presence-member-card,
+  .rh-priority-row,
+  .rh-absent-row,
+  .rh-all-requests-row--data,
+  .rh-balances-row--body,
+  .rh-documents-row--body,
+  .rh-absences-row--data,
+  .rh-derogations-row--body,
+  .rh-leave-types-row--body,
+  .rh-holidays-row--body,
+  .rh-export-card,
+  .director-priority-row,
+  .director-service-row,
+  .director-attention-item,
+  .director-all-requests-row--data,
+  .director-unavailability-card,
+  .admin-users-row--body,
+  .admin-services-row--body,
+  .admin-logs-row--body,
+  .admin-dashboard-activity-row
+):nth-child(n + 6) { animation-delay: 150ms; }
+
+.admin-dashboard-quick-list > button:nth-child(2),
+.admin-dashboard-attention-list > button:nth-child(2) { animation-delay: 38ms; }
+.admin-dashboard-quick-list > button:nth-child(3),
+.admin-dashboard-attention-list > button:nth-child(3) { animation-delay: 76ms; }
+.admin-dashboard-quick-list > button:nth-child(n + 4),
+.admin-dashboard-attention-list > button:nth-child(n + 4) { animation-delay: 114ms; }
+
+/* -------------------------------------------------------------------------- */
+/* Dashboards : élévation très légère, uniquement sur périphérique avec hover */
+/* -------------------------------------------------------------------------- */
+
+@media (hover: hover) and (pointer: fine) {
+  .dash-page:not(.admin-dashboard-page) .dash-card:not(.dash-skeleton-card):not(.dash-card-error),
+  .manager-dashboard-page .dash-card,
+  .rh-dashboard-page .dash-card:not(.rh-dashboard-skeleton):not(.rh-dashboard-full-error),
+  .director-dashboard-page .dash-card:not(.director-dashboard-skeleton):not(.director-dashboard-error),
+  .admin-dashboard-page .dash-card {
+    transition-property: transform, box-shadow, border-color;
+    transition-duration: 170ms;
+    transition-timing-function: cubic-bezier(.2, .72, .24, 1);
+  }
+
+  .dash-page:not(.admin-dashboard-page) .dash-card:not(.dash-skeleton-card):not(.dash-card-error):hover,
+  .manager-dashboard-page .dash-card:hover,
+  .rh-dashboard-page .dash-card:not(.rh-dashboard-skeleton):not(.rh-dashboard-full-error):hover,
+  .director-dashboard-page .dash-card:not(.director-dashboard-skeleton):not(.director-dashboard-error):hover,
+  .admin-dashboard-page .dash-card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(27, 110, 243, .12);
+    box-shadow: 0 10px 28px rgba(18, 52, 94, .075);
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Feedback tactile Figma, uniquement sur contrôles qui n'en avaient pas déjà */
+/* -------------------------------------------------------------------------- */
+
+.rh-workload-metric:active:not(:disabled),
+.rh-all-requests-new:active:not(:disabled),
+.rh-export-card button:active:not(:disabled),
+.director-availability-action:active:not(:disabled),
+.admin-dashboard-quick-list > button:active:not(:disabled),
+.admin-dashboard-attention-list > button:active:not(:disabled),
+.admin-users-new:active:not(:disabled),
+.admin-services-new:active:not(:disabled),
+.admin-logs-export:active:not(:disabled),
+.notifications-page-card__action button:active:not(:disabled) {
+  transform: scale(.97);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .my-requests-list > .my-request-card,
+  .documents-list > .document-card,
+  .history-page__list > .history-row,
+  .notifications-page__list > .notifications-page-card,
+  .recent-list > .recent-row,
+  .manager-requests-list > .manager-requests-card,
+  .manager-alerts-list > .manager-overlap-card,
+  .manager-request-list > .manager-request-row,
+  .manager-team-list > .manager-team-row,
+  .manager-presence-page .manager-presence-member-card,
+  .rh-priority-list > .rh-priority-row,
+  .rh-absents-list > .rh-absent-row,
+  .rh-all-requests-row--data,
+  .rh-balances-row--body,
+  .rh-documents-row--body,
+  .rh-absences-row--data,
+  .rh-derogations-row--body,
+  .rh-leave-types-row--body,
+  .rh-holidays-row--body,
+  .rh-export-card,
+  .director-priority-list > .director-priority-row,
+  .director-services-list > .director-service-row,
+  .director-attention-list > .director-attention-item,
+  .director-all-requests-row--data,
+  .director-unavailability-card,
+  .admin-users-row--body,
+  .admin-services-row--body,
+  .admin-logs-row--body,
+  .admin-dashboard-activity-list > .admin-dashboard-activity-row,
+  .admin-dashboard-quick-list > button,
+  .admin-dashboard-attention-list > button,
+  .balance-progress__fill,
+  .next-leave__progress-fill,
+  .manager-presence-progress > span,
+  .manager-presence-summary-card__progress > span,
+  .rh-presence-progress > span,
+  .director-presence-progress > span {
+    animation: none !important;
+  }
+
+  .dash-page .dash-card,
+  .manager-dashboard-page .dash-card,
+  .rh-dashboard-page .dash-card,
+  .director-dashboard-page .dash-card,
+  .admin-dashboard-page .dash-card {
+    transition: none !important;
+    transform: none !important;
+  }
+}

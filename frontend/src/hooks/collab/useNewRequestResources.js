@@ -64,13 +64,21 @@ export function useNewRequestResources(months, setSelection, options = {}) {
       derogationsPromise,
       balancePromise,
     ])
-    const filtered = leaveTypes.filter(
-      (type) =>
+    const filtered = leaveTypes.filter((type) => {
+      const normalizedName = String(type.name ?? '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .trim()
+        .toLocaleLowerCase('fr-FR')
+
+      return (
         type.category === 'DEMANDE_CONGE' &&
         type.isActive &&
         type.employeeCanCreate &&
-        !type.rhOnly,
-    )
+        !type.rhOnly &&
+        normalizedName !== 'conge'
+      )
+    })
     return {
       leaveTypes: filtered,
       balances,
