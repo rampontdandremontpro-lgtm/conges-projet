@@ -62,6 +62,7 @@ import {
   evaluateSubmissionNotice,
   type SubmissionNoticeInfo,
 } from './leave-request-notice.util';
+import { getMartiniqueDateString } from './leave-request-period.util';
 import { AuditAction } from '../audit/audit-log.entity';
 import { AuditService } from '../audit/audit.service';
 import { ServiceAvailabilityService } from './service-availability.service';
@@ -278,6 +279,17 @@ export class LeaveRequestsService {
 
     this.validateLeaveType(leaveType);
 
+    const directorLeaveTypeName = leaveType.name
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim()
+      .toLocaleLowerCase('fr-FR');
+    if (directorLeaveTypeName !== 'conge') {
+      throw new BadRequestException(
+        'Le Directeur peut uniquement enregistrer le type « Congé ».',
+      );
+    }
+
     const startPeriod =
       createLeaveRequestDto.startPeriod ?? DayPeriod.MATIN;
     const endPeriod =
@@ -347,43 +359,6 @@ export class LeaveRequestsService {
 
       await this.ensureNoPersonalOverlap(manager, savedRequest);
 
-      if (leaveType.deductsPaidLeaveBalance) {
-        const reservation =
-          await this.leaveBalancesService.reservePaidLeaveForRequest(
-            manager,
-            {
-              employeeId: employee.id,
-              leaveRequestId: savedRequest.id,
-              days: dates.deductedDays,
-              actorId: authenticatedUser.id,
-              reason:
-                'Réservation et déduction immédiates pour un congé enregistré par le Directeur.',
-            },
-          );
-        const balanceResult =
-          await this.leaveBalancesService.finalizePaidLeaveReservation(
-            manager,
-            {
-              employeeId: employee.id,
-              leaveRequestId: savedRequest.id,
-              actorId: authenticatedUser.id,
-              expectedDays: dates.deductedDays,
-              decision: 'VALIDATE',
-            },
-          );
-
-        savedRequest.realBalanceBefore =
-          reservation.realBalanceBefore;
-        savedRequest.potentialBalanceBefore =
-          reservation.potentialBalanceBefore;
-        savedRequest.realBalanceAfter =
-          balanceResult.realBalanceAfter;
-
-        await manager.getRepository(LeaveRequest).save(
-          savedRequest,
-        );
-      }
-
       await this.auditService.recordStatusChange(
         {
           actorId: authenticatedUser.id,
@@ -416,6 +391,17 @@ export class LeaveRequestsService {
         manager,
       );
 
+      await this.notificationsService.createForActiveRoles(
+        [UserRole.RH, UserRole.RESPONSABLE_SERVICE],
+        {
+          type: 'CONGE_DIRECTEUR_INFORMATION',
+          title: 'Indisponibilité du Directeur',
+          message: `${employee.prenom} ${employee.nom} a enregistré une indisponibilité du ${savedRequest.startDate} au ${savedRequest.endDate}.`,
+          leaveRequestId: savedRequest.id,
+        },
+        manager,
+      );
+
       requestId = savedRequest.id;
       requestEmployeeId = savedRequest.employeeId;
     });
@@ -423,6 +409,205 @@ export class LeaveRequestsService {
     await this.presenceService.refreshUserStatus(employee.id);
 
     return this.findOwnedRequest(requestId, requestEmployeeId);
+  }
+
+
+  async findDirectorRequests(
+    authenticatedUser: AuthenticatedUser,
+  ): Promise<LeaveRequest[]> {
+    if (authenticatedUser.role !== UserRole.DIRECTEUR) {
+      throw new ForbiddenException(
+        'Seul le Directeur peut consulter ses indisponibilités.',
+      );
+    }
+
+    return this.leaveRequestRepository.find({
+      where: { employeeId: authenticatedUser.id },
+      relations: {
+        employee: true,
+        createdBy: true,
+        leaveType: true,
+        service: true,
+      },
+      order: { startDate: 'DESC', createdAt: 'DESC' },
+    });
+  }
+
+  async findDirectorRequest(
+    id: number,
+    authenticatedUser: AuthenticatedUser,
+  ): Promise<LeaveRequest> {
+    if (authenticatedUser.role !== UserRole.DIRECTEUR) {
+      throw new ForbiddenException(
+        'Seul le Directeur peut consulter cette indisponibilité.',
+      );
+    }
+
+    return this.findOwnedRequest(id, authenticatedUser.id);
+  }
+
+  async updateDirectorRequest(
+    id: number,
+    authenticatedUser: AuthenticatedUser,
+    dto: UpdateLeaveRequestDto,
+  ): Promise<LeaveRequest> {
+    if (authenticatedUser.role !== UserRole.DIRECTEUR) {
+      throw new ForbiddenException(
+        'Seul le Directeur peut modifier cette indisponibilité.',
+      );
+    }
+
+    let employee: User | null = null;
+    await this.dataSource.transaction(async (manager) => {
+      const leaveRequest = await this.findRequestForUpdateLocked(manager, id);
+
+      if (leaveRequest.employeeId !== authenticatedUser.id) {
+        throw new ForbiddenException(
+          'Vous ne pouvez modifier que vos propres indisponibilités.',
+        );
+      }
+
+      if (leaveRequest.status !== LeaveRequestStatus.VALIDEE) {
+        throw new BadRequestException(
+          'Seule une indisponibilité active peut être modifiée.',
+        );
+      }
+
+      const today = getMartiniqueDateString(new Date());
+      if (leaveRequest.startDate <= today) {
+        throw new BadRequestException(
+          'Une indisponibilité en cours ou terminée ne peut plus être modifiée.',
+        );
+      }
+
+      const leaveType = dto.leaveTypeId !== undefined
+        ? await manager.getRepository(LeaveType).findOneBy({ id: dto.leaveTypeId })
+        : leaveRequest.leaveType;
+
+      if (!leaveType) {
+        throw new NotFoundException('Le type « Congé » est introuvable.');
+      }
+
+      this.validateLeaveType(leaveType);
+      const directorLeaveTypeName = leaveType.name
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .trim()
+        .toLocaleLowerCase('fr-FR');
+      if (directorLeaveTypeName !== 'conge') {
+        throw new BadRequestException(
+          'Le Directeur peut uniquement utiliser le type « Congé ».',
+        );
+      }
+
+      const startDate = dto.startDate ?? leaveRequest.startDate;
+      const endDate = dto.endDate ?? leaveRequest.endDate;
+      if (startDate <= today) {
+        throw new BadRequestException(
+          'La nouvelle période doit commencer après la date du jour.',
+        );
+      }
+
+      const startPeriod = dto.startPeriod ?? leaveRequest.startPeriod;
+      const endPeriod = dto.endPeriod ?? leaveRequest.endPeriod;
+      const dates = await this.validateAndCalculateDates(
+        startDate,
+        endDate,
+        startPeriod,
+        endPeriod,
+        leaveType.allowsHalfDays,
+      );
+
+      leaveRequest.leaveTypeId = leaveType.id;
+      leaveRequest.leaveType = leaveType;
+      leaveRequest.startDate = startDate;
+      leaveRequest.endDate = endDate;
+      leaveRequest.startPeriod = startPeriod;
+      leaveRequest.endPeriod = endPeriod;
+      leaveRequest.calendarDuration = dates.calendarDuration;
+      leaveRequest.deductedDays = dates.deductedDays;
+      leaveRequest.comment = dto.comment !== undefined
+        ? dto.comment.trim() || null
+        : leaveRequest.comment;
+      leaveRequest.version += 1;
+
+      await this.ensureNoPersonalOverlap(manager, leaveRequest);
+      await manager.getRepository(LeaveRequest).save(leaveRequest);
+      employee = leaveRequest.employee;
+
+      await this.notificationsService.createForActiveRoles(
+        [UserRole.RH, UserRole.RESPONSABLE_SERVICE],
+        {
+          type: 'CONGE_DIRECTEUR_MODIFIE',
+          title: 'Indisponibilité du Directeur modifiée',
+          message: `${leaveRequest.employee.prenom} ${leaveRequest.employee.nom} a modifié son indisponibilité : du ${leaveRequest.startDate} au ${leaveRequest.endDate}.`,
+          leaveRequestId: leaveRequest.id,
+        },
+        manager,
+      );
+    });
+
+    if (employee) {
+      await this.presenceService.refreshUserStatus(employee.id);
+    }
+
+    return this.findOwnedRequest(id, authenticatedUser.id);
+  }
+
+  async cancelDirectorRequest(
+    id: number,
+    authenticatedUser: AuthenticatedUser,
+  ): Promise<LeaveRequest> {
+    if (authenticatedUser.role !== UserRole.DIRECTEUR) {
+      throw new ForbiddenException(
+        'Seul le Directeur peut annuler cette indisponibilité.',
+      );
+    }
+
+    let employeeId = authenticatedUser.id;
+    await this.dataSource.transaction(async (manager) => {
+      const leaveRequest = await this.findRequestForUpdateLocked(manager, id);
+
+      if (leaveRequest.employeeId !== authenticatedUser.id) {
+        throw new ForbiddenException(
+          'Vous ne pouvez annuler que vos propres indisponibilités.',
+        );
+      }
+
+      if (leaveRequest.status !== LeaveRequestStatus.VALIDEE) {
+        throw new BadRequestException(
+          'Cette indisponibilité est déjà annulée ou n’est plus active.',
+        );
+      }
+
+      const today = getMartiniqueDateString(new Date());
+      if (leaveRequest.startDate <= today) {
+        throw new BadRequestException(
+          'Une indisponibilité en cours ou terminée ne peut plus être annulée.',
+        );
+      }
+
+      leaveRequest.status = LeaveRequestStatus.ANNULEE;
+      leaveRequest.cancelledAt = new Date();
+      leaveRequest.lockedAt = new Date();
+      leaveRequest.version += 1;
+      await manager.getRepository(LeaveRequest).save(leaveRequest);
+      employeeId = leaveRequest.employeeId;
+
+      await this.notificationsService.createForActiveRoles(
+        [UserRole.RH, UserRole.RESPONSABLE_SERVICE],
+        {
+          type: 'CONGE_DIRECTEUR_ANNULE',
+          title: 'Indisponibilité du Directeur annulée',
+          message: `${leaveRequest.employee.prenom} ${leaveRequest.employee.nom} a annulé son indisponibilité du ${leaveRequest.startDate} au ${leaveRequest.endDate}.`,
+          leaveRequestId: leaveRequest.id,
+        },
+        manager,
+      );
+    });
+
+    await this.presenceService.refreshUserStatus(employeeId);
+    return this.findOwnedRequest(id, authenticatedUser.id);
   }
 
   private async resolveEmployee(

@@ -1,0 +1,258 @@
+.director-unavailability-page {
+  --du-blue: #176ff2;
+  --du-blue-dark: #0a1e45;
+  --du-muted: #7184a5;
+  --du-border: #dce6f3;
+  --du-orange: #f76b1c;
+  width: min(100%, 1040px);
+  margin: 0 auto;
+  padding: 2px 0 28px;
+  color: var(--du-blue-dark);
+}
+
+.director-unavailability-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.director-unavailability-filters {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px;
+  border: 1px solid rgba(10, 30, 69, .07);
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: var(--shadow-sm);
+}
+
+.director-unavailability-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 8px 15px;
+  border-radius: 11px;
+  color: var(--du-muted);
+  font-size: 13.5px;
+  font-weight: 750;
+  transition: background .18s ease, color .18s ease, transform .18s ease, box-shadow .18s ease;
+}
+
+.director-unavailability-filter strong {
+  display: grid;
+  min-width: 22px;
+  height: 22px;
+  place-items: center;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: #eff4fb;
+  color: #58729a;
+  font-size: 11px;
+}
+
+.director-unavailability-filter:hover { background: #f7faff; color: var(--du-blue-dark); }
+.director-unavailability-filter.is-active {
+  background: var(--du-blue);
+  color: #fff;
+  box-shadow: 0 4px 10px rgba(23, 111, 242, .22);
+}
+.director-unavailability-filter.is-active strong { background: rgba(255,255,255,.19); color: #fff; }
+
+.director-unavailability-new {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 9px 17px;
+  border-radius: 14px;
+  background: var(--du-orange);
+  color: #fff;
+  font-size: 13.5px;
+  font-weight: 800;
+  box-shadow: 0 5px 14px rgba(247, 107, 28, .22);
+  transition: transform .18s ease, box-shadow .18s ease, background .18s ease;
+}
+.director-unavailability-new:hover { background: #e95f12; transform: translateY(-1px); box-shadow: 0 7px 18px rgba(247, 107, 28, .28); }
+
+.director-unavailability-feedback {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 13px;
+  padding: 11px 14px;
+  border: 1px solid;
+  border-radius: 13px;
+  font-size: 12.5px;
+  font-weight: 700;
+}
+.director-unavailability-feedback span { flex: 1; }
+.director-unavailability-feedback button { color: inherit; font-size: 19px; }
+.director-unavailability-feedback.is-success { border-color: #a9ead4; background: #edfbf6; color: #087e62; }
+.director-unavailability-feedback.is-error { border-color: #ffc2cc; background: #fff1f4; color: #b92f47; }
+
+.director-unavailability-list { display: flex; flex-direction: column; gap: 12px; }
+
+.director-unavailability-card {
+  display: flex;
+  width: 100%;
+  min-height: 90px;
+  align-items: center;
+  gap: 17px;
+  padding: 17px 21px;
+  border: 1px solid rgba(10, 30, 69, .07);
+  border-radius: 18px;
+  background: #fff;
+  color: inherit;
+  text-align: left;
+  box-shadow: 0 1px 2px rgba(10, 30, 69, .025);
+  transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+}
+.director-unavailability-card:hover { transform: translateY(-1px); border-color: rgba(10,30,69,.13); box-shadow: var(--shadow-sm); }
+
+.director-unavailability-card__icon {
+  display: grid;
+  width: 49px;
+  height: 49px;
+  flex: 0 0 49px;
+  place-items: center;
+  border-radius: 14px;
+}
+.director-unavailability-card__icon.is-leave { background: #fff3e9; color: #f76b1c; }
+.director-unavailability-card__icon.is-absence { background: #edf4ff; color: #176ff2; }
+
+.director-unavailability-card__content { min-width: 0; flex: 1; }
+.director-unavailability-card__topline { display: flex; align-items: center; flex-wrap: wrap; gap: 9px; margin-bottom: 5px; }
+.director-unavailability-card__topline > strong { color: var(--du-blue-dark); font-size: 15.5px; font-weight: 850; }
+.director-unavailability-card__meta { display: flex; min-width: 0; align-items: center; flex-wrap: wrap; gap: 5px; color: var(--du-muted); font-size: 12.5px; }
+.director-unavailability-card__meta i { font-style: normal; color: #b0bfd4; }
+.director-unavailability-card__meta b { color: #324c74; font-weight: 750; }
+.director-unavailability-card__comment { max-width: 390px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.director-unavailability-card__chevron { display: grid; width: 38px; height: 38px; flex: 0 0 38px; place-items: center; border-radius: 11px; color: #a9bad1; transition: background .18s ease, color .18s ease; }
+.director-unavailability-card:hover .director-unavailability-card__chevron { background: #f3f7fc; color: var(--du-blue); }
+
+.director-unavailability-status {
+  display: inline-flex;
+  min-height: 24px;
+  align-items: center;
+  padding: 3px 9px;
+  border: 1px solid;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.director-unavailability-status.is-upcoming { border-color: #bfdbfe; background: #eff6ff; color: #2563b8; }
+.director-unavailability-status.is-current { border-color: #99f6e4; background: #f0fdfa; color: #0f8c7b; }
+.director-unavailability-status.is-completed { border-color: #dbe4f1; background: #f7f9fc; color: #7184a5; }
+.director-unavailability-status.is-cancelled { border-color: #fecdd3; background: #fff1f2; color: #d43857; }
+
+.director-unavailability-empty {
+  display: flex;
+  min-height: 260px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  padding: 36px;
+  border: 1px solid rgba(10,30,69,.07);
+  border-radius: 18px;
+  background: #fff;
+  text-align: center;
+}
+.director-unavailability-empty > span { display: grid; width: 55px; height: 55px; place-items: center; border-radius: 16px; background: #eef4ff; color: var(--du-blue); }
+.director-unavailability-empty strong { font-size: 14px; }
+.director-unavailability-empty button { margin-top: 4px; padding: 9px 14px; border-radius: 11px; background: #eef4ff; color: var(--du-blue); font-weight: 800; }
+.director-unavailability-empty.is-error > span { background: #fff1f2; color: #dc3655; }
+
+.director-unavailability-skeleton {
+  height: 90px;
+  border: 1px solid rgba(10,30,69,.06);
+  border-radius: 18px;
+  background: linear-gradient(90deg, #edf2f9 25%, #f8faff 50%, #edf2f9 75%);
+  background-size: 200% 100%;
+  animation: director-unavailability-shimmer 1.3s ease-in-out infinite;
+}
+
+.director-unavailability-drawer-backdrop,
+.director-unavailability-confirm-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  background: rgba(5, 20, 48, .35);
+  backdrop-filter: blur(2px);
+}
+
+.director-unavailability-drawer-backdrop { display: flex; justify-content: flex-end; }
+.director-unavailability-drawer {
+  width: min(460px, 94vw);
+  height: 100%;
+  padding: 28px;
+  overflow-y: auto;
+  background: #fff;
+  box-shadow: -18px 0 48px rgba(10, 30, 69, .14);
+  animation: director-unavailability-drawer-in .24s ease both;
+}
+.director-unavailability-drawer__header { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; padding-bottom: 19px; border-bottom: 1px solid #e5edf7; }
+.director-unavailability-drawer__header span { color: #7e91ae; font-size: 10.5px; font-weight: 850; text-transform: uppercase; letter-spacing: .08em; }
+.director-unavailability-drawer__header h2 { margin-top: 4px; color: var(--du-blue-dark); font-size: 22px; }
+.director-unavailability-drawer__close { display: grid; width: 36px; height: 36px; place-items: center; border-radius: 11px; background: #f3f6fb; color: #7184a5; font-size: 23px; }
+.director-unavailability-drawer__status-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 18px 0; }
+.director-unavailability-drawer__hint { color: #8192ad; font-size: 11px; }
+
+.director-unavailability-detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 11px; }
+.director-unavailability-detail-grid > div { display: flex; min-height: 100px; flex-direction: column; justify-content: center; padding: 14px; border: 1px solid #e2eaf5; border-radius: 14px; background: #fbfcff; }
+.director-unavailability-detail-grid small,
+.director-unavailability-detail-comment small { margin-bottom: 5px; color: #8495b0; font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; }
+.director-unavailability-detail-grid strong { color: #142c52; font-size: 13px; }
+.director-unavailability-detail-grid span { margin-top: 3px; color: #7184a5; font-size: 11px; }
+.director-unavailability-detail-comment { margin-top: 12px; padding: 15px; border: 1px solid #e2eaf5; border-radius: 14px; background: #fbfcff; }
+.director-unavailability-detail-comment p { margin-top: 4px; color: #405a80; font-size: 12.5px; line-height: 1.55; white-space: pre-wrap; }
+
+.director-unavailability-drawer__actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 22px; }
+.director-unavailability-action { display: inline-flex; min-height: 44px; align-items: center; justify-content: center; gap: 7px; border-radius: 13px; font-size: 13px; font-weight: 850; }
+.director-unavailability-action--edit { background: var(--du-blue); color: #fff; box-shadow: 0 5px 14px rgba(23,111,242,.2); }
+.director-unavailability-action--cancel { border: 1px solid #ffc7d0; background: #fff1f4; color: #c93651; }
+.director-unavailability-action:disabled { opacity: .55; }
+.director-unavailability-drawer__locked { display: flex; align-items: flex-start; gap: 9px; margin-top: 21px; padding: 13px 14px; border: 1px solid #dce6f3; border-radius: 13px; background: #f7f9fc; color: #617694; font-size: 12px; line-height: 1.45; }
+
+.director-unavailability-confirm-backdrop { display: grid; place-items: center; z-index: 1250; padding: 20px; }
+.director-unavailability-confirm { width: min(440px, 100%); padding: 27px; border-radius: 20px; background: #fff; box-shadow: 0 24px 70px rgba(5,20,48,.24); animation: director-unavailability-pop .2s ease both; text-align: center; }
+.director-unavailability-confirm__icon { display: grid; width: 52px; height: 52px; margin: 0 auto 13px; place-items: center; border-radius: 16px; background: #fff1f2; color: #d43857; }
+.director-unavailability-confirm h2 { color: var(--du-blue-dark); font-size: 18px; }
+.director-unavailability-confirm p { margin: 10px 0 19px; color: #6c7f9d; font-size: 12.5px; line-height: 1.55; }
+.director-unavailability-confirm > div { display: grid; grid-template-columns: 1fr 1.25fr; gap: 9px; }
+.director-unavailability-confirm button { min-height: 42px; border-radius: 12px; font-size: 12.5px; font-weight: 850; }
+.director-unavailability-confirm button.is-secondary { background: #f1f5fa; color: #526b8e; }
+.director-unavailability-confirm button.is-danger { background: #d93c57; color: #fff; }
+.director-unavailability-confirm button:disabled { opacity: .55; }
+
+@keyframes director-unavailability-shimmer { to { background-position: -200% 0; } }
+@keyframes director-unavailability-drawer-in { from { transform: translateX(28px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+@keyframes director-unavailability-pop { from { transform: scale(.97); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+@media (max-width: 840px) {
+  .director-unavailability-toolbar { align-items: stretch; flex-direction: column; }
+  .director-unavailability-filters { overflow-x: auto; }
+  .director-unavailability-new { align-self: flex-start; }
+}
+
+@media (max-width: 600px) {
+  .director-unavailability-page { padding-inline: 2px; }
+  .director-unavailability-filter { padding-inline: 12px; }
+  .director-unavailability-card { gap: 12px; padding: 14px; }
+  .director-unavailability-card__icon { width: 43px; height: 43px; flex-basis: 43px; }
+  .director-unavailability-card__comment { display: none; }
+  .director-unavailability-detail-grid { grid-template-columns: 1fr; }
+  .director-unavailability-drawer { padding: 22px 18px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .director-unavailability-skeleton,
+  .director-unavailability-drawer,
+  .director-unavailability-confirm { animation: none; }
+}

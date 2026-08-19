@@ -4,6 +4,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Document } from '../documents/document.entity';
 import { LeaveRequest } from '../leave-requests/leave-request.entity';
 import { LeaveTypesModule } from '../leave-types/leave-types.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 import { UsersModule } from '../users/users.module';
 import { AbsenceDeclaration } from './absence-declaration.entity';
 import { AbsenceDeclarationsController } from './absence-declarations.controller';
@@ -18,6 +19,7 @@ import { AbsenceDeclarationsService } from './absence-declarations.service';
     ]),
     UsersModule,
     LeaveTypesModule,
+    NotificationsModule,
   ],
   controllers: [AbsenceDeclarationsController],
   providers: [AbsenceDeclarationsService],

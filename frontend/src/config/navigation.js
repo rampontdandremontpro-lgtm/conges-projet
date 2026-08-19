@@ -75,6 +75,7 @@ export const NAVIGATION = {
     { id: 'director-exports', label: 'Exports', to: '/app/director-exports', icon: 'download', group: 'PILOTAGE' },
 
     { id: 'director-availability', label: 'Enregistrer mon indisponibilité', to: '/app/director-availability', icon: 'calendar', group: 'MON STATUT' },
+    { id: 'director-unavailability', label: 'Mes indisponibilités', to: '/app/director-unavailability', icon: 'list', group: 'MON STATUT' },
 
     { id: 'notifications', label: 'Notifications', to: '/app/notifications', icon: 'bell', group: 'OUTILS' },
   ],

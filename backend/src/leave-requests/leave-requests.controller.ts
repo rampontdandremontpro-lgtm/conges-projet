@@ -79,6 +79,34 @@ export class LeaveRequestsController {
     return this.leaveRequestsService.findMyRequests(request.user);
   }
 
+  @Get('director/my')
+  @Roles(UserRole.DIRECTEUR)
+  findDirectorRequests(
+    @Req() request: AuthenticatedRequest,
+  ) {
+    return this.leaveRequestsService.findDirectorRequests(request.user);
+  }
+
+  @Patch('director/:id')
+  @Roles(UserRole.DIRECTEUR)
+  updateDirectorRequest(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() request: AuthenticatedRequest,
+    @Body() dto: UpdateLeaveRequestDto,
+  ) {
+    return this.leaveRequestsService.updateDirectorRequest(id, request.user, dto);
+  }
+
+  @Post('director/:id/cancel')
+  @HttpCode(HttpStatus.OK)
+  @Roles(UserRole.DIRECTEUR)
+  cancelDirectorRequest(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    return this.leaveRequestsService.cancelDirectorRequest(id, request.user);
+  }
+
   @Get('director/pending')
   @Roles(UserRole.DIRECTEUR)
   findPendingForDirector(
@@ -87,6 +115,15 @@ export class LeaveRequestsController {
     return this.leaveRequestsService.findPendingForDirector(
       request.user,
     );
+  }
+
+  @Get('director/:id')
+  @Roles(UserRole.DIRECTEUR)
+  findDirectorRequest(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    return this.leaveRequestsService.findDirectorRequest(id, request.user);
   }
 
   @Post(':id/submit')

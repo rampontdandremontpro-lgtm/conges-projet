@@ -18,6 +18,7 @@ function headerTitle(pathname) {
   if (/^\/app\/director-all-requests\/\d+$/.test(pathname)) return 'Détail de la demande'
   if (pathname === '/app/profile') return 'Mon profil'
   if (pathname === '/app/settings') return 'Paramètres'
+  if (/^\/app\/director-availability\/(leave|absence)\/\d+$/.test(pathname)) return 'Modifier mon indisponibilité'
   if (pathname === '/app/history') return 'Historique'
 
   const section = pathname.startsWith('/app/') ? pathname.slice('/app/'.length) : ''
@@ -50,12 +51,13 @@ export function Header() {
   const hideSearch =
     ['/app/dashboard', '/app/new-request', '/app/rh-prepare-request', '/app/rh-exports', '/app/rh-holidays', '/app/rh-summer-period', '/app/director-statistics', '/app/director-exports', '/app/director-availability', '/app/history', '/app/my-balance', '/app/my-balances', '/app/declare-absence', '/app/profile', '/app/settings'].includes(pathname) ||
     /^\/app\/(new-request|declare-absence)\/\d+$/.test(pathname) ||
+    /^\/app\/director-availability\/(leave|absence)\/\d+$/.test(pathname) ||
     /^\/app\/my-requests\/(leave|absence)\/\d+$/.test(pathname) ||
     /^\/app\/requests\/\d+$/.test(pathname) ||
     /^\/app\/rh-(?:all-requests|requests)\/\d+$/.test(pathname) ||
     /^\/app\/director-(?:all-requests|requests)\/\d+$/.test(pathname)
   const showSearch = !hideSearch
-  const searchEnabled = ['/app/my-requests', '/app/notifications', '/app/requests', '/app/alerts', '/app/service-presence', '/app/rh-all-requests', '/app/rh-absences', '/app/rh-derogations', '/app/rh-balances', '/app/rh-pdf-documents', '/app/rh-leave-types', '/app/rh-validators', '/app/director-all-requests', '/app/director-presence', '/app/my-documents'].includes(pathname)
+  const searchEnabled = ['/app/my-requests', '/app/notifications', '/app/requests', '/app/alerts', '/app/service-presence', '/app/rh-all-requests', '/app/rh-absences', '/app/rh-derogations', '/app/rh-balances', '/app/rh-pdf-documents', '/app/rh-leave-types', '/app/rh-validators', '/app/director-all-requests', '/app/director-presence', '/app/director-unavailability', '/app/my-documents'].includes(pathname)
   const searchValue = searchEnabled ? searchParams.get('q') ?? '' : undefined
 
   const handleSearchChange = (event) => {

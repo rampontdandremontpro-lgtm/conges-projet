@@ -106,6 +106,33 @@ export class AbsenceDeclarationsController {
     );
   }
 
+  @Patch('director/:id')
+  @Roles(UserRole.DIRECTEUR)
+  updateDirectorRecorded(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() request: AuthenticatedRequest,
+    @Body() dto: UpdateAbsenceDeclarationDto,
+  ) {
+    return this.absenceDeclarationsService.updateDirectorRecorded(
+      id,
+      request.user,
+      dto,
+    );
+  }
+
+  @Post('director/:id/cancel')
+  @HttpCode(HttpStatus.OK)
+  @Roles(UserRole.DIRECTEUR)
+  cancelDirectorRecorded(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    return this.absenceDeclarationsService.cancelDirectorRecorded(
+      id,
+      request.user,
+    );
+  }
+
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   deleteDraft(

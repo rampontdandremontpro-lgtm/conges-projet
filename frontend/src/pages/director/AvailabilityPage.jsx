@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
 
 import { HalfDaySelector } from '@/components/collab/new-request/HalfDaySelector'
 import { LeaveCalendar } from '@/components/collab/new-request/LeaveCalendar'
@@ -11,23 +12,22 @@ import {
 } from '@/services/leaveRequests'
 import {
   createAbsenceDeclaration,
-  deleteAbsenceDocument,
   submitAbsenceDeclaration,
   updateAbsenceDeclaration,
-  uploadAbsenceDocument,
 } from '@/services/absenceDeclarations'
 import { calculateDeductedDaysPreview } from '@/utils/leaveDuration'
 import { formatDateFR, formatDays, todayISO } from '@/utils/format'
 import { currentMonth, errorMessage, nextMonthOf, prevMonthOf } from '@/utils/newRequest'
 import { notifyAppDataChanged } from '@/utils/dataRefresh'
+import {
+  getDirectorAbsence,
+  getDirectorLeaveRequest,
+  updateDirectorAbsence,
+  updateDirectorLeaveRequest,
+} from '@/services/directorUnavailability'
 
 import '@/styles/collab/new-request/index.css'
 import '@/styles/director/availability.css'
-
-const MAX_FILES = 5
-const MAX_FILE_SIZE = 10 * 1024 * 1024
-const ALLOWED_MIME_TYPES = new Set(['application/pdf', 'image/jpeg', 'image/png'])
-const ALLOWED_EXTENSIONS = ['.pdf', '.jpg', '.jpeg', '.png']
 
 function normalizedComment(value) {
   return String(value ?? '').trim()
@@ -49,12 +49,6 @@ function periodLabel(period) {
   return period === 'APRES_MIDI' ? 'après-midi' : 'matin'
 }
 
-function fileSize(bytes) {
-  if (!Number.isFinite(bytes)) return ''
-  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} Ko`
-  return `${(bytes / (1024 * 1024)).toFixed(1).replace('.', ',')} Mo`
-}
-
 function LoadingState() {
   return (
     <div className="director-availability director-availability--loading" aria-busy="true">
@@ -67,6 +61,10 @@ function LoadingState() {
 }
 
 export function DirectorAvailabilityPage() {
+  const navigate = useNavigate()
+  const { source: editSource, id: editIdParam } = useParams()
+  const editId = editIdParam ? Number(editIdParam) : null
+  const isEditing = Boolean(editId && ['leave', 'absence'].includes(editSource))
   const [mode, setMode] = useState('LEAVE')
   const [types, setTypes] = useState([])
   const [selectedTypeId, setSelectedTypeId] = useState(null)
@@ -81,8 +79,6 @@ export function DirectorAvailabilityPage() {
   })
   const [comment, setComment] = useState('')
   const [durationHours, setDurationHours] = useState('')
-  const [pendingFiles, setPendingFiles] = useState([])
-  const [uploadedDocuments, setUploadedDocuments] = useState([])
   const [absenceDraft, setAbsenceDraft] = useState(null)
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState(false)
@@ -104,18 +100,60 @@ export function DirectorAvailabilityPage() {
     setLoading(true)
     setLoadError(false)
 
-    getLeaveTypes()
-      .then((data) => {
-        if (cancelled) return
-        const available = (data ?? []).filter(
-          (type) => type.isActive && type.employeeCanCreate && !type.rhOnly,
-        )
-        setTypes(available)
-        const leaveTypes = available.filter((type) => type.category === 'DEMANDE_CONGE')
-        const preferred =
-          leaveTypes.find((type) => type.deductsPaidLeaveBalance) ?? leaveTypes[0] ?? null
-        setSelectedTypeId(preferred?.id ?? null)
+    const loadPage = async () => {
+      const [typesData, existing] = await Promise.all([
+        getLeaveTypes(),
+        isEditing
+          ? editSource === 'leave'
+            ? getDirectorLeaveRequest(editId)
+            : getDirectorAbsence(editId)
+          : Promise.resolve(null),
+      ])
+
+      if (cancelled) return
+
+      const available = (typesData ?? []).filter(
+        (type) => type.isActive && type.employeeCanCreate && !type.rhOnly,
+      )
+      setTypes(available)
+
+      const directorLeaveTypes = available.filter(
+        (type) =>
+          type.category === 'DEMANDE_CONGE' &&
+          String(type.name ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('fr-FR').trim() === 'conge',
+      )
+
+      if (!existing) {
+        setSelectedTypeId(directorLeaveTypes[0]?.id ?? null)
+        return
+      }
+
+      const start = String(existing.startDate ?? '').slice(0, 10)
+      if (start) {
+        const [year, monthNumber] = start.split('-').map(Number)
+        if (year && monthNumber) setMonth({ year, month: monthNumber - 1 })
+      }
+
+      setComment(existing.comment ?? '')
+      setSelection({
+        startDate: existing.startDate ?? null,
+        endDate: existing.endDate ?? existing.startDate ?? null,
+        startPeriod: existing.startPeriod ?? 'MATIN',
+        endPeriod: existing.endPeriod ?? 'APRES_MIDI',
       })
+
+      if (editSource === 'leave') {
+        setMode('LEAVE')
+        setSelectedTypeId(existing.leaveTypeId ?? directorLeaveTypes[0]?.id ?? null)
+        setDurationHours('')
+      } else {
+        setMode('ABSENCE')
+        setSelectedTypeId(existing.leaveTypeId ?? existing.leaveType?.id ?? null)
+        setDurationHours(existing.durationHours != null ? String(existing.durationHours) : '')
+      }
+    }
+
+    loadPage()
       .catch(() => {
         if (!cancelled) setLoadError(true)
       })
@@ -126,7 +164,7 @@ export function DirectorAvailabilityPage() {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [editId, editSource, isEditing])
 
   useEffect(() => {
     if (loadedHolidayYears.has(month.year)) return undefined
@@ -156,7 +194,12 @@ export function DirectorAvailabilityPage() {
   }, [loadedHolidayYears, month.year, showToast])
 
   const leaveTypes = useMemo(
-    () => types.filter((type) => type.category === 'DEMANDE_CONGE'),
+    () =>
+      types.filter(
+        (type) =>
+          type.category === 'DEMANDE_CONGE' &&
+          String(type.name ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('fr-FR').trim() === 'conge',
+      ),
     [types],
   )
   const absenceTypes = useMemo(
@@ -187,26 +230,22 @@ export function DirectorAvailabilityPage() {
   }, [halfDaysAllowed, hoursOnly, selectedType])
 
   const handleModeChange = (nextMode) => {
-    if (nextMode === mode) return
+    if (isEditing || nextMode === mode) return
     const nextTypes = nextMode === 'LEAVE' ? leaveTypes : absenceTypes
     const preferred =
       nextMode === 'LEAVE'
-        ? nextTypes.find((type) => type.deductsPaidLeaveBalance) ?? nextTypes[0] ?? null
+        ? nextTypes[0] ?? null
         : nextTypes[0] ?? null
 
     setMode(nextMode)
     setSelectedTypeId(preferred?.id ?? null)
     setDurationHours('')
-    setPendingFiles([])
-    setUploadedDocuments([])
     setAbsenceDraft(null)
   }
 
   const handleTypeChange = (event) => {
     setSelectedTypeId(Number(event.target.value))
     setDurationHours('')
-    setPendingFiles([])
-    setUploadedDocuments([])
     setAbsenceDraft(null)
   }
 
@@ -228,44 +267,6 @@ export function DirectorAvailabilityPage() {
       }
       return { ...current, endDate: iso }
     })
-  }
-
-  const handleFiles = (files) => {
-    const availableSlots = Math.max(0, MAX_FILES - pendingFiles.length - uploadedDocuments.length)
-    if (availableSlots === 0) {
-      showToast('error', 'Vous avez déjà atteint la limite de 5 justificatifs.')
-      return
-    }
-
-    const accepted = []
-    for (const file of files.slice(0, availableSlots)) {
-      const lowerName = file.name.toLocaleLowerCase('fr-FR')
-      const validExtension = ALLOWED_EXTENSIONS.some((extension) => lowerName.endsWith(extension))
-      if (!ALLOWED_MIME_TYPES.has(file.type) || !validExtension) {
-        showToast('error', `« ${file.name} » n’est pas un PDF, JPG ou PNG valide.`)
-        continue
-      }
-      if (file.size > MAX_FILE_SIZE) {
-        showToast('error', `« ${file.name} » dépasse la limite de 10 Mo.`)
-        continue
-      }
-      accepted.push(file)
-    }
-
-    if (files.length > availableSlots) {
-      showToast('error', 'Une absence ne peut contenir que 5 justificatifs maximum.')
-    }
-    setPendingFiles((current) => [...current, ...accepted])
-  }
-
-  const handleRemoveUploaded = async (document) => {
-    if (saving) return
-    try {
-      await deleteAbsenceDocument(document.id)
-      setUploadedDocuments((current) => current.filter((item) => item.id !== document.id))
-    } catch (error) {
-      showToast('error', errorMessage(error))
-    }
   }
 
   const duration = useMemo(() => {
@@ -300,20 +301,11 @@ export function DirectorAvailabilityPage() {
       const hours = Number(durationHours)
       if (!Number.isFinite(hours) || hours <= 0) return 'Indiquez la durée de l’absence en heures.'
     }
-    if (
-      mode === 'ABSENCE' &&
-      selectedType.documentRequired &&
-      !selectedType.documentCanBeAddedLater &&
-      pendingFiles.length + uploadedDocuments.length === 0
-    ) {
-      return 'Ajoutez le justificatif obligatoire avant l’enregistrement.'
-    }
     return null
-  }, [durationHours, hoursOnly, mode, pendingFiles.length, selectedType, selection, uploadedDocuments.length])
+  }, [durationHours, hoursOnly, mode, selectedType, selection])
 
   const resetForm = () => {
-    const leavePreferred =
-      leaveTypes.find((type) => type.deductsPaidLeaveBalance) ?? leaveTypes[0] ?? null
+    const leavePreferred = leaveTypes[0] ?? null
     setMode('LEAVE')
     setSelectedTypeId(leavePreferred?.id ?? null)
     setSelection({
@@ -324,8 +316,6 @@ export function DirectorAvailabilityPage() {
     })
     setComment('')
     setDurationHours('')
-    setPendingFiles([])
-    setUploadedDocuments([])
     setAbsenceDraft(null)
   }
 
@@ -337,6 +327,31 @@ export function DirectorAvailabilityPage() {
 
     setSaving(true)
     try {
+      if (isEditing) {
+        const payload = {
+          leaveTypeId: Number(selectedType.id),
+          startDate: selection.startDate,
+          endDate: hoursOnly ? selection.startDate : selection.endDate,
+          comment: normalizedComment(comment),
+          ...(hoursOnly
+            ? { durationHours: Number(durationHours) }
+            : {
+                startPeriod: selection.startPeriod,
+                endPeriod: selection.endPeriod,
+              }),
+        }
+
+        if (editSource === 'leave') {
+          await updateDirectorLeaveRequest(editId, payload)
+        } else {
+          await updateDirectorAbsence(editId, payload)
+        }
+
+        notifyAppDataChanged()
+        navigate('/app/director-unavailability')
+        return
+      }
+
       if (mode === 'LEAVE') {
         await createDirectorLeaveRequest({
           leaveTypeId: Number(selectedType.id),
@@ -370,22 +385,10 @@ export function DirectorAvailabilityPage() {
         : await createAbsenceDeclaration(payload)
       setAbsenceDraft(draft)
 
-      const filesToUpload = [...pendingFiles]
-      for (const file of filesToUpload) {
-        const document = await uploadAbsenceDocument(draft.id, file)
-        setUploadedDocuments((current) => [...current, document])
-        setPendingFiles((current) => current.filter((item) => item !== file))
-      }
-
-      const registered = await submitAbsenceDeclaration(draft.id, { certifiedAccurate: true })
+      await submitAbsenceDeclaration(draft.id, { certifiedAccurate: true })
       notifyAppDataChanged()
       resetForm()
-      showToast(
-        'success',
-        registered.status === 'ENREGISTREE'
-          ? 'Votre absence a été enregistrée directement.'
-          : 'Votre absence a été transmise avec son justificatif.',
-      )
+      showToast('success', 'Votre absence a été enregistrée directement.')
     } catch (error) {
       showToast('error', errorMessage(error))
     } finally {
@@ -416,7 +419,7 @@ export function DirectorAvailabilityPage() {
             <div className="director-availability-card__heading">
               <div>
                 <span className="director-availability-eyebrow">Mon indisponibilité</span>
-                <h2>Que souhaitez-vous enregistrer ?</h2>
+                <h2>{isEditing ? 'Quelle indisponibilité souhaitez-vous modifier ?' : 'Que souhaitez-vous enregistrer ?'}</h2>
               </div>
             </div>
 
@@ -426,13 +429,14 @@ export function DirectorAvailabilityPage() {
                 className={`director-availability-mode${mode === 'LEAVE' ? ' is-active' : ''}`}
                 onClick={() => handleModeChange('LEAVE')}
                 aria-pressed={mode === 'LEAVE'}
+                disabled={isEditing && mode !== 'LEAVE'}
               >
                 <span className="director-availability-mode__icon director-availability-mode__icon--leave">
                   <Icon name="sun" size={21} />
                 </span>
                 <span>
                   <strong>Congé</strong>
-                  <small>Décompté selon le type sélectionné</small>
+                  <small>Enregistré sans décompte de solde</small>
                 </span>
                 <i><Icon name="check" size={13} /></i>
               </button>
@@ -442,6 +446,7 @@ export function DirectorAvailabilityPage() {
                 className={`director-availability-mode${mode === 'ABSENCE' ? ' is-active' : ''}`}
                 onClick={() => handleModeChange('ABSENCE')}
                 aria-pressed={mode === 'ABSENCE'}
+                disabled={isEditing && mode !== 'ABSENCE'}
               >
                 <span className="director-availability-mode__icon director-availability-mode__icon--absence">
                   <Icon name="calendar" size={21} />
@@ -454,15 +459,21 @@ export function DirectorAvailabilityPage() {
               </button>
             </div>
 
-            <label className="director-availability-field">
+            <div className="director-availability-field">
               <span>{mode === 'LEAVE' ? 'Type de congé' : 'Type d’absence'}</span>
-              <select value={selectedTypeId ?? ''} onChange={handleTypeChange} disabled={availableTypes.length === 0}>
-                {availableTypes.length === 0 && <option value="">Aucun type disponible</option>}
-                {availableTypes.map((type) => (
-                  <option value={type.id} key={type.id}>{type.name}</option>
-                ))}
-              </select>
-            </label>
+              {mode === 'LEAVE' ? (
+                <div className="director-availability-fixed-value" aria-label="Type de congé fixe">
+                  Congé
+                </div>
+              ) : (
+                <select value={selectedTypeId ?? ''} onChange={handleTypeChange} disabled={availableTypes.length === 0}>
+                  {availableTypes.length === 0 && <option value="">Aucun type disponible</option>}
+                  {availableTypes.map((type) => (
+                    <option value={type.id} key={type.id}>{type.name}</option>
+                  ))}
+                </select>
+              )}
+            </div>
           </section>
 
           {(halfDaysAllowed || hoursOnly) && (
@@ -506,69 +517,6 @@ export function DirectorAvailabilityPage() {
             </label>
           </section>
 
-          {mode === 'ABSENCE' && selectedType?.documentRequired && (
-            <section className="director-availability-card director-availability-document-card">
-              <div className="director-availability-document-heading">
-                <span>
-                  <strong>Justificatif</strong>
-                  <small>
-                    {selectedType.documentCanBeAddedLater
-                      ? 'Obligatoire, mais il peut être ajouté ultérieurement.'
-                      : 'Obligatoire avant l’enregistrement.'}
-                  </small>
-                </span>
-                <span className="director-availability-required">Obligatoire</span>
-              </div>
-
-              <label className="director-availability-dropzone">
-                <input
-                  type="file"
-                  accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
-                  multiple
-                  disabled={saving || pendingFiles.length + uploadedDocuments.length >= MAX_FILES}
-                  onChange={(event) => {
-                    handleFiles(Array.from(event.target.files ?? []))
-                    event.target.value = ''
-                  }}
-                />
-                <Icon name="file" size={20} />
-                <span>
-                  <strong>Ajouter un justificatif</strong>
-                  <small>PDF, JPG ou PNG · 10 Mo maximum</small>
-                </span>
-              </label>
-
-              {(pendingFiles.length > 0 || uploadedDocuments.length > 0) && (
-                <div className="director-availability-files">
-                  {uploadedDocuments.map((document) => (
-                    <div key={`uploaded-${document.id}`} className="director-availability-file">
-                      <Icon name="check" size={14} />
-                      <span>
-                        <strong>{document.originalName || `Justificatif ${document.id}`}</strong>
-                        <small>Enregistré · {fileSize(Number(document.fileSize))}</small>
-                      </span>
-                      <button type="button" onClick={() => handleRemoveUploaded(document)} aria-label="Supprimer le justificatif">×</button>
-                    </div>
-                  ))}
-                  {pendingFiles.map((file, index) => (
-                    <div key={`${file.name}-${file.lastModified}`} className="director-availability-file">
-                      <Icon name="clock" size={14} />
-                      <span>
-                        <strong>{file.name}</strong>
-                        <small>À enregistrer · {fileSize(file.size)}</small>
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setPendingFiles((current) => current.filter((_, itemIndex) => itemIndex !== index))}
-                        aria-label={`Retirer ${file.name}`}
-                      >×</button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </section>
-          )}
-
           <section className="director-availability-card director-availability-recap-card">
             <div className="director-availability-card__heading director-availability-card__heading--recap">
               <div>
@@ -598,13 +546,13 @@ export function DirectorAvailabilityPage() {
               onClick={handleSave}
             >
               {saving ? (
-                <><span className="director-availability-spinner" /> Enregistrement…</>
+                <><span className="director-availability-spinner" /> {isEditing ? 'Modification…' : 'Enregistrement…'}</>
               ) : (
-                <><Icon name="check" size={18} /> Enregistrer</>
+                <><Icon name="check" size={18} /> {isEditing ? 'Enregistrer les modifications' : 'Enregistrer'}</>
               )}
             </button>
             <p className="director-availability-certification">
-              En enregistrant cette indisponibilité, vous certifiez l’exactitude des informations saisies.
+              {isEditing ? 'Les RH et Responsables de service seront informés de cette modification.' : 'En enregistrant cette indisponibilité, vous certifiez l’exactitude des informations saisies.'}
             </p>
           </section>
         </div>

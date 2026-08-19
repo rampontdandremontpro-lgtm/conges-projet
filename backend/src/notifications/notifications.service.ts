@@ -87,6 +87,34 @@ export class NotificationsService {
     return results;
   }
 
+
+  async createForActiveRoles(
+    roles: UserRole[],
+    input: Omit<CreateNotificationInput, 'userId'>,
+    manager?: EntityManager,
+  ): Promise<Notification[]> {
+    if (roles.length === 0) {
+      return [];
+    }
+
+    const repository = manager
+      ? manager.getRepository(User)
+      : this.userRepository;
+    const recipients = await repository.find({
+      where: {
+        role: In(roles),
+        isActive: true,
+      },
+      select: { id: true },
+    });
+
+    return this.createForUsers(
+      recipients.map((recipient) => recipient.id),
+      input,
+      manager,
+    );
+  }
+
   async findMy(
     userId: number,
     query: NotificationQueryDto,

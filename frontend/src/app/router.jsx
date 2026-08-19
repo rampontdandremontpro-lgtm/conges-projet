@@ -38,6 +38,7 @@ import { DirectorRequestDecisionPage } from '@/pages/director/RequestDecisionPag
 import { DirectorPresencePage } from '@/pages/director/PresencePage'
 import { DirectorStatisticsPage } from '@/pages/director/StatisticsPage'
 import { DirectorAvailabilityPage } from '@/pages/director/AvailabilityPage'
+import { DirectorUnavailabilityPage } from '@/pages/director/UnavailabilityPage'
 import { NEW_REQUEST_ROLES, ROLES } from '@/config/navigation'
 import { RoleRoute } from '@/auth/RoleRoute'
 
@@ -99,6 +100,22 @@ export const router = createBrowserRouter([
         element: (
           <RoleRoute roles={[ROLES.DIRECTEUR]}>
             <DirectorAvailabilityPage />
+          </RoleRoute>
+        ),
+      },
+      {
+        path: 'director-availability/:source/:id',
+        element: (
+          <RoleRoute roles={[ROLES.DIRECTEUR]}>
+            <DirectorAvailabilityPage />
+          </RoleRoute>
+        ),
+      },
+      {
+        path: 'director-unavailability',
+        element: (
+          <RoleRoute roles={[ROLES.DIRECTEUR]}>
+            <DirectorUnavailabilityPage />
           </RoleRoute>
         ),
       },

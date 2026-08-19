@@ -17,11 +17,13 @@ import {
   LeaveRequestStatus,
   DayPeriod,
 } from '../leave-requests/leave-request.entity';
+import { getMartiniqueDateString } from '../leave-requests/leave-request-period.util';
 import {
   LeaveType,
   LeaveTypeCategory,
 } from '../leave-types/leave-type.entity';
 import { LeaveTypesService } from '../leave-types/leave-types.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { PresenceService } from '../presence/presence.service';
 import { User, UserRole } from '../users/user.entity';
 import { UsersService } from '../users/users.service';
@@ -48,6 +50,7 @@ export class AbsenceDeclarationsService {
 
     private readonly usersService: UsersService,
     private readonly leaveTypesService: LeaveTypesService,
+    private readonly notificationsService: NotificationsService,
     private readonly presenceService: PresenceService,
   ) {}
 
@@ -338,15 +341,16 @@ export class AbsenceDeclarationsService {
       declaration.leaveType.rhOnly &&
       authenticatedUser.role === UserRole.RH;
 
-    if (
-      (isDirectorSelfDeclaration || isRhOnlyDeclaration) &&
+    if (isDirectorSelfDeclaration) {
+      declaration.status = AbsenceDeclarationStatus.ENREGISTREE;
+      declaration.verifiedByRhId = null;
+      declaration.verifiedAt = now;
+    } else if (
+      isRhOnlyDeclaration &&
       !declaration.leaveType.documentRequired
     ) {
       declaration.status = AbsenceDeclarationStatus.ENREGISTREE;
-      declaration.verifiedByRhId =
-        authenticatedUser.role === UserRole.RH
-          ? authenticatedUser.id
-          : null;
+      declaration.verifiedByRhId = authenticatedUser.id;
       declaration.verifiedAt = now;
     } else if (declaration.leaveType.documentRequired) {
       const hasActiveDocument = await this.hasActiveDocument(
@@ -374,6 +378,149 @@ export class AbsenceDeclarationsService {
 
     await this.presenceService.refreshUserStatus(
       declaration.employeeId,
+    );
+
+    if (isDirectorSelfDeclaration) {
+      await this.notificationsService.createForActiveRoles(
+        [UserRole.RH, UserRole.RESPONSABLE_SERVICE],
+        {
+          type: 'ABSENCE_DIRECTEUR_INFORMATION',
+          title: 'Indisponibilité du Directeur',
+          message: `${declaration.employee.prenom} ${declaration.employee.nom} a enregistré une indisponibilité du ${declaration.startDate} au ${declaration.endDate}.`,
+          absenceDeclarationId: declaration.id,
+        },
+      );
+    }
+
+    return this.findAccessibleOne(id, authenticatedUser);
+  }
+
+
+  async updateDirectorRecorded(
+    id: number,
+    authenticatedUser: AuthenticatedUser,
+    dto: UpdateAbsenceDeclarationDto,
+  ): Promise<AbsenceDeclaration> {
+    if (authenticatedUser.role !== UserRole.DIRECTEUR) {
+      throw new ForbiddenException(
+        'Seul le Directeur peut modifier cette indisponibilité.',
+      );
+    }
+
+    const declaration = await this.findAccessibleOne(id, authenticatedUser);
+    if (declaration.status !== AbsenceDeclarationStatus.ENREGISTREE) {
+      throw new BadRequestException(
+        'Seule une indisponibilité active peut être modifiée.',
+      );
+    }
+
+    const today = getMartiniqueDateString(new Date());
+    if (declaration.startDate <= today) {
+      throw new BadRequestException(
+        'Une indisponibilité en cours ou terminée ne peut plus être modifiée.',
+      );
+    }
+
+    const leaveType =
+      dto.leaveTypeId !== undefined && dto.leaveTypeId !== declaration.leaveTypeId
+        ? await this.leaveTypesService.findOne(dto.leaveTypeId)
+        : declaration.leaveType;
+    this.validateLeaveType(leaveType, authenticatedUser.role);
+    this.ensureSingleMode(dto);
+
+    const startDate = dto.startDate ?? declaration.startDate;
+    const endDate = dto.endDate ?? declaration.endDate;
+    if (startDate <= today) {
+      throw new BadRequestException(
+        'La nouvelle période doit commencer après la date du jour.',
+      );
+    }
+
+    const startPeriod = dto.startPeriod ?? declaration.startPeriod;
+    const endPeriod = dto.endPeriod ?? declaration.endPeriod;
+    const durationHours = dto.durationHours !== undefined
+      ? dto.durationHours
+      : dto.startPeriod !== undefined || dto.endPeriod !== undefined
+        ? undefined
+        : declaration.durationHours ?? undefined;
+    const duration = this.validateAndCalculateDuration({
+      leaveType,
+      startDate,
+      endDate,
+      startPeriod,
+      endPeriod,
+      durationHours,
+    });
+
+    await this.ensureNoPersonalOverlap({
+      employeeId: declaration.employeeId,
+      startDate,
+      endDate,
+      ignoredAbsenceId: declaration.id,
+    });
+
+    declaration.leaveTypeId = leaveType.id;
+    declaration.leaveType = leaveType;
+    declaration.startDate = startDate;
+    declaration.endDate = endDate;
+    declaration.startPeriod = duration.startPeriod;
+    declaration.endPeriod = duration.endPeriod;
+    declaration.durationDays = duration.durationDays;
+    declaration.durationHours = duration.durationHours;
+    if (dto.comment !== undefined) {
+      declaration.comment = dto.comment.trim() || null;
+    }
+
+    await this.absenceDeclarationRepository.save(declaration);
+    await this.presenceService.refreshUserStatus(declaration.employeeId);
+    await this.notificationsService.createForActiveRoles(
+      [UserRole.RH, UserRole.RESPONSABLE_SERVICE],
+      {
+        type: 'ABSENCE_DIRECTEUR_MODIFIEE',
+        title: 'Indisponibilité du Directeur modifiée',
+        message: `${declaration.employee.prenom} ${declaration.employee.nom} a modifié son indisponibilité : du ${declaration.startDate} au ${declaration.endDate}.`,
+        absenceDeclarationId: declaration.id,
+      },
+    );
+
+    return this.findAccessibleOne(id, authenticatedUser);
+  }
+
+  async cancelDirectorRecorded(
+    id: number,
+    authenticatedUser: AuthenticatedUser,
+  ): Promise<AbsenceDeclaration> {
+    if (authenticatedUser.role !== UserRole.DIRECTEUR) {
+      throw new ForbiddenException(
+        'Seul le Directeur peut annuler cette indisponibilité.',
+      );
+    }
+
+    const declaration = await this.findAccessibleOne(id, authenticatedUser);
+    if (declaration.status !== AbsenceDeclarationStatus.ENREGISTREE) {
+      throw new BadRequestException(
+        'Cette indisponibilité est déjà annulée ou n’est plus active.',
+      );
+    }
+
+    const today = getMartiniqueDateString(new Date());
+    if (declaration.startDate <= today) {
+      throw new BadRequestException(
+        'Une indisponibilité en cours ou terminée ne peut plus être annulée.',
+      );
+    }
+
+    declaration.status = AbsenceDeclarationStatus.ANNULEE;
+    await this.absenceDeclarationRepository.save(declaration);
+    await this.presenceService.refreshUserStatus(declaration.employeeId);
+    await this.notificationsService.createForActiveRoles(
+      [UserRole.RH, UserRole.RESPONSABLE_SERVICE],
+      {
+        type: 'ABSENCE_DIRECTEUR_ANNULEE',
+        title: 'Indisponibilité du Directeur annulée',
+        message: `${declaration.employee.prenom} ${declaration.employee.nom} a annulé son indisponibilité du ${declaration.startDate} au ${declaration.endDate}.`,
+        absenceDeclarationId: declaration.id,
+      },
     );
 
     return this.findAccessibleOne(id, authenticatedUser);
