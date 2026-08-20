@@ -82,7 +82,6 @@ export function LoginPage() {
   const [rememberMe, setRememberMe] = useState(Boolean(rememberedEmail))
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
-  const [notice, setNotice] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
   if (isAuthenticated) {
@@ -104,7 +103,6 @@ export function LoginPage() {
   async function handleSubmit(event) {
     event.preventDefault()
     setError('')
-    setNotice('')
     setSubmitting(true)
 
     const normalizedEmail = email.trim()
@@ -128,9 +126,22 @@ export function LoginPage() {
 
   function handleForgotPassword() {
     setError('')
-    setNotice(
-      'La réinitialisation automatique du mot de passe sera disponible prochainement. Contactez votre administrateur GMES pour réinitialiser votre accès.',
-    )
+    navigate('/forgot-password', {
+      state: { email: email.trim() },
+    })
+  }
+
+  function handleRememberMeChange(event) {
+    const checked = event.target.checked
+    setRememberMe(checked)
+
+    if (!checked) {
+      try {
+        localStorage.removeItem(REMEMBERED_EMAIL_KEY)
+      } catch {
+        // Le navigateur peut bloquer le stockage local.
+      }
+    }
   }
 
   return (
@@ -272,7 +283,7 @@ export function LoginPage() {
               <input
                 type="checkbox"
                 checked={rememberMe}
-                onChange={(event) => setRememberMe(event.target.checked)}
+                onChange={handleRememberMeChange}
               />
               <span className="login-remember__check" aria-hidden="true" />
               <span>Se souvenir de moi</span>
@@ -286,12 +297,6 @@ export function LoginPage() {
           {error && (
             <p className="login-message login-message--error" role="alert">
               {error}
-            </p>
-          )}
-
-          {notice && (
-            <p className="login-message login-message--notice" role="status">
-              {notice}
             </p>
           )}
 

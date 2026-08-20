@@ -8,11 +8,13 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { createHash } from 'node:crypto';
 
+import { MailService } from '../mail/mail.service';
 import { UsersService } from '../users/users.service';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { DefinePasswordDto } from './dto/define-password.dto';
 import { LoginDto } from './dto/login.dto';
 import { RequestPasswordDto } from './dto/request-password.dto';
+import { ValidatePasswordTokenDto } from './dto/validate-password-token.dto';
 import { JwtPayload } from './jwt-payload.interface';
 
 interface PasswordTokenPayload {
@@ -27,6 +29,7 @@ export class AuthService {
   constructor(
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
+    private readonly mailService: MailService,
   ) {}
 
   async requestPassword(
@@ -55,64 +58,39 @@ export class AuthService {
       { expiresIn: '1h' },
     );
 
-    console.log(
-      [
-        '',
-        '==================================================',
-        'LIEN TEMPORAIRE DE DÉFINITION DU MOT DE PASSE',
-        `Utilisateur : ${user.prenom} ${user.nom}`,
-        `E-mail : ${user.email}`,
-        `Jeton : ${token}`,
-        `Expiration : ${expiresAt.toISOString()}`,
-        '==================================================',
-        '',
-      ].join('\n'),
-    );
+    try {
+      await this.mailService.sendPasswordResetEmail({
+        email: user.email,
+        displayName: `${user.prenom} ${user.nom}`.trim(),
+        token,
+        expiresAt,
+      });
+    } catch (error) {
+      console.error(
+        'Impossible d’envoyer l’e-mail de réinitialisation du mot de passe.',
+        error,
+      );
+    }
 
     return response;
+  }
+
+  async validatePasswordToken(
+    validatePasswordTokenDto: ValidatePasswordTokenDto,
+  ): Promise<{ valid: true }> {
+    await this.resolvePasswordResetToken(
+      validatePasswordTokenDto.token.trim(),
+    );
+
+    return { valid: true };
   }
 
   async definePassword(
     definePasswordDto: DefinePasswordDto,
   ): Promise<{ message: string }> {
-    let payload: PasswordTokenPayload;
-
-    try {
-      payload = await this.jwtService.verifyAsync<PasswordTokenPayload>(
-        definePasswordDto.token.trim(),
-      );
-    } catch {
-      throw new BadRequestException(
-        'Le lien de définition du mot de passe est invalide ou expiré.',
-      );
-    }
-
-    if (payload.purpose !== 'password-reset') {
-      throw new BadRequestException(
-        'Le lien de définition du mot de passe est invalide ou expiré.',
-      );
-    }
-
-    const user = await this.usersService.findByEmailWithPassword(
-      payload.email,
+    const { user } = await this.resolvePasswordResetToken(
+      definePasswordDto.token.trim(),
     );
-
-    if (
-      !user ||
-      user.id !== payload.sub ||
-      this.passwordFingerprint(user.passwordHash) !==
-        payload.passwordFingerprint
-    ) {
-      throw new BadRequestException(
-        'Le lien de définition du mot de passe est invalide, expiré ou déjà utilisé.',
-      );
-    }
-
-    if (!user.isActive) {
-      throw new ForbiddenException(
-        'Le compte utilisateur est désactivé.',
-      );
-    }
 
     const passwordHash = await bcrypt.hash(
       definePasswordDto.password,
@@ -222,6 +200,49 @@ export class AuthService {
         service: user.service,
       },
     };
+  }
+
+  private async resolvePasswordResetToken(token: string) {
+    let payload: PasswordTokenPayload;
+
+    try {
+      payload = await this.jwtService.verifyAsync<PasswordTokenPayload>(
+        token,
+      );
+    } catch {
+      throw new BadRequestException(
+        'Le lien de définition du mot de passe est invalide ou expiré.',
+      );
+    }
+
+    if (payload.purpose !== 'password-reset') {
+      throw new BadRequestException(
+        'Le lien de définition du mot de passe est invalide ou expiré.',
+      );
+    }
+
+    const user = await this.usersService.findByEmailWithPassword(
+      payload.email,
+    );
+
+    if (
+      !user ||
+      user.id !== payload.sub ||
+      this.passwordFingerprint(user.passwordHash) !==
+        payload.passwordFingerprint
+    ) {
+      throw new BadRequestException(
+        'Le lien de définition du mot de passe est invalide, expiré ou déjà utilisé.',
+      );
+    }
+
+    if (!user.isActive) {
+      throw new ForbiddenException(
+        'Le compte utilisateur est désactivé.',
+      );
+    }
+
+    return { payload, user };
   }
 
   private passwordFingerprint(passwordHash: string | null): string {

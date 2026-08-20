@@ -270,7 +270,10 @@ function ServiceBars({ rows }) {
   )
 }
 
-export function DirectorStatisticsPage() {
+export function DirectorStatisticsPage({
+  getStatistics = getDirectorStatistics,
+  getStatisticsServices = getDirectorStatisticsServices,
+} = {}) {
   const defaultPeriod = resolvePresetPeriod('year')
   const [periodPreset, setPeriodPreset] = useState('year')
   const [customStartDate, setCustomStartDate] = useState(defaultPeriod.startDate)
@@ -302,18 +305,18 @@ export function DirectorStatisticsPage() {
 
     setState((current) => ({ ...current, loading: true, error: false }))
     try {
-      const data = await getDirectorStatistics(params)
+      const data = await getStatistics(params)
       setState({ loading: false, error: false, data })
     } catch {
       setState({ loading: false, error: true, data: null })
     }
-  }, [params, period.endDate, period.startDate])
+  }, [getStatistics, params, period.endDate, period.startDate])
 
   useEffect(() => {
-    getDirectorStatisticsServices()
+    getStatisticsServices()
       .then((result) => setServices(result.filter((service) => service?.isActive !== false)))
       .catch(() => setServices([]))
-  }, [])
+  }, [getStatisticsServices])
 
   useEffect(() => {
     load()

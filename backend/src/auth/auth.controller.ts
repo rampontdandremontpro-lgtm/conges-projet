@@ -16,6 +16,7 @@ import { ChangePasswordDto } from './dto/change-password.dto';
 import { DefinePasswordDto } from './dto/define-password.dto';
 import { LoginDto } from './dto/login.dto';
 import { RequestPasswordDto } from './dto/request-password.dto';
+import { ValidatePasswordTokenDto } from './dto/validate-password-token.dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import type { AuthenticatedUser } from './jwt-payload.interface';
 
@@ -36,6 +37,17 @@ export class AuthController {
   ) {
     return this.authService.requestPassword(
       requestPasswordDto,
+    );
+  }
+
+
+  @Post('validate-password-token')
+  @HttpCode(HttpStatus.OK)
+  validatePasswordToken(
+    @Body() validatePasswordTokenDto: ValidatePasswordTokenDto,
+  ) {
+    return this.authService.validatePasswordToken(
+      validatePasswordTokenDto,
     );
   }
 

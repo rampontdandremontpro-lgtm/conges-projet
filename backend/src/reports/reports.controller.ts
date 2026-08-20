@@ -24,4 +24,13 @@ export class ReportsController {
   ) {
     return this.reportsService.getDirectorStatistics(query, request.user);
   }
+
+  @Get('rh/statistics')
+  @Roles(UserRole.RH)
+  getRhStatistics(
+    @Req() request: AuthenticatedRequest,
+    @Query() query: StatisticsQueryDto,
+  ) {
+    return this.reportsService.getDirectorStatistics(query, request.user);
+  }
 }

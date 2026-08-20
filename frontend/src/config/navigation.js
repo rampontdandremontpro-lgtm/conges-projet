@@ -51,6 +51,7 @@ export const NAVIGATION = {
     { id: 'rh-derogations', label: 'Dérogations', to: '/app/rh-derogations', icon: 'shield', group: 'DEMANDES' },
 
     { id: 'rh-balances', label: 'Soldes collaborateurs', to: '/app/rh-balances', icon: 'wallet', group: 'ADMINISTRATION' },
+    { id: 'rh-statistics', label: 'Statistiques', to: '/app/rh-statistics', icon: 'chart', group: 'ADMINISTRATION' },
     { id: 'rh-exports', label: 'Exports', to: '/app/rh-exports', icon: 'download', group: 'ADMINISTRATION' },
     { id: 'rh-pdf-documents', label: 'Documents', to: '/app/rh-pdf-documents', icon: 'doc', group: 'ADMINISTRATION' },
 

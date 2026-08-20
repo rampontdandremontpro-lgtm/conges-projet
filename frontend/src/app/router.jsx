@@ -5,6 +5,8 @@ import { RootRedirect } from '@/auth/RootRedirect'
 import { SectionGuard } from '@/auth/SectionGuard'
 import { AppLayout } from '@/layouts/AppLayout'
 import { LoginPage } from '@/pages/auth/LoginPage'
+import { ForgotPasswordPage } from '@/pages/auth/ForgotPasswordPage'
+import { ResetPasswordPage } from '@/pages/auth/ResetPasswordPage'
 import { NotFound } from '@/pages/shared/NotFound'
 import { DashboardGate } from '@/pages/shared/DashboardGate'
 import { NewRequest } from '@/pages/collab/NewRequestPage'
@@ -27,6 +29,7 @@ import { RhRequestDecisionPage } from '@/pages/rh/RequestDecisionPage'
 import { RhAbsencesPage } from '@/pages/rh/AbsencesPage'
 import { RhDerogationsPage } from '@/pages/rh/DerogationsPage'
 import { RhBalancesPage } from '@/pages/rh/BalancesPage'
+import { RhStatisticsPage } from '@/pages/rh/StatisticsPage'
 import { RhExportsPage } from '@/pages/rh/ExportsPage'
 import { RhDocumentsPage } from '@/pages/rh/DocumentsPage'
 import { RhLeaveTypesPage } from '@/pages/rh/LeaveTypesPage'
@@ -49,6 +52,8 @@ import { RoleRoute } from '@/auth/RoleRoute'
 export const router = createBrowserRouter([
   { path: '/', element: <RootRedirect /> },
   { path: '/login', element: <LoginPage /> },
+  { path: '/forgot-password', element: <ForgotPasswordPage /> },
+  { path: '/reset-password', element: <ResetPasswordPage /> },
   {
     path: '/app',
     element: (
@@ -232,6 +237,14 @@ export const router = createBrowserRouter([
         element: (
           <RoleRoute roles={[ROLES.RH]}>
             <RhBalancesPage />
+          </RoleRoute>
+        ),
+      },
+      {
+        path: 'rh-statistics',
+        element: (
+          <RoleRoute roles={[ROLES.RH]}>
+            <RhStatisticsPage />
           </RoleRoute>
         ),
       },

@@ -414,7 +414,7 @@ export class ReportsService {
 
     await this.auditService.record({
       actorId: actor.id,
-      action: 'DIRECTOR_STATISTICS_VIEWED',
+      action: actor.role === 'RH' ? 'RH_STATISTICS_VIEWED' : 'DIRECTOR_STATISTICS_VIEWED',
       resourceType: 'REPORT',
       resourceId: null,
       newValue: {
