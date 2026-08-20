@@ -189,6 +189,21 @@
 }
 .rh-all-requests-row--data:last-child { border-bottom: 0; }
 .rh-all-requests-row--data:hover { background: #f9fbfe; }
+
+.rh-all-requests-row--data.is-warning {
+  position: relative;
+  z-index: 1;
+  background: #fffaf3;
+  box-shadow:
+    inset 1px 0 0 #f6b94c,
+    inset 0 1px 0 #f6b94c,
+    inset 0 -1px 0 #f6b94c,
+    inset -1px 0 0 #f6b94c;
+}
+
+.rh-all-requests-row--data.is-warning:hover {
+  background: #fff6e8;
+}
 .rh-all-requests-row--data:focus-visible { position: relative; z-index: 1; outline: 3px solid rgba(27,110,243,.14); outline-offset: -3px; }
 
 .rh-all-requests-row--header > span:first-child,

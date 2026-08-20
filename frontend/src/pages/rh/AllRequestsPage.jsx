@@ -327,7 +327,7 @@ export function RhAllRequestsPage() {
                 return (
                   <button
                     type="button"
-                    className="rh-all-requests-row rh-all-requests-row--data"
+                    className={`rh-all-requests-row rh-all-requests-row--data${request.hasAvailabilityAlert ? ' is-warning' : ''}`}
                     role="row"
                     key={request.id}
                     onClick={() => navigate(`/app/rh-all-requests/${request.id}`)}

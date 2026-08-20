@@ -341,7 +341,7 @@ export function DirectorAllRequestsPage() {
                 return (
                   <button
                     type="button"
-                    className="director-all-requests-row director-all-requests-row--data"
+                    className={`director-all-requests-row director-all-requests-row--data${request.hasAvailabilityAlert ? ' is-warning' : ''}`}
                     role="row"
                     key={request.id}
                     onClick={() => navigate(`/app/director-all-requests/${request.id}`)}

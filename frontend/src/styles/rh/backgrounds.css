@@ -1,0 +1,619 @@
+/* -------------------------------------------------------------------------- */
+/* Fonds décoratifs — espace RH                                               */
+/* Identité GMES : administration, pilotage et accompagnement des équipes.     */
+/* Visible mais maîtrisé pour préserver tableaux, graphiques et formulaires.   */
+/* -------------------------------------------------------------------------- */
+
+.gmes-rh-bg {
+  position: relative;
+  isolation: isolate;
+  min-height: calc(100svh - var(--header-height));
+  background:
+    radial-gradient(circle at 7% 10%, rgba(14, 165, 233, 0.10), transparent 27%),
+    radial-gradient(circle at 94% 10%, rgba(59, 130, 246, 0.15), transparent 25%),
+    radial-gradient(circle at 78% 82%, rgba(139, 92, 246, 0.055), transparent 22%),
+    linear-gradient(180deg, #f9fbff 0%, #f3f7fc 49%, #f3f6fb 100%);
+}
+
+.gmes-rh-bg > .page-container {
+  position: relative;
+  z-index: 1;
+}
+
+.gmes-rh-bg__decor {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  user-select: none;
+}
+
+.gmes-rh-bg__shape {
+  position: absolute;
+  display: block;
+  pointer-events: none;
+}
+
+.gmes-rh-bg__shape--orb {
+  width: 430px;
+  height: 430px;
+  top: -260px;
+  right: -120px;
+  border-radius: 50%;
+  border: 1px solid rgba(37, 99, 235, 0.23);
+  background:
+    radial-gradient(circle at 36% 40%, rgba(255, 255, 255, 0.92) 0 16%, transparent 17%),
+    radial-gradient(circle at 50% 52%, rgba(125, 211, 252, 0.23), rgba(224, 242, 254, 0.02) 69%);
+}
+
+.gmes-rh-bg__shape--ring {
+  width: 515px;
+  height: 515px;
+  top: -392px;
+  left: 28%;
+  border: 2px solid rgba(14, 165, 233, 0.23);
+  border-left-color: transparent;
+  border-bottom-color: transparent;
+  border-radius: 50%;
+  transform: rotate(-18deg);
+}
+
+.gmes-rh-bg__shape--blob {
+  width: 575px;
+  height: 350px;
+  right: -260px;
+  bottom: -220px;
+  border-radius: 54% 46% 62% 38% / 58% 50% 50% 42%;
+  background: linear-gradient(
+    138deg,
+    rgba(14, 165, 233, 0.22) 0%,
+    rgba(59, 130, 246, 0.15) 48%,
+    rgba(196, 181, 253, 0.035) 100%
+  );
+  transform: rotate(-10deg);
+}
+
+.gmes-rh-bg__shape--arc {
+  width: 380px;
+  height: 220px;
+  left: -125px;
+  bottom: -112px;
+  border: 2px solid rgba(37, 99, 235, 0.24);
+  border-right-color: transparent;
+  border-bottom-color: transparent;
+  border-radius: 50%;
+  transform: rotate(12deg);
+}
+
+.gmes-rh-bg__shape--dots {
+  width: 145px;
+  height: 105px;
+  right: 4%;
+  bottom: 4.5%;
+  opacity: 0.76;
+  background-image: radial-gradient(circle, rgba(56, 189, 248, 0.8) 1.65px, transparent 1.95px);
+  background-size: 17px 17px;
+}
+
+.gmes-rh-bg__shape--accent {
+  width: 13px;
+  height: 13px;
+  top: 102px;
+  right: 24%;
+  border-radius: 50%;
+  background: rgba(249, 115, 22, 0.94);
+  box-shadow: 0 0 0 7px rgba(249, 115, 22, 0.075);
+}
+
+/* Dashboard RH : fond le plus vivant de l'espace. */
+.gmes-rh-bg--dashboard {
+  background:
+    radial-gradient(circle at 7% 11%, rgba(14, 165, 233, 0.14), transparent 27%),
+    radial-gradient(circle at 94% 9%, rgba(59, 130, 246, 0.17), transparent 26%),
+    radial-gradient(circle at 77% 88%, rgba(139, 92, 246, 0.07), transparent 21%),
+    linear-gradient(180deg, #f9fcff 0%, #f2f7fc 48%, #f3f6fb 100%);
+}
+
+.gmes-rh-bg--dashboard .gmes-rh-bg__shape--blob {
+  width: 660px;
+  height: 400px;
+  right: -275px;
+  bottom: -232px;
+  opacity: 0.98;
+}
+
+.gmes-rh-bg--dashboard .gmes-rh-bg__shape--dots {
+  right: auto;
+  left: 3.4%;
+  bottom: 7%;
+  opacity: 0.82;
+}
+
+.gmes-rh-bg--dashboard .gmes-rh-bg__shape--accent {
+  top: 106px;
+  right: 8.5%;
+}
+
+/* Toutes les demandes : décor autour du tableau. */
+.gmes-rh-bg--requests {
+  background:
+    radial-gradient(circle at 96% 7%, rgba(59, 130, 246, 0.17), transparent 23%),
+    radial-gradient(circle at 4% 92%, rgba(14, 165, 233, 0.11), transparent 27%),
+    linear-gradient(180deg, #f8fbff 0%, #f3f6fb 57%, #f4f7fb 100%);
+}
+
+.gmes-rh-bg--requests .gmes-rh-bg__shape--orb {
+  width: 390px;
+  height: 390px;
+  top: -245px;
+  right: -120px;
+}
+
+.gmes-rh-bg--requests .gmes-rh-bg__shape--ring {
+  width: 475px;
+  height: 475px;
+  top: auto;
+  left: auto;
+  right: -322px;
+  bottom: -352px;
+  opacity: 0.66;
+}
+
+.gmes-rh-bg--requests .gmes-rh-bg__shape--blob {
+  width: 490px;
+  height: 295px;
+  right: auto;
+  left: -245px;
+  bottom: -175px;
+  opacity: 0.9;
+  transform: rotate(9deg);
+}
+
+.gmes-rh-bg--requests .gmes-rh-bg__shape--dots {
+  width: 148px;
+  height: 108px;
+  right: 4%;
+  bottom: 4%;
+  opacity: 0.76;
+}
+
+.gmes-rh-bg--requests .gmes-rh-bg__shape--accent {
+  top: 86px;
+  right: 9%;
+  width: 11px;
+  height: 11px;
+}
+
+/* Détail de demande : halos latéraux et centre totalement libre. */
+.gmes-rh-bg--request-detail {
+  background:
+    radial-gradient(circle at 97% 10%, rgba(59, 130, 246, 0.16), transparent 24%),
+    radial-gradient(circle at 2% 84%, rgba(14, 165, 233, 0.10), transparent 24%),
+    linear-gradient(180deg, #f8fbff 0%, #f3f7fc 52%, #f3f6fb 100%);
+}
+
+.gmes-rh-bg--request-detail .gmes-rh-bg__shape--orb {
+  width: 410px;
+  height: 410px;
+  right: -220px;
+  top: -255px;
+}
+
+.gmes-rh-bg--request-detail .gmes-rh-bg__shape--ring {
+  width: 465px;
+  height: 465px;
+  left: -335px;
+  top: 19%;
+  opacity: 0.68;
+}
+
+.gmes-rh-bg--request-detail .gmes-rh-bg__shape--blob {
+  width: 520px;
+  height: 310px;
+  right: -280px;
+  bottom: -185px;
+  opacity: 0.88;
+}
+
+/* Préparer une demande : formulaire, décor repoussé aux bords. */
+.gmes-rh-bg--prepare,
+.gmes-rh-bg--personal-form {
+  background:
+    radial-gradient(circle at 96% 9%, rgba(99, 171, 247, 0.17), transparent 24%),
+    radial-gradient(circle at 4% 90%, rgba(14, 165, 233, 0.09), transparent 25%),
+    linear-gradient(180deg, #f9fcff 0%, #f3f7fc 50%, #f3f6fb 100%);
+}
+
+.gmes-rh-bg--prepare .gmes-rh-bg__shape--orb,
+.gmes-rh-bg--personal-form .gmes-rh-bg__shape--orb {
+  width: 510px;
+  height: 510px;
+  top: -315px;
+  right: -250px;
+}
+
+.gmes-rh-bg--prepare .gmes-rh-bg__shape--blob,
+.gmes-rh-bg--personal-form .gmes-rh-bg__shape--blob {
+  width: 520px;
+  height: 320px;
+  right: -275px;
+  bottom: -185px;
+  opacity: 0.9;
+}
+
+.gmes-rh-bg--prepare .gmes-rh-bg__shape--dots,
+.gmes-rh-bg--personal-form .gmes-rh-bg__shape--dots {
+  right: auto;
+  left: 3.2%;
+  bottom: 4%;
+  opacity: 0.66;
+}
+
+/* Absences : bleu GMES + petite chaleur orange, sans teinter les formulaires. */
+.gmes-rh-bg--absences,
+.gmes-rh-bg--personal-absence {
+  background:
+    radial-gradient(circle at 96% 8%, rgba(249, 115, 22, 0.075), transparent 21%),
+    radial-gradient(circle at 5% 90%, rgba(14, 165, 233, 0.11), transparent 26%),
+    linear-gradient(180deg, #fffbf8 0%, #f7f8fc 34%, #f3f6fb 100%);
+}
+
+.gmes-rh-bg--absences .gmes-rh-bg__shape--orb,
+.gmes-rh-bg--personal-absence .gmes-rh-bg__shape--orb {
+  border-color: rgba(249, 115, 22, 0.20);
+}
+
+.gmes-rh-bg--absences .gmes-rh-bg__shape--accent,
+.gmes-rh-bg--personal-absence .gmes-rh-bg__shape--accent {
+  width: 15px;
+  height: 15px;
+  right: 7%;
+}
+
+/* Dérogations : tonalité légèrement violette, toujours dans la famille GMES. */
+.gmes-rh-bg--derogations {
+  background:
+    radial-gradient(circle at 95% 9%, rgba(139, 92, 246, 0.105), transparent 23%),
+    radial-gradient(circle at 5% 91%, rgba(14, 165, 233, 0.10), transparent 27%),
+    linear-gradient(180deg, #fbfaff 0%, #f5f5fc 38%, #f3f6fb 100%);
+}
+
+.gmes-rh-bg--derogations .gmes-rh-bg__shape--ring {
+  border-color: rgba(139, 92, 246, 0.22);
+  border-left-color: transparent;
+  border-bottom-color: transparent;
+}
+
+.gmes-rh-bg--derogations .gmes-rh-bg__shape--blob {
+  background: linear-gradient(
+    138deg,
+    rgba(139, 92, 246, 0.16),
+    rgba(59, 130, 246, 0.14),
+    rgba(14, 165, 233, 0.03)
+  );
+}
+
+/* Soldes collaborateurs : cyan/vert très léger pour évoquer les compteurs. */
+.gmes-rh-bg--balances,
+.gmes-rh-bg--personal-balance {
+  background:
+    radial-gradient(circle at 96% 8%, rgba(34, 197, 94, 0.07), transparent 22%),
+    radial-gradient(circle at 5% 91%, rgba(14, 165, 233, 0.11), transparent 27%),
+    linear-gradient(180deg, #f9fffc 0%, #f3f8fb 40%, #f3f6fb 100%);
+}
+
+.gmes-rh-bg--balances .gmes-rh-bg__shape--blob,
+.gmes-rh-bg--personal-balance .gmes-rh-bg__shape--blob {
+  background: linear-gradient(
+    138deg,
+    rgba(34, 197, 94, 0.11),
+    rgba(14, 165, 233, 0.16),
+    rgba(59, 130, 246, 0.03)
+  );
+}
+
+/* Statistiques : plus vivant autour, jamais derrière les graphes. */
+.gmes-rh-bg--statistics {
+  background:
+    radial-gradient(circle at 95% 8%, rgba(59, 130, 246, 0.19), transparent 24%),
+    radial-gradient(circle at 4% 92%, rgba(14, 165, 233, 0.13), transparent 27%),
+    radial-gradient(circle at 83% 84%, rgba(139, 92, 246, 0.075), transparent 19%),
+    linear-gradient(180deg, #f8fbff 0%, #f2f7fc 50%, #f3f6fb 100%);
+}
+
+.gmes-rh-bg--statistics .gmes-rh-bg__shape--ring {
+  width: 600px;
+  height: 600px;
+  top: -455px;
+  left: 20%;
+  opacity: 0.82;
+}
+
+.gmes-rh-bg--statistics .gmes-rh-bg__shape--blob {
+  width: 650px;
+  height: 390px;
+  right: -310px;
+  bottom: -240px;
+}
+
+.gmes-rh-bg--statistics .gmes-rh-bg__shape--dots {
+  right: auto;
+  left: 3%;
+  bottom: 5%;
+  opacity: 0.86;
+}
+
+/* Exports : cyan plus net autour des cartes de génération. */
+.gmes-rh-bg--exports {
+  background:
+    radial-gradient(circle at 95% 8%, rgba(6, 182, 212, 0.14), transparent 23%),
+    radial-gradient(circle at 4% 91%, rgba(59, 130, 246, 0.10), transparent 27%),
+    linear-gradient(180deg, #f7fdff 0%, #f2f8fb 45%, #f3f6fb 100%);
+}
+
+.gmes-rh-bg--exports .gmes-rh-bg__shape--orb {
+  border-color: rgba(6, 182, 212, 0.24);
+}
+
+.gmes-rh-bg--exports .gmes-rh-bg__shape--ring {
+  border-color: rgba(6, 182, 212, 0.22);
+  border-left-color: transparent;
+  border-bottom-color: transparent;
+}
+
+/* Documents : exploite volontairement les grandes zones vides. */
+.gmes-rh-bg--documents,
+.gmes-rh-bg--personal-documents {
+  background:
+    radial-gradient(circle at 96% 8%, rgba(99, 171, 247, 0.19), transparent 24%),
+    radial-gradient(circle at 1% 92%, rgba(47, 134, 239, 0.14), transparent 29%),
+    linear-gradient(180deg, #f8fbff 0%, #f3f6fb 55%, #f4f7fb 100%);
+}
+
+.gmes-rh-bg--documents .gmes-rh-bg__shape--orb,
+.gmes-rh-bg--personal-documents .gmes-rh-bg__shape--orb {
+  width: 410px;
+  height: 410px;
+  top: -248px;
+  right: -125px;
+  opacity: 0.98;
+}
+
+.gmes-rh-bg--documents .gmes-rh-bg__shape--ring,
+.gmes-rh-bg--personal-documents .gmes-rh-bg__shape--ring {
+  width: 610px;
+  height: 610px;
+  top: auto;
+  left: auto;
+  right: -355px;
+  bottom: -430px;
+  opacity: 0.8;
+  transform: rotate(-24deg);
+}
+
+.gmes-rh-bg--documents .gmes-rh-bg__shape--blob,
+.gmes-rh-bg--personal-documents .gmes-rh-bg__shape--blob {
+  width: 620px;
+  height: 370px;
+  right: auto;
+  left: -330px;
+  bottom: -230px;
+  opacity: 0.94;
+  transform: rotate(8deg);
+}
+
+.gmes-rh-bg--documents .gmes-rh-bg__shape--dots,
+.gmes-rh-bg--personal-documents .gmes-rh-bg__shape--dots {
+  width: 170px;
+  height: 125px;
+  right: 4%;
+  bottom: 5%;
+  opacity: 0.84;
+}
+
+/* Types de congés / absences : paramétrage bleu + violet doux. */
+.gmes-rh-bg--leave-types {
+  background:
+    radial-gradient(circle at 95% 8%, rgba(139, 92, 246, 0.11), transparent 23%),
+    radial-gradient(circle at 5% 91%, rgba(14, 165, 233, 0.11), transparent 27%),
+    linear-gradient(180deg, #fbfaff 0%, #f5f7fc 42%, #f3f6fb 100%);
+}
+
+.gmes-rh-bg--leave-types .gmes-rh-bg__shape--ring {
+  border-color: rgba(139, 92, 246, 0.23);
+  border-left-color: transparent;
+  border-bottom-color: transparent;
+}
+
+/* Jours fériés / fermetures : orange plus visible mais limité aux bords. */
+.gmes-rh-bg--holidays {
+  background:
+    radial-gradient(circle at 95% 8%, rgba(249, 115, 22, 0.11), transparent 23%),
+    radial-gradient(circle at 5% 91%, rgba(14, 165, 233, 0.10), transparent 27%),
+    linear-gradient(180deg, #fffaf6 0%, #f8f8fb 38%, #f3f6fb 100%);
+}
+
+.gmes-rh-bg--holidays .gmes-rh-bg__shape--orb {
+  border-color: rgba(249, 115, 22, 0.24);
+}
+
+/* Période estivale : chaleur orange/bleu, décor plus solaire. */
+.gmes-rh-bg--summer {
+  background:
+    radial-gradient(circle at 94% 7%, rgba(249, 115, 22, 0.13), transparent 23%),
+    radial-gradient(circle at 5% 91%, rgba(14, 165, 233, 0.10), transparent 27%),
+    linear-gradient(180deg, #fffaf5 0%, #f8f8fb 39%, #f3f6fb 100%);
+}
+
+.gmes-rh-bg--summer .gmes-rh-bg__shape--accent {
+  width: 18px;
+  height: 18px;
+  right: 7%;
+  box-shadow: 0 0 0 10px rgba(249, 115, 22, 0.075);
+}
+
+.gmes-rh-bg--summer .gmes-rh-bg__shape--ring {
+  border-color: rgba(249, 115, 22, 0.20);
+  border-left-color: transparent;
+  border-bottom-color: transparent;
+}
+
+/* Valideurs : bleu/violet pour l'administration des circuits. */
+.gmes-rh-bg--validators {
+  background:
+    radial-gradient(circle at 95% 8%, rgba(124, 58, 237, 0.105), transparent 23%),
+    radial-gradient(circle at 5% 91%, rgba(14, 165, 233, 0.105), transparent 27%),
+    linear-gradient(180deg, #faf9ff 0%, #f4f6fc 42%, #f3f6fb 100%);
+}
+
+.gmes-rh-bg--validators .gmes-rh-bg__shape--ring {
+  border-color: rgba(124, 58, 237, 0.22);
+  border-left-color: transparent;
+  border-bottom-color: transparent;
+}
+
+.gmes-rh-bg--validators .gmes-rh-bg__shape--blob {
+  background: linear-gradient(
+    138deg,
+    rgba(124, 58, 237, 0.16),
+    rgba(59, 130, 246, 0.14),
+    rgba(14, 165, 233, 0.03)
+  );
+}
+
+/* Pages personnelles RH : même famille, moins administratives. */
+.gmes-rh-bg--personal-requests,
+.gmes-rh-bg--personal-list {
+  background:
+    radial-gradient(circle at 96% 7%, rgba(99, 171, 247, 0.17), transparent 23%),
+    radial-gradient(circle at 4% 92%, rgba(47, 134, 239, 0.11), transparent 27%),
+    linear-gradient(180deg, #f8fbff 0%, #f3f6fb 57%, #f4f7fb 100%);
+}
+
+.gmes-rh-bg--personal-detail {
+  background:
+    radial-gradient(circle at 97% 10%, rgba(59, 130, 246, 0.16), transparent 24%),
+    radial-gradient(circle at 2% 84%, rgba(14, 165, 233, 0.10), transparent 24%),
+    linear-gradient(180deg, #f8fbff 0%, #f3f7fc 52%, #f3f6fb 100%);
+}
+
+/* Notifications : décor plus marqué dans les marges et zones vides. */
+.gmes-rh-bg--notifications {
+  background:
+    radial-gradient(circle at 96% 7%, rgba(99, 171, 247, 0.19), transparent 24%),
+    radial-gradient(circle at 2% 94%, rgba(47, 134, 239, 0.13), transparent 28%),
+    linear-gradient(180deg, #f8fbff 0%, #f3f6fb 58%, #f4f7fb 100%);
+}
+
+.gmes-rh-bg--notifications .gmes-rh-bg__shape--ring {
+  width: 580px;
+  height: 580px;
+  top: auto;
+  left: auto;
+  right: -355px;
+  bottom: -410px;
+  opacity: 0.78;
+  transform: rotate(-18deg);
+}
+
+.gmes-rh-bg--notifications .gmes-rh-bg__shape--blob {
+  width: 570px;
+  height: 340px;
+  right: auto;
+  left: -300px;
+  bottom: -215px;
+  opacity: 0.92;
+  transform: rotate(10deg);
+}
+
+.gmes-rh-bg--notifications .gmes-rh-bg__shape--dots {
+  width: 165px;
+  height: 120px;
+  right: 4%;
+  bottom: 4%;
+  opacity: 0.82;
+}
+
+/* Profil / paramètres : version calme. */
+.gmes-rh-bg--profile,
+.gmes-rh-bg--default {
+  background:
+    radial-gradient(circle at 95% 8%, rgba(99, 171, 247, 0.13), transparent 24%),
+    radial-gradient(circle at 5% 92%, rgba(47, 134, 239, 0.085), transparent 27%),
+    linear-gradient(180deg, #f9fbff 0%, #f4f7fb 55%, #f3f6fb 100%);
+}
+
+.gmes-rh-bg--profile .gmes-rh-bg__shape--blob,
+.gmes-rh-bg--default .gmes-rh-bg__shape--blob {
+  opacity: 0.72;
+}
+
+.gmes-rh-bg--profile .gmes-rh-bg__shape--dots,
+.gmes-rh-bg--default .gmes-rh-bg__shape--dots {
+  opacity: 0.58;
+}
+
+/* Responsive : conserver le décor mais l'alléger sur petits écrans. */
+@media (max-width: 1024px) {
+  .gmes-rh-bg__shape--ring {
+    opacity: 0.52;
+  }
+
+  .gmes-rh-bg__shape--blob {
+    opacity: 0.66;
+  }
+
+  .gmes-rh-bg__shape--dots {
+    opacity: 0.58;
+  }
+
+  .gmes-rh-bg__shape--accent {
+    opacity: 0.78;
+  }
+}
+
+@media (max-width: 767px) {
+  .gmes-rh-bg {
+    background:
+      radial-gradient(circle at 100% 0%, rgba(99, 171, 247, 0.09), transparent 26%),
+      linear-gradient(180deg, #f8fbff 0%, #f3f6fb 100%);
+  }
+
+  .gmes-rh-bg__shape--orb {
+    width: 300px;
+    height: 300px;
+    top: -210px;
+    right: -155px;
+    opacity: 0.68;
+  }
+
+  .gmes-rh-bg__shape--ring,
+  .gmes-rh-bg__shape--blob,
+  .gmes-rh-bg__shape--arc {
+    display: none;
+  }
+
+  .gmes-rh-bg__shape--dots {
+    width: 105px;
+    height: 78px;
+    right: 2%;
+    bottom: 2%;
+    opacity: 0.44;
+  }
+
+  .gmes-rh-bg__shape--accent {
+    width: 9px;
+    height: 9px;
+    top: 70px;
+    right: 8%;
+    opacity: 0.72;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gmes-rh-bg__shape {
+    transition: none !important;
+    animation: none !important;
+  }
+}

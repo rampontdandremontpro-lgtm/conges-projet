@@ -691,13 +691,6 @@ export class LeaveRequestsService {
       .addOrderBy('leaveRequest.id', 'DESC')
       .getMany();
 
-    if (
-      authenticatedUser.role !==
-      UserRole.RESPONSABLE_SERVICE
-    ) {
-      return requests;
-    }
-
     return Promise.all(
       requests.map(async (leaveRequest) => {
         if (

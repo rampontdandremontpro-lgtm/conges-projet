@@ -252,6 +252,21 @@
   background: #f9fbfe;
 }
 
+.director-all-requests-row--data.is-warning {
+  position: relative;
+  z-index: 1;
+  background: #fffaf3;
+  box-shadow:
+    inset 1px 0 0 #f6b94c,
+    inset 0 1px 0 #f6b94c,
+    inset 0 -1px 0 #f6b94c,
+    inset -1px 0 0 #f6b94c;
+}
+
+.director-all-requests-row--data.is-warning:hover {
+  background: #fff6e8;
+}
+
 .director-all-requests-row--data:focus-visible {
   position: relative;
   z-index: 1;

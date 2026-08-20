@@ -1,0 +1,527 @@
+/* -------------------------------------------------------------------------- */
+/* Fonds décoratifs — espace Responsable de service                           */
+/* Même identité GMES que le Collaborateur, adaptée au pilotage d'équipe.      */
+/* -------------------------------------------------------------------------- */
+
+.gmes-manager-bg {
+  position: relative;
+  isolation: isolate;
+  min-height: calc(100svh - var(--header-height));
+  background:
+    radial-gradient(circle at 8% 9%, rgba(14, 165, 233, 0.09), transparent 27%),
+    radial-gradient(circle at 93% 12%, rgba(59, 130, 246, 0.15), transparent 25%),
+    linear-gradient(180deg, #f8fbff 0%, #f3f7fc 48%, #f3f6fb 100%);
+}
+
+.gmes-manager-bg > .page-container {
+  position: relative;
+  z-index: 1;
+}
+
+.gmes-manager-bg__decor {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  user-select: none;
+}
+
+.gmes-manager-bg__shape {
+  position: absolute;
+  display: block;
+  pointer-events: none;
+}
+
+.gmes-manager-bg__shape--orb {
+  width: 430px;
+  height: 430px;
+  top: -255px;
+  right: -120px;
+  border-radius: 50%;
+  border: 1px solid rgba(37, 99, 235, 0.24);
+  background:
+    radial-gradient(circle at 38% 42%, rgba(255, 255, 255, 0.9) 0 16%, transparent 17%),
+    radial-gradient(circle at 48% 48%, rgba(125, 211, 252, 0.22), rgba(224, 242, 254, 0.02) 68%);
+}
+
+.gmes-manager-bg__shape--ring {
+  width: 520px;
+  height: 520px;
+  top: -390px;
+  left: 29%;
+  border: 2px solid rgba(14, 165, 233, 0.22);
+  border-left-color: transparent;
+  border-bottom-color: transparent;
+  border-radius: 50%;
+  transform: rotate(-18deg);
+}
+
+.gmes-manager-bg__shape--blob {
+  width: 565px;
+  height: 345px;
+  right: -250px;
+  bottom: -215px;
+  border-radius: 54% 46% 62% 38% / 58% 50% 50% 42%;
+  background: linear-gradient(
+    138deg,
+    rgba(14, 165, 233, 0.22) 0%,
+    rgba(59, 130, 246, 0.15) 48%,
+    rgba(186, 230, 253, 0.02) 100%
+  );
+  transform: rotate(-10deg);
+}
+
+.gmes-manager-bg__shape--arc {
+  width: 370px;
+  height: 215px;
+  left: -120px;
+  bottom: -112px;
+  border: 2px solid rgba(37, 99, 235, 0.24);
+  border-right-color: transparent;
+  border-bottom-color: transparent;
+  border-radius: 50%;
+  transform: rotate(12deg);
+}
+
+.gmes-manager-bg__shape--dots {
+  width: 138px;
+  height: 100px;
+  right: 4%;
+  bottom: 4.5%;
+  opacity: 0.72;
+  background-image: radial-gradient(circle, rgba(56, 189, 248, 0.78) 1.65px, transparent 1.95px);
+  background-size: 17px 17px;
+}
+
+.gmes-manager-bg__shape--accent {
+  width: 13px;
+  height: 13px;
+  top: 102px;
+  right: 24%;
+  border-radius: 50%;
+  background: rgba(249, 115, 22, 0.94);
+  box-shadow: 0 0 0 7px rgba(249, 115, 22, 0.075);
+}
+
+/* Tableau de bord : le fond le plus vivant de l'espace Responsable. */
+.gmes-manager-bg--dashboard {
+  background:
+    radial-gradient(circle at 7% 11%, rgba(14, 165, 233, 0.13), transparent 27%),
+    radial-gradient(circle at 94% 10%, rgba(59, 130, 246, 0.16), transparent 26%),
+    linear-gradient(180deg, #f8fcff 0%, #f2f7fc 48%, #f3f6fb 100%);
+}
+
+.gmes-manager-bg--dashboard .gmes-manager-bg__shape--blob {
+  width: 650px;
+  height: 390px;
+  right: -270px;
+  bottom: -225px;
+  opacity: 0.98;
+}
+
+.gmes-manager-bg--dashboard .gmes-manager-bg__shape--dots {
+  right: auto;
+  left: 3.4%;
+  bottom: 7%;
+  opacity: 0.76;
+}
+
+.gmes-manager-bg--dashboard .gmes-manager-bg__shape--accent {
+  top: 110px;
+  right: 8.5%;
+}
+
+/* Demandes de l'équipe : décor autour du tableau, jamais derrière ses lignes. */
+.gmes-manager-bg--requests {
+  background:
+    radial-gradient(circle at 96% 7%, rgba(59, 130, 246, 0.17), transparent 23%),
+    radial-gradient(circle at 4% 91%, rgba(14, 165, 233, 0.11), transparent 27%),
+    linear-gradient(180deg, #f8fbff 0%, #f3f6fb 57%, #f4f7fb 100%);
+}
+
+.gmes-manager-bg--requests .gmes-manager-bg__shape--orb {
+  width: 390px;
+  height: 390px;
+  top: -245px;
+  right: -120px;
+}
+
+.gmes-manager-bg--requests .gmes-manager-bg__shape--ring {
+  width: 470px;
+  height: 470px;
+  top: auto;
+  left: auto;
+  right: -320px;
+  bottom: -350px;
+  opacity: 0.62;
+}
+
+.gmes-manager-bg--requests .gmes-manager-bg__shape--blob {
+  width: 485px;
+  height: 295px;
+  right: auto;
+  left: -245px;
+  bottom: -175px;
+  opacity: 0.88;
+  transform: rotate(9deg);
+}
+
+.gmes-manager-bg--requests .gmes-manager-bg__shape--dots {
+  width: 145px;
+  height: 105px;
+  right: 4%;
+  bottom: 4%;
+}
+
+.gmes-manager-bg--requests .gmes-manager-bg__shape--accent {
+  top: 86px;
+  right: 9%;
+  width: 11px;
+  height: 11px;
+}
+
+/* Détail d'une demande : halos latéraux pour laisser les cartes centrales intactes. */
+.gmes-manager-bg--decision {
+  background:
+    radial-gradient(circle at 97% 10%, rgba(59, 130, 246, 0.16), transparent 24%),
+    radial-gradient(circle at 2% 84%, rgba(14, 165, 233, 0.10), transparent 24%),
+    linear-gradient(180deg, #f8fbff 0%, #f3f7fc 52%, #f3f6fb 100%);
+}
+
+.gmes-manager-bg--decision .gmes-manager-bg__shape--orb {
+  width: 410px;
+  height: 410px;
+  right: -220px;
+  top: -255px;
+}
+
+.gmes-manager-bg--decision .gmes-manager-bg__shape--ring {
+  width: 460px;
+  height: 460px;
+  left: -330px;
+  top: 19%;
+  opacity: 0.66;
+}
+
+.gmes-manager-bg--decision .gmes-manager-bg__shape--blob {
+  width: 520px;
+  height: 310px;
+  right: -280px;
+  bottom: -185px;
+  opacity: 0.86;
+}
+
+/* Alertes de chevauchement : identité manager + orange plus assumé. */
+.gmes-manager-bg--alerts {
+  background:
+    radial-gradient(circle at 95% 8%, rgba(249, 115, 22, 0.10), transparent 22%),
+    radial-gradient(circle at 7% 91%, rgba(14, 165, 233, 0.11), transparent 27%),
+    linear-gradient(180deg, #fffaf7 0%, #f7f8fc 36%, #f3f6fb 100%);
+}
+
+.gmes-manager-bg--alerts .gmes-manager-bg__shape--orb {
+  border-color: rgba(249, 115, 22, 0.26);
+  background:
+    radial-gradient(circle at 44% 42%, rgba(255, 255, 255, 0.92) 0 17%, transparent 18%),
+    radial-gradient(circle at 48% 48%, rgba(254, 215, 170, 0.23), rgba(255, 247, 237, 0.02) 68%);
+}
+
+.gmes-manager-bg--alerts .gmes-manager-bg__shape--ring {
+  border-color: rgba(249, 115, 22, 0.23);
+  border-left-color: transparent;
+  border-bottom-color: transparent;
+}
+
+.gmes-manager-bg--alerts .gmes-manager-bg__shape--blob {
+  background: linear-gradient(138deg, rgba(14, 165, 233, 0.17), rgba(249, 115, 22, 0.12), transparent 100%);
+}
+
+.gmes-manager-bg--alerts .gmes-manager-bg__shape--dots {
+  background-image: radial-gradient(circle, rgba(249, 115, 22, 0.58) 1.65px, transparent 1.95px);
+  opacity: 0.72;
+}
+
+.gmes-manager-bg--alerts .gmes-manager-bg__shape--accent {
+  width: 15px;
+  height: 15px;
+  top: 96px;
+  right: 8.5%;
+  box-shadow: 0 0 0 8px rgba(249, 115, 22, 0.09);
+}
+
+/* Présence du service : décor repoussé vers les bords du calendrier. */
+.gmes-manager-bg--calendar .gmes-manager-bg__shape--orb {
+  width: 500px;
+  height: 500px;
+  top: -320px;
+  right: -270px;
+  opacity: 0.95;
+}
+
+.gmes-manager-bg--calendar .gmes-manager-bg__shape--ring {
+  width: 500px;
+  height: 500px;
+  top: -390px;
+  left: 4%;
+  opacity: 0.72;
+}
+
+.gmes-manager-bg--calendar .gmes-manager-bg__shape--blob {
+  width: 525px;
+  height: 320px;
+  right: -280px;
+  bottom: -190px;
+  opacity: 0.9;
+}
+
+.gmes-manager-bg--calendar .gmes-manager-bg__shape--dots {
+  right: auto;
+  left: 3%;
+  bottom: 4%;
+  opacity: 0.60;
+}
+
+.gmes-manager-bg--calendar .gmes-manager-bg__shape--accent {
+  top: 92px;
+  right: 4.5%;
+}
+
+/* Nouvelle demande : proche du Collaborateur, mais avec un halo cyan Responsable. */
+.gmes-manager-bg--form {
+  background:
+    radial-gradient(circle at 96% 9%, rgba(14, 165, 233, 0.15), transparent 24%),
+    linear-gradient(180deg, #f8fcff 0%, #f3f7fc 50%, #f3f6fb 100%);
+}
+
+.gmes-manager-bg--form .gmes-manager-bg__shape--orb {
+  width: 470px;
+  height: 470px;
+  top: -300px;
+  right: -245px;
+  opacity: 0.9;
+}
+
+.gmes-manager-bg--form .gmes-manager-bg__shape--ring {
+  width: 445px;
+  height: 445px;
+  top: -352px;
+  left: 8%;
+  opacity: 0.76;
+}
+
+.gmes-manager-bg--form .gmes-manager-bg__shape--dots {
+  right: auto;
+  left: 2.8%;
+  bottom: 5%;
+  opacity: 0.52;
+}
+
+.gmes-manager-bg--form .gmes-manager-bg__shape--accent {
+  top: 94px;
+  right: 4.5%;
+}
+
+/* Déclarer une absence : un peu plus visible, décor toujours hors formulaire. */
+.gmes-manager-bg--absence-form {
+  background:
+    radial-gradient(circle at 96% 9%, rgba(59, 130, 246, 0.17), transparent 24%),
+    radial-gradient(circle at 5% 88%, rgba(14, 165, 233, 0.095), transparent 25%),
+    linear-gradient(180deg, #f8fbff 0%, #f3f7fc 50%, #f3f6fb 100%);
+}
+
+.gmes-manager-bg--absence-form .gmes-manager-bg__shape--orb {
+  width: 500px;
+  height: 500px;
+  top: -310px;
+  right: -255px;
+}
+
+.gmes-manager-bg--absence-form .gmes-manager-bg__shape--ring {
+  width: 485px;
+  height: 485px;
+  top: -370px;
+  left: 4%;
+  opacity: 0.72;
+}
+
+.gmes-manager-bg--absence-form .gmes-manager-bg__shape--blob {
+  width: 520px;
+  height: 320px;
+  right: -270px;
+  bottom: -182px;
+}
+
+.gmes-manager-bg--absence-form .gmes-manager-bg__shape--dots {
+  right: auto;
+  left: 3.2%;
+  bottom: 4%;
+  opacity: 0.64;
+}
+
+/* Mes demandes personnelles. */
+.gmes-manager-bg--personal-requests,
+.gmes-manager-bg--personal-list {
+  background:
+    radial-gradient(circle at 95% 7%, rgba(59, 130, 246, 0.17), transparent 23%),
+    radial-gradient(circle at 5% 91%, rgba(14, 165, 233, 0.10), transparent 26%),
+    linear-gradient(180deg, #f8fbff 0%, #f3f6fb 56%, #f4f7fb 100%);
+}
+
+.gmes-manager-bg--personal-requests .gmes-manager-bg__shape--ring,
+.gmes-manager-bg--personal-list .gmes-manager-bg__shape--ring {
+  width: 470px;
+  height: 470px;
+  top: auto;
+  left: auto;
+  right: -315px;
+  bottom: -350px;
+  opacity: 0.60;
+}
+
+.gmes-manager-bg--personal-requests .gmes-manager-bg__shape--blob,
+.gmes-manager-bg--personal-list .gmes-manager-bg__shape--blob {
+  width: 470px;
+  height: 285px;
+  right: auto;
+  left: -235px;
+  bottom: -168px;
+  opacity: 0.86;
+  transform: rotate(9deg);
+}
+
+/* Mon solde : décor présent autour des cartes financières. */
+.gmes-manager-bg--balance {
+  background:
+    radial-gradient(circle at 93% 10%, rgba(59, 130, 246, 0.17), transparent 24%),
+    radial-gradient(circle at 4% 90%, rgba(14, 165, 233, 0.12), transparent 27%),
+    linear-gradient(180deg, #f8fbff 0%, #f2f7fc 52%, #f3f6fb 100%);
+}
+
+.gmes-manager-bg--balance .gmes-manager-bg__shape--blob {
+  width: 610px;
+  height: 365px;
+  right: -265px;
+  bottom: -220px;
+  opacity: 0.94;
+}
+
+.gmes-manager-bg--balance .gmes-manager-bg__shape--dots {
+  right: auto;
+  left: 3.2%;
+  bottom: 5%;
+  opacity: 0.68;
+}
+
+/* Documents / Notifications : exploiter davantage les grandes zones vides. */
+.gmes-manager-bg--documents,
+.gmes-manager-bg--notifications {
+  background:
+    radial-gradient(circle at 96% 8%, rgba(59, 130, 246, 0.19), transparent 24%),
+    radial-gradient(circle at 1% 92%, rgba(14, 165, 233, 0.14), transparent 29%),
+    linear-gradient(180deg, #f8fbff 0%, #f3f6fb 55%, #f4f7fb 100%);
+}
+
+.gmes-manager-bg--documents .gmes-manager-bg__shape--ring,
+.gmes-manager-bg--notifications .gmes-manager-bg__shape--ring {
+  width: 610px;
+  height: 610px;
+  top: auto;
+  left: auto;
+  right: -360px;
+  bottom: -430px;
+  opacity: 0.78;
+  transform: rotate(-22deg);
+}
+
+.gmes-manager-bg--documents .gmes-manager-bg__shape--blob,
+.gmes-manager-bg--notifications .gmes-manager-bg__shape--blob {
+  width: 620px;
+  height: 370px;
+  right: auto;
+  left: -330px;
+  bottom: -230px;
+  opacity: 0.92;
+  transform: rotate(8deg);
+}
+
+.gmes-manager-bg--documents .gmes-manager-bg__shape--dots,
+.gmes-manager-bg--notifications .gmes-manager-bg__shape--dots {
+  width: 170px;
+  height: 125px;
+  right: 4%;
+  bottom: 5%;
+  opacity: 0.80;
+}
+
+/* Détails personnels / profil : composition plus calme. */
+.gmes-manager-bg--personal-detail,
+.gmes-manager-bg--profile {
+  background:
+    radial-gradient(circle at 97% 9%, rgba(59, 130, 246, 0.15), transparent 24%),
+    radial-gradient(circle at 3% 87%, rgba(14, 165, 233, 0.09), transparent 24%),
+    linear-gradient(180deg, #f8fbff 0%, #f3f7fc 52%, #f3f6fb 100%);
+}
+
+.gmes-manager-bg--personal-detail .gmes-manager-bg__shape--ring,
+.gmes-manager-bg--profile .gmes-manager-bg__shape--ring {
+  opacity: 0.54;
+}
+
+.gmes-manager-bg--personal-detail .gmes-manager-bg__shape--blob,
+.gmes-manager-bg--profile .gmes-manager-bg__shape--blob {
+  opacity: 0.72;
+}
+
+/* Responsive : décor simplifié pour préserver la lisibilité. */
+@media (max-width: 1024px) {
+  .gmes-manager-bg {
+    background:
+      radial-gradient(circle at 100% 0%, rgba(59, 130, 246, 0.10), transparent 27%),
+      linear-gradient(180deg, #f8fbff 0%, #f3f6fb 100%);
+  }
+
+  .gmes-manager-bg__shape--ring,
+  .gmes-manager-bg__shape--arc {
+    display: none;
+  }
+
+  .gmes-manager-bg__shape--orb {
+    width: 330px;
+    height: 330px;
+    top: -220px;
+    right: -180px;
+    opacity: 0.68;
+  }
+
+  .gmes-manager-bg__shape--blob {
+    width: 390px;
+    height: 240px;
+    right: -210px;
+    bottom: -155px;
+    opacity: 0.58;
+  }
+
+  .gmes-manager-bg__shape--dots {
+    width: 105px;
+    height: 78px;
+    right: 2%;
+    bottom: 2%;
+    opacity: 0.48;
+  }
+
+  .gmes-manager-bg__shape--accent {
+    width: 10px;
+    height: 10px;
+    top: 78px;
+    right: 5%;
+  }
+}
+
+@media (max-width: 640px) {
+  .gmes-manager-bg__shape--blob,
+  .gmes-manager-bg__shape--dots,
+  .gmes-manager-bg__shape--accent {
+    opacity: 0.32;
+  }
+}
