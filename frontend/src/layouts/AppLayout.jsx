@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 
 import { useAuth } from '@/auth/AuthContext'
@@ -227,10 +227,39 @@ function CollaboratorBackgroundDecor() {
 export function AppLayout() {
   const location = useLocation()
   const { user } = useAuth()
-  const [collapsed] = useState(
+  const [collapsed, setCollapsed] = useState(
     () => window.matchMedia('(max-width: 1024px) and (min-width: 768px)').matches,
   )
   const [mobileOpen, setMobileOpen] = useState(false)
+
+  useEffect(() => {
+    const tabletQuery = window.matchMedia('(max-width: 1024px) and (min-width: 768px)')
+    const syncCollapsed = (event) => setCollapsed(event.matches)
+
+    setCollapsed(tabletQuery.matches)
+    tabletQuery.addEventListener?.('change', syncCollapsed)
+
+    return () => tabletQuery.removeEventListener?.('change', syncCollapsed)
+  }, [])
+
+  useEffect(() => {
+    setMobileOpen(false)
+  }, [location.pathname])
+
+  useEffect(() => {
+    document.body.classList.toggle('gmes-mobile-nav-open', mobileOpen)
+
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') setMobileOpen(false)
+    }
+
+    if (mobileOpen) window.addEventListener('keydown', handleKeyDown)
+
+    return () => {
+      document.body.classList.remove('gmes-mobile-nav-open')
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [mobileOpen])
   const collaboratorBackgroundVariant = getCollaboratorBackgroundVariant(
     location.pathname,
     user?.role,
@@ -298,7 +327,10 @@ export function AppLayout() {
       )}
       <Sidebar collapsed={collapsed} onCloseMobile={() => setMobileOpen(false)} />
       <div className="app-shell__main">
-        <Header />
+        <Header
+          onOpenMobile={() => setMobileOpen((value) => !value)}
+          mobileOpen={mobileOpen}
+        />
         <main className={contentClassName}>
           {collaboratorBackgroundVariant && <CollaboratorBackgroundDecor />}
           {managerBackgroundVariant && <ManagerBackgroundDecor />}

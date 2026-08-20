@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { useLocation, useSearchParams } from 'react-router-dom'
 
 import { NotificationsDropdown } from '@/components/layout/NotificationsDropdown'
@@ -44,9 +45,10 @@ function SearchIcon() {
   )
 }
 
-export function Header() {
+export function Header({ onOpenMobile, mobileOpen = false }) {
   const { pathname } = useLocation()
   const [searchParams, setSearchParams] = useSearchParams()
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false)
   const title = headerTitle(pathname)
   const hideSearch =
     ['/app/dashboard', '/app/new-request', '/app/rh-prepare-request', '/app/rh-exports', '/app/rh-holidays', '/app/rh-summer-period', '/app/admin-summer-period', '/app/admin-holidays', '/app/admin-minimum-presence', '/app/director-statistics', '/app/rh-statistics', '/app/director-exports', '/app/director-availability', '/app/history', '/app/my-balance', '/app/my-balances', '/app/declare-absence', '/app/profile', '/app/settings'].includes(pathname) ||
@@ -59,6 +61,10 @@ export function Header() {
   const showSearch = !hideSearch
   const searchEnabled = ['/app/my-requests', '/app/notifications', '/app/requests', '/app/alerts', '/app/service-presence', '/app/rh-all-requests', '/app/rh-absences', '/app/rh-derogations', '/app/rh-balances', '/app/rh-pdf-documents', '/app/rh-leave-types', '/app/admin-leave-types', '/app/admin-users', '/app/admin-services', '/app/admin-technical-logs', '/app/rh-validators', '/app/director-all-requests', '/app/director-presence', '/app/director-unavailability', '/app/my-documents'].includes(pathname)
   const searchValue = searchEnabled ? searchParams.get('q') ?? '' : undefined
+
+  useEffect(() => {
+    setMobileSearchOpen(false)
+  }, [pathname])
 
   const handleSearchChange = (event) => {
     if (!searchEnabled) {
@@ -79,12 +85,39 @@ export function Header() {
 
   return (
     <header className="header">
+      <button
+        type="button"
+        className="header__mobile-menu"
+        onClick={onOpenMobile}
+        aria-label={mobileOpen ? 'Fermer le menu principal' : 'Ouvrir le menu principal'}
+        aria-expanded={mobileOpen}
+        aria-controls="gmes-main-sidebar"
+      >
+        <span aria-hidden="true" className="header__mobile-menu-lines">
+          <span />
+          <span />
+          <span />
+        </span>
+      </button>
+
       <div className="header__page-meta">
         <h1 className="header__page-title">{title}</h1>
       </div>
 
+      {showSearch && searchEnabled && (
+        <button
+          type="button"
+          className="header__mobile-search-toggle"
+          onClick={() => setMobileSearchOpen((value) => !value)}
+          aria-label={mobileSearchOpen ? 'Fermer la recherche' : 'Ouvrir la recherche'}
+          aria-expanded={mobileSearchOpen}
+        >
+          <SearchIcon />
+        </button>
+      )}
+
       {showSearch && (
-        <label className="header__search">
+        <label className={`header__search${mobileSearchOpen ? ' header__search--mobile-open' : ''}`}>
           <SearchIcon />
           <input
             key={pathname}

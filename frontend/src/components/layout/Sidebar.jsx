@@ -12,14 +12,24 @@ export function Sidebar({ collapsed, onCloseMobile }) {
   const showNewRequest = NEW_REQUEST_ROLES.includes(role)
 
   return (
-    <aside className="sidebar" aria-label="Navigation principale">
-      <NavLink to="/" className="sidebar__brand" onClick={onCloseMobile}>
-        <img src={gmesLogo} alt="GMES" className="sidebar__logo-img" />
-        <span className="sidebar__brand-text">
-          <strong>GMES</strong>
-          <small>Congés &amp; absences</small>
-        </span>
-      </NavLink>
+    <aside id="gmes-main-sidebar" className="sidebar" aria-label="Navigation principale">
+      <div className="sidebar__mobile-head">
+        <NavLink to="/" className="sidebar__brand" onClick={onCloseMobile}>
+          <img src={gmesLogo} alt="GMES" className="sidebar__logo-img" />
+          <span className="sidebar__brand-text">
+            <strong>GMES</strong>
+            <small>Congés &amp; absences</small>
+          </span>
+        </NavLink>
+        <button
+          type="button"
+          className="sidebar__mobile-close"
+          onClick={onCloseMobile}
+          aria-label="Fermer le menu principal"
+        >
+          <span aria-hidden="true">×</span>
+        </button>
+      </div>
 
       {showNewRequest && (
         <NavLink

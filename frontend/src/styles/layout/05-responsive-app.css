@@ -1,0 +1,912 @@
+/* ========================================================================== */
+/* Responsive final — GMES                                                   */
+/* Cette couche est volontairement importée en dernier dans le shell.         */
+/* Desktop >= 1025px : rendu existant conservé.                               */
+/* Tablette 768–1024px : sidebar compacte + grilles adaptées.                  */
+/* Mobile <= 767px : navigation off-canvas + contenu mono-colonne.             */
+/* ========================================================================== */
+
+.header__mobile-menu,
+.header__mobile-search-toggle,
+.sidebar__mobile-close {
+  display: none;
+}
+
+.sidebar__mobile-head {
+  display: contents;
+}
+
+/* Sécurise toutes les pages contre les débordements dus aux grilles/flex. */
+.app-shell,
+.app-shell__main,
+.app-shell__content,
+.page-container,
+.app-page-motion,
+.app-page-motion > * {
+  min-width: 0;
+}
+
+/* Les zones à défilement horizontal restent fluides au tactile. */
+.admin-users-table-wrap,
+.admin-services-table-wrap,
+.admin-logs-table-wrap,
+.manager-all-requests-table-wrap,
+.manager-month-planning-wrap,
+.rh-all-requests-table-wrap,
+.rh-absences-table-wrap,
+.rh-balances-table-wrap,
+.rh-balances-history-wrap,
+.rh-derogations-table-wrap,
+.rh-documents-table-wrap,
+.rh-holidays-table-wrap,
+.rh-leave-types-table-wrap,
+.director-all-requests-table-wrap,
+.director-stat-table-wrap,
+.notifications-preferences__table {
+  max-width: 100%;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-inline: contain;
+}
+
+/* -------------------------------------------------------------------------- */
+/* TABLETTE                                                                   */
+/* -------------------------------------------------------------------------- */
+@media (max-width: 1024px) {
+  :root {
+    --content-max-width: 100%;
+  }
+
+  .app-shell__content {
+    padding: 20px 18px 36px;
+  }
+
+  .header {
+    padding-inline: 16px;
+    gap: 8px;
+  }
+
+  .header__page-title {
+    font-size: 17px;
+  }
+
+  .header__search {
+    width: min(190px, 24vw);
+  }
+
+  /* Formulaires/grilles administratives : 2 colonnes max sur tablette. */
+  .admin-users-filters,
+  .admin-services-filters,
+  .admin-logs-filters,
+  .admin-minimum-filters,
+  .rh-documents-filters,
+  .rh-balances-filters,
+  .rh-validators-filters,
+  .rh-holidays-filters,
+  .director-stat-filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  /* Le tableau Soldes RH doit pouvoir défiler même si son CSS desktop dit visible. */
+  .rh-balances-table-wrap {
+    overflow-x: auto;
+  }
+
+  /* Tiroirs suffisamment larges mais jamais hors écran. */
+  .admin-users-drawer,
+  .admin-services-drawer,
+  .admin-logs-drawer,
+  .rh-absence-drawer,
+  .rh-derogation-drawer,
+  .rh-balances-drawer,
+  .rh-validators-drawer {
+    max-width: min(760px, 92vw);
+  }
+
+  /* Calendriers mensuels : conserve une vraie grille lisible et scrollable. */
+  .manager-month-planning {
+    min-width: max-content;
+  }
+
+  .manager-month-planning__corner,
+  .manager-month-planning__person,
+  .manager-month-planning__footer-label {
+    min-width: 180px;
+  }
+
+  /* Gros dashboards : aucun bloc ne doit imposer une largeur au parent. */
+  .dash-grid,
+  .manager-dashboard-grid,
+  .rh-dashboard-grid,
+  .director-dashboard-grid,
+  .admin-dashboard-grid,
+  .director-availability-layout,
+  .manager-request-detail-grid,
+  .request-detail-grid,
+  .absence-form-grid {
+    max-width: 100%;
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/* MOBILE                                                                     */
+/* -------------------------------------------------------------------------- */
+@media (max-width: 767px) {
+  html,
+  body,
+  #root {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  body.gmes-mobile-nav-open {
+    overflow: hidden;
+  }
+
+  :root {
+    --header-height: 60px;
+  }
+
+  /* ----------------------------- Navigation ------------------------------ */
+  .sidebar,
+  .app-shell--collapsed .sidebar {
+    width: min(86vw, 300px);
+    max-width: 300px;
+    transform: translateX(-102%);
+    box-shadow: none;
+    transition: transform 220ms cubic-bezier(.2,.72,.24,1), box-shadow 220ms ease;
+  }
+
+  .app-shell--mobile-open .sidebar,
+  .app-shell--collapsed.app-shell--mobile-open .sidebar {
+    transform: translateX(0);
+    box-shadow: 18px 0 48px rgba(4, 36, 75, .24);
+  }
+
+  .sidebar__mobile-head {
+    display: flex;
+    min-height: var(--header-height);
+    align-items: center;
+    border-bottom: 1px solid rgba(255,255,255,.12);
+  }
+
+  .sidebar__mobile-head .sidebar__brand,
+  .app-shell--collapsed .sidebar__mobile-head .sidebar__brand {
+    flex: 1;
+    min-width: 0;
+    justify-content: flex-start;
+    padding: 0 12px 0 14px;
+  }
+
+  .sidebar__mobile-close {
+    display: grid;
+    width: 42px;
+    height: 42px;
+    flex: 0 0 42px;
+    margin-right: 10px;
+    place-items: center;
+    border-radius: 12px;
+    color: #fff;
+    font-size: 29px;
+    line-height: 1;
+    transition: background .15s ease;
+  }
+
+  .sidebar__mobile-close:hover,
+  .sidebar__mobile-close:focus-visible {
+    background: rgba(255,255,255,.12);
+  }
+
+  .sidebar__logo-img {
+    width: 38px;
+    height: 38px;
+  }
+
+  .sidebar__brand-text,
+  .app-shell--collapsed .sidebar__brand-text {
+    display: flex;
+  }
+
+  .sidebar__brand-text strong {
+    font-size: 17px;
+  }
+
+  .sidebar__brand-text small {
+    font-size: 11px;
+  }
+
+  .sidebar__cta,
+  .app-shell--collapsed .sidebar__cta {
+    width: auto;
+    min-height: 46px;
+    margin: 14px 14px 12px;
+    padding: 0 14px;
+  }
+
+  .sidebar__cta span,
+  .app-shell--collapsed .sidebar__cta span {
+    display: inline;
+  }
+
+  .sidebar__nav,
+  .app-shell--collapsed .sidebar__nav {
+    padding: 6px 10px calc(24px + env(safe-area-inset-bottom));
+  }
+
+  .sidebar__section-title,
+  .app-shell--collapsed .sidebar__section-title {
+    display: block;
+    margin: 17px 11px 7px;
+  }
+
+  .sidebar__nav-item,
+  .app-shell--collapsed .sidebar__nav-item {
+    min-height: 44px;
+    justify-content: flex-start;
+    gap: 11px;
+    padding: 9px 11px;
+    border-radius: 10px;
+  }
+
+  .sidebar__nav-item span,
+  .app-shell--collapsed .sidebar__nav-item span {
+    display: inline;
+  }
+
+  .app-shell__backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: var(--z-backdrop);
+    display: block;
+    background: rgba(4, 27, 57, .52);
+    backdrop-filter: blur(2px);
+  }
+
+  .app-shell__main,
+  .app-shell--collapsed .app-shell__main {
+    margin-left: 0;
+  }
+
+  /* ------------------------------- Header -------------------------------- */
+  .header {
+    height: var(--header-height);
+    min-height: var(--header-height);
+    padding: 0 10px;
+    gap: 5px;
+  }
+
+  .header__mobile-menu {
+    display: grid;
+    width: 42px;
+    height: 42px;
+    flex: 0 0 42px;
+    place-items: center;
+    border-radius: 12px;
+    color: #124f94;
+    transition: background .15s ease, color .15s ease;
+  }
+
+  .header__mobile-menu:hover,
+  .header__mobile-menu[aria-expanded='true'] {
+    background: #edf5ff;
+    color: #1764cf;
+  }
+
+  .header__mobile-menu-lines {
+    display: grid;
+    width: 20px;
+    gap: 4px;
+  }
+
+  .header__mobile-menu-lines > span {
+    width: 20px;
+    height: 2px;
+    border-radius: 99px;
+    background: currentColor;
+  }
+
+  .header__page-meta {
+    min-width: 0;
+  }
+
+  .header__page-title {
+    font-size: clamp(15px, 4.2vw, 17px);
+    line-height: 1.15;
+  }
+
+  .header__search {
+    display: none;
+  }
+
+  .header__mobile-search-toggle {
+    display: grid;
+    width: 40px;
+    height: 40px;
+    flex: 0 0 40px;
+    place-items: center;
+    border-radius: 11px;
+    color: #5e7696;
+    transition: background .15s ease, color .15s ease;
+  }
+
+  .header__mobile-search-toggle:hover,
+  .header__mobile-search-toggle[aria-expanded='true'] {
+    background: #edf5ff;
+    color: #1764cf;
+  }
+
+  .header__search.header__search--mobile-open {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 10px;
+    left: 10px;
+    z-index: calc(var(--z-dropdown) - 1);
+    display: flex;
+    width: auto;
+    min-height: 46px;
+    border-color: #d8e5f3;
+    background: #fff;
+    box-shadow: 0 12px 34px rgba(7, 29, 58, .14);
+  }
+
+  .header__search.header__search--mobile-open input {
+    font-size: 16px;
+  }
+
+  .icon-button,
+  .user-menu__avatar {
+    width: 40px;
+    height: 40px;
+  }
+
+  .user-menu__button {
+    padding: 1px;
+  }
+
+  .user-menu__info,
+  .user-menu__chevron {
+    display: none;
+  }
+
+  /* Dropdowns deviennent de vrais panneaux mobiles. */
+  .dropdown__panel--notifications,
+  .dropdown__panel--user {
+    position: fixed;
+    top: calc(var(--header-height) + 8px);
+    right: 10px;
+    left: 10px;
+    width: auto;
+    max-width: none;
+    max-height: calc(100dvh - var(--header-height) - 20px);
+    overflow-y: auto;
+    border-radius: 16px;
+    box-shadow: 0 18px 50px rgba(7, 29, 58, .18);
+  }
+
+  .dropdown__panel--notifications .notifications__list {
+    max-height: min(55dvh, 430px);
+  }
+
+  .user-menu__item,
+  .notification-item__button {
+    min-height: 46px;
+  }
+
+  /* ------------------------------- Contenu ------------------------------- */
+  .app-shell__content {
+    min-height: calc(100svh - var(--header-height));
+    padding: 14px 12px calc(34px + env(safe-area-inset-bottom));
+  }
+
+  .page-container {
+    width: 100%;
+  }
+
+  .page-heading {
+    margin-bottom: 16px;
+  }
+
+  .page-heading h1 {
+    font-size: 20px;
+  }
+
+  .card,
+  .dash-card,
+  .absence-card,
+  .request-detail-card,
+  .manager-request-detail-card,
+  .director-stat-card,
+  .director-availability-card,
+  .admin-services-section,
+  .notifications-page-card,
+  .settings-card,
+  .profile-card {
+    max-width: 100%;
+  }
+
+  /* --------------------------- Grilles / colonnes ------------------------- */
+  .dash-grid,
+  .manager-dashboard-grid,
+  .rh-dashboard-grid,
+  .director-dashboard-grid,
+  .admin-dashboard-grid,
+  .manager-my-balance__grid,
+  .director-availability-layout,
+  .request-detail-grid,
+  .manager-request-detail-grid,
+  .absence-form-grid,
+  .absence-fields,
+  .rh-balances-correction__grid,
+  .admin-dashboard-service-metrics,
+  .rh-summer-period-date-fields,
+  .rh-summer-period-kpis {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .dash-col,
+  .manager-dashboard-column,
+  .rh-dashboard-column,
+  .director-dashboard-column,
+  .admin-dashboard-column,
+  .request-detail-main,
+  .request-detail-side,
+  .manager-request-detail-main,
+  .director-availability-main,
+  .director-availability-side,
+  .absence-form-main,
+  .absence-form-side {
+    min-width: 0;
+    width: 100%;
+  }
+
+  /* ----------------------------- Barres outils ---------------------------- */
+  .my-requests-toolbar,
+  .notifications-page__toolbar,
+  .history-page__toolbar,
+  .rh-documents-toolbar,
+  .rh-balances-toolbar,
+  .rh-absences-toolbar,
+  .rh-derogations-toolbar,
+  .rh-holidays-toolbar,
+  .rh-leave-types-toolbar,
+  .rh-validators-toolbar,
+  .director-unavailability-toolbar,
+  .director-stat-toolbar,
+  .manager-all-requests-toolbar,
+  .manager-alerts-toolbar,
+  .manager-presence-toolbar,
+  .admin-users-heading,
+  .admin-services-heading,
+  .admin-logs-heading,
+  .admin-minimum-heading {
+    align-items: stretch !important;
+    flex-direction: column !important;
+    gap: 10px;
+  }
+
+  .my-requests-filters,
+  .notifications-page__filters,
+  .history-page__filters,
+  .manager-alerts-filters,
+  .manager-presence-filters,
+  .rh-documents-tabs,
+  .rh-absences-tabs,
+  .rh-derogations-tabs,
+  .rh-holidays-tabs,
+  .director-unavailability-filters {
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+  }
+
+  /* Les filtres à champs deviennent une seule colonne. */
+  .admin-users-filters,
+  .admin-services-filters,
+  .admin-logs-filters,
+  .admin-logs-custom-dates,
+  .admin-minimum-filters,
+  .rh-documents-filters,
+  .rh-balances-filters,
+  .rh-all-requests-filter-panel,
+  .director-all-requests-filter-panel,
+  .manager-all-requests-filter-panel,
+  .director-stat-filters,
+  .rh-holidays-filters,
+  .rh-validators-filters {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  /* ------------------------------ Tableaux ------------------------------- */
+  .admin-users-table-wrap,
+  .admin-services-table-wrap,
+  .admin-logs-table-wrap,
+  .manager-all-requests-table-wrap,
+  .rh-all-requests-table-wrap,
+  .rh-absences-table-wrap,
+  .rh-balances-table-wrap,
+  .rh-balances-history-wrap,
+  .rh-derogations-table-wrap,
+  .rh-documents-table-wrap,
+  .rh-holidays-table-wrap,
+  .rh-leave-types-table-wrap,
+  .director-all-requests-table-wrap,
+  .director-stat-table-wrap,
+  .notifications-preferences__table {
+    width: 100%;
+    overflow-x: auto !important;
+    overflow-y: hidden;
+    padding-bottom: 4px;
+    border-radius: 12px;
+  }
+
+  /* Scrollbars tactiles discrètes mais visibles. */
+  .admin-users-table-wrap::-webkit-scrollbar,
+  .admin-services-table-wrap::-webkit-scrollbar,
+  .admin-logs-table-wrap::-webkit-scrollbar,
+  .manager-all-requests-table-wrap::-webkit-scrollbar,
+  .rh-all-requests-table-wrap::-webkit-scrollbar,
+  .rh-absences-table-wrap::-webkit-scrollbar,
+  .rh-balances-table-wrap::-webkit-scrollbar,
+  .rh-derogations-table-wrap::-webkit-scrollbar,
+  .rh-documents-table-wrap::-webkit-scrollbar,
+  .rh-holidays-table-wrap::-webkit-scrollbar,
+  .rh-leave-types-table-wrap::-webkit-scrollbar,
+  .director-all-requests-table-wrap::-webkit-scrollbar {
+    height: 7px;
+  }
+
+  .admin-users-table-wrap::-webkit-scrollbar-thumb,
+  .admin-services-table-wrap::-webkit-scrollbar-thumb,
+  .admin-logs-table-wrap::-webkit-scrollbar-thumb,
+  .manager-all-requests-table-wrap::-webkit-scrollbar-thumb,
+  .rh-all-requests-table-wrap::-webkit-scrollbar-thumb,
+  .rh-absences-table-wrap::-webkit-scrollbar-thumb,
+  .rh-balances-table-wrap::-webkit-scrollbar-thumb,
+  .rh-derogations-table-wrap::-webkit-scrollbar-thumb,
+  .rh-documents-table-wrap::-webkit-scrollbar-thumb,
+  .rh-holidays-table-wrap::-webkit-scrollbar-thumb,
+  .rh-leave-types-table-wrap::-webkit-scrollbar-thumb,
+  .director-all-requests-table-wrap::-webkit-scrollbar-thumb {
+    border-radius: 99px;
+    background: rgba(47, 134, 239, .35);
+  }
+
+  /* ----------------------------- Calendriers ------------------------------ */
+  .manager-calendar-card {
+    padding: 14px 10px;
+    border-radius: 16px;
+  }
+
+  .manager-calendar-head {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 11px;
+  }
+
+  .manager-calendar-head__title strong {
+    font-size: 17px;
+  }
+
+  .manager-calendar-nav {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .manager-calendar-nav button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .manager-calendar-nav__today {
+    flex: 1 1 auto;
+    min-width: 0 !important;
+  }
+
+  .manager-month-planning-wrap {
+    border-radius: 12px;
+  }
+
+  .manager-month-planning__corner,
+  .manager-month-planning__person,
+  .manager-month-planning__footer-label {
+    min-width: 154px;
+  }
+
+  .manager-month-planning__corner,
+  .manager-month-planning__day-head,
+  .manager-month-planning__person,
+  .manager-month-planning__cell,
+  .manager-month-planning__footer-label,
+  .manager-month-planning__footer-cell {
+    min-height: 64px;
+  }
+
+  /* --------------------------- Tiroirs / modales -------------------------- */
+  .admin-users-overlay,
+  .admin-services-overlay,
+  .admin-logs-overlay,
+  .rh-absence-drawer-backdrop,
+  .rh-validators-overlay,
+  .rh-balances-overlay,
+  .rh-derogation-overlay {
+    align-items: stretch;
+  }
+
+  .admin-users-drawer,
+  .admin-services-drawer,
+  .admin-logs-drawer,
+  .rh-absence-drawer,
+  .rh-derogation-drawer,
+  .rh-balances-drawer,
+  .rh-validators-drawer {
+    width: 100vw !important;
+    max-width: 100vw !important;
+    min-width: 0 !important;
+    height: 100dvh !important;
+    max-height: 100dvh;
+    border-radius: 0 !important;
+  }
+
+  .admin-users-drawer__head,
+  .admin-services-drawer__head,
+  .admin-logs-drawer__head,
+  .rh-absence-drawer__header,
+  .rh-balances-drawer__head,
+  .rh-validators-drawer__head,
+  .rh-derogation-drawer__head {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    min-height: 72px;
+    padding: 14px 14px !important;
+    background: rgba(255,255,255,.98);
+    backdrop-filter: blur(10px);
+  }
+
+  .admin-users-view,
+  .admin-users-form,
+  .admin-services-view,
+  .admin-services-form,
+  .admin-logs-drawer__body,
+  .rh-absence-drawer,
+  .rh-balances-drawer__body,
+  .rh-validators-form,
+  .rh-derogation-drawer {
+    padding-left: 14px !important;
+    padding-right: 14px !important;
+  }
+
+  .manager-decision-modal-backdrop,
+  .rh-request-modal-backdrop,
+  .signature-modal-backdrop {
+    padding: 12px !important;
+  }
+
+  .manager-decision-modal,
+  .rh-request-modal,
+  .signature-modal {
+    width: min(100%, 560px) !important;
+    max-height: calc(100dvh - 24px) !important;
+    overflow-y: auto;
+    border-radius: 16px !important;
+  }
+
+  /* ------------------------------ Formulaires ----------------------------- */
+  input,
+  select,
+  textarea {
+    max-width: 100%;
+  }
+
+  .admin-users-form__grid,
+  .admin-users-details-grid,
+  .admin-services-form-grid,
+  .admin-services-details-grid,
+  .settings-password-grid,
+  .profile-details__grid,
+  .rh-request-modal__grid,
+  .manager-request-detail-info-grid,
+  .request-detail-info,
+  .director-availability-grid,
+  .rh-prepare-employee-picker {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .admin-users-form__grid .is-wide,
+  .admin-users-details-grid .is-wide,
+  .admin-services-form-grid .is-wide,
+  .admin-services-details-grid .is-wide,
+  .rh-validators-form__wide {
+    grid-column: auto !important;
+  }
+
+  /* ---------------------------- Boutons / actions ------------------------- */
+  .admin-users-new,
+  .admin-services-new,
+  .admin-logs-export,
+  .admin-minimum-save,
+  .my-requests-new-button,
+  .rh-all-requests-new,
+  .rh-all-requests-filter-button,
+  .director-all-requests-filter-button,
+  .manager-view-toggle,
+  .rh-balances-correction-btn {
+    min-height: 44px;
+  }
+
+  .admin-users-drawer__actions,
+  .admin-services-drawer__actions,
+  .rh-balances-correction__actions,
+  .rh-validators-form__actions,
+  .absence-summary__actions,
+  .settings-actions,
+  .manager-decision-modal__footer {
+    flex-wrap: wrap;
+  }
+
+  /* --------------------------- Bas de listes ------------------------------ */
+  .admin-users-footer,
+  .admin-services-footer,
+  .admin-logs-footer,
+  .manager-all-requests-footer,
+  .manager-alerts-pagination-footer,
+  .my-requests-pagination-footer,
+  .rh-all-requests-footer,
+  .rh-documents-footer,
+  .rh-balances-footer,
+  .director-all-requests-footer {
+    align-items: stretch !important;
+    flex-direction: column !important;
+    gap: 10px !important;
+  }
+
+  .gmes-pagination {
+    max-width: 100%;
+  }
+
+  /* ------------------------------ Décors --------------------------------- */
+  .gmes-collab-bg__decor,
+  .gmes-manager-bg__decor,
+  .gmes-rh-bg__decor,
+  .gmes-director-bg__decor,
+  .gmes-admin-bg__decor {
+    opacity: .78;
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/* PETITS TÉLÉPHONES                                                          */
+/* -------------------------------------------------------------------------- */
+@media (max-width: 480px) {
+  .app-shell__content {
+    padding-inline: 9px;
+    padding-top: 11px;
+  }
+
+  .header {
+    padding-inline: 7px;
+  }
+
+  .header__mobile-menu,
+  .header__mobile-search-toggle,
+  .icon-button,
+  .user-menu__avatar {
+    width: 38px;
+    height: 38px;
+  }
+
+  .header__mobile-menu {
+    flex-basis: 38px;
+  }
+
+  .header__page-title {
+    font-size: 15px;
+  }
+
+  .sidebar,
+  .app-shell--collapsed .sidebar {
+    width: min(90vw, 292px);
+  }
+
+  /* Les filtres type onglets restent exploitables avec le pouce. */
+  .my-requests-filters,
+  .notifications-page__filters,
+  .manager-alerts-filters,
+  .rh-all-requests-tabs,
+  .director-all-requests-tabs,
+  .manager-all-requests-tabs {
+    gap: 6px;
+  }
+
+  /* Actions principales en pleine largeur lorsqu'il n'y a plus de place. */
+  .admin-users-new,
+  .admin-services-new,
+  .admin-logs-export,
+  .my-requests-new-button,
+  .rh-all-requests-new,
+  .rh-all-requests-filter-button,
+  .director-all-requests-filter-button,
+  .manager-decision-btn,
+  .absence-button,
+  .settings-btn,
+  .rh-absence-button,
+  .rh-derogation-button,
+  .rh-validators-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .admin-users-drawer__actions,
+  .admin-services-drawer__actions,
+  .rh-balances-correction__actions,
+  .rh-validators-form__actions,
+  .manager-decision-modal__footer,
+  .settings-actions {
+    flex-direction: column;
+  }
+
+  .admin-users-drawer__actions > *,
+  .admin-services-drawer__actions > *,
+  .rh-balances-correction__actions > *,
+  .rh-validators-form__actions > *,
+  .manager-decision-modal__footer > *,
+  .settings-actions > * {
+    width: 100%;
+  }
+
+  .profile-hero,
+  .document-card,
+  .notifications-page-card,
+  .history-row {
+    border-radius: 14px;
+  }
+
+  .profile-hero,
+  .profile-details,
+  .settings-card,
+  .absence-card,
+  .request-detail-card,
+  .manager-request-detail-card {
+    padding-left: 13px;
+    padding-right: 13px;
+  }
+
+  /* Planning : colonne collaborateurs un peu plus compacte sur 360/390px. */
+  .manager-month-planning__corner,
+  .manager-month-planning__person,
+  .manager-month-planning__footer-label {
+    min-width: 138px;
+  }
+
+  .manager-month-planning__avatar {
+    width: 34px;
+    height: 34px;
+    flex-basis: 34px;
+  }
+
+  .dropdown__panel--notifications,
+  .dropdown__panel--user {
+    right: 7px;
+    left: 7px;
+  }
+}
+
+/* iOS : évite que Safari zoome automatiquement sur les champs <16px. */
+@supports (-webkit-touch-callout: none) {
+  @media (max-width: 767px) {
+    input,
+    select,
+    textarea {
+      font-size: 16px !important;
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar,
+  .header__mobile-menu,
+  .sidebar__mobile-close {
+    transition: none !important;
+  }
+}
