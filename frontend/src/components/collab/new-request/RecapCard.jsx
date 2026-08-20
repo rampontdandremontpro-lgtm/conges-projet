@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 
 import { Icon } from '@/components/ui/Icon'
+import { useAutoDismiss } from '@/hooks/useAutoDismiss'
 import { formatDays, formatRangeCompactFR } from '@/utils/format'
 import { buildNoticeRules, evaluateNotice } from '@/utils/leaveNotice'
 import { calculateDeductedDaysPreview } from '@/utils/leaveDuration'
@@ -62,6 +63,8 @@ export function RecapCard({
   const [derogationReason, setDerogationReason] = useState('')
   const [derogationSending, setDerogationSending] = useState(false)
   const [derogationError, setDerogationError] = useState(null)
+
+  useAutoDismiss(derogationError, setDerogationError)
 
   const { startDate, endDate, startPeriod, endPeriod } = selection ?? {}
   const periodComplete = Boolean(startDate && endDate)

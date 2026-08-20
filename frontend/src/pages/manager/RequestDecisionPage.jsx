@@ -4,6 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { SignatureModal } from '@/components/collab/new-request/SignatureModal'
 import { ManagerRefusalModal } from '@/components/manager/requests/ManagerRefusalModal'
 import { Icon } from '@/components/ui/Icon'
+import { useAutoDismiss } from '@/hooks/useAutoDismiss'
 import {
   getManagerRequest,
   getManagerRequestAvailability,
@@ -55,6 +56,8 @@ export function ManagerRequestDecisionPage() {
   const [submitting, setSubmitting] = useState(false)
   const [feedback, setFeedback] = useState(null)
   const [minimumPresenceJustification, setMinimumPresenceJustification] = useState('')
+
+  useAutoDismiss(feedback, setFeedback)
 
   const load = useCallback(async () => {
     setState((current) => ({ ...current, loading: true, error: null }))

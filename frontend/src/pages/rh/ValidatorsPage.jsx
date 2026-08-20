@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 
 import { Icon } from '@/components/ui/Icon'
+import { useAutoDismiss } from '@/hooks/useAutoDismiss'
 import { PaginationBar } from '@/components/ui/PaginationBar'
 import { PageContainer } from '@/components/ui/PageContainer'
 import {
@@ -192,6 +193,8 @@ function BackupValidatorDrawer({ service, users, validatorData, onClose, onSaved
   const [saving, setSaving] = useState(false)
   const [feedback, setFeedback] = useState('')
 
+  useAutoDismiss(feedback, setFeedback, { clearValue: '' })
+
   const submit = async (event) => {
     event.preventDefault()
     if (!validatorId || saving) return
@@ -277,6 +280,8 @@ function ReplacementDrawer({ mode, item, users, onClose, onSaved }) {
   })
   const [saving, setSaving] = useState(false)
   const [feedback, setFeedback] = useState('')
+
+  useAutoDismiss(feedback, setFeedback, { clearValue: '' })
 
   const submit = async (event) => {
     event.preventDefault()

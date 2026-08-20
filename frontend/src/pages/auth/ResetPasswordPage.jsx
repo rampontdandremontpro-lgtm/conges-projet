@@ -3,6 +3,7 @@ import { Link, Navigate, useSearchParams } from 'react-router-dom'
 
 import { PasswordRecoveryLayout, LockIcon } from '@/components/auth/PasswordRecoveryLayout'
 import { useAuth } from '@/auth/AuthContext'
+import { useAutoDismiss } from '@/hooks/useAutoDismiss'
 import {
   resetPassword,
   validatePasswordResetToken,
@@ -25,6 +26,8 @@ export function ResetPasswordPage() {
   const [submitting, setSubmitting] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState('')
+
+  useAutoDismiss(error, setError, { clearValue: '' })
 
   const rules = useMemo(() => passwordRules(password), [password])
   const passwordsMatch = Boolean(password) && password === confirmation

@@ -5,6 +5,7 @@ import gmesLogo from '@/assets/logo-gmes.png'
 import gmesBugbustersLogo from '@/assets/gmes-bugbusters-logo.png'
 import poleApplicatifLogo from '@/assets/pole-applicatif-logo.png'
 import { useAuth } from '@/auth/AuthContext'
+import { useAutoDismiss } from '@/hooks/useAutoDismiss'
 
 const REMEMBERED_EMAIL_KEY = 'gmes_remembered_email'
 
@@ -83,6 +84,8 @@ export function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
+
+  useAutoDismiss(error, setError, { clearValue: '' })
 
   if (isAuthenticated) {
     return <Navigate to="/app/dashboard" replace />

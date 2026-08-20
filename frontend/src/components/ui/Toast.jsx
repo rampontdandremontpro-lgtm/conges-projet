@@ -1,6 +1,9 @@
 import { Icon } from '@/components/ui/Icon'
+import { useAutoDismiss } from '@/hooks/useAutoDismiss'
 
-export function Toast({ kind = 'info', message, onClose }) {
+export function Toast({ kind = 'info', message, onClose, duration = 5000 }) {
+  useAutoDismiss(message, onClose, { delay: duration, clearValue: undefined, enabled: Boolean(onClose) })
+
   if (!message) {
     return null
   }

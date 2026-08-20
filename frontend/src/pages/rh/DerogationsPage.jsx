@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 
 import { Icon } from '@/components/ui/Icon'
+import { useAutoDismiss } from '@/hooks/useAutoDismiss'
 import { PaginationBar } from '@/components/ui/PaginationBar'
 import { PageContainer } from '@/components/ui/PageContainer'
 import {
@@ -134,6 +135,8 @@ function DerogationDetailDrawer({ itemId, onClose, onChanged }) {
   const [comment, setComment] = useState('')
   const [busy, setBusy] = useState('')
   const [feedback, setFeedback] = useState('')
+
+  useAutoDismiss(feedback, setFeedback, { clearValue: '' })
 
   const load = useCallback(async () => {
     setState((current) => ({ ...current, loading: true, error: false }))

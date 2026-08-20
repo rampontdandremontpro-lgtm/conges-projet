@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 
 import { Icon } from '@/components/ui/Icon'
+import { useAutoDismiss } from '@/hooks/useAutoDismiss'
 import {
   getMyNotifications,
   getNotificationPreferences,
@@ -220,6 +221,9 @@ function NotificationPreferences({ onBack }) {
   const [resetting, setResetting] = useState(false)
   const [error, setError] = useState('')
   const [saved, setSaved] = useState(false)
+
+  useAutoDismiss(error, setError, { clearValue: '' })
+  useAutoDismiss(saved, setSaved, { clearValue: false })
 
   const applyPayload = useCallback((payload) => {
     const next = Array.isArray(payload?.preferences) ? payload.preferences : []

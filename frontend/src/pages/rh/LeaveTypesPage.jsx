@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 
 import { Icon } from '@/components/ui/Icon'
+import { useAutoDismiss } from '@/hooks/useAutoDismiss'
 import { PaginationBar } from '@/components/ui/PaginationBar'
 import { PageContainer } from '@/components/ui/PageContainer'
 import {
@@ -99,6 +100,8 @@ function LeaveTypeDrawer({ type, onClose, onSaved }) {
   const [form, setForm] = useState(() => formFromType(type))
   const [busy, setBusy] = useState(false)
   const [feedback, setFeedback] = useState('')
+
+  useAutoDismiss(feedback, setFeedback, { clearValue: '' })
   const isEdit = Boolean(type?.id)
 
   useEffect(() => {

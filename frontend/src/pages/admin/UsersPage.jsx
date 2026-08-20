@@ -5,6 +5,7 @@ import { useAuth } from '@/auth/AuthContext'
 import { Icon } from '@/components/ui/Icon'
 import { PaginationBar } from '@/components/ui/PaginationBar'
 import { PageContainer } from '@/components/ui/PageContainer'
+import { useAutoDismiss } from '@/hooks/useAutoDismiss'
 import {
   createAdminUser,
   disableAdminUser,
@@ -93,6 +94,8 @@ function UserDrawer({ mode, user, services, onClose, onSaved, onEdit }) {
   const [form, setForm] = useState(() => formFromUser(user))
   const [busy, setBusy] = useState(false)
   const [feedback, setFeedback] = useState('')
+
+  useAutoDismiss(feedback, setFeedback, { clearValue: '' })
 
   useEffect(() => {
     setForm(formFromUser(user))

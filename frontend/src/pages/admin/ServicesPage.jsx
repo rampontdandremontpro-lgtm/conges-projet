@@ -4,6 +4,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Icon } from '@/components/ui/Icon'
 import { PaginationBar } from '@/components/ui/PaginationBar'
 import { PageContainer } from '@/components/ui/PageContainer'
+import { useAutoDismiss } from '@/hooks/useAutoDismiss'
 import {
   createAdminService,
   disableAdminService,
@@ -74,6 +75,8 @@ function ServiceDrawer({ mode, service, users, counts, onClose, onSaved, onEdit 
   const [form, setForm] = useState(() => serviceForm(service))
   const [busy, setBusy] = useState(false)
   const [feedback, setFeedback] = useState('')
+
+  useAutoDismiss(feedback, setFeedback, { clearValue: '' })
 
   useEffect(() => {
     setForm(serviceForm(service))

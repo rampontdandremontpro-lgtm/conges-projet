@@ -3,6 +3,7 @@ import { Link, Navigate, useLocation } from 'react-router-dom'
 
 import { PasswordRecoveryLayout, MailIcon } from '@/components/auth/PasswordRecoveryLayout'
 import { useAuth } from '@/auth/AuthContext'
+import { useAutoDismiss } from '@/hooks/useAutoDismiss'
 import { requestPasswordReset } from '@/services/auth/passwordRecovery'
 
 export function ForgotPasswordPage() {
@@ -13,6 +14,8 @@ export function ForgotPasswordPage() {
   const [submitting, setSubmitting] = useState(false)
   const [sent, setSent] = useState(false)
   const [error, setError] = useState('')
+
+  useAutoDismiss(error, setError, { clearValue: '' })
 
   if (isAuthenticated) {
     return <Navigate to="/app/dashboard" replace />

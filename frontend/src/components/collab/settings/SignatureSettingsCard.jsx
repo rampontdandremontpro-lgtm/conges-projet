@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 
 import { Icon } from '@/components/ui/Icon'
+import { useAutoDismiss } from '@/hooks/useAutoDismiss'
 
 const INITIALS_PATTERN = /^[\p{L}.\-\s]+$/u
 
@@ -42,6 +43,8 @@ export function SignatureSettingsCard({ signature, loading, saving, onSave, onDe
   const canvasRef = useRef(null)
   const drawingRef = useRef(false)
   const canvasSizeRef = useRef({ width: 0, height: 0 })
+
+  useAutoDismiss(localError, setLocalError)
 
   useEffect(() => {
     if (!signature?.configured) {

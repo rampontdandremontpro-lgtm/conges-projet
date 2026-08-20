@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import '@/styles/components/signature-modal.css'
 
 import { Icon } from '@/components/ui/Icon'
+import { useAutoDismiss } from '@/hooks/useAutoDismiss'
 import { getMySignature } from '@/services/profile'
 
 const INITIALS_PATTERN = /^[\p{L}.\-\s]+$/u
@@ -29,6 +30,8 @@ export function SignatureModal({
   const [error, setError] = useState(null)
   const [savedSignature, setSavedSignature] = useState(null)
   const [savedLoading, setSavedLoading] = useState(false)
+
+  useAutoDismiss(error, setError)
 
   const canvasRef = useRef(null)
   const containerRef = useRef(null)

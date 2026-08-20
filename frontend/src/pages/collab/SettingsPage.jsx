@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useAuth } from '@/auth/AuthContext'
 import { SignatureSettingsCard } from '@/components/collab/settings/SignatureSettingsCard'
 import { Icon } from '@/components/ui/Icon'
+import { useAutoDismiss } from '@/hooks/useAutoDismiss'
 import {
   changeMyPassword,
   deleteMySignature,
@@ -30,6 +31,8 @@ export function SettingsPage() {
     next: false,
     confirm: false,
   })
+
+  useAutoDismiss(feedback, setFeedback)
 
   const loadSignature = useCallback(async () => {
     if (!canSign) return

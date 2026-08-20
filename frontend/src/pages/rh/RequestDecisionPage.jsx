@@ -6,6 +6,7 @@ import { useAuth } from '@/auth/AuthContext'
 import { SignatureModal } from '@/components/collab/new-request/SignatureModal'
 import { ManagerRefusalModal } from '@/components/manager/requests/ManagerRefusalModal'
 import { Icon } from '@/components/ui/Icon'
+import { useAutoDismiss } from '@/hooks/useAutoDismiss'
 import {
   getRhRequest,
   getRhRequestAvailability,
@@ -61,6 +62,8 @@ export function RhRequestDecisionPage() {
   const [submitting, setSubmitting] = useState(false)
   const [feedback, setFeedback] = useState(null)
   const [minimumPresenceJustification, setMinimumPresenceJustification] = useState('')
+
+  useAutoDismiss(feedback, setFeedback)
   const [directorAgreementConfirmed, setDirectorAgreementConfirmed] = useState(false)
 
   const load = useCallback(async () => {

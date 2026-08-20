@@ -5,6 +5,7 @@ import { DocumentPreviewModal } from '@/components/collab/documents/DocumentPrev
 import { Icon } from '@/components/ui/Icon'
 import { PaginationBar } from '@/components/ui/PaginationBar'
 import { PageContainer } from '@/components/ui/PageContainer'
+import { useAutoDismiss } from '@/hooks/useAutoDismiss'
 import {
   acceptRhAbsenceDocument,
   cancelRhAbsence,
@@ -146,6 +147,8 @@ function CreateAbsenceDrawer({ employees, types, onClose, onSaved }) {
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+
+  useAutoDismiss(error, setError, { clearValue: '' })
 
   const selectedType = useMemo(
     () => types.find((type) => Number(type.id) === Number(form.leaveTypeId)) ?? null,
