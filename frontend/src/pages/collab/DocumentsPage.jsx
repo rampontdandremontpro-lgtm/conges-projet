@@ -301,6 +301,7 @@ export function DocumentsPage() {
     blob: null,
     blobUrl: null,
     mimeType: null,
+    filename: null,
     error: null,
   })
 
@@ -455,6 +456,7 @@ export function DocumentsPage() {
         blob: null,
         blobUrl: null,
         mimeType: document.mimeType || null,
+        filename: null,
         error: null,
       }
     })
@@ -476,6 +478,7 @@ export function DocumentsPage() {
           blob: result.blob,
           blobUrl,
           mimeType: result.mimeType,
+          filename: result.filename || document.originalName || null,
           error: null,
         }
       })
@@ -495,7 +498,7 @@ export function DocumentsPage() {
     if (!preview.document || !preview.blob) return
     triggerBlobDownload(
       preview.blob,
-      preview.document.originalName || (preview.document.documentKind === 'JUSTIFICATIF' ? 'justificatif' : 'document.pdf'),
+      preview.filename || preview.document.originalName || (preview.document.documentKind === 'JUSTIFICATIF' ? 'justificatif' : 'document.pdf'),
     )
   }
 

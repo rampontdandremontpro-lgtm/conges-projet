@@ -33,6 +33,17 @@ import { ValidateLeaveRequestDto } from './dto/validate-leave-request.dto';
 import { LeaveRequestsService } from './leave-requests.service';
 import { LeaveRequestSchedulerService } from './leave-request-scheduler.service';
 
+
+function attachmentContentDisposition(filename: string): string {
+  const asciiFallback = filename
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^\x20-\x7E]/g, '_')
+    .replace(/["\\]/g, '_');
+
+  return `attachment; filename="${asciiFallback}"; filename*=UTF-8''${encodeURIComponent(filename)}`;
+}
+
 type AuthenticatedRequest = Request & {
   user: AuthenticatedUser;
 };
@@ -332,7 +343,7 @@ export class LeaveRequestsController {
     response.setHeader('Content-Type', 'application/pdf');
     response.setHeader(
       'Content-Disposition',
-      `attachment; filename="${file.filename}"`,
+      attachmentContentDisposition(file.filename),
     );
     response.setHeader('Content-Length', String(file.buffer.length));
     response.setHeader(
@@ -360,7 +371,7 @@ export class LeaveRequestsController {
     response.setHeader('Content-Type', 'application/pdf');
     response.setHeader(
       'Content-Disposition',
-      `attachment; filename="${file.filename}"`,
+      attachmentContentDisposition(file.filename),
     );
     response.setHeader('Content-Length', String(file.buffer.length));
     response.setHeader(
@@ -393,7 +404,7 @@ export class LeaveRequestsController {
     response.setHeader('Content-Type', 'application/pdf');
     response.setHeader(
       'Content-Disposition',
-      `attachment; filename="${file.filename}"`,
+      attachmentContentDisposition(file.filename),
     );
     response.setHeader(
       'Content-Length',

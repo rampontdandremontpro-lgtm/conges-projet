@@ -1,5 +1,5 @@
 import { apiClient } from '@/services/apiClient'
-import { triggerBlobDownload } from '@/services/documents'
+import { filenameFromDisposition, triggerBlobDownload } from '@/services/documents'
 
 export async function getRhDocumentLibrary(filters = {}) {
   const params = {}
@@ -46,12 +46,16 @@ export async function fetchRhDocument(document) {
   return {
     blob: response.data,
     mimeType: response.headers['content-type'] || 'application/pdf',
+    filename: filenameFromDisposition(
+      response.headers['content-disposition'],
+      document.originalName || 'document.pdf',
+    ),
   }
 }
 
 export async function downloadRhDocument(document) {
-  const { blob } = await fetchRhDocument(document)
-  triggerBlobDownload(blob, document.originalName || 'document')
+  const { blob, filename } = await fetchRhDocument(document)
+  triggerBlobDownload(blob, filename || document.originalName || 'document.pdf')
 }
 
 export async function getRhDocumentServices() {

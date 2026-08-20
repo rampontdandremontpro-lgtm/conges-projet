@@ -13,6 +13,11 @@ async function bootstrap(): Promise<void> {
   app.enableCors({
     origin: 'http://localhost:5173',
     credentials: true,
+    exposedHeaders: [
+      'Content-Disposition',
+      'X-Document-Reference',
+      'X-Document-Checksum',
+    ],
   });
 
   app.useGlobalPipes(

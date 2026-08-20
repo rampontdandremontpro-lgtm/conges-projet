@@ -1,5 +1,20 @@
 import { apiClient } from '@/services/apiClient'
 
+
+export function filenameFromDisposition(disposition, fallback = 'document.pdf') {
+  if (!disposition) return fallback
+
+  const utf8Match = disposition.match(/filename\*=UTF-8''([^;]+)/i)
+  if (utf8Match?.[1]) {
+    try {
+      return decodeURIComponent(utf8Match[1].trim())
+    } catch {}
+  }
+
+  const plainMatch = disposition.match(/filename="?([^";]+)"?/i)
+  return plainMatch?.[1]?.trim() || fallback
+}
+
 export async function getMyDocuments() {
   const { data } = await apiClient.get('/documents/my')
   return data
@@ -44,6 +59,10 @@ export async function fetchOfficialPdf(document) {
   return {
     blob: response.data,
     mimeType: response.headers['content-type'] || 'application/pdf',
+    filename: filenameFromDisposition(
+      response.headers['content-disposition'],
+      document.originalName || 'document.pdf',
+    ),
   }
 }
 
@@ -59,8 +78,8 @@ export function triggerBlobDownload(blob, filename) {
 }
 
 export async function downloadOfficialPdf(document) {
-  const { blob } = await fetchOfficialPdf(document)
-  triggerBlobDownload(blob, document.originalName || 'document.pdf')
+  const { blob, filename } = await fetchOfficialPdf(document)
+  triggerBlobDownload(blob, filename)
 }
 
 export async function downloadMyJustificatif(document) {

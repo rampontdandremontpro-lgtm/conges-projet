@@ -1,4 +1,5 @@
 import { apiClient } from '@/services/apiClient'
+import { filenameFromDisposition } from '@/services/documents'
 
 function triggerPdfDownload(blob, filename) {
   const url = URL.createObjectURL(blob)
@@ -80,14 +81,22 @@ export async function uploadAbsenceJustificatif(id, file) {
   return data
 }
 
-export async function downloadPendingSummaryPdf(id, filename = `recapitulatif-demande-${id}.pdf`) {
+export async function downloadPendingSummaryPdf(id, filename = null) {
   const response = await apiClient.get(`/leave-requests/${id}/pending-summary-pdf`, { responseType: 'blob' })
-  triggerPdfDownload(response.data, filename)
+  const serverFilename = filenameFromDisposition(
+    response.headers['content-disposition'],
+    `recapitulatif-demande-${id}.pdf`,
+  )
+  triggerPdfDownload(response.data, filename || serverFilename)
 }
 
-export async function downloadValidationPdf(id, filename = `demande-conge-${id}.pdf`) {
+export async function downloadValidationPdf(id, filename = null) {
   const response = await apiClient.get(`/leave-requests/${id}/pdf`, { responseType: 'blob' })
-  triggerPdfDownload(response.data, filename)
+  const serverFilename = filenameFromDisposition(
+    response.headers['content-disposition'],
+    `demande-conge-${id}.pdf`,
+  )
+  triggerPdfDownload(response.data, filename || serverFilename)
 }
 
 export async function downloadCancellationPdf(id, filename = `annulation-conge-${id}.pdf`) {

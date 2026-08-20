@@ -59,6 +59,8 @@ export class DocumentPdfService {
   private readonly pdfTemplateWidthPx = 1055;
   private readonly pdfTemplateHeightPx = 1491;
 
+  private readonly validationPdfDesignVersion = 'code-v7-trace-uniform';
+
   constructor(
     @InjectRepository(Document)
     private readonly documentRepository: Repository<Document>,
@@ -90,7 +92,7 @@ export class DocumentPdfService {
       ? storedDocument.originalName.replace(/\.pdf$/i, '')
       : this.createValidationReference(leaveRequest, generatedAt);
     const usesCurrentPdfDesign =
-      storedDocument?.storageKey?.includes('/code-v5/') === true;
+      storedDocument?.storageKey?.includes(`/${this.validationPdfDesignVersion}/`) === true;
     const storageKey = usesCurrentPdfDesign
       ? storedDocument!.storageKey
       : this.createValidationStorageKey(referenceNumber, generatedAt);
@@ -772,7 +774,7 @@ export class DocumentPdfService {
     return [
       'official-pdfs',
       'validation',
-      'code-v5',
+      this.validationPdfDesignVersion,
       String(generatedAt.getFullYear()),
       `${referenceNumber}.pdf`,
     ].join('/');
@@ -945,63 +947,71 @@ export class DocumentPdfService {
       valueXPx: 412,
       lineStartXPx: 108,
       lineEndXPx: 952,
+      firstRowYPx: 344,
+      rowHeightPx: 38,
     });
 
     this.drawExactSectionCard(document, {
       xPx: 70,
-      yPx: 510,
+      yPx: 500,
       widthPx: 914,
-      heightPx: 255,
+      heightPx: 245,
       title: 'DÉTAILS DU CONGÉ',
       icon: 'calendar',
       labels: [
-        ['Type de congé', 582],
-        ['Date de début', 620],
-        ['Date de fin', 658],
-        ['Durée calendaire', 696],
-        ['Jours ouvrables décomptés', 734],
+        ['Type de congé', 572],
+        ['Date de début', 610],
+        ['Date de fin', 648],
+        ['Durée calendaire', 686],
+        ['Jours ouvrables décomptés', 724],
       ],
       labelXPx: 110,
       valueXPx: 412,
       lineStartXPx: 108,
       lineEndXPx: 952,
+      firstRowYPx: 572,
+      rowHeightPx: 38,
     });
 
     this.drawExactSectionCard(document, {
       xPx: 70,
-      yPx: 785,
+      yPx: 755,
       widthPx: 914,
-      heightPx: 173,
+      heightPx: 165,
       title: 'SITUATION DU SOLDE',
       icon: 'balance',
       labels: [
-        ['Solde réel avant validation', 855],
-        ['Solde potentiel avant validation', 893],
-        ['Solde réel après validation', 931],
+        ['Solde réel avant validation', 825],
+        ['Solde potentiel avant validation', 863],
+        ['Solde réel après validation', 901],
       ],
       labelXPx: 110,
       valueXPx: 412,
       lineStartXPx: 108,
       lineEndXPx: 952,
+      firstRowYPx: 825,
+      rowHeightPx: 38,
     });
 
     this.drawExactSectionCard(document, {
       xPx: 70,
-      yPx: 975,
+      yPx: 930,
       widthPx: 914,
-      heightPx: 173,
+      heightPx: 220,
       title: 'TRAÇABILITÉ',
       icon: 'document',
       labels: [
-        ['Soumise le', 1047],
-        ['Décision enregistrée le', 1076],
-        ['Décision prise par', 1105],
-        ['Rôle du valideur', 1134],
+        ['Soumise le', 1004],
+        ['Décision enregistrée le', 1042],
+        ['Décision prise par', 1080],
+        ['Rôle du valideur', 1118],
       ],
       labelXPx: 110,
       valueXPx: 412,
       lineStartXPx: 108,
       lineEndXPx: 952,
+      firstRowYPx: 1004,
+      rowHeightPx: 38,
     });
 
     this.drawExactValidationSignatureShell(document);
@@ -1308,6 +1318,8 @@ export class DocumentPdfService {
       lineEndXPx: number;
       compactRows?: boolean;
       pendingCard?: boolean;
+      firstRowYPx?: number;
+      rowHeightPx?: number;
     },
   ): void {
     this.drawExactShadow(document, {
@@ -1367,10 +1379,18 @@ export class DocumentPdfService {
       color: '#154FA6',
     });
 
-    input.labels.forEach(([label, yPx], index) => {
+    const explicitRowHeightPx = input.rowHeightPx ?? null;
+    const explicitFirstRowYPx = input.firstRowYPx ?? null;
+
+    input.labels.forEach(([label, configuredYPx], index) => {
+      const rowYPx =
+        explicitRowHeightPx !== null && explicitFirstRowYPx !== null
+          ? explicitFirstRowYPx + index * explicitRowHeightPx
+          : configuredYPx;
+
       this.drawExactPdfText(document, label, {
         xPx: input.labelXPx,
-        yPx,
+        yPx: rowYPx,
         widthPx: input.valueXPx - input.labelXPx - 24,
         fontSizePx: input.pendingCard ? 14.5 : input.compactRows ? 13.3 : 14.2,
         font: 'Helvetica-Bold',
@@ -1378,9 +1398,11 @@ export class DocumentPdfService {
       });
 
       if (index < input.labels.length - 1) {
-        const currentY = yPx;
-        const nextY = input.labels[index + 1][1];
-        const lineY = currentY + (nextY - currentY) * 0.72;
+        const nextRowYPx =
+          explicitRowHeightPx !== null && explicitFirstRowYPx !== null
+            ? rowYPx + explicitRowHeightPx
+            : input.labels[index + 1][1];
+        const lineY = rowYPx + (nextRowYPx - rowYPx) * 0.72;
         document
           .moveTo(
             this.pdfTemplateX(document, input.lineStartXPx),
@@ -1636,7 +1658,7 @@ export class DocumentPdfService {
     document: PDFKit.PDFDocument,
   ): void {
     const xPx = 70;
-    const yPx = 1154;
+    const yPx = 1160;
     const widthPx = 914;
     const heightPx = 202;
 
@@ -1661,7 +1683,7 @@ export class DocumentPdfService {
 
     this.drawExactPdfText(document, 'SIGNATURES', {
       xPx: 442,
-      yPx: 1174,
+      yPx: 1180,
       widthPx: 170,
       fontSizePx: 18,
       font: 'Helvetica-Bold',
@@ -1673,11 +1695,11 @@ export class DocumentPdfService {
       document
         .moveTo(
           this.pdfTemplateX(document, startXPx),
-          this.pdfTemplateY(document, 1184),
+          this.pdfTemplateY(document, 1190),
         )
         .lineTo(
           this.pdfTemplateX(document, startXPx + 45),
-          this.pdfTemplateY(document, 1184),
+          this.pdfTemplateY(document, 1190),
         )
         .lineWidth(this.pdfTemplateY(document, 1.3))
         .strokeColor('#8FB4E3')
@@ -1687,21 +1709,21 @@ export class DocumentPdfService {
       document
         .circle(
           this.pdfTemplateX(document, dotXPx),
-          this.pdfTemplateY(document, 1184),
+          this.pdfTemplateY(document, 1190),
           this.pdfTemplateY(document, 3),
         )
         .fillAndStroke('#FFFFFF', '#8FB4E3');
     });
 
     document
-      .moveTo(this.pdfTemplateX(document, 140), this.pdfTemplateY(document, 1268))
-      .lineTo(this.pdfTemplateX(document, 397), this.pdfTemplateY(document, 1268))
+      .moveTo(this.pdfTemplateX(document, 140), this.pdfTemplateY(document, 1274))
+      .lineTo(this.pdfTemplateX(document, 397), this.pdfTemplateY(document, 1274))
       .lineWidth(this.pdfTemplateY(document, 1))
       .strokeColor('#B5C8DE')
       .stroke();
     document
-      .moveTo(this.pdfTemplateX(document, 642), this.pdfTemplateY(document, 1268))
-      .lineTo(this.pdfTemplateX(document, 899), this.pdfTemplateY(document, 1268))
+      .moveTo(this.pdfTemplateX(document, 642), this.pdfTemplateY(document, 1274))
+      .lineTo(this.pdfTemplateX(document, 899), this.pdfTemplateY(document, 1274))
       .lineWidth(this.pdfTemplateY(document, 1))
       .strokeColor('#B5C8DE')
       .stroke();
@@ -1713,7 +1735,7 @@ export class DocumentPdfService {
     document: PDFKit.PDFDocument,
   ): void {
     const cx = this.pdfTemplateX(document, 527);
-    const cy = this.pdfTemplateY(document, 1260);
+    const cy = this.pdfTemplateY(document, 1266);
     const outer = this.pdfTemplateY(document, 35);
     const inner = this.pdfTemplateY(document, 26);
 
@@ -1752,7 +1774,7 @@ export class DocumentPdfService {
   ): void {
     this.drawExactFooterWaves(document);
 
-    this.drawExactFooterShield(document, 198, 1378);
+    this.drawExactFooterShield(document, 198, 1373);
     this.drawExactPdfText(
       document,
       'Document officiel généré par l’application\nde gestion des congés GMES',
@@ -2082,17 +2104,17 @@ export class DocumentPdfService {
         });
 
         [
-          [leaveRequest.leaveType.name, 582],
+          [leaveRequest.leaveType.name, 572],
           [
             `${this.formatDateOnly(leaveRequest.startDate)} — ${this.formatDayPeriod(leaveRequest.startPeriod)}`,
-            620,
+            610,
           ],
           [
             `${this.formatDateOnly(leaveRequest.endDate)} — ${this.formatDayPeriod(leaveRequest.endPeriod)}`,
-            658,
+            648,
           ],
-          [`${leaveRequest.calendarDuration} jour(s)`, 696],
-          [this.formatDays(leaveRequest.deductedDays), 734],
+          [`${leaveRequest.calendarDuration} jour(s)`, 686],
+          [this.formatDays(leaveRequest.deductedDays), 724],
         ].forEach(([value, yPx]) => {
           this.drawExactPdfText(document, String(value), {
             xPx: 412,
@@ -2107,17 +2129,17 @@ export class DocumentPdfService {
         [
           [
             this.formatOptionalDays(leaveRequest.realBalanceBefore),
-            855,
+            825,
           ],
           [
             this.formatOptionalDays(
               leaveRequest.potentialBalanceBefore,
             ),
-            893,
+            863,
           ],
           [
             this.formatOptionalDays(leaveRequest.realBalanceAfter),
-            931,
+            901,
           ],
         ].forEach(([value, yPx]) => {
           this.drawExactPdfText(document, String(value), {
@@ -2131,13 +2153,13 @@ export class DocumentPdfService {
         });
 
         [
-          [this.formatDateTime(leaveRequest.submittedAt), 1047],
-          [this.formatDateTime(leaveRequest.decisionAt), 1076],
+          [this.formatDateTime(leaveRequest.submittedAt), 1004],
+          [this.formatDateTime(leaveRequest.decisionAt), 1042],
           [
             `${leaveRequest.finalDecider?.prenom ?? ''} ${leaveRequest.finalDecider?.nom ?? ''}`.trim(),
-            1105,
+            1080,
           ],
-          [this.formatRole(leaveRequest.finalDeciderRole), 1134],
+          [this.formatRole(leaveRequest.finalDeciderRole), 1118],
         ].forEach(([value, yPx]) => {
           this.drawExactPdfText(document, String(value), {
             xPx: 412,
@@ -2312,7 +2334,7 @@ export class DocumentPdfService {
   ): void {
     this.drawExactPdfText(document, 'Collaborateur', {
       xPx: 176,
-      yPx: 1177,
+      yPx: 1183,
       widthPx: 210,
       fontSizePx: 14,
       font: 'Helvetica-Bold',
@@ -2321,7 +2343,7 @@ export class DocumentPdfService {
     });
     this.drawExactPdfText(document, 'Valideur', {
       xPx: 666,
-      yPx: 1177,
+      yPx: 1183,
       widthPx: 210,
       fontSizePx: 14,
       font: 'Helvetica-Bold',
@@ -2333,7 +2355,7 @@ export class DocumentPdfService {
       signatureType: leaveRequest.employeeSignatureType!,
       signatureData: leaveRequest.employeeSignatureData!,
       xPx: 176,
-      yPx: 1210,
+      yPx: 1216,
       widthPx: 210,
       heightPx: 47,
     });
@@ -2341,7 +2363,7 @@ export class DocumentPdfService {
       signatureType: leaveRequest.validatorSignatureType!,
       signatureData: leaveRequest.validatorSignatureData!,
       xPx: 666,
-      yPx: 1210,
+      yPx: 1216,
       widthPx: 210,
       heightPx: 47,
     });
@@ -2353,7 +2375,7 @@ export class DocumentPdfService {
 
     this.drawExactPdfText(document, leftName, {
       xPx: 158,
-      yPx: 1278,
+      yPx: 1284,
       widthPx: 245,
       fontSizePx: 15,
       font: 'Helvetica-Bold',
@@ -2362,7 +2384,7 @@ export class DocumentPdfService {
     });
     this.drawExactPdfText(document, rightName, {
       xPx: 648,
-      yPx: 1278,
+      yPx: 1284,
       widthPx: 245,
       fontSizePx: 15,
       font: 'Helvetica-Bold',
@@ -2372,7 +2394,7 @@ export class DocumentPdfService {
 
     this.drawExactPdfText(document, 'Collaborateur', {
       xPx: 158,
-      yPx: 1308,
+      yPx: 1314,
       widthPx: 245,
       fontSizePx: 13,
       font: 'Helvetica-Oblique',
@@ -2384,7 +2406,7 @@ export class DocumentPdfService {
       this.formatRole(leaveRequest.finalDeciderRole),
       {
         xPx: 648,
-        yPx: 1308,
+        yPx: 1314,
         widthPx: 245,
         fontSizePx: 13,
         font: 'Helvetica-Oblique',
@@ -2398,7 +2420,7 @@ export class DocumentPdfService {
       this.formatDateTime(leaveRequest.employeeSignedAt),
       {
         xPx: 158,
-        yPx: 1332,
+        yPx: 1338,
         widthPx: 245,
         fontSizePx: 11.5,
         font: 'Helvetica-Oblique',
@@ -2411,7 +2433,7 @@ export class DocumentPdfService {
       this.formatDateTime(leaveRequest.validatorSignedAt),
       {
         xPx: 648,
-        yPx: 1332,
+        yPx: 1338,
         widthPx: 245,
         fontSizePx: 11.5,
         font: 'Helvetica-Oblique',
@@ -2493,14 +2515,20 @@ export class DocumentPdfService {
         lineBreak: false,
       });
 
-    this.drawExactPdfText(document, input.referenceNumber, {
-      xPx: 426.5,
-      yPx: 1367,
-      widthPx: 202,
+    const referencePillWidthPx = 212;
+    const referencePillXPx =
+      (this.pdfTemplateWidthPx - referencePillWidthPx) / 2;
+
+    this.drawExactPdfTextCenteredInBox(document, input.referenceNumber, {
+      xPx: referencePillXPx,
+      yPx: 1357,
+      widthPx: referencePillWidthPx,
+      heightPx: 42,
       fontSizePx: 14,
       font: 'Helvetica-Bold',
       color: '#FFFFFF',
       align: 'center',
+      opticalOffsetYPx: 0.5,
     });
   }
 
