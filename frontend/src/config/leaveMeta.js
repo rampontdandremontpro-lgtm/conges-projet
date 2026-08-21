@@ -2,7 +2,7 @@ export const LEAVE_REQUEST_STATUS_META = {
   BROUILLON: { label: 'Brouillon', tone: 'neutral' },
   EN_ATTENTE_VALIDATION: { label: 'En attente', tone: 'warning' },
   EN_COURS_TRAITEMENT: { label: 'En cours de traitement', tone: 'warning' },
-  VALIDEE: { label: 'Validée · circuit terminé', tone: 'success' },
+  VALIDEE: { label: 'Validée · traitement terminé', tone: 'success' },
   REFUSEE: { label: 'Refusée', tone: 'danger' },
   ANNULEE: { label: 'Annulée', tone: 'neutral' },
   ANNULATION_EN_ATTENTE_ACCORD: {

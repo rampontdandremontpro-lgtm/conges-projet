@@ -232,7 +232,9 @@ export class LeaveRequestSchedulerService
             continue;
           }
 
-          if (daysBeforeStart >= 1 && daysBeforeStart <= 14) {
+          // Les rappels de validation commencent à J-30 et se poursuivent
+          // jusqu'à J-1. Avant J-30, aucune relance n'est nécessaire.
+          if (daysBeforeStart >= 1 && daysBeforeStart <= 30) {
             result.remindersCreated += await this.sendReminder(
               request,
               daysBeforeStart,

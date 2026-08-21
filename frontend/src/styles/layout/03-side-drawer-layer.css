@@ -1,0 +1,22 @@
+/*
+ * Les pages métier utilisent des contextes d'empilement isolés pour leurs
+ * décors. Sans correction, un drawer rendu dans la page reste sous le header
+ * global, même avec un z-index élevé. Lorsqu'un panneau latéral ou un aperçu de document est ouvert,
+ * on remonte temporairement la couche de contenu au-dessus du header.
+ */
+.app-shell__content:has(
+  .rh-absence-drawer-backdrop,
+  .rh-balances-overlay,
+  .rh-derogation-overlay,
+  .rh-validators-overlay,
+  .rh-holidays-overlay,
+  .rh-leave-types-overlay,
+  .admin-services-overlay,
+  .admin-users-overlay,
+  .admin-logs-overlay,
+  .director-unavailability-drawer-backdrop,
+  .document-preview-backdrop
+) {
+  position: relative;
+  z-index: calc(var(--z-dropdown) + 10);
+}

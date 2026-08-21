@@ -38,7 +38,7 @@ function periodLabel(value) {
 const STATUS_META = {
   EN_ATTENTE_VALIDATION: { label: 'En attente', tone: 'pending', icon: 'clock' },
   EN_COURS_TRAITEMENT: { label: 'En cours de traitement', tone: 'pending', icon: 'clock' },
-  VALIDEE: { label: 'Validée · circuit terminé', tone: 'approved', icon: 'check' },
+  VALIDEE: { label: 'Validée · traitement terminé', tone: 'approved', icon: 'check' },
   REFUSEE: { label: 'Refusée', tone: 'refused', icon: 'alert' },
   ANNULEE: { label: 'Annulée', tone: 'cancelled', icon: 'alert' },
   ANNULATION_EN_ATTENTE_ACCORD: { label: 'Annulation en attente', tone: 'pending', icon: 'clock' },

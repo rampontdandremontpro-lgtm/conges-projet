@@ -14,7 +14,7 @@ const PAGE_SIZE = 8
 const STATUS_META = {
   EN_ATTENTE_VALIDATION: { label: 'En attente', tone: 'pending' },
   EN_COURS_TRAITEMENT: { label: 'En cours de traitement', tone: 'pending' },
-  VALIDEE: { label: 'Validée · circuit terminé', tone: 'approved' },
+  VALIDEE: { label: 'Validée · traitement terminé', tone: 'approved' },
   REFUSEE: { label: 'Refusée', tone: 'refused' },
   ANNULEE: { label: 'Annulée', tone: 'cancelled' },
   ANNULATION_EN_ATTENTE_ACCORD: { label: 'Annulation en attente', tone: 'pending' },

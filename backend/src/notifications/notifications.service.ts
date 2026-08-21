@@ -274,6 +274,23 @@ export class NotificationsService {
       order: { startDate: 'ASC', submittedAt: 'ASC' },
     });
 
+    const currentUser = await this.userRepository.findOne({
+      where: { id: userId, isActive: true },
+    });
+
+    if (!currentUser) {
+      return [];
+    }
+
+    const authenticatedUser = {
+      id: currentUser.id,
+      nom: currentUser.nom,
+      prenom: currentUser.prenom,
+      email: currentUser.email,
+      role: currentUser.role,
+      serviceId: currentUser.serviceId,
+    };
+
     const today = getMartiniqueDateString(new Date());
     const reminders: Array<{
       id: number;
@@ -283,6 +300,9 @@ export class NotificationsService {
       startDate: string;
       endDate: string;
       daysBeforeStart: number;
+      pendingDays: number;
+      takeoverDelayDays: number;
+      validationLate: boolean;
       urgent: boolean;
       finalization: boolean;
     }> = [];
@@ -293,38 +313,84 @@ export class NotificationsService {
         request.startDate,
       );
 
-      // La popup devient visible pendant les 14 jours qui précèdent le départ.
-      // Elle est calculée à la demande : un scheduler manqué ne peut donc plus
-      // empêcher l'affichage du rappel sur le tableau de bord.
-      if (daysBeforeStart < 1 || daysBeforeStart > 14) {
+      // Les rappels de validation ne commencent qu'un mois avant le départ.
+      // Avant J-30, le valideur dispose encore de temps : aucune popup ni
+      // notification de retard n'est générée. À J-0, la maintenance gère
+      // l'expiration de la demande.
+      if (daysBeforeStart < 1 || daysBeforeStart > 30) {
         continue;
       }
 
-      const recipientIds = await this.getDecisionRecipientIds(request);
-      if (!recipientIds.includes(userId)) {
+      // La popup doit suivre les droits réels de traitement et non uniquement
+      // la liste des destinataires de notification. Après ouverture du relais,
+      // le Responsable principal conserve le droit de traiter sa demande ; il
+      // doit donc continuer à voir son rappel sur le tableau de bord.
+      try {
+        await this.validatorResolutionService.resolveAccess(
+          request,
+          authenticatedUser,
+        );
+      } catch {
         continue;
       }
 
-      // Répare aussi la notification de la cloche si le scheduler n'a pas
-      // tourné à temps. Le type Jx empêche les doublons pour une même échéance.
-      const notificationType = `LEAVE_REQUEST_REMINDER_J${daysBeforeStart}`;
-      const exists = await this.alreadyExists({
-        userId,
-        type: notificationType,
-        leaveRequestId: request.id,
-      });
+      const submittedDate = getMartiniqueDateString(
+        request.submittedAt ?? request.createdAt,
+      );
+      const pendingDays = Math.max(
+        0,
+        this.daysBetweenDateStrings(submittedDate, today),
+      );
+      const takeoverDelayDays = Math.max(
+        1,
+        Number(request.service.takeoverDelayDays ?? 7),
+      );
+      const finalization = request.finalDeciderId !== null;
+      const validationLate =
+        !finalization && pendingDays >= takeoverDelayDays;
+      const urgent = daysBeforeStart <= 7 || validationLate;
 
-      if (!exists) {
-        await this.create({
+      // La popup et la cloche suivent la même fenêtre métier : J-30 -> J-1.
+      // Avant J-30, aucune relance n'est faite.
+      if (daysBeforeStart <= 30) {
+        const notificationType = `LEAVE_REQUEST_REMINDER_J${daysBeforeStart}`;
+        const exists = await this.alreadyExists({
           userId,
           type: notificationType,
-          title:
-            daysBeforeStart <= 7
-              ? 'Rappel urgent — demande à traiter'
-              : 'Rappel — demande de congé à traiter',
-          message: `La demande n°${request.id} de ${request.employee.prenom} ${request.employee.nom} débute dans ${daysBeforeStart} jour(s).`,
           leaveRequestId: request.id,
         });
+
+        if (!exists) {
+          await this.create({
+            userId,
+            type: notificationType,
+            title:
+              urgent
+                ? 'Rappel urgent — demande à traiter'
+                : 'Rappel — demande de congé à traiter',
+            message: `La demande n°${request.id} de ${request.employee.prenom} ${request.employee.nom} débute dans ${daysBeforeStart} jour(s).`,
+            leaveRequestId: request.id,
+          });
+        }
+      }
+
+      if (validationLate) {
+        const lateType = 'LEAVE_REQUEST_VALIDATION_LATE';
+        const lateExists = await this.alreadyExists({
+          userId,
+          type: lateType,
+          leaveRequestId: request.id,
+        });
+
+        if (!lateExists) {
+          await this.create({
+            userId,
+            type: lateType,
+            title: 'Retard de validation — demande à traiter',
+            message: `La demande n°${request.id} de ${request.employee.prenom} ${request.employee.nom} attend une décision depuis ${pendingDays} jour(s).`,
+            leaveRequestId: request.id,
+          });
+        }
       }
 
       reminders.push({
@@ -346,12 +412,18 @@ export class NotificationsService {
         startDate: request.startDate,
         endDate: request.endDate,
         daysBeforeStart,
-        urgent: daysBeforeStart <= 7,
-        finalization: request.finalDeciderId !== null,
+        pendingDays,
+        takeoverDelayDays,
+        validationLate,
+        urgent,
+        finalization,
       });
     }
 
     return reminders.sort((a, b) => {
+      if (a.validationLate !== b.validationLate) {
+        return a.validationLate ? -1 : 1;
+      }
       if (a.daysBeforeStart !== b.daysBeforeStart) {
         return a.daysBeforeStart - b.daysBeforeStart;
       }

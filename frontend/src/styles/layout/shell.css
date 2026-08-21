@@ -1,5 +1,6 @@
 @import './01-shell-sidebar.css';
 @import './02-header-dropdowns.css';
+@import './03-side-drawer-layer.css';
 @import '../shared/01-page-content.css';
 @import '../collab/backgrounds.css';
 @import '../manager/backgrounds.css';

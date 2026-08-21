@@ -18,9 +18,12 @@ function formatDate(value) {
   return `${day}/${month}/${year}`
 }
 
-function reminderLabel(days) {
-  if (days === 1) return 'Départ demain'
-  return `Départ dans ${days} jours`
+function reminderLabel(item) {
+  if (item.validationLate) {
+    return `Validation en retard depuis ${item.pendingDays} jour${item.pendingDays > 1 ? 's' : ''}`
+  }
+  if (item.daysBeforeStart === 1) return 'Départ demain'
+  return `Départ dans ${item.daysBeforeStart} jours`
 }
 
 export function DashboardReminderPopup({ role, onNavigate }) {
@@ -68,7 +71,7 @@ export function DashboardReminderPopup({ role, onNavigate }) {
   return (
     <div className="dashboard-reminder-backdrop" role="presentation" onMouseDown={() => setDismissed(true)}>
       <section
-        className="dashboard-reminder-modal"
+        className={`dashboard-reminder-modal ${urgentCount > 0 ? 'is-urgent' : ''}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby="dashboard-reminder-title"
@@ -80,7 +83,7 @@ export function DashboardReminderPopup({ role, onNavigate }) {
           </span>
           <div>
             <h2 id="dashboard-reminder-title">
-              {urgentCount > 0 ? 'Rappel urgent — demandes à traiter' : 'Rappel — demandes à traiter'}
+              {urgentCount > 0 ? 'RAPPEL URGENT' : 'Rappel'}
             </h2>
             <p>
               {items.length} demande{items.length > 1 ? 's' : ''} approche{items.length > 1 ? 'nt' : ''} de la date de départ.
@@ -106,6 +109,9 @@ export function DashboardReminderPopup({ role, onNavigate }) {
                 {item.finalization && (
                   <span className="dashboard-reminder-stage">Validation RH finale</span>
                 )}
+                {!item.finalization && item.validationLate && (
+                  <span className="dashboard-reminder-stage is-late">Validation en retard</span>
+                )}
               </div>
 
               <div className="dashboard-reminder-item__body">
@@ -113,7 +119,7 @@ export function DashboardReminderPopup({ role, onNavigate }) {
                   <strong>{`${item.employee?.prenom ?? ''} ${item.employee?.nom ?? ''}`.trim() || 'Collaborateur'}</strong>
                   <span>{item.leaveType?.name ?? 'Demande de congé'} · {item.service?.name ?? 'Service'}</span>
                   <small>
-                    Du {formatDate(item.startDate)} au {formatDate(item.endDate)} · {reminderLabel(item.daysBeforeStart)}
+                    Du {formatDate(item.startDate)} au {formatDate(item.endDate)} · {reminderLabel(item)}
                   </small>
                 </div>
 
@@ -127,7 +133,7 @@ export function DashboardReminderPopup({ role, onNavigate }) {
         </div>
 
         <footer className="dashboard-reminder-footer">
-          <span>Ce rappel réapparaîtra lors d&apos;une prochaine ouverture du tableau de bord tant que la demande reste à traiter.</span>
+          <span>Les demandes encore à traiter réapparaîtront à la prochaine ouverture du tableau de bord.</span>
           <button type="button" onClick={() => setDismissed(true)}>Plus tard</button>
         </footer>
       </section>
