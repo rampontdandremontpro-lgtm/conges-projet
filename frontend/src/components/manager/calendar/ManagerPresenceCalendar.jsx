@@ -58,7 +58,7 @@ function DaySlot({ status, baseClass }) {
   return <span className={`manager-month-cell__half ${statusClass(status)} ${baseClass}`} />
 }
 
-export function ManagerPresenceCalendar({ data, month, filter, onMonthChange }) {
+export function ManagerPresenceCalendar({ data, month, filter, onMonthChange, onPendingRequestClick }) {
   const monthDays = useMemo(() => buildMonthDays(month), [month])
   const daysByDate = useMemo(() => new Map((data?.days ?? []).map((day) => [day.date, day])), [data?.days])
   const holidayByDate = useMemo(() => {
@@ -144,15 +144,37 @@ export function ManagerPresenceCalendar({ data, month, filter, onMonthChange }) 
                     ? STATUS_LABELS[memberDay.morningStatus]
                     : `Matin : ${STATUS_LABELS[memberDay.morningStatus]} · Après-midi : ${STATUS_LABELS[memberDay.afternoonStatus]}`
                   const holidayLabel = isHoliday ? ` · ${holidays.map((holiday) => holiday.name).join(', ')}` : ''
+                  const pendingRequestIds = [...new Set([
+                    ...(memberDay.morningPendingRequestIds ?? []),
+                    ...(memberDay.afternoonPendingRequestIds ?? []),
+                  ])]
+                  const pendingLabel = pendingRequestIds.length > 0
+                    ? ` · ${pendingRequestIds.length} demande${pendingRequestIds.length > 1 ? 's' : ''} en attente de validation`
+                    : ''
 
                   return (
                     <div
                       key={`${member.id}-${date}`}
                       className={`manager-month-planning__cell${meta.isWeekend ? ' is-weekend' : ''}${isHoliday ? ' is-holiday' : ''}${isToday ? ' is-today' : ''}`}
-                      title={`${member.prenom} ${member.nom} · ${date} · ${label}${holidayLabel}`}
+                      title={`${member.prenom} ${member.nom} · ${date} · ${label}${holidayLabel}${pendingLabel}`}
                     >
                       <DaySlot status={memberDay.morningStatus} baseClass={baseClass} />
                       <DaySlot status={memberDay.afternoonStatus} baseClass={baseClass} />
+                      {pendingRequestIds.length > 0 && (
+                        <button
+                          type="button"
+                          className="manager-month-planning__pending-request"
+                          title="Demande en attente — cliquer pour valider"
+                          aria-label={`Valider la demande en attente de ${member.prenom} ${member.nom}`}
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            onPendingRequestClick?.(pendingRequestIds[0])
+                          }}
+                        >
+                          <Icon name="clock" size={10} />
+                          {pendingRequestIds.length > 1 ? pendingRequestIds.length : ''}
+                        </button>
+                      )}
                     </div>
                   )
                 })}
@@ -193,6 +215,7 @@ export function ManagerPresenceCalendar({ data, month, filter, onMonthChange }) 
       <div className="manager-month-planning__legend">
         <span><i className="is-present" /> Présent</span>
         <span><i className="is-leave" /> Congé</span>
+        <span><i className="is-pending" /> En attente de validation</span>
         <span><i className="is-absence" /> Absence</span>
         <span><i className="is-weekend" /> Week-end</span>
         <span><i className="is-holiday" /> Jour férié / fermeture</span>

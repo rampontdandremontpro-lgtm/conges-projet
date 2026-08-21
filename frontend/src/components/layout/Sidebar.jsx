@@ -6,8 +6,8 @@ import { Icon } from '@/components/ui/Icon'
 import { NEW_REQUEST_ITEM, NEW_REQUEST_ROLES, getNavigationForRole } from '@/config/navigation'
 
 export function Sidebar({ collapsed, onCloseMobile }) {
-  const { user } = useAuth()
-  const role = user?.role
+  const { effectiveRole } = useAuth()
+  const role = effectiveRole
   const navigation = getNavigationForRole(role)
   const showNewRequest = NEW_REQUEST_ROLES.includes(role)
 

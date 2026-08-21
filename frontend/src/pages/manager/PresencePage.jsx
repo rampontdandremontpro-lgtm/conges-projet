@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 
+import { SignatureModal } from '@/components/collab/new-request/SignatureModal'
 import { ManagerPresenceCalendar } from '@/components/manager/calendar/ManagerPresenceCalendar'
 import { ManagerPresenceMemberCard } from '@/components/manager/presence/ManagerPresenceMemberCard'
 import { Icon } from '@/components/ui/Icon'
@@ -9,6 +10,11 @@ import {
   getManagerServicePresence,
   getManagerServicePresenceCalendar,
 } from '@/services/manager/managerDashboard'
+import {
+  getManagerRequest,
+  getManagerRequestAvailability,
+  validateManagerRequest,
+} from '@/services/manager/managerRequests'
 import { getCurrentMonthKey, shiftMonthKey } from '@/utils/managerCalendar'
 
 import '@/styles/manager/presence/index.css'
@@ -54,6 +60,11 @@ export function ManagerPresencePage() {
   const [calendarMonth, setCalendarMonth] = useState(getCurrentMonthKey())
   const [state, setState] = useState({ loading: true, error: false, data: null })
   const [calendarState, setCalendarState] = useState({ loading: false, error: false, data: null })
+  const [calendarDecision, setCalendarDecision] = useState(null)
+  const [decisionLoading, setDecisionLoading] = useState(false)
+  const [signatureOpen, setSignatureOpen] = useState(false)
+  const [decisionSubmitting, setDecisionSubmitting] = useState(false)
+  const [actionFeedback, setActionFeedback] = useState(null)
 
   const load = useCallback(async () => {
     setState((current) => ({ ...current, loading: true, error: false }))
@@ -100,6 +111,65 @@ export function ManagerPresencePage() {
   useEffect(() => {
     if (viewMode === 'calendar') loadCalendar(calendarMonth)
   }, [calendarMonth, loadCalendar, viewMode])
+
+  useEffect(() => {
+    if (!actionFeedback) return undefined
+    const timer = window.setTimeout(() => setActionFeedback(null), 4500)
+    return () => window.clearTimeout(timer)
+  }, [actionFeedback])
+
+  const openCalendarValidation = useCallback(async (requestId) => {
+    setDecisionLoading(true)
+    setActionFeedback(null)
+    try {
+      const [request, availability] = await Promise.all([
+        getManagerRequest(requestId),
+        getManagerRequestAvailability(requestId),
+      ])
+      setCalendarDecision({
+        request,
+        availability,
+        justification: '',
+      })
+    } catch (error) {
+      setActionFeedback({
+        error: true,
+        text: error?.response?.data?.message ?? 'Cette demande ne peut pas être traitée depuis le calendrier.',
+      })
+    } finally {
+      setDecisionLoading(false)
+    }
+  }, [])
+
+  const confirmCalendarValidation = useCallback(async (signatureType, signatureData) => {
+    if (!calendarDecision?.request?.id) return
+    setDecisionSubmitting(true)
+    try {
+      const result = await validateManagerRequest(calendarDecision.request.id, {
+        signatureType,
+        signatureData,
+        minimumPresenceJustification: calendarDecision.justification?.trim() || undefined,
+      })
+      const sentToRh = result?.workflowStatus === 'EN_COURS_TRAITEMENT'
+      setSignatureOpen(false)
+      setCalendarDecision(null)
+      setActionFeedback({
+        error: false,
+        text: sentToRh
+          ? 'Demande validée au premier niveau et transmise à la RH.'
+          : 'Demande validée avec succès.',
+      })
+      await Promise.all([load(), loadCalendar(calendarMonth)])
+      window.dispatchEvent(new CustomEvent('gmes:data-changed'))
+    } catch (error) {
+      setActionFeedback({
+        error: true,
+        text: error?.response?.data?.message ?? 'La validation a échoué.',
+      })
+    } finally {
+      setDecisionSubmitting(false)
+    }
+  }, [calendarDecision, calendarMonth, load, loadCalendar])
 
   const members = state.data?.members ?? []
   const summary = state.data?.summary ?? { total: 0, present: 0, onLeave: 0, absent: 0 }
@@ -186,6 +256,14 @@ export function ManagerPresencePage() {
 
   return (
     <div className={`manager-presence-page${viewMode === 'calendar' ? ' manager-presence-page--calendar' : ''}`}>
+      {decisionLoading && (
+        <div className="manager-calendar-action-feedback">Chargement de la demande…</div>
+      )}
+      {actionFeedback && !decisionLoading && (
+        <div className={`manager-calendar-action-feedback${actionFeedback.error ? ' is-error' : ''}`}>
+          {actionFeedback.text}
+        </div>
+      )}
       {state.loading && !state.data ? (
         <>
           <div className="manager-presence-toolbar manager-presence-toolbar--top" aria-hidden="true">
@@ -263,6 +341,7 @@ export function ManagerPresencePage() {
                   month={calendarMonth}
                   filter="all"
                   onMonthChange={changeCalendarMonth}
+                  onPendingRequestClick={openCalendarValidation}
                 />
               )
             ) : visibleMembers.length === 0 ? (
@@ -372,6 +451,99 @@ export function ManagerPresencePage() {
           </div>
         </>
       )}
+
+      {calendarDecision && !signatureOpen && (
+        <div
+          className="manager-calendar-decision-backdrop"
+          role="presentation"
+          onMouseDown={() => !decisionSubmitting && setCalendarDecision(null)}
+        >
+          <div
+            className="manager-calendar-decision"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Validation depuis le calendrier"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <div className="manager-calendar-decision__head">
+              <div>
+                <strong>Valider cette demande</strong>
+                <small>La validation du Responsable transmettra ensuite la demande à la RH.</small>
+              </div>
+              <button
+                type="button"
+                className="manager-calendar-decision__close"
+                onClick={() => setCalendarDecision(null)}
+                aria-label="Fermer"
+              >×</button>
+            </div>
+
+            <div className="manager-calendar-decision__summary">
+              <div>
+                <span>Collaborateur</span>
+                <strong>{calendarDecision.request?.employee?.prenom} {calendarDecision.request?.employee?.nom}</strong>
+              </div>
+              <div>
+                <span>Type</span>
+                <strong>{calendarDecision.request?.leaveType?.name ?? 'Congé'}</strong>
+              </div>
+              <div>
+                <span>Début</span>
+                <strong>{calendarDecision.request?.startDate}</strong>
+              </div>
+              <div>
+                <span>Fin</span>
+                <strong>{calendarDecision.request?.endDate}</strong>
+              </div>
+            </div>
+
+            {calendarDecision.availability?.minimumPresenceBreached && (
+              <>
+                <div className="manager-calendar-decision__warning">
+                  Le minimum de présence du service serait dépassé. Une justification est obligatoire pour poursuivre.
+                </div>
+                <label className="manager-calendar-decision__field">
+                  Justification
+                  <textarea
+                    value={calendarDecision.justification}
+                    onChange={(event) => setCalendarDecision((current) => ({
+                      ...current,
+                      justification: event.target.value,
+                    }))}
+                    placeholder="Expliquez pourquoi cette validation reste possible…"
+                  />
+                </label>
+              </>
+            )}
+
+            <div className="manager-calendar-decision__actions">
+              <button type="button" onClick={() => setCalendarDecision(null)}>Annuler</button>
+              <button
+                type="button"
+                className="is-primary"
+                disabled={calendarDecision.availability?.minimumPresenceBreached && !calendarDecision.justification?.trim()}
+                onClick={() => setSignatureOpen(true)}
+              >
+                Signer et valider
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <SignatureModal
+        open={signatureOpen}
+        requestLabel={calendarDecision?.request
+          ? `${calendarDecision.request.employee?.prenom ?? ''} ${calendarDecision.request.employee?.nom ?? ''} · ${calendarDecision.request.startDate} au ${calendarDecision.request.endDate}`
+          : ''}
+        submitting={decisionSubmitting}
+        onClose={() => !decisionSubmitting && setSignatureOpen(false)}
+        onConfirm={confirmCalendarValidation}
+        title="Signer la validation"
+        confirmLabel="Valider et transmettre à la RH"
+        submittingLabel="Validation…"
+        dialogLabel="Signer la validation de la demande"
+      />
     </div>
   )
 }

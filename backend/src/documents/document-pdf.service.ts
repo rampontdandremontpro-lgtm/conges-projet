@@ -1556,7 +1556,7 @@ export class DocumentPdfService {
 
     document
       .roundedRect(x, y, width, height, this.pdfTemplateY(document, 18))
-      .fillAndStroke('#FFF9F3', '#F97316');
+      .fillAndStroke('#FEF2F2', '#DC2626');
 
     document
       .circle(
@@ -1564,7 +1564,7 @@ export class DocumentPdfService {
         this.pdfTemplateY(document, 350),
         this.pdfTemplateY(document, 31),
       )
-      .fill('#F97316');
+      .fill('#DC2626');
     this.drawExactExclamationMark(document, {
       centerXPx: 112,
       centerYPx: 350,
@@ -1581,7 +1581,7 @@ export class DocumentPdfService {
         widthPx: 680,
         fontSizePx: 19,
         font: 'Helvetica-Bold',
-        color: '#F06B0F',
+        color: '#B91C1C',
       },
     );
     this.drawExactPdfText(
@@ -1606,13 +1606,13 @@ export class DocumentPdfService {
         this.pdfTemplateY(document, 48),
       )
       .lineWidth(this.pdfTemplateY(document, 7))
-      .strokeColor('#F97316')
+      .strokeColor('#DC2626')
       .stroke();
     this.drawExactExclamationMark(document, {
       centerXPx: 949,
       centerYPx: 351,
       scale: 48 / 31,
-      color: '#F97316',
+      color: '#DC2626',
     });
     document.restore();
   }

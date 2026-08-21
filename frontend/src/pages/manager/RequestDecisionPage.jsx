@@ -35,7 +35,8 @@ function periodLabel(value) {
 
 const STATUS_META = {
   EN_ATTENTE_VALIDATION: { label: 'En attente', tone: 'pending', icon: 'clock' },
-  VALIDEE: { label: 'Validée', tone: 'approved', icon: 'check' },
+  EN_COURS_TRAITEMENT: { label: 'En cours de traitement', tone: 'pending', icon: 'clock' },
+  VALIDEE: { label: 'Validée · circuit terminé', tone: 'approved', icon: 'check' },
   REFUSEE: { label: 'Refusée', tone: 'refused', icon: 'alert' },
   ANNULEE: { label: 'Annulée', tone: 'cancelled', icon: 'refresh' },
   ANNULATION_EN_ATTENTE_ACCORD: { label: 'Annulation en attente', tone: 'pending', icon: 'clock' },
@@ -43,8 +44,9 @@ const STATUS_META = {
   EXPIREE_NON_VALIDEE: { label: 'Expirée', tone: 'cancelled', icon: 'clock' },
 }
 
-function getStatusMeta(status) {
-  return STATUS_META[status] ?? { label: status || '—', tone: 'pending', icon: 'clock' }
+function getStatusMeta(status, request) {
+  const effective = status === 'EN_ATTENTE_VALIDATION' && request?.finalDeciderId ? 'EN_COURS_TRAITEMENT' : status
+  return STATUS_META[effective] ?? { label: effective || '—', tone: 'pending', icon: 'clock' }
 }
 
 export function ManagerRequestDecisionPage() {

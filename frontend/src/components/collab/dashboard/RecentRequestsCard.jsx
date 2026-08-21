@@ -1,5 +1,6 @@
 import { Icon } from '@/components/ui/Icon'
 import { StatusBadge } from '@/components/collab/dashboard/StatusBadge'
+import { getEffectiveLeaveRequestStatus } from '@/config/leaveMeta'
 import { CardSkeleton, CardError } from '@/components/collab/dashboard/DashboardStates'
 import { formatDays, formatRangeNumericFR } from '@/utils/format'
 
@@ -44,7 +45,7 @@ export function RecentRequestsCard({ requests, loading, error, onRetry, onViewAl
             <div className="recent-row__main">
               <div className="recent-row__top">
                 <span className="recent-row__type">{request.leaveType.name}</span>
-                <StatusBadge status={request.status} />
+                <StatusBadge status={getEffectiveLeaveRequestStatus(request)} />
               </div>
               <span className="recent-row__period">
                 {formatRangeNumericFR(request.startDate, request.endDate)}

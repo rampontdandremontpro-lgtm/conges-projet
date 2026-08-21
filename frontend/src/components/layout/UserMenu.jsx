@@ -7,7 +7,7 @@ import { ROLE_LABELS } from '@/config/navigation'
 import { useClickOutside } from '@/hooks/useClickOutside'
 
 export function UserMenu() {
-  const { user, logout } = useAuth()
+  const { user, effectiveRole, profileMode, availableProfiles, switchProfile, logout } = useAuth()
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
   const ref = useClickOutside(() => setOpen(false), open)
@@ -17,7 +17,13 @@ export function UserMenu() {
   }
 
   const initials = `${user.prenom?.[0] ?? ''}${user.nom?.[0] ?? ''}`.toUpperCase()
-  const roleLabel = ROLE_LABELS[user.role] ?? user.role
+  const roleLabel = ROLE_LABELS[effectiveRole] ?? effectiveRole
+
+  function handleProfileSwitch(mode) {
+    switchProfile(mode)
+    setOpen(false)
+    navigate('/app/dashboard', { replace: true })
+  }
 
   function handleLogout() {
     setOpen(false)
@@ -47,6 +53,23 @@ export function UserMenu() {
       </button>
       {open && (
         <div className="dropdown__panel dropdown__panel--user" role="menu">
+          {availableProfiles.length > 0 && (
+            <>
+              {availableProfiles.map((profile) => (
+                <button
+                  key={profile.id}
+                  type="button"
+                  className="user-menu__item"
+                  onClick={() => handleProfileSwitch(profile.id)}
+                >
+                  <Icon name={profile.id === 'COLLABORATOR' ? 'user' : 'shield'} size={16} />
+                  {profile.label}
+                  {profileMode === profile.id && <Icon name="check" size={14} />}
+                </button>
+              ))}
+              <div className="user-menu__divider" />
+            </>
+          )}
           <Link to="/app/profile" className="user-menu__item" onClick={() => setOpen(false)}>
             <Icon name="user" size={16} />
             Mon profil

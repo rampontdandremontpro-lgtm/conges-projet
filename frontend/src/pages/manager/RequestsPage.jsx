@@ -13,7 +13,8 @@ const PAGE_SIZE = 8
 
 const STATUS_META = {
   EN_ATTENTE_VALIDATION: { label: 'En attente', tone: 'pending' },
-  VALIDEE: { label: 'Validée', tone: 'approved' },
+  EN_COURS_TRAITEMENT: { label: 'En cours de traitement', tone: 'pending' },
+  VALIDEE: { label: 'Validée · circuit terminé', tone: 'approved' },
   REFUSEE: { label: 'Refusée', tone: 'refused' },
   ANNULEE: { label: 'Annulée', tone: 'cancelled' },
   ANNULATION_EN_ATTENTE_ACCORD: { label: 'Annulation en attente', tone: 'pending' },
@@ -54,14 +55,43 @@ function initials(employee) {
   return `${employee?.prenom?.[0] ?? ''}${employee?.nom?.[0] ?? ''}`.toUpperCase() || '—'
 }
 
+function effectiveStatus(request) {
+  if (request?.status === 'EN_ATTENTE_VALIDATION' && request?.finalDeciderId) {
+    return 'EN_COURS_TRAITEMENT'
+  }
+  return request?.status
+}
+
 function statusMeta(status) {
   return STATUS_META[status] ?? { label: status || '—', tone: 'neutral' }
+}
+
+function requestUrgencyScore(request) {
+  const status = effectiveStatus(request)
+  if (request?.isUrgent && ['EN_ATTENTE_VALIDATION', 'EN_COURS_TRAITEMENT'].includes(status)) return 600
+  if (status === 'EN_COURS_TRAITEMENT') return 500
+  if (status === 'EN_ATTENTE_VALIDATION') return 350
+  if (status === 'ANNULATION_EN_ATTENTE_ACCORD') return 300
+  return 0
+}
+
+function sortMostUrgentFirst(left, right) {
+  const scoreDiff = requestUrgencyScore(right) - requestUrgencyScore(left)
+  if (scoreDiff !== 0) return scoreDiff
+
+  const leftStart = left?.startDate ? new Date(`${left.startDate}T00:00:00`).getTime() : Number.MAX_SAFE_INTEGER
+  const rightStart = right?.startDate ? new Date(`${right.startDate}T00:00:00`).getTime() : Number.MAX_SAFE_INTEGER
+  if (leftStart !== rightStart) return leftStart - rightStart
+
+  const leftSubmitted = new Date(left?.submittedAt ?? left?.createdAt ?? 0).getTime()
+  const rightSubmitted = new Date(right?.submittedAt ?? right?.createdAt ?? 0).getTime()
+  return leftSubmitted - rightSubmitted
 }
 
 function statusMatchesFilter(status, filter) {
   if (filter === 'all') return true
   if (filter === 'pending') {
-    return ['EN_ATTENTE_VALIDATION', 'ANNULATION_EN_ATTENTE_ACCORD'].includes(status)
+    return ['EN_ATTENTE_VALIDATION', 'EN_COURS_TRAITEMENT', 'ANNULATION_EN_ATTENTE_ACCORD'].includes(status)
   }
   if (filter === 'approved') return status === 'VALIDEE'
   if (filter === 'refused') return status === 'REFUSEE'
@@ -83,7 +113,7 @@ function requestMatchesSearch(request, query) {
     request.service?.name,
     request.startDate,
     request.endDate,
-    statusMeta(request.status).label,
+    statusMeta(effectiveStatus(request)).label,
     request.id,
   ]
     .map(normalizeSearchValue)
@@ -162,19 +192,19 @@ export function ManagerRequestsPage() {
 
   const counts = useMemo(() => ({
     all: state.requests.length,
-    pending: state.requests.filter((request) => statusMatchesFilter(request.status, 'pending')).length,
-    approved: state.requests.filter((request) => statusMatchesFilter(request.status, 'approved')).length,
-    refused: state.requests.filter((request) => statusMatchesFilter(request.status, 'refused')).length,
-    cancelled: state.requests.filter((request) => statusMatchesFilter(request.status, 'cancelled')).length,
+    pending: state.requests.filter((request) => statusMatchesFilter(effectiveStatus(request), 'pending')).length,
+    approved: state.requests.filter((request) => statusMatchesFilter(effectiveStatus(request), 'approved')).length,
+    refused: state.requests.filter((request) => statusMatchesFilter(effectiveStatus(request), 'refused')).length,
+    cancelled: state.requests.filter((request) => statusMatchesFilter(effectiveStatus(request), 'cancelled')).length,
   }), [state.requests])
 
   const activeAdvancedFilters = typeFilter !== 'all' ? 1 : 0
 
   const filteredRequests = useMemo(() => state.requests.filter((request) => {
-    if (!statusMatchesFilter(request.status, statusFilter)) return false
+    if (!statusMatchesFilter(effectiveStatus(request), statusFilter)) return false
     if (typeFilter !== 'all' && String(request.leaveType?.id) !== typeFilter) return false
     return requestMatchesSearch(request, search)
-  }), [search, state.requests, statusFilter, typeFilter])
+  }).sort(sortMostUrgentFirst), [search, state.requests, statusFilter, typeFilter])
 
   useEffect(() => {
     setPage(1)
@@ -281,7 +311,7 @@ export function ManagerRequestsPage() {
               </div>
             ) : (
               visibleRequests.map((request) => {
-                const meta = statusMeta(request.status)
+                const meta = statusMeta(effectiveStatus(request))
 
                 return (
                   <button

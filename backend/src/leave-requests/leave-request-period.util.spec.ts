@@ -1,5 +1,6 @@
 import { DayPeriod } from './leave-request.entity';
 import {
+  calculateDeductedLeaveDays,
   getCurrentDayPeriod,
   getMartiniqueDateString,
   getMartiniqueTimeString,
@@ -209,5 +210,44 @@ describe('getNextPeriodSwitch — prochaine bascule de période en America/Marti
     const next = getNextPeriodSwitch(martiniqueTime('11:59'), '12:00');
     expect(getMartiniqueTimeString(next)).toBe('12:00');
     expect(next.getUTCHours()).toBe(16);
+  });
+});
+
+
+describe('calculateDeductedLeaveDays — règle du vendredi', () => {
+  it('décompte aussi le samedi lorsqu’un congé se termine le vendredi après-midi', () => {
+    expect(
+      calculateDeductedLeaveDays(
+        new Date('2026-08-21T00:00:00.000Z'),
+        new Date('2026-08-21T00:00:00.000Z'),
+        DayPeriod.MATIN,
+        DayPeriod.APRES_MIDI,
+        new Set(),
+      ),
+    ).toBe(2);
+  });
+
+  it('ne rajoute pas le samedi pour une fin le vendredi matin', () => {
+    expect(
+      calculateDeductedLeaveDays(
+        new Date('2026-08-21T00:00:00.000Z'),
+        new Date('2026-08-21T00:00:00.000Z'),
+        DayPeriod.MATIN,
+        DayPeriod.MATIN,
+        new Set(),
+      ),
+    ).toBe(0.5);
+  });
+
+  it('ne décompte pas le samedi suivant s’il est configuré non décomptable', () => {
+    expect(
+      calculateDeductedLeaveDays(
+        new Date('2026-08-21T00:00:00.000Z'),
+        new Date('2026-08-21T00:00:00.000Z'),
+        DayPeriod.MATIN,
+        DayPeriod.APRES_MIDI,
+        new Set(['2026-08-22']),
+      ),
+    ).toBe(1);
   });
 });

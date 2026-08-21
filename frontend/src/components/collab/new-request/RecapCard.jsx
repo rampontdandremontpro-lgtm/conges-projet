@@ -8,7 +8,8 @@ import { calculateDeductedDaysPreview } from '@/utils/leaveDuration'
 
 const DEROGATION_LABELS = {
   EN_ATTENTE_RH: 'En attente de décision RH',
-  ACCORDEE: 'Accordée par la RH',
+  EN_ATTENTE_DIRECTEUR: 'Validée par la RH · en attente du Directeur',
+  ACCORDEE: 'Accordée par la RH et le Directeur',
   REFUSEE: 'Refusée par la RH',
   EXPIREE: 'Expirée',
   UTILISEE: 'Utilisée',
@@ -98,6 +99,8 @@ export function RecapCard({
     !notice.isNoticeCompliant &&
     notice.isDerogationWindow
 
+  const derogationWorkflowStatus = derogation?.workflowStatus ?? (derogation?.status === 'EN_ATTENTE_RH' && derogation?.decidedByRhId ? 'EN_ATTENTE_DIRECTEUR' : derogation?.status)
+
   const derogationAllowed = Boolean(
     derogationNeeded &&
       (!derogation || derogation.status === 'EXPIREE'),
@@ -106,21 +109,23 @@ export function RecapCard({
   const submitAllowed =
     periodComplete &&
     Boolean(leaveType) &&
-    (!notice || notice.isNoticeCompliant || (draftClean && derogation?.status === 'ACCORDEE'))
+    (!notice || notice.isNoticeCompliant || (draftClean && derogationWorkflowStatus === 'ACCORDEE'))
 
   const submitHint =
     notice && !notice.isNoticeCompliant
-      ? derogation?.status === 'ACCORDEE' && draftClean
+      ? derogationWorkflowStatus === 'ACCORDEE' && draftClean
         ? 'Dérogation accordée — la soumission est possible.'
         : notice.daysBeforeStart < 0
           ? 'La date de départ est dépassée : la soumission est impossible.'
           : !notice.isDerogationWindow
             ? lateSubmissionMessage(notice.daysBeforeStart, derogationLastAllowedDay)
-            : derogation?.status === 'EN_ATTENTE_RH'
+            : derogationWorkflowStatus === 'EN_ATTENTE_RH'
               ? 'Votre demande de dérogation est en attente de décision RH.'
-              : derogation?.status === 'REFUSEE'
-                ? 'La dérogation a été refusée par la RH. Modifiez les dates si nécessaire.'
-                : 'Une dérogation RH accordée est requise pour soumettre.'
+              : derogationWorkflowStatus === 'EN_ATTENTE_DIRECTEUR'
+                ? 'La RH a validé la dérogation. Elle est en attente de la décision finale du Directeur.'
+                : derogationWorkflowStatus === 'REFUSEE'
+                  ? 'La dérogation a été refusée. Modifiez les dates si nécessaire.'
+                  : 'Une dérogation validée par la RH puis le Directeur est requise pour soumettre.'
       : null
 
   useEffect(() => {
@@ -135,10 +140,6 @@ export function RecapCard({
 
   const handleDerogationSubmit = async () => {
     setDerogationError(null)
-    if (derogationReason.trim().length < 10) {
-      setDerogationError('La motivation doit contenir au moins 10 caractères.')
-      return
-    }
     setDerogationSending(true)
     try {
       await onRequestDerogation({ reason: derogationReason.trim() })
@@ -194,8 +195,8 @@ export function RecapCard({
             <p className="nr-recap__note">
               {deductedDays != null
                 ? deductedDaysSource === 'server'
-                  ? 'Calcul confirmé. Les dimanches et jours non décomptables sont exclus.'
-                  : 'Calcul en temps réel. Les dimanches et jours non décomptables sont exclus.'
+                  ? 'Calcul confirmé. Un vendredi posé décompte aussi le samedi suivant ; les dimanches et jours non décomptables sont exclus.'
+                  : 'Calcul en temps réel. Un vendredi posé décompte aussi le samedi suivant ; les dimanches et jours non décomptables sont exclus.'
                 : 'Sélectionnez une période complète pour calculer le décompte.'}
             </p>
           </section>
@@ -301,7 +302,7 @@ export function RecapCard({
               <span
                 className={`nr-derogation-badge nr-derogation-badge--${derogation.status.toLowerCase()}`}
               >
-                {DEROGATION_LABELS[derogation.status] ?? derogation.status}
+                {DEROGATION_LABELS[derogationWorkflowStatus] ?? derogation.status}
               </span>
             </section>
           )}
@@ -323,7 +324,7 @@ export function RecapCard({
           {derogationFormOpen && (
             <div className="nr-derogation-form">
               <label className="nr-derogation-form__label" htmlFor="derogation-reason">
-                Motivation de la dérogation
+                Motif de la dérogation (facultatif)
               </label>
               <textarea
                 id="derogation-reason"
@@ -332,10 +333,10 @@ export function RecapCard({
                 maxLength={2000}
                 value={derogationReason}
                 onChange={(event) => setDerogationReason(event.target.value)}
-                placeholder="Expliquez le motif de votre demande hors délai…"
+                placeholder="Vous pouvez préciser le motif de votre demande hors délai…"
               />
               <p className="nr-derogation-form__count">
-                {derogationReason.trim().length}/2000 — minimum 10 caractères
+                {derogationReason.trim().length}/2000 — facultatif
               </p>
               {derogationError && <p className="nr-derogation-form__error">{derogationError}</p>}
               <div className="nr-derogation-form__actions">
@@ -355,7 +356,7 @@ export function RecapCard({
                   type="button"
                   className="nr-btn nr-btn--secondary"
                   onClick={handleDerogationSubmit}
-                  disabled={derogationSending || saving || submitting || derogationReason.trim().length < 10}
+                  disabled={derogationSending || saving || submitting}
                 >
                   {derogationSending ? 'Envoi…' : 'Envoyer la demande'}
                 </button>

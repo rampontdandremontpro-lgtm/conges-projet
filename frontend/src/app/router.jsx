@@ -81,6 +81,14 @@ export const router = createBrowserRouter([
         ),
       },
       {
+        path: 'director-derogations',
+        element: (
+          <RoleRoute roles={[ROLES.DIRECTEUR]}>
+            <RhDerogationsPage />
+          </RoleRoute>
+        ),
+      },
+      {
         path: 'director-presence',
         element: (
           <RoleRoute roles={[ROLES.DIRECTEUR]}>

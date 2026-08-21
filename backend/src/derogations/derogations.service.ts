@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -38,7 +39,6 @@ import {
 } from './derogation.entity';
 
 const EXPIRABLE_DEROGATION_STATUSES = [
-  DerogationStatus.EN_ATTENTE_RH,
   DerogationStatus.EN_ATTENTE_RH,
   DerogationStatus.ACCORDEE,
 ];
@@ -99,7 +99,7 @@ export class DerogationsService {
             DerogationStatus.EN_ATTENTE_RH
         ) {
           throw new ConflictException(
-            'Une demande de dérogation est déjà en attente de décision RH pour cette période.',
+            'Une demande de dérogation est déjà en cours de validation pour cette période.',
           );
         }
 
@@ -108,7 +108,7 @@ export class DerogationsService {
           existingDerogation.status === DerogationStatus.ACCORDEE
         ) {
           throw new ConflictException(
-            'Une dérogation RH est déjà accordée pour cette période.',
+            'Une dérogation est déjà accordée pour cette période.',
           );
         }
 
@@ -139,7 +139,7 @@ export class DerogationsService {
         derogation.leaveRequestId = leaveRequest.id;
         derogation.requestedStartDate = leaveRequest.startDate;
         derogation.requestedEndDate = leaveRequest.endDate;
-        derogation.reason = dto.reason.trim();
+        derogation.reason = dto.reason?.trim() ?? '';
         derogation.status = DerogationStatus.EN_ATTENTE_RH;
         derogation.requestedAt = requestedAt;
         derogation.decidedByRhId = null;
@@ -210,7 +210,7 @@ export class DerogationsService {
       derogation.leaveTypeId = leaveRequest.leaveTypeId;
       derogation.requestedStartDate = leaveRequest.startDate;
       derogation.requestedEndDate = leaveRequest.endDate;
-      derogation.reason = dto.reason.trim();
+      derogation.reason = dto.reason?.trim() ?? '';
       derogation.expiresAt = await this.calculateDerogationExpiryWithSettings(
         leaveRequest.startDate,
       );
@@ -294,17 +294,6 @@ export class DerogationsService {
         manager,
       );
 
-      await this.notificationsService.createForActiveRoles(
-        [UserRole.DIRECTEUR],
-        {
-          type: 'DEROGATION_DIRECTOR_INFO',
-          title: 'Nouvelle dérogation',
-          message: `Une demande de dérogation a été soumise pour la période du ${leaveRequest.startDate} au ${leaveRequest.endDate}.`,
-          leaveRequestId: leaveRequest.id,
-          derogationId: derogation.id,
-        },
-        manager,
-      );
     });
 
     return this.findMyOne(id, authenticatedUser);
@@ -376,6 +365,7 @@ export class DerogationsService {
 
   async findForManagement(
     query: DerogationQueryDto,
+    authenticatedUser: AuthenticatedUser,
   ): Promise<Derogation[]> {
     await this.expireOutdatedDerogations();
 
@@ -392,19 +382,32 @@ export class DerogationsService {
         'decidedByRh',
       );
 
-    if (query.status) {
+    if (authenticatedUser.role === UserRole.DIRECTEUR) {
+      queryBuilder
+        .where('derogation.status = :directorPendingStatus', {
+          directorPendingStatus: DerogationStatus.EN_ATTENTE_RH,
+        })
+        .andWhere('derogation.decidedByRhId IS NOT NULL');
+    } else if (query.status) {
       queryBuilder.where('derogation.status = :status', {
         status: query.status,
       });
     }
 
-    return queryBuilder
-      .orderBy('derogation.requestedAt', 'DESC')
-      .addOrderBy('derogation.id', 'DESC')
+    const derogations = await queryBuilder
+      .orderBy('derogation.requestedAt', 'ASC')
+      .addOrderBy('derogation.id', 'ASC')
       .getMany();
+
+    return derogations.map((derogation) =>
+      this.decorateWorkflowStatus(derogation),
+    );
   }
 
-  async findOneForManagement(id: number): Promise<Derogation> {
+  async findOneForManagement(
+    id: number,
+    authenticatedUser: AuthenticatedUser,
+  ): Promise<Derogation> {
     await this.expireOutdatedDerogations();
 
     const derogation = await this.derogationRepository.findOne({
@@ -423,7 +426,16 @@ export class DerogationsService {
       );
     }
 
-    return derogation;
+    if (
+      authenticatedUser.role === UserRole.DIRECTEUR &&
+      derogation.decidedByRhId === null
+    ) {
+      throw new ForbiddenException(
+        'Cette dérogation ne relève pas encore de la validation du Directeur.',
+      );
+    }
+
+    return this.decorateWorkflowStatus(derogation);
   }
 
   async decide(
@@ -449,7 +461,7 @@ export class DerogationsService {
 
       if (derogation.status !== DerogationStatus.EN_ATTENTE_RH) {
         throw new BadRequestException(
-          'Seule une dérogation au statut EN_ATTENTE_RH peut être traitée.',
+          'Cette dérogation a déjà reçu une décision finale.',
         );
       }
 
@@ -483,7 +495,7 @@ export class DerogationsService {
 
       if (leaveRequest.status !== LeaveRequestStatus.BROUILLON) {
         throw new BadRequestException(
-          'La demande de congé liée n’est plus au statut EN_ATTENTE_RH.',
+          'La demande de congé liée n’est plus au statut BROUILLON.',
         );
       }
 
@@ -494,17 +506,106 @@ export class DerogationsService {
       }
 
       const now = new Date();
-      const isGranted =
-        dto.decision === DerogationDecision.ACCORDER;
+      const isGranted = dto.decision === DerogationDecision.ACCORDER;
       const comment = dto.decisionComment?.trim() || null;
+      const isRhStage = derogation.decidedByRhId === null;
+
+      if (isRhStage) {
+        if (authenticatedUser.role !== UserRole.RH) {
+          throw new ForbiddenException(
+            'La RH doit valider la dérogation avant le Directeur.',
+          );
+        }
+
+        derogation.decidedByRhId = authenticatedUser.id;
+        derogation.decisionComment = comment;
+        derogation.decidedAt = now;
+
+        if (!isGranted) {
+          derogation.status = DerogationStatus.REFUSEE;
+          await repository.save(derogation);
+
+          await this.createHistory(manager, {
+            leaveRequest,
+            action: AuditAction.DEROGATION_REFUSEE,
+            actorId: authenticatedUser.id,
+            comment,
+            metadata: {
+              derogationId: derogation.id,
+              status: derogation.status,
+              validationLevel: 'RH',
+              expiresAt: derogation.expiresAt,
+            },
+          });
+
+          await this.notificationsService.create(
+            {
+              userId: derogation.employeeId,
+              type: 'DEROGATION_REFUSED',
+              title: 'Dérogation refusée',
+              message: `Votre dérogation pour la période du ${leaveRequest.startDate} au ${leaveRequest.endDate} a été refusée par la RH.`,
+              leaveRequestId: leaveRequest.id,
+              derogationId: derogation.id,
+            },
+            manager,
+          );
+          return;
+        }
+
+        // Accord RH : la dérogation reste techniquement en attente afin d'éviter
+        // une migration d'enum SQL, mais le statut métier exposé devient EN_ATTENTE_DIRECTEUR.
+        derogation.status = DerogationStatus.EN_ATTENTE_RH;
+        await repository.save(derogation);
+
+        await this.createHistory(manager, {
+          leaveRequest,
+          action: AuditAction.DEROGATION_PREVALIDEE_RH,
+          actorId: authenticatedUser.id,
+          comment,
+          metadata: {
+            derogationId: derogation.id,
+            status: 'EN_ATTENTE_DIRECTEUR',
+            validationLevel: 'RH',
+            nextValidatorRole: UserRole.DIRECTEUR,
+            expiresAt: derogation.expiresAt,
+          },
+        });
+
+        await this.notificationsService.createForActiveRoles(
+          [UserRole.DIRECTEUR],
+          {
+            type: 'DEROGATION_WAITING_DIRECTOR',
+            title: 'Dérogation à valider',
+            message: `La RH a validé la dérogation pour la période du ${leaveRequest.startDate} au ${leaveRequest.endDate}. Votre décision finale est requise.`,
+            leaveRequestId: leaveRequest.id,
+            derogationId: derogation.id,
+          },
+          manager,
+        );
+
+        await this.notificationsService.create(
+          {
+            userId: derogation.employeeId,
+            type: 'DEROGATION_IN_PROGRESS',
+            title: 'Dérogation en cours de validation',
+            message: 'La RH a validé votre dérogation. Elle est maintenant transmise au Directeur pour décision finale.',
+            leaveRequestId: leaveRequest.id,
+            derogationId: derogation.id,
+          },
+          manager,
+        );
+        return;
+      }
+
+      if (authenticatedUser.role !== UserRole.DIRECTEUR) {
+        throw new ForbiddenException(
+          'La validation finale de cette dérogation relève du Directeur.',
+        );
+      }
 
       derogation.status = isGranted
         ? DerogationStatus.ACCORDEE
         : DerogationStatus.REFUSEE;
-      derogation.decidedByRhId = authenticatedUser.id;
-      derogation.decisionComment = comment;
-      derogation.decidedAt = now;
-
       await repository.save(derogation);
 
       await this.createHistory(manager, {
@@ -517,6 +618,8 @@ export class DerogationsService {
         metadata: {
           derogationId: derogation.id,
           status: derogation.status,
+          validationLevel: 'DIRECTEUR',
+          rhValidatorId: derogation.decidedByRhId,
           expiresAt: derogation.expiresAt,
         },
       });
@@ -531,8 +634,8 @@ export class DerogationsService {
             ? 'Dérogation accordée'
             : 'Dérogation refusée',
           message: isGranted
-            ? `Votre dérogation pour la période du ${leaveRequest.startDate} au ${leaveRequest.endDate} a été accordée.`
-            : `Votre dérogation pour la période du ${leaveRequest.startDate} au ${leaveRequest.endDate} a été refusée.`,
+            ? `Votre dérogation pour la période du ${leaveRequest.startDate} au ${leaveRequest.endDate} a été validée par la RH puis accordée par le Directeur.`
+            : `Votre dérogation pour la période du ${leaveRequest.startDate} au ${leaveRequest.endDate} a été refusée par le Directeur.`,
           leaveRequestId: leaveRequest.id,
           derogationId: derogation.id,
         },
@@ -546,7 +649,22 @@ export class DerogationsService {
       );
     }
 
-    return this.findOneForManagement(id);
+    return this.findOneForManagement(id, authenticatedUser);
+  }
+
+  private decorateWorkflowStatus(derogation: Derogation): Derogation {
+    if (
+      derogation.status === DerogationStatus.EN_ATTENTE_RH &&
+      derogation.decidedByRhId !== null
+    ) {
+      return Object.assign(derogation, {
+        workflowStatus: 'EN_ATTENTE_DIRECTEUR',
+      });
+    }
+
+    return Object.assign(derogation, {
+      workflowStatus: derogation.status,
+    });
   }
 
   async consumeGrantedDerogation(
@@ -598,7 +716,7 @@ export class DerogationsService {
       )
     ) {
       throw new BadRequestException(
-        'Une dérogation RH accordée, valide et correspondant exactement à cette demande est obligatoire.',
+        'Une dérogation validée par la RH puis accordée par le Directeur, valide et correspondant exactement à cette demande est obligatoire.',
       );
     }
 

@@ -25,6 +25,7 @@ const FILTERS = [
 const FILTER_STATUSES = {
   pending: new Set([
     'EN_ATTENTE_VALIDATION',
+    'EN_COURS_TRAITEMENT',
     'ANNULATION_EN_ATTENTE_ACCORD',
     'DECLAREE',
     'JUSTIFICATIF_EN_ATTENTE',
@@ -45,7 +46,7 @@ function normalizeLeaveRequest(request) {
     endDate: request.endDate,
     duration: Number(request.deductedDays) || 0,
     durationUnit: 'j',
-    status: request.status,
+    status: request.status === 'EN_ATTENTE_VALIDATION' && request.finalDeciderId ? 'EN_COURS_TRAITEMENT' : request.status,
     preparedByRh: Boolean(
       request.status === 'BROUILLON' &&
       request.createdBy?.role === 'RH' &&

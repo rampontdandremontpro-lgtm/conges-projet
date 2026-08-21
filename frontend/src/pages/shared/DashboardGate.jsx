@@ -8,24 +8,24 @@ import { DashboardDirecteur } from '@/pages/director/DashboardPage'
 import { AdminDashboardPage } from '@/pages/admin/DashboardPage'
 
 export function DashboardGate() {
-  const { user } = useAuth()
-  if (user?.role === ROLES.COLLABORATEUR) {
+  const { effectiveRole } = useAuth()
+  if (effectiveRole === ROLES.COLLABORATEUR) {
     return <DashboardCollaborateur />
   }
 
-  if (user?.role === ROLES.RESPONSABLE_SERVICE) {
+  if (effectiveRole === ROLES.RESPONSABLE_SERVICE) {
     return <DashboardResponsable />
   }
 
-  if (user?.role === ROLES.RH) {
+  if (effectiveRole === ROLES.RH) {
     return <DashboardRh />
   }
 
-  if (user?.role === ROLES.DIRECTEUR) {
+  if (effectiveRole === ROLES.DIRECTEUR) {
     return <DashboardDirecteur />
   }
 
-  if (user?.role === ROLES.ADMIN) {
+  if (effectiveRole === ROLES.ADMIN) {
     return <AdminDashboardPage />
   }
 

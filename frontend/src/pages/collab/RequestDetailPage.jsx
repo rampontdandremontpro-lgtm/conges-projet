@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 
 import { RequestStatusBadge } from '@/components/collab/requests/RequestStatusBadge'
+import { getEffectiveLeaveRequestStatus } from '@/config/leaveMeta'
 import { Icon } from '@/components/ui/Icon'
 import {
   cancelAbsenceDeclaration,
@@ -271,7 +272,7 @@ export function RequestDetailPage() {
           </span>
           <div className="request-detail-hero__title-row">
             <h2>{title}</h2>
-            <RequestStatusBadge status={request.status} />
+            <RequestStatusBadge status={isLeave ? getEffectiveLeaveRequestStatus(request) : request.status} />
           </div>
           <p>{formatRangeNumericFR(request.startDate, request.endDate)} · <strong>{formatDuration(request, source)}</strong></p>
         </div>

@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 
+import { useAuth } from '@/auth/AuthContext'
+
 import { Icon } from '@/components/ui/Icon'
 import { useAutoDismiss } from '@/hooks/useAutoDismiss'
 import { PaginationBar } from '@/components/ui/PaginationBar'
@@ -17,7 +19,8 @@ import '@/styles/rh/derogations.css'
 const PAGE_SIZE = 8
 
 const STATUS_META = {
-  EN_ATTENTE_RH: { label: 'En attente', tone: 'pending' },
+  EN_ATTENTE_RH: { label: 'En attente RH', tone: 'pending' },
+  EN_ATTENTE_DIRECTEUR: { label: 'En attente Direction', tone: 'pending' },
   ACCORDEE: { label: 'Accordée', tone: 'granted' },
   REFUSEE: { label: 'Refusée', tone: 'refused' },
   UTILISEE: { label: 'Utilisée', tone: 'used' },
@@ -54,9 +57,17 @@ function statusMeta(status) {
   return STATUS_META[status] ?? { label: status || '—', tone: 'neutral' }
 }
 
+function effectiveDerogationStatus(item) {
+  return item?.workflowStatus ?? (
+    item?.status === 'EN_ATTENTE_RH' && item?.decidedByRhId
+      ? 'EN_ATTENTE_DIRECTEUR'
+      : item?.status
+  )
+}
+
 function statusMatches(status, filter) {
   if (filter === 'all') return true
-  if (filter === 'pending') return status === 'EN_ATTENTE_RH'
+  if (filter === 'pending') return ['EN_ATTENTE_RH', 'EN_ATTENTE_DIRECTEUR'].includes(status)
   if (filter === 'granted') return status === 'ACCORDEE'
   if (filter === 'refused') return status === 'REFUSEE'
   if (filter === 'used') return status === 'UTILISEE'
@@ -110,7 +121,7 @@ function matchesSearch(item, query) {
     item.requestedStartDate,
     item.requestedEndDate,
     item.reason,
-    statusMeta(item.status).label,
+    statusMeta(effectiveDerogationStatus(item)).label,
     item.decisionComment,
     item.decidedByRh?.prenom,
     item.decidedByRh?.nom,
@@ -131,6 +142,7 @@ function StatusBadge({ status }) {
 }
 
 function DerogationDetailDrawer({ itemId, onClose, onChanged }) {
+  const { user } = useAuth()
   const [state, setState] = useState({ loading: true, error: false, item: null })
   const [comment, setComment] = useState('')
   const [busy, setBusy] = useState('')
@@ -154,7 +166,11 @@ function DerogationDetailDrawer({ itemId, onClose, onChanged }) {
   }, [load])
 
   const item = state.item
-  const isPending = item?.status === 'EN_ATTENTE_RH'
+  const isDirector = user?.role === 'DIRECTEUR'
+  const workflowStatus = effectiveDerogationStatus(item)
+  const isPending = isDirector
+    ? workflowStatus === 'EN_ATTENTE_DIRECTEUR'
+    : workflowStatus === 'EN_ATTENTE_RH'
 
   const decide = async (decision) => {
     if (!item || busy) return
@@ -173,7 +189,9 @@ function DerogationDetailDrawer({ itemId, onClose, onChanged }) {
       setComment('')
       onChanged(
         decision === 'ACCORDER'
-          ? `Dérogation accordée à ${fullName(updated.employee)}.`
+          ? isDirector
+            ? `Dérogation accordée définitivement à ${fullName(updated.employee)}.`
+            : `Validation RH enregistrée pour ${fullName(updated.employee)} ; dérogation transmise au Directeur.`
           : `Dérogation refusée pour ${fullName(updated.employee)}.`,
       )
     } catch (error) {
@@ -213,7 +231,7 @@ function DerogationDetailDrawer({ itemId, onClose, onChanged }) {
         ) : (
           <>
             <div className="rh-derogation-detail-status">
-              <StatusBadge status={item.status} />
+              <StatusBadge status={workflowStatus} />
               <strong>{item.leaveType?.name ?? 'Type de congé'}</strong>
             </div>
 
@@ -249,19 +267,19 @@ function DerogationDetailDrawer({ itemId, onClose, onChanged }) {
               <p>{item.reason || 'Aucun motif renseigné.'}</p>
             </div>
 
-            {item.status !== 'EN_ATTENTE_RH' && (
+            {item.decidedByRhId && (
               <div className="rh-derogation-decision-summary">
                 <div className="rh-derogation-decision-summary__title">
                   <Icon name={item.status === 'REFUSEE' ? 'alert' : 'check'} size={17} />
-                  <strong>Décision RH</strong>
+                  <strong>Validation RH</strong>
                 </div>
                 <div className="rh-derogation-decision-summary__grid">
                   <div>
-                    <small>Décidée par</small>
+                    <small>Validée par</small>
                     <strong>{fullName(item.decidedByRh)}</strong>
                   </div>
                   <div>
-                    <small>Décidée le</small>
+                    <small>Validée le</small>
                     <strong>{formatDateTime(item.decidedAt)}</strong>
                   </div>
                 </div>
@@ -277,8 +295,12 @@ function DerogationDetailDrawer({ itemId, onClose, onChanged }) {
                 <div className="rh-derogation-decision-card__intro">
                   <span className="rh-derogation-decision-card__icon"><Icon name="shield" size={19} /></span>
                   <div>
-                    <strong>Décision RH</strong>
-                    <p>Vérifiez le motif et la période avant d’accorder ou de refuser cette dérogation.</p>
+                    <strong>{isDirector ? 'Décision finale du Directeur' : 'Validation RH'}</strong>
+                    <p>
+                      {isDirector
+                        ? 'La RH a validé cette dérogation. Vérifiez la période avant la décision finale.'
+                        : 'Vérifiez la période avant de transmettre la dérogation au Directeur ou de la refuser.'}
+                    </p>
                   </div>
                 </div>
 
@@ -316,7 +338,7 @@ function DerogationDetailDrawer({ itemId, onClose, onChanged }) {
                     onClick={() => decide('ACCORDER')}
                   >
                     <Icon name="check" size={16} />
-                    {busy === 'ACCORDER' ? 'Validation…' : 'Accorder la dérogation'}
+                    {busy === 'ACCORDER' ? 'Validation…' : isDirector ? 'Accorder définitivement' : 'Valider et transmettre au Directeur'}
                   </button>
                 </div>
               </div>
@@ -335,6 +357,8 @@ function DerogationDetailDrawer({ itemId, onClose, onChanged }) {
 }
 
 export function RhDerogationsPage() {
+  const { user } = useAuth()
+  const isDirector = user?.role === 'DIRECTEUR'
   const [searchParams] = useSearchParams()
   const [state, setState] = useState({ loading: true, error: false, items: [] })
   const [filter, setFilter] = useState('all')
@@ -377,7 +401,7 @@ export function RhDerogationsPage() {
 
   const counts = useMemo(() => ({
     all: state.items.length,
-    pending: state.items.filter((item) => item.status === 'EN_ATTENTE_RH').length,
+    pending: state.items.filter((item) => ['EN_ATTENTE_RH', 'EN_ATTENTE_DIRECTEUR'].includes(effectiveDerogationStatus(item))).length,
     granted: state.items.filter((item) => item.status === 'ACCORDEE').length,
     refused: state.items.filter((item) => item.status === 'REFUSEE').length,
     used: state.items.filter((item) => item.status === 'UTILISEE').length,
@@ -385,7 +409,7 @@ export function RhDerogationsPage() {
   }), [state.items])
 
   const filtered = useMemo(
-    () => state.items.filter((item) => statusMatches(item.status, filter) && matchesSearch(item, query)),
+    () => state.items.filter((item) => statusMatches(effectiveDerogationStatus(item), filter) && matchesSearch(item, query)),
     [filter, query, state.items],
   )
 
@@ -414,13 +438,13 @@ export function RhDerogationsPage() {
       <section className="rh-derogations-card">
         <div className="rh-derogations-toolbar">
           <div>
-            <h2>Gestion des dérogations</h2>
-            <p>Demandes exceptionnelles liées au délai de prévenance des congés.</p>
+            <h2>{isDirector ? 'Dérogations à valider' : 'Gestion des dérogations'}</h2>
+            <p>{isDirector ? 'Dérogations déjà validées par la RH et en attente de votre décision finale.' : 'Premier niveau de validation des demandes exceptionnelles avant transmission au Directeur.'}</p>
           </div>
         </div>
 
         <div className="rh-derogations-tabs" role="tablist" aria-label="Filtrer les dérogations">
-          {FILTERS.map((tab) => (
+          {(isDirector ? FILTERS.filter((tab) => ['all', 'pending'].includes(tab.id)) : FILTERS).map((tab) => (
             <button
               key={tab.id}
               type="button"
@@ -484,7 +508,7 @@ export function RhDerogationsPage() {
                   <span className="rh-derogations-cell-strong">{formatDuration(item)}</span>
                   <span className="rh-derogations-reason-preview" title={item.reason ?? ''}>{truncate(item.reason)}</span>
                   <span>{formatDateTime(item.requestedAt)}</span>
-                  <span><StatusBadge status={item.status} /></span>
+                  <span><StatusBadge status={effectiveDerogationStatus(item)} /></span>
                   <span className="rh-derogations-eye"><Icon name="eye" size={17} /></span>
                 </button>
               ))}

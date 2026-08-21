@@ -3,7 +3,8 @@ import { Icon } from '@/components/ui/Icon'
 const STATUS_META = {
   BROUILLON: { label: 'Brouillon', tone: 'neutral', icon: 'file' },
   EN_ATTENTE_VALIDATION: { label: 'En attente', tone: 'warning', icon: 'clock' },
-  VALIDEE: { label: 'Validée', tone: 'success', icon: 'check' },
+  EN_COURS_TRAITEMENT: { label: 'En cours de traitement', tone: 'warning', icon: 'clock' },
+  VALIDEE: { label: 'Validée · circuit terminé', tone: 'success', icon: 'check' },
   REFUSEE: { label: 'Refusée', tone: 'danger', icon: 'alert' },
   ANNULEE: { label: 'Annulée', tone: 'neutral', icon: 'clock' },
   ANNULATION_EN_ATTENTE_ACCORD: {

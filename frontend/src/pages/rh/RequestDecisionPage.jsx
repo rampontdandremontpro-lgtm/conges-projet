@@ -37,7 +37,8 @@ function periodLabel(value) {
 
 const STATUS_META = {
   EN_ATTENTE_VALIDATION: { label: 'En attente', tone: 'pending', icon: 'clock' },
-  VALIDEE: { label: 'Validée', tone: 'approved', icon: 'check' },
+  EN_COURS_TRAITEMENT: { label: 'En cours de traitement', tone: 'pending', icon: 'clock' },
+  VALIDEE: { label: 'Validée · circuit terminé', tone: 'approved', icon: 'check' },
   REFUSEE: { label: 'Refusée', tone: 'refused', icon: 'alert' },
   ANNULEE: { label: 'Annulée', tone: 'cancelled', icon: 'alert' },
   ANNULATION_EN_ATTENTE_ACCORD: { label: 'Annulation en attente', tone: 'pending', icon: 'clock' },
@@ -46,6 +47,9 @@ const STATUS_META = {
 }
 
 function requestStatusMeta(request) {
+  if (request?.status === 'EN_ATTENTE_VALIDATION' && request?.finalDeciderId) {
+    return STATUS_META.EN_COURS_TRAITEMENT
+  }
   if (request?.status === 'EN_ATTENTE_VALIDATION' && request?.isUrgent) {
     return { label: 'Urgente', tone: 'urgent', icon: 'alert' }
   }
@@ -99,7 +103,8 @@ export function RhRequestDecisionPage() {
   }, [state.request])
 
   const handleValidate = () => {
-    if (!directorAgreementConfirmed) {
+    const isRhFinalization = state.request?.decisionAccess?.kind === 'RH_FINALISATION'
+    if (!isRhFinalization && !directorAgreementConfirmed) {
       setFeedback({ kind: 'error', message: 'Vous devez confirmer avoir obtenu l’accord du Directeur avant de valider.' })
       return
     }
@@ -118,7 +123,7 @@ export function RhRequestDecisionPage() {
       await validateRhRequest(id, {
         signatureType,
         signatureData,
-        rhConfirmedDirectorAgreement: true,
+        rhConfirmedDirectorAgreement: state.request?.decisionAccess?.kind === 'RH_FINALISATION' ? undefined : true,
         minimumPresenceJustification: minimumPresenceJustification.trim() || undefined,
       })
       window.dispatchEvent(new Event('gmes:data-changed'))
@@ -307,30 +312,32 @@ export function RhRequestDecisionPage() {
 
           {canDecide ? (
             <>
-              <label
-                className={`manager-request-actions-card__agreement${directorAgreementConfirmed ? ' is-checked' : ''}`}
-              >
-                <span className="manager-request-actions-card__agreement-check">
-                  <input
-                    type="checkbox"
-                    checked={directorAgreementConfirmed}
-                    onChange={(event) => setDirectorAgreementConfirmed(event.target.checked)}
-                  />
-                  <span className="manager-request-actions-card__agreement-box" aria-hidden="true">
-                    <Icon name="check" size={14} />
-                  </span>
-                </span>
-
-                <span className="manager-request-actions-card__agreement-content">
-                  <span className="manager-request-actions-card__agreement-title">
-                    <strong>Accord du Directeur obtenu</strong>
-                    <span className="manager-request-actions-card__agreement-badge">
-                      {directorAgreementConfirmed ? 'Confirmé' : 'Obligatoire'}
+              {request.decisionAccess?.kind !== 'RH_FINALISATION' && (
+                <label
+                  className={`manager-request-actions-card__agreement${directorAgreementConfirmed ? ' is-checked' : ''}`}
+                >
+                  <span className="manager-request-actions-card__agreement-check">
+                    <input
+                      type="checkbox"
+                      checked={directorAgreementConfirmed}
+                      onChange={(event) => setDirectorAgreementConfirmed(event.target.checked)}
+                    />
+                    <span className="manager-request-actions-card__agreement-box" aria-hidden="true">
+                      <Icon name="check" size={14} />
                     </span>
                   </span>
-                  <small>Je confirme avoir obtenu l’accord du Directeur avant de valider cette demande.</small>
-                </span>
-              </label>
+
+                  <span className="manager-request-actions-card__agreement-content">
+                    <span className="manager-request-actions-card__agreement-title">
+                      <strong>Accord du Directeur obtenu</strong>
+                      <span className="manager-request-actions-card__agreement-badge">
+                        {directorAgreementConfirmed ? 'Confirmé' : 'Obligatoire'}
+                      </span>
+                    </span>
+                    <small>Je confirme avoir obtenu l’accord du Directeur avant de valider cette demande.</small>
+                  </span>
+                </label>
+              )}
 
               {availability?.minimumPresenceBreached && (
                 <label className="manager-request-actions-card__justification" htmlFor="minimum-presence-justification">

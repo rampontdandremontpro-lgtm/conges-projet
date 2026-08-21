@@ -43,7 +43,9 @@ function buildAlerts({ balance, requests, settings }) {
     if (request.status === 'EN_ATTENTE_VALIDATION') {
       alerts.push({
         tone: 'info',
-        text: `Demande du ${formatDateNumericFR(request.startDate)} en attente de validation`,
+        text: request.finalDeciderId
+          ? `Demande du ${formatDateNumericFR(request.startDate)} en cours de traitement par la RH`
+          : `Demande du ${formatDateNumericFR(request.startDate)} en attente de validation`,
       })
     }
   }

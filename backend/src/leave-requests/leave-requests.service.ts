@@ -62,7 +62,10 @@ import {
   evaluateSubmissionNotice,
   type SubmissionNoticeInfo,
 } from './leave-request-notice.util';
-import { getMartiniqueDateString } from './leave-request-period.util';
+import {
+  calculateDeductedLeaveDays,
+  getMartiniqueDateString,
+} from './leave-request-period.util';
 import { AuditAction } from '../audit/audit-log.entity';
 import { AuditService } from '../audit/audit.service';
 import { ServiceAvailabilityService } from './service-availability.service';
@@ -381,7 +384,7 @@ export class LeaveRequestsService {
       );
 
       await this.notificationsService.createForActiveRoles(
-        [UserRole.RH, UserRole.RESPONSABLE_SERVICE],
+        [UserRole.RH],
         {
           type: 'CONGE_DIRECTEUR_INFORMATION',
           title: 'Indisponibilité du Directeur',
@@ -525,7 +528,7 @@ export class LeaveRequestsService {
       employeeId = leaveRequest.employeeId;
 
       await this.notificationsService.createForActiveRoles(
-        [UserRole.RH, UserRole.RESPONSABLE_SERVICE],
+        [UserRole.RH],
         {
           type: 'CONGE_DIRECTEUR_MODIFIE',
           title: 'Indisponibilité du Directeur modifiée',
@@ -582,7 +585,7 @@ export class LeaveRequestsService {
       employeeId = leaveRequest.employeeId;
 
       await this.notificationsService.createForActiveRoles(
-        [UserRole.RH, UserRole.RESPONSABLE_SERVICE],
+        [UserRole.RH],
         {
           type: 'CONGE_DIRECTEUR_ANNULE',
           title: 'Indisponibilité du Directeur annulée',
@@ -1286,7 +1289,34 @@ export class LeaveRequestsService {
     });
 
     if (authenticatedUser.role === UserRole.DIRECTEUR) {
-      return requests;
+      const pending: LeaveRequest[] = [];
+
+      for (const leaveRequest of requests) {
+        if (leaveRequest.employeeId === authenticatedUser.id) {
+          continue;
+        }
+
+        try {
+          const decisionAccess =
+            await this.validatorResolutionService.resolveAccess(
+              leaveRequest,
+              authenticatedUser,
+            );
+          pending.push(
+            Object.assign(leaveRequest, { decisionAccess }),
+          );
+        } catch (error) {
+          if (
+            error instanceof ForbiddenException ||
+            error instanceof BadRequestException
+          ) {
+            continue;
+          }
+          throw error;
+        }
+      }
+
+      return pending;
     }
 
     if (authenticatedUser.role === UserRole.RH) {
@@ -1543,6 +1573,8 @@ export class LeaveRequestsService {
     authenticatedUser: AuthenticatedUser,
     dto: ValidateLeaveRequestDto,
   ): Promise<LeaveRequest> {
+    let forwardedToRh = false;
+
     await this.dataSource.transaction(async (manager) => {
       const leaveRequest =
         await this.findRequestForDecisionUpdate(manager, id);
@@ -1580,6 +1612,7 @@ export class LeaveRequestsService {
 
       if (
         authenticatedUser.role === UserRole.RH &&
+        access.kind !== 'RH_FINALISATION' &&
         dto.rhConfirmedDirectorAgreement !== true
       ) {
         throw new BadRequestException(
@@ -1592,6 +1625,89 @@ export class LeaveRequestsService {
           dto.signatureType,
           dto.signatureData,
         );
+
+      const decisionAt = new Date();
+      const oldStatus = leaveRequest.status;
+      const requiresRhFinalization =
+        leaveRequest.service.validationMode ===
+          ValidationMode.RESPONSABLE_PUIS_RELAIS &&
+        leaveRequest.employee.role === UserRole.COLLABORATEUR &&
+        leaveRequest.finalDeciderId === null &&
+        authenticatedUser.role !== UserRole.RH;
+
+      if (requiresRhFinalization) {
+        // Premier niveau : le Responsable (ou son relais autorisé) donne son accord,
+        // puis la demande reste ouverte pour la validation finale de la RH.
+        leaveRequest.status = LeaveRequestStatus.EN_ATTENTE_VALIDATION;
+        leaveRequest.finalDeciderId = authenticatedUser.id;
+        leaveRequest.finalDeciderRole = authenticatedUser.role;
+        leaveRequest.decisionAt = decisionAt;
+        leaveRequest.refusalComment = null;
+        leaveRequest.validatorSignatureType = dto.signatureType;
+        leaveRequest.validatorSignatureData = validatorSignatureData;
+        leaveRequest.validatorSignedAt = decisionAt;
+        leaveRequest.rhConfirmedDirectorAgreement = false;
+        leaveRequest.rhDirectorAgreementConfirmedAt = null;
+        leaveRequest.isUrgent = access.kind === 'URGENCE';
+        leaveRequest.urgentReason =
+          access.kind === 'URGENCE' ? access.reason : null;
+        leaveRequest.lockedAt = null;
+        leaveRequest.version += 1;
+
+        await manager.getRepository(LeaveRequest).save(leaveRequest);
+
+        await this.saveDecisionAccessHistory(
+          manager,
+          leaveRequest,
+          authenticatedUser,
+          access,
+        );
+
+        await this.auditService.recordStatusChange(
+          {
+            actorId: authenticatedUser.id,
+            action: AuditAction.DEMANDE_PREVALIDEE,
+            resourceType: 'LEAVE_REQUESTS',
+            resourceId: leaveRequest.id,
+            oldStatus,
+            newStatus: 'EN_COURS_TRAITEMENT',
+            comment: null,
+            metadata: {
+              firstLevelValidatorRole: authenticatedUser.role,
+              accessKind: access.kind,
+              serviceAvailability: availability,
+              minimumPresenceJustification,
+              nextValidatorRole: UserRole.RH,
+            },
+          },
+          manager,
+        );
+
+        await this.notificationsService.create(
+          {
+            userId: leaveRequest.employeeId,
+            type: 'LEAVE_REQUEST_IN_PROGRESS',
+            title: 'Demande en cours de traitement',
+            message: `Votre demande du ${leaveRequest.startDate} au ${leaveRequest.endDate} a été validée au premier niveau et transmise à la RH pour validation finale.`,
+            leaveRequestId: leaveRequest.id,
+          },
+          manager,
+        );
+
+        await this.notificationsService.createForActiveRoles(
+          [UserRole.RH],
+          {
+            type: 'LEAVE_REQUEST_RH_FINALIZATION',
+            title: 'Demande à finaliser',
+            message: `La demande n°${leaveRequest.id} de ${leaveRequest.employee.prenom} ${leaveRequest.employee.nom} a été validée au premier niveau et attend votre validation finale.`,
+            leaveRequestId: leaveRequest.id,
+          },
+          manager,
+        );
+
+        forwardedToRh = true;
+        return;
+      }
 
       let realBalanceAfter: number | null = null;
 
@@ -1611,22 +1727,20 @@ export class LeaveRequestsService {
         realBalanceAfter = balanceResult.realBalanceAfter;
       }
 
-      const decisionAt = new Date();
-      const oldStatus = leaveRequest.status;
-
       leaveRequest.status = LeaveRequestStatus.VALIDEE;
       leaveRequest.finalDeciderId = authenticatedUser.id;
       leaveRequest.finalDeciderRole = authenticatedUser.role;
       leaveRequest.decisionAt = decisionAt;
       leaveRequest.refusalComment = null;
       leaveRequest.validatorSignatureType = dto.signatureType;
-      leaveRequest.validatorSignatureData =
-        validatorSignatureData;
+      leaveRequest.validatorSignatureData = validatorSignatureData;
       leaveRequest.validatorSignedAt = decisionAt;
       leaveRequest.rhConfirmedDirectorAgreement =
-        authenticatedUser.role === UserRole.RH;
+        authenticatedUser.role === UserRole.RH &&
+        access.kind !== 'RH_FINALISATION';
       leaveRequest.rhDirectorAgreementConfirmedAt =
-        authenticatedUser.role === UserRole.RH
+        authenticatedUser.role === UserRole.RH &&
+        access.kind !== 'RH_FINALISATION'
           ? decisionAt
           : null;
       leaveRequest.realBalanceAfter = realBalanceAfter;
@@ -1663,23 +1777,30 @@ export class LeaveRequestsService {
               leaveRequest.rhConfirmedDirectorAgreement,
             serviceAvailability: availability,
             minimumPresenceJustification,
+            circuitCompleted: true,
           },
         },
         manager,
       );
     });
 
-    const validatedRequest = await this.findDecidedRequest(
-      id,
-    );
+    const decidedRequest = await this.findDecidedRequest(id);
+
+    if (forwardedToRh) {
+      return Object.assign(decidedRequest, {
+        workflowStatus: 'EN_COURS_TRAITEMENT',
+        validationStage: 'RH_FINALISATION',
+      });
+    }
+
     await this.notificationsService.notifyLeaveRequestDecision(
-      validatedRequest,
+      decidedRequest,
       'VALIDEE',
       authenticatedUser.id,
     );
 
     await this.presenceService.refreshUserStatus(
-      validatedRequest.employeeId,
+      decidedRequest.employeeId,
     );
 
     try {
@@ -1694,7 +1815,7 @@ export class LeaveRequestsService {
       );
     }
 
-    return validatedRequest;
+    return decidedRequest;
   }
 
   async refuseRequest(
@@ -2323,7 +2444,6 @@ export class LeaveRequestsService {
     if (
       leaveRequest.status !==
         LeaveRequestStatus.EN_ATTENTE_VALIDATION ||
-      leaveRequest.finalDeciderId !== null ||
       leaveRequest.lockedAt !== null
     ) {
       const decisionMessage = leaveRequest.finalDecider
@@ -2739,39 +2859,13 @@ export class LeaveRequestsService {
     endPeriod: DayPeriod,
     nonDeductibleDates: Set<string>,
   ): number {
-    let total = 0;
-    const currentDate = new Date(startDate);
-
-    while (currentDate.getTime() <= endDate.getTime()) {
-      const currentDateValue = currentDate.toISOString().slice(0, 10);
-      const isSunday = currentDate.getUTCDay() === 0;
-      const isNonDeductible =
-        nonDeductibleDates.has(currentDateValue);
-
-      if (!isSunday && !isNonDeductible) {
-        let value = 1;
-
-        if (
-          currentDate.getTime() === startDate.getTime() &&
-          startPeriod === DayPeriod.APRES_MIDI
-        ) {
-          value -= 0.5;
-        }
-
-        if (
-          currentDate.getTime() === endDate.getTime() &&
-          endPeriod === DayPeriod.MATIN
-        ) {
-          value -= 0.5;
-        }
-
-        total += value;
-      }
-
-      currentDate.setUTCDate(currentDate.getUTCDate() + 1);
-    }
-
-    return Math.max(total, 0);
+    return calculateDeductedLeaveDays(
+      startDate,
+      endDate,
+      startPeriod,
+      endPeriod,
+      nonDeductibleDates,
+    );
   }
 
   private validateBoundaryDate(

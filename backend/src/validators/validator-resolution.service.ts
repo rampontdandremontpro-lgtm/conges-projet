@@ -13,7 +13,10 @@ import {
 } from 'typeorm';
 
 import type { AuthenticatedUser } from '../auth/jwt-payload.interface';
-import type { LeaveRequest } from '../leave-requests/leave-request.entity';
+import {
+  LeaveRequestStatus,
+  type LeaveRequest,
+} from '../leave-requests/leave-request.entity';
 import { PresenceService } from '../presence/presence.service';
 import {
   ServiceType,
@@ -27,6 +30,10 @@ import {
 } from '../users/user.entity';
 import { ServiceBackupValidator } from './service-backup-validator.entity';
 import { ValidatorReplacement } from './validator-replacement.entity';
+import {
+  getValidatorTakeoverAt,
+  isValidatorTakeoverDelayExpired,
+} from './validator-delay.util';
 
 export type DecisionAccessKind =
   | 'RESPONSABLE_PRINCIPAL'
@@ -35,7 +42,8 @@ export type DecisionAccessKind =
   | 'RELAIS'
   | 'URGENCE'
   | 'REMPLACEMENT'
-  | 'SECOURS';
+  | 'SECOURS'
+  | 'RH_FINALISATION';
 
 export interface DecisionAccess {
   kind: DecisionAccessKind;
@@ -49,7 +57,8 @@ export type ValidationTreatmentKind =
   | 'RELAIS_DIRECTEUR'
   | 'DIRECTEUR_RH'
   | 'DIRECTEUR_SEUL'
-  | 'SANS_VALIDATION';
+  | 'SANS_VALIDATION'
+  | 'RH_FINALISATION';
 
 export interface ValidationTreatment {
   kind: ValidationTreatmentKind;
@@ -196,11 +205,11 @@ export class ValidatorResolutionService {
 
     const submittedAt =
       leaveRequest.submittedAt ?? leaveRequest.createdAt;
-    const takeoverAt = new Date(
-      submittedAt.getTime() +
-        service.takeoverDelayDays * 24 * 60 * 60 * 1000,
+    const delayExpired = isValidatorTakeoverDelayExpired(
+      submittedAt,
+      service.takeoverDelayDays,
+      now,
     );
-    const delayExpired = now.getTime() >= takeoverAt.getTime();
 
     let backupValidatorIds: number[] = [];
     if (
@@ -243,6 +252,17 @@ export class ValidatorResolutionService {
       ? manager.getRepository(User)
       : this.userRepository;
     const service = leaveRequest.service;
+
+    if (
+      leaveRequest.status === LeaveRequestStatus.EN_ATTENTE_VALIDATION &&
+      leaveRequest.finalDeciderId !== null
+    ) {
+      const rhUsers = await userRepository.find({
+        where: { role: UserRole.RH, isActive: true },
+        select: { id: true },
+      });
+      return rhUsers.map((user) => user.id);
+    }
 
     if (leaveRequest.employee.role === UserRole.RH) {
       const directors = await userRepository.find({
@@ -306,6 +326,13 @@ export class ValidatorResolutionService {
     leaveRequest: LeaveRequest,
     options: ResolutionOptions = {},
   ): Promise<ValidationTreatment> {
+    if (
+      leaveRequest.status === LeaveRequestStatus.EN_ATTENTE_VALIDATION &&
+      leaveRequest.finalDeciderId !== null
+    ) {
+      return { kind: 'RH_FINALISATION', reason: null };
+    }
+
     if (leaveRequest.employee.role === UserRole.RH) {
       return { kind: 'DIRECTEUR_SEUL', reason: null };
     }
@@ -376,6 +403,22 @@ export class ValidatorResolutionService {
       throw new ForbiddenException(
         'Vous ne pouvez pas traiter votre propre demande.',
       );
+    }
+
+    if (
+      leaveRequest.status === LeaveRequestStatus.EN_ATTENTE_VALIDATION &&
+      leaveRequest.finalDeciderId !== null
+    ) {
+      if (authenticatedUser.role !== UserRole.RH) {
+        throw new ForbiddenException(
+          'Cette demande a déjà été validée au premier niveau et doit maintenant être finalisée par la RH.',
+        );
+      }
+
+      return {
+        kind: 'RH_FINALISATION',
+        reason: null,
+      };
     }
 
     if (leaveRequest.employee.role === UserRole.RH) {
@@ -477,6 +520,13 @@ export class ValidatorResolutionService {
     userId: number,
     options: ResolutionOptions = {},
   ): Promise<boolean> {
+    if (
+      leaveRequest.status === LeaveRequestStatus.EN_ATTENTE_VALIDATION &&
+      leaveRequest.finalDeciderId !== null
+    ) {
+      return false;
+    }
+
     const resolution = await this.buildResolution(leaveRequest, options);
 
     if (resolution.replacement !== null) {
@@ -646,13 +696,9 @@ export class ValidatorResolutionService {
 
     const submittedAt =
       leaveRequest.submittedAt ?? leaveRequest.createdAt;
-    const takeoverAt = new Date(
-      submittedAt.getTime() +
-        leaveRequest.service.takeoverDelayDays *
-          24 *
-          60 *
-          60 *
-          1000,
+    const takeoverAt = getValidatorTakeoverAt(
+      submittedAt,
+      leaveRequest.service.takeoverDelayDays,
     );
 
     if (resolution.delayExpired) {

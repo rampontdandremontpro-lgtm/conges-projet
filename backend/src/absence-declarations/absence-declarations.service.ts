@@ -382,7 +382,7 @@ export class AbsenceDeclarationsService {
 
     if (isDirectorSelfDeclaration) {
       await this.notificationsService.createForActiveRoles(
-        [UserRole.RH, UserRole.RESPONSABLE_SERVICE],
+        [UserRole.RH],
         {
           type: 'ABSENCE_DIRECTEUR_INFORMATION',
           title: 'Indisponibilité du Directeur',
@@ -531,7 +531,7 @@ export class AbsenceDeclarationsService {
     await this.absenceDeclarationRepository.save(declaration);
     await this.presenceService.refreshUserStatus(declaration.employeeId);
     await this.notificationsService.createForActiveRoles(
-      [UserRole.RH, UserRole.RESPONSABLE_SERVICE],
+      [UserRole.RH],
       {
         type: 'ABSENCE_DIRECTEUR_MODIFIEE',
         title: 'Indisponibilité du Directeur modifiée',
@@ -571,7 +571,7 @@ export class AbsenceDeclarationsService {
     await this.absenceDeclarationRepository.save(declaration);
     await this.presenceService.refreshUserStatus(declaration.employeeId);
     await this.notificationsService.createForActiveRoles(
-      [UserRole.RH, UserRole.RESPONSABLE_SERVICE],
+      [UserRole.RH],
       {
         type: 'ABSENCE_DIRECTEUR_ANNULEE',
         title: 'Indisponibilité du Directeur annulée',

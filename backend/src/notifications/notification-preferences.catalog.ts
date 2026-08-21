@@ -34,6 +34,9 @@ export const NOTIFICATION_PREFERENCES_BY_ROLE: Record<
     event('leave_submitted', 'Demande de congé soumise', [
       'LEAVE_REQUEST_SUBMITTED_SELF',
     ]),
+    event('leave_in_progress', 'Demande transmise à la RH', [
+      'LEAVE_REQUEST_IN_PROGRESS',
+    ]),
     event('leave_approved', 'Demande de congé approuvée', [
       'LEAVE_REQUEST_VALIDEE',
     ]),
@@ -63,6 +66,9 @@ export const NOTIFICATION_PREFERENCES_BY_ROLE: Record<
     ]),
     event('supporting_document_required', 'Justificatif ou document à fournir', [
       'SUPPORTING_DOCUMENT_REQUIRED',
+    ]),
+    event('derogation_in_progress', 'Dérogation validée par la RH et transmise au Directeur', [
+      'DEROGATION_IN_PROGRESS',
     ]),
     event('derogation_approved', 'Dérogation accordée', [
       'DEROGATION_APPROVED',
@@ -194,6 +200,7 @@ export const NOTIFICATION_PREFERENCES_BY_ROLE: Record<
       'LEAVE_REQUEST_VALIDEE_INFO',
       'LEAVE_REQUEST_REFUSEE_INFO',
       'LEAVE_REQUEST_EXPIRED_INFO',
+      'LEAVE_REQUEST_RH_FINALIZATION',
     ]),
     event('new_absence_declaration', 'Nouvelle déclaration d’absence', [
       'ABSENCE_DECLARATION_SUBMITTED_RH',
@@ -309,7 +316,7 @@ export const NOTIFICATION_PREFERENCES_BY_ROLE: Record<
     event(
       'derogation_needs_intervention',
       'Nouvelle demande de dérogation nécessitant mon intervention',
-      ['DEROGATION_DIRECTOR_INFO'],
+      ['DEROGATION_WAITING_DIRECTOR'],
     ),
     event('important_overlap_alert', 'Alerte de chevauchement importante', [
       'OVERLAP_ALERT',

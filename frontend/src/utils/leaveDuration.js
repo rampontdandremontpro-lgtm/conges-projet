@@ -39,5 +39,12 @@ export function calculateDeductedDaysPreview(selection, holidays) {
     current.setUTCDate(current.getUTCDate() + 1)
   }
 
+  if (end.getUTCDay() === 5 && endPeriod === 'APRES_MIDI') {
+    const saturday = new Date(end)
+    saturday.setUTCDate(saturday.getUTCDate() + 1)
+    const saturdayIso = saturday.toISOString().slice(0, 10)
+    if (!nonDeductibleDates.has(saturdayIso)) total += 1
+  }
+
   return Math.max(total, 0)
 }

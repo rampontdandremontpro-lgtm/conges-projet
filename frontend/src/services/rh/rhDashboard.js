@@ -52,7 +52,9 @@ function buildPriorityItems({
       : 'Demande en attente',
     date: itemDate(request),
     urgent: Boolean(request.isUrgent),
-    to: '/app/rh-requests',
+    urgencyRank: request.isUrgent ? 650 : request.finalDeciderId ? 500 : 300,
+    dueDate: request.startDate ?? null,
+    to: '/app/rh-all-requests',
   }))
 
   const absenceItems = absences.map((absence) => ({
@@ -67,6 +69,8 @@ function buildPriorityItems({
       : 'À vérifier par la RH',
     date: itemDate(absence),
     urgent: false,
+    urgencyRank: 250,
+    dueDate: absence.startDate ?? null,
     to: '/app/rh-absences',
   }))
 
@@ -84,7 +88,9 @@ function buildPriorityItems({
     meta: 'En attente de vérification RH',
     date: itemDate(document),
     urgent: false,
-    to: '/app/rh-justificatifs',
+    urgencyRank: 200,
+    dueDate: null,
+    to: '/app/rh-pdf-documents',
   }))
 
   const derogationItems = derogations.map((derogation) => ({
@@ -99,11 +105,23 @@ function buildPriorityItems({
       : 'Décision RH requise',
     date: itemDate(derogation),
     urgent: true,
+    urgencyRank: 700,
+    dueDate: derogation.requestedStartDate ?? null,
     to: '/app/rh-derogations',
   }))
 
   return [...leaveItems, ...absenceItems, ...documentItems, ...derogationItems]
-    .sort((a, b) => dateValue(b.date) - dateValue(a.date))
+    .sort((a, b) => {
+      if ((b.urgencyRank ?? 0) !== (a.urgencyRank ?? 0)) {
+        return (b.urgencyRank ?? 0) - (a.urgencyRank ?? 0)
+      }
+      const aDue = dateValue(a.dueDate)
+      const bDue = dateValue(b.dueDate)
+      if (aDue && bDue && aDue !== bDue) return aDue - bDue
+      if (aDue && !bDue) return -1
+      if (!aDue && bDue) return 1
+      return dateValue(a.date) - dateValue(b.date)
+    })
     .slice(0, 6)
 }
 
@@ -139,7 +157,7 @@ export async function getRhDashboardData() {
       !item.deletedAt,
   )
   const derogationsPending = resultValue(derogationsResult).filter(
-    (item) => item.status === RH_PENDING_DEROGATION_STATUS,
+    (item) => item.status === RH_PENDING_DEROGATION_STATUS && !item.decidedByRhId,
   )
 
   const activeUsers = resultValue(usersResult).filter(

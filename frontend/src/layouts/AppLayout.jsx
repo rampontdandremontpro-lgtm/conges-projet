@@ -226,7 +226,7 @@ function CollaboratorBackgroundDecor() {
 
 export function AppLayout() {
   const location = useLocation()
-  const { user } = useAuth()
+  const { user, effectiveRole } = useAuth()
   const [collapsed, setCollapsed] = useState(
     () => window.matchMedia('(max-width: 1024px) and (min-width: 768px)').matches,
   )
@@ -262,23 +262,23 @@ export function AppLayout() {
   }, [mobileOpen])
   const collaboratorBackgroundVariant = getCollaboratorBackgroundVariant(
     location.pathname,
-    user?.role,
+    effectiveRole,
   )
   const managerBackgroundVariant = getManagerBackgroundVariant(
     location.pathname,
-    user?.role,
+    effectiveRole,
   )
   const rhBackgroundVariant = getRhBackgroundVariant(
     location.pathname,
-    user?.role,
+    effectiveRole,
   )
   const directorBackgroundVariant = getDirectorBackgroundVariant(
     location.pathname,
-    user?.role,
+    effectiveRole,
   )
   const adminBackgroundVariant = getAdminBackgroundVariant(
     location.pathname,
-    user?.role,
+    effectiveRole,
   )
 
   const shellClassName = [

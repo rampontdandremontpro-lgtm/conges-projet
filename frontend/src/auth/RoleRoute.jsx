@@ -3,9 +3,9 @@ import { Navigate } from 'react-router-dom'
 import { useAuth } from '@/auth/AuthContext'
 
 export function RoleRoute({ roles, children }) {
-  const { user } = useAuth()
+  const { effectiveRole } = useAuth()
 
-  if (!roles.includes(user?.role)) {
+  if (!roles.includes(effectiveRole)) {
     return <Navigate to="/app/dashboard" replace />
   }
 

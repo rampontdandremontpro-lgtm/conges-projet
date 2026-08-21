@@ -138,3 +138,56 @@ export function getMartiniqueTimeWithSeconds(date: Date): string {
 
   return `${hour}:${minute}:${second}`;
 }
+
+
+export function calculateDeductedLeaveDays(
+  startDate: Date,
+  endDate: Date,
+  startPeriod: DayPeriod,
+  endPeriod: DayPeriod,
+  nonDeductibleDates: Set<string>,
+): number {
+  let total = 0;
+  const currentDate = new Date(startDate);
+
+  while (currentDate.getTime() <= endDate.getTime()) {
+    const currentDateValue = currentDate.toISOString().slice(0, 10);
+    const isSunday = currentDate.getUTCDay() === 0;
+    const isNonDeductible = nonDeductibleDates.has(currentDateValue);
+
+    if (!isSunday && !isNonDeductible) {
+      let value = 1;
+
+      if (
+        currentDate.getTime() === startDate.getTime() &&
+        startPeriod === DayPeriod.APRES_MIDI
+      ) {
+        value -= 0.5;
+      }
+
+      if (
+        currentDate.getTime() === endDate.getTime() &&
+        endPeriod === DayPeriod.MATIN
+      ) {
+        value -= 0.5;
+      }
+
+      total += value;
+    }
+
+    currentDate.setUTCDate(currentDate.getUTCDate() + 1);
+  }
+
+  // Règle GMES : lorsqu'un congé se termine le vendredi après-midi,
+  // le samedi qui suit est également décompté, sauf s'il est non décomptable.
+  if (endDate.getUTCDay() === 5 && endPeriod === DayPeriod.APRES_MIDI) {
+    const saturday = new Date(endDate);
+    saturday.setUTCDate(saturday.getUTCDate() + 1);
+    const saturdayValue = saturday.toISOString().slice(0, 10);
+    if (!nonDeductibleDates.has(saturdayValue)) {
+      total += 1;
+    }
+  }
+
+  return Math.max(total, 0);
+}

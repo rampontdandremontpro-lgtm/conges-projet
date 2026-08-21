@@ -71,17 +71,21 @@ export class DerogationsController {
   }
 
   @Get('management')
-  @Roles(UserRole.RH)
-  findForManagement(@Query() query: DerogationQueryDto) {
-    return this.derogationsService.findForManagement(query);
+  @Roles(UserRole.RH, UserRole.DIRECTEUR)
+  findForManagement(
+    @Query() query: DerogationQueryDto,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    return this.derogationsService.findForManagement(query, request.user);
   }
 
   @Get('management/:id')
-  @Roles(UserRole.RH)
+  @Roles(UserRole.RH, UserRole.DIRECTEUR)
   findOneForManagement(
     @Param('id', ParseIntPipe) id: number,
+    @Req() request: AuthenticatedRequest,
   ) {
-    return this.derogationsService.findOneForManagement(id);
+    return this.derogationsService.findOneForManagement(id, request.user);
   }
 
   @Patch(':id')
@@ -112,7 +116,7 @@ export class DerogationsController {
   }
 
   @Patch(':id/decision')
-  @Roles(UserRole.RH)
+  @Roles(UserRole.RH, UserRole.DIRECTEUR)
   @HttpCode(HttpStatus.OK)
   decide(
     @Param('id', ParseIntPipe) id: number,

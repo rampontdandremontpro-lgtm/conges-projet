@@ -26,8 +26,8 @@ export function RhPriorityCard({ items, onNavigate }) {
   return (
     <section className="dash-card rh-priority-card">
       <header className="dash-card__header">
-        <h2 className="dash-card__title dash-card__title--lg">Priorités RH</h2>
-        <button type="button" className="dash-card__view-all" onClick={() => onNavigate('/app/rh-requests')}>
+        <h2 className="dash-card__title dash-card__title--lg">Demandes à traiter en priorité</h2>
+        <button type="button" className="dash-card__view-all" onClick={() => onNavigate('/app/rh-all-requests')}>
           Voir tout <Icon name="arrowRight" size={14} />
         </button>
       </header>
@@ -37,8 +37,8 @@ export function RhPriorityCard({ items, onNavigate }) {
           <span className="dash-empty__icon">
             <Icon name="check" size={22} />
           </span>
-          <p className="dash-empty__title">Aucun dossier prioritaire</p>
-          <p className="dash-empty__text">Les nouveaux dossiers RH apparaîtront ici.</p>
+          <p className="dash-empty__title">Aucune demande prioritaire</p>
+          <p className="dash-empty__text">Les demandes à traiter apparaîtront ici, de la plus urgente à la moins urgente.</p>
         </div>
       ) : (
         <div className="rh-priority-list">
