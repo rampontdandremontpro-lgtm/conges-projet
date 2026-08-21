@@ -446,6 +446,11 @@ button.manager-month-planning__cell:hover {
   }
 }
 
+
+.manager-month-planning__cell.has-pending-request {
+  z-index: 2;
+  box-shadow: inset 0 0 0 3px rgba(245, 158, 11, .88);
+}
 .manager-month-planning__pending-request {
   position: absolute;
   right: 4px;
@@ -471,6 +476,14 @@ button.manager-month-planning__cell:hover {
 .manager-month-planning__pending-request:hover {
   transform: translateY(-1px);
   background: #d97706;
+}
+.manager-month-planning__pending-request.is-readonly {
+  cursor: default;
+  background: #c98919;
+}
+.manager-month-planning__pending-request.is-readonly:hover {
+  transform: none;
+  background: #c98919;
 }
 .manager-month-planning__legend i.is-pending {
   border: 2px solid #f59e0b;

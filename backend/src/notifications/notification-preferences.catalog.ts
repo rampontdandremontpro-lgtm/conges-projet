@@ -202,6 +202,10 @@ export const NOTIFICATION_PREFERENCES_BY_ROLE: Record<
       'LEAVE_REQUEST_EXPIRED_INFO',
       'LEAVE_REQUEST_RH_FINALIZATION',
     ]),
+    event('pending_request_reminder', 'Demande en attente depuis plusieurs jours', [
+      'LEAVE_REQUEST_REMINDER_*',
+      'LEAVE_REQUEST_EXPIRED_INFO',
+    ]),
     event('new_absence_declaration', 'Nouvelle déclaration d’absence', [
       'ABSENCE_DECLARATION_SUBMITTED_RH',
     ]),

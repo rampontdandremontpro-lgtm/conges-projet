@@ -37,3 +37,8 @@ export async function resetNotificationPreferences() {
   const response = await apiClient.patch('/notifications/preferences/reset')
   return response.data
 }
+
+export async function getDashboardReminders() {
+  const response = await apiClient.get('/notifications/dashboard-reminders')
+  return Array.isArray(response.data) ? response.data : []
+}

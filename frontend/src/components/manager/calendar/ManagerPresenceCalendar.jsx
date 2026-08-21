@@ -58,7 +58,7 @@ function DaySlot({ status, baseClass }) {
   return <span className={`manager-month-cell__half ${statusClass(status)} ${baseClass}`} />
 }
 
-export function ManagerPresenceCalendar({ data, month, filter, onMonthChange, onPendingRequestClick }) {
+export function ManagerPresenceCalendar({ data, month, filter, onMonthChange, currentUserId, onPendingRequestClick }) {
   const monthDays = useMemo(() => buildMonthDays(month), [month])
   const daysByDate = useMemo(() => new Map((data?.days ?? []).map((day) => [day.date, day])), [data?.days])
   const holidayByDate = useMemo(() => {
@@ -151,29 +151,41 @@ export function ManagerPresenceCalendar({ data, month, filter, onMonthChange, on
                   const pendingLabel = pendingRequestIds.length > 0
                     ? ` · ${pendingRequestIds.length} demande${pendingRequestIds.length > 1 ? 's' : ''} en attente de validation`
                     : ''
+                  const isOwnPendingRequest = pendingRequestIds.length > 0 && Number(member.id) === Number(currentUserId)
 
                   return (
                     <div
                       key={`${member.id}-${date}`}
-                      className={`manager-month-planning__cell${meta.isWeekend ? ' is-weekend' : ''}${isHoliday ? ' is-holiday' : ''}${isToday ? ' is-today' : ''}`}
+                      className={`manager-month-planning__cell${meta.isWeekend ? ' is-weekend' : ''}${isHoliday ? ' is-holiday' : ''}${isToday ? ' is-today' : ''}${pendingRequestIds.length > 0 ? ' has-pending-request' : ''}`}
                       title={`${member.prenom} ${member.nom} · ${date} · ${label}${holidayLabel}${pendingLabel}`}
                     >
                       <DaySlot status={memberDay.morningStatus} baseClass={baseClass} />
                       <DaySlot status={memberDay.afternoonStatus} baseClass={baseClass} />
                       {pendingRequestIds.length > 0 && (
-                        <button
-                          type="button"
-                          className="manager-month-planning__pending-request"
-                          title="Demande en attente — cliquer pour valider"
-                          aria-label={`Valider la demande en attente de ${member.prenom} ${member.nom}`}
-                          onClick={(event) => {
-                            event.stopPropagation()
-                            onPendingRequestClick?.(pendingRequestIds[0])
-                          }}
-                        >
-                          <Icon name="clock" size={10} />
-                          {pendingRequestIds.length > 1 ? pendingRequestIds.length : ''}
-                        </button>
+                        isOwnPendingRequest ? (
+                          <span
+                            className="manager-month-planning__pending-request is-readonly"
+                            title="Votre demande est en attente — elle doit être validée par un autre valideur"
+                            aria-label="Votre demande est en attente de validation par un autre valideur"
+                          >
+                            <Icon name="clock" size={10} />
+                            {pendingRequestIds.length > 1 ? pendingRequestIds.length : ''}
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            className="manager-month-planning__pending-request"
+                            title="Demande en attente — cliquer pour valider"
+                            aria-label={`Valider la demande en attente de ${member.prenom} ${member.nom}`}
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              onPendingRequestClick?.(pendingRequestIds[0])
+                            }}
+                          >
+                            <Icon name="clock" size={10} />
+                            {pendingRequestIds.length > 1 ? pendingRequestIds.length : ''}
+                          </button>
+                        )
                       )}
                     </div>
                   )

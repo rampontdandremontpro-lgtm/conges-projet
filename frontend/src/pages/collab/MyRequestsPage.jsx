@@ -7,7 +7,7 @@ import { Icon } from '@/components/ui/Icon'
 import { PaginationBar } from '@/components/ui/PaginationBar'
 import { getMyDocuments } from '@/services/documents'
 import { getMyAbsenceDeclarations, getMyLeaveRequests } from '@/services/collab/myRequests'
-import { deleteAbsenceDraft, deleteLeaveDraft, downloadCancellationPdf, downloadPendingSummaryPdf, downloadValidationPdf } from '@/services/collab/requestDetails'
+import { deleteLeaveDraft, downloadCancellationPdf, downloadPendingSummaryPdf, downloadValidationPdf } from '@/services/collab/requestDetails'
 import { formatDays, formatRangeNumericFR } from '@/utils/format'
 
 import '@/styles/collab/requests/index.css'
@@ -297,8 +297,8 @@ export function MyRequestsPage() {
   }, [location.pathname, location.search, location.state, navigate])
 
   const openItem = (item) => {
-    if (item.status === 'BROUILLON') {
-      navigate(item.source === 'leave' ? `/app/new-request/${item.id}` : `/app/declare-absence/${item.id}`)
+    if (item.status === 'BROUILLON' && item.source === 'leave') {
+      navigate(`/app/new-request/${item.id}`)
       return
     }
     navigate(`/app/my-requests/${item.source}/${item.id}`)
@@ -326,8 +326,7 @@ export function MyRequestsPage() {
       if (!window.confirm(`Supprimer définitivement le brouillon de ${label} ?`)) return
       setBusyKey(item.key)
       try {
-        if (item.source === 'leave') await deleteLeaveDraft(item.id)
-        else await deleteAbsenceDraft(item.id)
+        await deleteLeaveDraft(item.id)
         removeItemLocally(item)
         setFeedback({ kind: 'success', message: 'Brouillon supprimé.' })
       } catch (error) {

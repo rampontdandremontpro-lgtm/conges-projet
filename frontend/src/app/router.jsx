@@ -12,7 +12,6 @@ import { DashboardGate } from '@/pages/shared/DashboardGate'
 import { NewRequest } from '@/pages/collab/NewRequestPage'
 import { HistoryPage } from '@/pages/collab/HistoryPage'
 import { MyRequestsPage } from '@/pages/collab/MyRequestsPage'
-import { DeclareAbsencePage } from '@/pages/collab/DeclareAbsencePage'
 import { DocumentsPage } from '@/pages/collab/DocumentsPage'
 import { NotificationsPage } from '@/pages/collab/NotificationsPage'
 import { RequestDetailPage } from '@/pages/collab/RequestDetailPage'
@@ -359,7 +358,7 @@ export const router = createBrowserRouter([
       {
         path: 'new-request/:id',
         element: (
-          <RoleRoute roles={[ROLES.COLLABORATEUR, ROLES.RESPONSABLE_SERVICE, ROLES.RH]}>
+          <RoleRoute roles={[ROLES.COLLABORATEUR]}>
             <NewRequest />
           </RoleRoute>
         ),
@@ -367,7 +366,7 @@ export const router = createBrowserRouter([
       {
         path: 'my-requests',
         element: (
-          <RoleRoute roles={[ROLES.COLLABORATEUR, ROLES.RESPONSABLE_SERVICE, ROLES.RH]}>
+          <RoleRoute roles={[ROLES.COLLABORATEUR]}>
             <MyRequestsPage />
           </RoleRoute>
         ),
@@ -375,24 +374,8 @@ export const router = createBrowserRouter([
       {
         path: 'my-requests/:source/:id',
         element: (
-          <RoleRoute roles={[ROLES.COLLABORATEUR, ROLES.RESPONSABLE_SERVICE, ROLES.RH]}>
+          <RoleRoute roles={[ROLES.COLLABORATEUR]}>
             <RequestDetailPage />
-          </RoleRoute>
-        ),
-      },
-      {
-        path: 'declare-absence',
-        element: (
-          <RoleRoute roles={[ROLES.COLLABORATEUR, ROLES.RESPONSABLE_SERVICE, ROLES.RH]}>
-            <DeclareAbsencePage />
-          </RoleRoute>
-        ),
-      },
-      {
-        path: 'declare-absence/:id',
-        element: (
-          <RoleRoute roles={[ROLES.COLLABORATEUR, ROLES.RESPONSABLE_SERVICE, ROLES.RH]}>
-            <DeclareAbsencePage />
           </RoleRoute>
         ),
       },
@@ -407,7 +390,7 @@ export const router = createBrowserRouter([
       {
         path: 'my-documents',
         element: (
-          <RoleRoute roles={[ROLES.COLLABORATEUR, ROLES.RESPONSABLE_SERVICE, ROLES.RH]}>
+          <RoleRoute roles={[ROLES.COLLABORATEUR]}>
             <DocumentsPage />
           </RoleRoute>
         ),

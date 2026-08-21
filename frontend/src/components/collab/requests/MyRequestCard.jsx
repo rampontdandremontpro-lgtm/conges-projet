@@ -11,7 +11,7 @@ function formatDuration(item) {
 }
 
 function actionMeta(item) {
-  if (item.status === 'BROUILLON') {
+  if (item.status === 'BROUILLON' && item.source === 'leave') {
     return { type: 'delete', icon: 'trash', label: 'Supprimer le brouillon' }
   }
 

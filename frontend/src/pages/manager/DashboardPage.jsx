@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
+import { DashboardReminderPopup } from '@/components/shared/DashboardReminderPopup'
 import { PageContainer } from '@/components/ui/PageContainer'
 import { ManagerOverviewCard } from '@/components/manager/dashboard/ManagerOverviewCard'
 import { ManagerPresenceCard } from '@/components/manager/dashboard/ManagerPresenceCard'
@@ -61,6 +62,7 @@ export function DashboardResponsable() {
 
   return (
     <PageContainer className="manager-dashboard-page">
+      <DashboardReminderPopup role="manager" onNavigate={navigate} />
       <div className="manager-dashboard-grid">
         <div className="manager-dashboard-column manager-dashboard-column--main">
           <ManagerOverviewCard

@@ -44,6 +44,7 @@ export class AbsenceDeclarationsController {
   ) {}
 
   @Post()
+  @Roles(UserRole.RH, UserRole.DIRECTEUR)
   createDraft(
     @Req() request: AuthenticatedRequest,
     @Body() dto: CreateAbsenceDeclarationDto,
@@ -81,6 +82,7 @@ export class AbsenceDeclarationsController {
 
   @Post(':id/submit')
   @HttpCode(HttpStatus.OK)
+  @Roles(UserRole.RH, UserRole.DIRECTEUR)
   submit(
     @Param('id', ParseIntPipe) id: number,
     @Req() request: AuthenticatedRequest,
@@ -135,6 +137,7 @@ export class AbsenceDeclarationsController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
+  @Roles(UserRole.RH, UserRole.DIRECTEUR)
   deleteDraft(
     @Param('id', ParseIntPipe) id: number,
     @Req() request: AuthenticatedRequest,
@@ -147,6 +150,7 @@ export class AbsenceDeclarationsController {
 
   @Post(':id/cancel')
   @HttpCode(HttpStatus.OK)
+  @Roles(UserRole.RH, UserRole.DIRECTEUR)
   cancel(
     @Param('id', ParseIntPipe) id: number,
     @Req() request: AuthenticatedRequest,
@@ -169,6 +173,7 @@ export class AbsenceDeclarationsController {
   }
 
   @Patch(':id')
+  @Roles(UserRole.RH, UserRole.DIRECTEUR)
   updateDraft(
     @Param('id', ParseIntPipe) id: number,
     @Req() request: AuthenticatedRequest,

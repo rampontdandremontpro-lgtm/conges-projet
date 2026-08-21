@@ -232,7 +232,7 @@ export class LeaveRequestSchedulerService
             continue;
           }
 
-          if ([14, 10, 7, 6, 5, 4, 3, 2, 1].includes(daysBeforeStart)) {
+          if (daysBeforeStart >= 1 && daysBeforeStart <= 14) {
             result.remindersCreated += await this.sendReminder(
               request,
               daysBeforeStart,

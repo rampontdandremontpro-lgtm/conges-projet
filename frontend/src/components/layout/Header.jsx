@@ -10,8 +10,6 @@ function headerTitle(pathname) {
   if (pathname === '/app/new-request') return 'Nouvelle demande'
   if (pathname === '/app/rh-prepare-request') return 'Préparer une demande'
   if (/^\/app\/new-request\/\d+$/.test(pathname)) return 'Modifier la demande'
-  if (pathname === '/app/declare-absence') return 'Déclarer une absence'
-  if (/^\/app\/declare-absence\/\d+$/.test(pathname)) return 'Modifier la déclaration'
   if (/^\/app\/my-requests\/leave\/\d+$/.test(pathname)) return 'Détail de la demande'
   if (/^\/app\/my-requests\/absence\/\d+$/.test(pathname)) return 'Détail de l’absence'
   if (/^\/app\/requests\/\d+$/.test(pathname)) return 'Détail de la demande'
@@ -51,8 +49,8 @@ export function Header({ onOpenMobile, mobileOpen = false }) {
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false)
   const title = headerTitle(pathname)
   const hideSearch =
-    ['/app/dashboard', '/app/new-request', '/app/rh-prepare-request', '/app/rh-exports', '/app/rh-holidays', '/app/rh-summer-period', '/app/admin-summer-period', '/app/admin-holidays', '/app/admin-minimum-presence', '/app/director-statistics', '/app/rh-statistics', '/app/director-exports', '/app/director-availability', '/app/history', '/app/my-balance', '/app/my-balances', '/app/declare-absence', '/app/profile', '/app/settings'].includes(pathname) ||
-    /^\/app\/(new-request|declare-absence)\/\d+$/.test(pathname) ||
+    ['/app/dashboard', '/app/new-request', '/app/rh-prepare-request', '/app/rh-exports', '/app/rh-holidays', '/app/rh-summer-period', '/app/admin-summer-period', '/app/admin-holidays', '/app/admin-minimum-presence', '/app/director-statistics', '/app/rh-statistics', '/app/director-exports', '/app/director-availability', '/app/history', '/app/my-balance', '/app/my-balances', '/app/profile', '/app/settings'].includes(pathname) ||
+    /^\/app\/new-request\/\d+$/.test(pathname) ||
     /^\/app\/director-availability\/(leave|absence)\/\d+$/.test(pathname) ||
     /^\/app\/my-requests\/(leave|absence)\/\d+$/.test(pathname) ||
     /^\/app\/requests\/\d+$/.test(pathname) ||

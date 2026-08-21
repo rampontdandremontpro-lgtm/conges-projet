@@ -19,12 +19,6 @@ function getCollaboratorBackgroundVariant(pathname, role) {
     return 'form'
   }
 
-  if (
-    pathname === '/app/declare-absence' ||
-    pathname.startsWith('/app/declare-absence/')
-  ) {
-    return 'absence-form'
-  }
 
   if (pathname.startsWith('/app/my-requests/')) return 'detail'
 
@@ -54,12 +48,6 @@ function getManagerBackgroundVariant(pathname, role) {
     return 'form'
   }
 
-  if (
-    pathname === '/app/declare-absence' ||
-    pathname.startsWith('/app/declare-absence/')
-  ) {
-    return 'absence-form'
-  }
 
   if (pathname.startsWith('/app/my-requests/')) return 'personal-detail'
   if (pathname === '/app/my-requests') return 'personal-requests'
@@ -112,12 +100,6 @@ function getRhBackgroundVariant(pathname, role) {
     return 'personal-form'
   }
 
-  if (
-    pathname === '/app/declare-absence' ||
-    pathname.startsWith('/app/declare-absence/')
-  ) {
-    return 'personal-absence'
-  }
 
   if (pathname.startsWith('/app/my-requests/')) return 'personal-detail'
   if (pathname === '/app/my-requests') return 'personal-requests'

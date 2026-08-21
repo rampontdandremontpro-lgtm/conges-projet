@@ -5,7 +5,6 @@ import { RequestStatusBadge } from '@/components/collab/requests/RequestStatusBa
 import { getEffectiveLeaveRequestStatus } from '@/config/leaveMeta'
 import { Icon } from '@/components/ui/Icon'
 import {
-  cancelAbsenceDeclaration,
   cancelLeaveRequest,
   downloadCancellationPdf,
   downloadPendingSummaryPdf,
@@ -209,10 +208,6 @@ export function RequestDetailPage() {
     )
   }
 
-  const handleCancelAbsence = () => {
-    if (!window.confirm('Annuler cette déclaration d’absence ?')) return
-    run('cancel-absence', () => cancelAbsenceDeclaration(numericId), 'Déclaration annulée.')
-  }
 
   const handleJustificatif = async (event) => {
     const file = event.target.files?.[0]
@@ -431,10 +426,10 @@ export function RequestDetailPage() {
               </>
             )}
 
-            {isAbsence && ['DECLAREE', 'JUSTIFICATIF_EN_ATTENTE', 'A_VERIFIER_PAR_RH', 'JUSTIFICATIF_REJETE'].includes(request.status) && (
-              <button type="button" className="request-detail-button request-detail-button--danger-outline" disabled={Boolean(busy)} onClick={handleCancelAbsence}>
-                <Icon name="trash" size={16} /> {busy === 'cancel-absence' ? 'Annulation…' : 'Annuler la déclaration'}
-              </button>
+            {isAbsence && !['ENREGISTREE', 'ANNULEE'].includes(request.status) && (
+              <div className="request-detail-consent-note">
+                Cette absence est gérée par la RH. Vous pouvez la consulter et ajouter un justificatif lorsqu’il est demandé.
+              </div>
             )}
 
             {isAbsence && ['ENREGISTREE', 'ANNULEE'].includes(request.status) && (

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
+import { DashboardReminderPopup } from '@/components/shared/DashboardReminderPopup'
 import { PageContainer } from '@/components/ui/PageContainer'
 import { Icon } from '@/components/ui/Icon'
 import { RhWorkloadCard } from '@/components/rh/dashboard/RhWorkloadCard'
@@ -101,6 +102,7 @@ export function DashboardRh() {
 
   return (
     <PageContainer className="rh-dashboard-page">
+      <DashboardReminderPopup role="rh" onNavigate={navigate} />
       {data.partialErrors.length > 0 && (
         <div className="rh-dashboard-partial-warning" role="status">
           <Icon name="alert" size={17} />

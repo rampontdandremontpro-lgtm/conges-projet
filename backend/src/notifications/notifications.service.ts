@@ -10,7 +10,8 @@ import {
   Repository,
 } from 'typeorm';
 
-import { LeaveRequest } from '../leave-requests/leave-request.entity';
+import { getMartiniqueDateString } from '../leave-requests/leave-request-period.util';
+import { LeaveRequest, LeaveRequestStatus } from '../leave-requests/leave-request.entity';
 import { Setting } from '../settings/setting.entity';
 import { User, UserRole } from '../users/user.entity';
 import { ValidatorResolutionService } from '../validators/validator-resolution.service';
@@ -59,6 +60,9 @@ export class NotificationsService {
 
     @InjectRepository(Setting)
     private readonly settingRepository: Repository<Setting>,
+
+    @InjectRepository(LeaveRequest)
+    private readonly leaveRequestRepository: Repository<LeaveRequest>,
 
     private readonly validatorResolutionService: ValidatorResolutionService,
   ) {}
@@ -247,6 +251,120 @@ export class NotificationsService {
       .execute();
 
     return { updated: result.affected ?? 0 };
+  }
+
+  async getDashboardReminders(userId: number, role: UserRole) {
+    if (
+      ![
+        UserRole.RESPONSABLE_SERVICE,
+        UserRole.RH,
+        UserRole.DIRECTEUR,
+      ].includes(role)
+    ) {
+      return [];
+    }
+
+    const requests = await this.leaveRequestRepository.find({
+      where: { status: LeaveRequestStatus.EN_ATTENTE_VALIDATION },
+      relations: {
+        employee: true,
+        leaveType: true,
+        service: true,
+      },
+      order: { startDate: 'ASC', submittedAt: 'ASC' },
+    });
+
+    const today = getMartiniqueDateString(new Date());
+    const reminders: Array<{
+      id: number;
+      employee: { id: number; nom: string; prenom: string; role: UserRole };
+      leaveType: { id: number; name: string };
+      service: { id: number; name: string };
+      startDate: string;
+      endDate: string;
+      daysBeforeStart: number;
+      urgent: boolean;
+      finalization: boolean;
+    }> = [];
+
+    for (const request of requests) {
+      const daysBeforeStart = this.daysBetweenDateStrings(
+        today,
+        request.startDate,
+      );
+
+      // La popup devient visible pendant les 14 jours qui précèdent le départ.
+      // Elle est calculée à la demande : un scheduler manqué ne peut donc plus
+      // empêcher l'affichage du rappel sur le tableau de bord.
+      if (daysBeforeStart < 1 || daysBeforeStart > 14) {
+        continue;
+      }
+
+      const recipientIds = await this.getDecisionRecipientIds(request);
+      if (!recipientIds.includes(userId)) {
+        continue;
+      }
+
+      // Répare aussi la notification de la cloche si le scheduler n'a pas
+      // tourné à temps. Le type Jx empêche les doublons pour une même échéance.
+      const notificationType = `LEAVE_REQUEST_REMINDER_J${daysBeforeStart}`;
+      const exists = await this.alreadyExists({
+        userId,
+        type: notificationType,
+        leaveRequestId: request.id,
+      });
+
+      if (!exists) {
+        await this.create({
+          userId,
+          type: notificationType,
+          title:
+            daysBeforeStart <= 7
+              ? 'Rappel urgent — demande à traiter'
+              : 'Rappel — demande de congé à traiter',
+          message: `La demande n°${request.id} de ${request.employee.prenom} ${request.employee.nom} débute dans ${daysBeforeStart} jour(s).`,
+          leaveRequestId: request.id,
+        });
+      }
+
+      reminders.push({
+        id: request.id,
+        employee: {
+          id: request.employee.id,
+          nom: request.employee.nom,
+          prenom: request.employee.prenom,
+          role: request.employee.role,
+        },
+        leaveType: {
+          id: request.leaveType.id,
+          name: request.leaveType.name,
+        },
+        service: {
+          id: request.service.id,
+          name: request.service.name,
+        },
+        startDate: request.startDate,
+        endDate: request.endDate,
+        daysBeforeStart,
+        urgent: daysBeforeStart <= 7,
+        finalization: request.finalDeciderId !== null,
+      });
+    }
+
+    return reminders.sort((a, b) => {
+      if (a.daysBeforeStart !== b.daysBeforeStart) {
+        return a.daysBeforeStart - b.daysBeforeStart;
+      }
+      return a.id - b.id;
+    });
+  }
+
+  private daysBetweenDateStrings(from: string, to: string): number {
+    const fromDate = new Date(`${from}T00:00:00.000Z`);
+    const toDate = new Date(`${to}T00:00:00.000Z`);
+    return Math.floor(
+      (toDate.getTime() - fromDate.getTime()) / (24 * 60 * 60 * 1000),
+    );
   }
 
   async getMyPreferences(userId: number, role: UserRole) {

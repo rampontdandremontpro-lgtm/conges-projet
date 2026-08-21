@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
+import { LeaveRequest } from '../leave-requests/leave-request.entity';
 import { Setting } from '../settings/setting.entity';
 import { User } from '../users/user.entity';
 import { ValidatorsModule } from '../validators/validators.module';
@@ -10,7 +11,7 @@ import { NotificationsService } from './notifications.service';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Notification, User, Setting]),
+    TypeOrmModule.forFeature([Notification, User, Setting, LeaveRequest]),
     ValidatorsModule,
   ],
   controllers: [NotificationsController],

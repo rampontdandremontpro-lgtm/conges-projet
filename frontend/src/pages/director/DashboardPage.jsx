@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
+import { DashboardReminderPopup } from '@/components/shared/DashboardReminderPopup'
 import { Icon } from '@/components/ui/Icon'
 import { PageContainer } from '@/components/ui/PageContainer'
 import { getDirectorDashboardData } from '@/services/director/directorDashboard'
@@ -330,6 +331,7 @@ export function DashboardDirecteur() {
 
   return (
     <PageContainer className="director-dashboard-page">
+      <DashboardReminderPopup role="director" onNavigate={navigate} />
       {data.partialErrors.length > 0 && (
         <div className="director-dashboard-warning" role="status">
           <Icon name="alert" size={17} />

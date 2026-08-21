@@ -582,6 +582,7 @@ export class UsersService {
             statuses: [
               LeaveRequestStatus.VALIDEE,
               LeaveRequestStatus.ANNULATION_EN_ATTENTE_ACCORD,
+              LeaveRequestStatus.EN_ATTENTE_VALIDATION,
             ],
           })
           .getMany();
@@ -604,6 +605,15 @@ export class UsersService {
       monthEnd,
     );
 
+    const activeLeaves = leaves.filter(
+      (leave) => leave.status !== LeaveRequestStatus.EN_ATTENTE_VALIDATION,
+    );
+    const pendingLeaves = leaves.filter(
+      (leave) =>
+        leave.status === LeaveRequestStatus.EN_ATTENTE_VALIDATION &&
+        leave.finalDeciderId === null,
+    );
+
     const days: Array<{
       date: string;
       morningPresent: number;
@@ -614,6 +624,8 @@ export class UsersService {
         id: number;
         morningStatus: PresenceStatus;
         afternoonStatus: PresenceStatus;
+        morningPendingRequestIds: number[];
+        afternoonPendingRequestIds: number[];
       }>;
     }> = [];
 
@@ -630,7 +642,10 @@ export class UsersService {
         const memberAbsences = absences.filter(
           (absence) => absence.employeeId === member.id,
         );
-        const memberLeaves = leaves.filter(
+        const memberLeaves = activeLeaves.filter(
+          (leave) => leave.employeeId === member.id,
+        );
+        const memberPendingLeaves = pendingLeaves.filter(
           (leave) => leave.employeeId === member.id,
         );
 
@@ -656,6 +671,12 @@ export class UsersService {
 
         const morningStatus = resolveStatus(DayPeriod.MATIN);
         const afternoonStatus = resolveStatus(DayPeriod.APRES_MIDI);
+        const morningPendingRequestIds = memberPendingLeaves
+          .filter((leave) => occupiesSlot(leave, date, DayPeriod.MATIN))
+          .map((leave) => leave.id);
+        const afternoonPendingRequestIds = memberPendingLeaves
+          .filter((leave) => occupiesSlot(leave, date, DayPeriod.APRES_MIDI))
+          .map((leave) => leave.id);
 
         if (morningStatus === PresenceStatus.PRESENT) morningPresent += 1;
         if (afternoonStatus === PresenceStatus.PRESENT) afternoonPresent += 1;
@@ -664,6 +685,8 @@ export class UsersService {
           id: member.id,
           morningStatus,
           afternoonStatus,
+          morningPendingRequestIds,
+          afternoonPendingRequestIds,
         };
       });
 

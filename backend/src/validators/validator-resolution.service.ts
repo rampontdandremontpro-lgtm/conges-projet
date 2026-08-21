@@ -272,6 +272,19 @@ export class ValidatorResolutionService {
       return directors.map((user) => user.id);
     }
 
+    if (leaveRequest.employee.role === UserRole.RESPONSABLE_SERVICE) {
+      const validators = await userRepository.find({
+        where: {
+          role: In([UserRole.RH, UserRole.DIRECTEUR]),
+          isActive: true,
+        },
+        select: { id: true },
+      });
+      return validators
+        .map((user) => user.id)
+        .filter((userId) => userId !== leaveRequest.employeeId);
+    }
+
     if (
       service.validationMode === ValidationMode.RESPONSABLE_PUIS_RELAIS
     ) {

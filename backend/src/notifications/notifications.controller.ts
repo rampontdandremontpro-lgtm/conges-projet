@@ -65,6 +65,14 @@ export class NotificationsController {
     );
   }
 
+  @Get('dashboard-reminders')
+  getDashboardReminders(@Req() request: AuthenticatedRequest) {
+    return this.notificationsService.getDashboardReminders(
+      request.user.id,
+      request.user.role,
+    );
+  }
+
   @Get('my')
   findMy(
     @Req() request: AuthenticatedRequest,

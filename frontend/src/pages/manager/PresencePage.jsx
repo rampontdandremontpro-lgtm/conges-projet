@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 
+import { useAuth } from '@/auth/AuthContext'
 import { SignatureModal } from '@/components/collab/new-request/SignatureModal'
 import { ManagerPresenceCalendar } from '@/components/manager/calendar/ManagerPresenceCalendar'
 import { ManagerPresenceMemberCard } from '@/components/manager/presence/ManagerPresenceMemberCard'
@@ -53,6 +54,7 @@ function countSlotPresent(members, slotName) {
 }
 
 export function ManagerPresencePage() {
+  const { user } = useAuth()
   const [searchParams] = useSearchParams()
   const [filter, setFilter] = useState('all')
   const [page, setPage] = useState(1)
@@ -341,6 +343,7 @@ export function ManagerPresencePage() {
                   month={calendarMonth}
                   filter="all"
                   onMonthChange={changeCalendarMonth}
+                  currentUserId={user?.id}
                   onPendingRequestClick={openCalendarValidation}
                 />
               )
