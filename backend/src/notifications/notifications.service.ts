@@ -10,6 +10,7 @@ import {
   Repository,
 } from 'typeorm';
 
+import { Derogation, DerogationStatus } from '../derogations/derogation.entity';
 import { getMartiniqueDateString } from '../leave-requests/leave-request-period.util';
 import { LeaveRequest, LeaveRequestStatus } from '../leave-requests/leave-request.entity';
 import { Setting } from '../settings/setting.entity';
@@ -38,6 +39,24 @@ type StoredNotificationPreferences = Record<
   StoredNotificationPreference
 >;
 
+export interface DashboardReminderItem {
+  kind: 'leave' | 'derogation';
+  id: number;
+  employee: { id: number; nom: string; prenom: string; role: UserRole };
+  leaveType: { id: number; name: string };
+  service: { id: number; name: string } | null;
+  startDate: string;
+  endDate: string;
+  daysBeforeStart: number;
+  pendingDays: number;
+  takeoverDelayDays: number;
+  validationLate: boolean;
+  urgent: boolean;
+  finalization: boolean;
+  stage: 'leave-validation' | 'leave-finalization' | 'derogation-rh' | 'derogation-director';
+  deadlineAt?: Date | null;
+}
+
 export interface CreateNotificationInput {
   userId: number;
   channel?: NotificationChannel;
@@ -63,6 +82,9 @@ export class NotificationsService {
 
     @InjectRepository(LeaveRequest)
     private readonly leaveRequestRepository: Repository<LeaveRequest>,
+
+    @InjectRepository(Derogation)
+    private readonly derogationRepository: Repository<Derogation>,
 
     private readonly validatorResolutionService: ValidatorResolutionService,
   ) {}
@@ -292,20 +314,7 @@ export class NotificationsService {
     };
 
     const today = getMartiniqueDateString(new Date());
-    const reminders: Array<{
-      id: number;
-      employee: { id: number; nom: string; prenom: string; role: UserRole };
-      leaveType: { id: number; name: string };
-      service: { id: number; name: string };
-      startDate: string;
-      endDate: string;
-      daysBeforeStart: number;
-      pendingDays: number;
-      takeoverDelayDays: number;
-      validationLate: boolean;
-      urgent: boolean;
-      finalization: boolean;
-    }> = [];
+    const reminders: DashboardReminderItem[] = [];
 
     for (const request of requests) {
       const daysBeforeStart = this.daysBetweenDateStrings(
@@ -394,6 +403,7 @@ export class NotificationsService {
       }
 
       reminders.push({
+        kind: 'leave',
         id: request.id,
         employee: {
           id: request.employee.id,
@@ -417,7 +427,97 @@ export class NotificationsService {
         validationLate,
         urgent,
         finalization,
+        stage: finalization ? 'leave-finalization' : 'leave-validation',
       });
+    }
+
+    if ([UserRole.RH, UserRole.DIRECTEUR].includes(role)) {
+      const derogations = await this.derogationRepository.find({
+        where: { status: DerogationStatus.EN_ATTENTE_RH },
+        relations: {
+          employee: true,
+          leaveType: true,
+          leaveRequest: { service: true },
+        },
+        order: { requestedStartDate: 'ASC', requestedAt: 'ASC' },
+      });
+
+      const now = new Date();
+
+      for (const derogation of derogations) {
+        const directorStage = derogation.decidedByRhId !== null;
+        if (role === UserRole.RH && directorStage) continue;
+        if (role === UserRole.DIRECTEUR && !directorStage) continue;
+        if (derogation.expiresAt && derogation.expiresAt.getTime() <= now.getTime()) continue;
+
+        const daysBeforeStart = this.daysBetweenDateStrings(
+          today,
+          derogation.requestedStartDate,
+        );
+        if (daysBeforeStart < 1 || daysBeforeStart > 30) continue;
+
+        const requestedDate = getMartiniqueDateString(derogation.requestedAt);
+        const pendingDays = Math.max(
+          0,
+          this.daysBetweenDateStrings(requestedDate, today),
+        );
+        const urgent = daysBeforeStart <= 7;
+        const stage = directorStage
+          ? 'derogation-director' as const
+          : 'derogation-rh' as const;
+        const notificationType = directorStage
+          ? `DEROGATION_REMINDER_DIRECTOR_J${daysBeforeStart}`
+          : `DEROGATION_REMINDER_RH_J${daysBeforeStart}`;
+        const exists = await this.alreadyExists({
+          userId,
+          type: notificationType,
+          leaveRequestId: derogation.leaveRequestId,
+        });
+
+        if (!exists) {
+          await this.create({
+            userId,
+            type: notificationType,
+            title: urgent
+              ? 'Rappel urgent — dérogation à traiter'
+              : 'Rappel — dérogation à traiter',
+            message: `La dérogation n°${derogation.id} de ${derogation.employee.prenom} ${derogation.employee.nom} doit être traitée avant J-3 à 16 h (heure de Martinique).`,
+            leaveRequestId: derogation.leaveRequestId,
+            derogationId: derogation.id,
+          });
+        }
+
+        reminders.push({
+          kind: 'derogation',
+          id: derogation.id,
+          employee: {
+            id: derogation.employee.id,
+            nom: derogation.employee.nom,
+            prenom: derogation.employee.prenom,
+            role: derogation.employee.role,
+          },
+          leaveType: {
+            id: derogation.leaveType.id,
+            name: derogation.leaveType.name,
+          },
+          service: derogation.leaveRequest?.service
+            ? {
+                id: derogation.leaveRequest.service.id,
+                name: derogation.leaveRequest.service.name,
+              }
+            : null,
+          startDate: derogation.requestedStartDate,
+          endDate: derogation.requestedEndDate,
+          daysBeforeStart,
+          pendingDays,
+          takeoverDelayDays: 0,
+          validationLate: false,
+          urgent,
+          finalization: directorStage,
+          stage,
+          deadlineAt: derogation.expiresAt,
+        });
+      }
     }
 
     return reminders.sort((a, b) => {

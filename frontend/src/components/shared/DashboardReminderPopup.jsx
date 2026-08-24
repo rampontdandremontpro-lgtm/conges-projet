@@ -19,6 +19,9 @@ function formatDate(value) {
 }
 
 function reminderLabel(item) {
+  if (item.kind === 'derogation') {
+    return 'À traiter avant J-3 à 16 h'
+  }
   if (item.validationLate) {
     return `Validation en retard depuis ${item.pendingDays} jour${item.pendingDays > 1 ? 's' : ''}`
   }
@@ -62,9 +65,11 @@ export function DashboardReminderPopup({ role, onNavigate }) {
 
   const routeBuilder = ROUTES[role]
 
-  const openRequest = (id) => {
+  const openRequest = (item) => {
     setDismissed(true)
-    const route = routeBuilder?.(id)
+    const route = item.kind === 'derogation'
+      ? `/app/rh-derogations?filter=pending&derogation=${item.id}`
+      : routeBuilder?.(item.id)
     if (route) onNavigate(route)
   }
 
@@ -86,7 +91,7 @@ export function DashboardReminderPopup({ role, onNavigate }) {
               {urgentCount > 0 ? 'RAPPEL URGENT' : 'Rappel'}
             </h2>
             <p>
-              {items.length} demande{items.length > 1 ? 's' : ''} approche{items.length > 1 ? 'nt' : ''} de la date de départ.
+              {items.length} demande{items.length > 1 ? 's' : ''} nécessite{items.length > 1 ? 'nt' : ''} votre attention.
             </p>
           </div>
           <button
@@ -101,15 +106,21 @@ export function DashboardReminderPopup({ role, onNavigate }) {
 
         <div className="dashboard-reminder-list">
           {items.map((item) => (
-            <article className={`dashboard-reminder-item ${item.urgent ? 'is-urgent' : ''}`} key={item.id}>
+            <article className={`dashboard-reminder-item ${item.urgent ? 'is-urgent' : ''}`} key={`${item.kind}-${item.id}`}>
               <div className="dashboard-reminder-item__top">
                 <span className={`dashboard-reminder-badge ${item.urgent ? 'is-urgent' : ''}`}>
                   J-{item.daysBeforeStart}
                 </span>
-                {item.finalization && (
+                {item.stage === 'leave-finalization' && (
                   <span className="dashboard-reminder-stage">Validation RH finale</span>
                 )}
-                {!item.finalization && item.validationLate && (
+                {item.stage === 'derogation-rh' && (
+                  <span className="dashboard-reminder-stage">Validation RH</span>
+                )}
+                {item.stage === 'derogation-director' && (
+                  <span className="dashboard-reminder-stage">Validation Directeur finale</span>
+                )}
+                {item.stage === 'leave-validation' && item.validationLate && (
                   <span className="dashboard-reminder-stage is-late">Validation en retard</span>
                 )}
               </div>
@@ -117,14 +128,14 @@ export function DashboardReminderPopup({ role, onNavigate }) {
               <div className="dashboard-reminder-item__body">
                 <div>
                   <strong>{`${item.employee?.prenom ?? ''} ${item.employee?.nom ?? ''}`.trim() || 'Collaborateur'}</strong>
-                  <span>{item.leaveType?.name ?? 'Demande de congé'} · {item.service?.name ?? 'Service'}</span>
+                  <span>{item.leaveType?.name ?? (item.kind === 'derogation' ? 'Dérogation' : 'Demande de congé')} · {item.service?.name ?? 'Service'}</span>
                   <small>
                     Du {formatDate(item.startDate)} au {formatDate(item.endDate)} · {reminderLabel(item)}
                   </small>
                 </div>
 
-                <button type="button" onClick={() => openRequest(item.id)}>
-                  Traiter la demande
+                <button type="button" onClick={() => openRequest(item)}>
+                  {item.kind === 'derogation' ? 'Traiter la dérogation' : 'Traiter la demande'}
                   <Icon name="arrowRight" size={15} />
                 </button>
               </div>

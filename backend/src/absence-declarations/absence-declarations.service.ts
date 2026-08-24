@@ -715,7 +715,7 @@ export class AbsenceDeclarationsService {
       await this.notificationsService.create({
         userId: declaration.employeeId,
         type: 'ABSENCE_DECLARATION_REFUSED',
-        title: 'Absence refusée',
+        title: 'Absence annulée',
         message: `Votre absence du ${declaration.startDate} au ${declaration.endDate} a été annulée par la RH.`,
         absenceDeclarationId: declaration.id,
       });
@@ -725,8 +725,8 @@ export class AbsenceDeclarationsService {
           declaration.serviceId,
           {
             type: 'ABSENCE_DECLARATION_DECISION_INFO',
-            title: 'Absence refusée dans votre service',
-            message: `L’absence de ${declaration.employee.prenom} ${declaration.employee.nom} du ${declaration.startDate} au ${declaration.endDate} a été refusée.`,
+            title: 'Absence annulée dans votre service',
+            message: `L’absence de ${declaration.employee.prenom} ${declaration.employee.nom} du ${declaration.startDate} au ${declaration.endDate} a été annulée par la RH.`,
             absenceDeclarationId: declaration.id,
           },
         );
@@ -774,8 +774,10 @@ export class AbsenceDeclarationsService {
       );
     }
 
+    // Le refus porte uniquement sur le justificatif : l’absence elle-même
+    // n’est jamais refusée par la RH. Un nouveau document est attendu.
     declaration.status =
-      AbsenceDeclarationStatus.JUSTIFICATIF_REJETE;
+      AbsenceDeclarationStatus.JUSTIFICATIF_EN_ATTENTE;
     declaration.verifiedByRhId = null;
     declaration.verifiedAt = null;
 

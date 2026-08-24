@@ -3,7 +3,10 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
+  OnApplicationBootstrap,
+  OnApplicationShutdown,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import {
@@ -40,11 +43,13 @@ import {
 
 const EXPIRABLE_DEROGATION_STATUSES = [
   DerogationStatus.EN_ATTENTE_RH,
-  DerogationStatus.ACCORDEE,
 ];
 
 @Injectable()
-export class DerogationsService {
+export class DerogationsService implements OnApplicationBootstrap, OnApplicationShutdown {
+  private readonly logger = new Logger(DerogationsService.name);
+  private deadlineTimer?: NodeJS.Timeout;
+
   constructor(
     @InjectRepository(Derogation)
     private readonly derogationRepository: Repository<Derogation>,
@@ -54,6 +59,47 @@ export class DerogationsService {
     private readonly settingsService: SettingsService,
     private readonly notificationsService: NotificationsService,
   ) {}
+
+  onApplicationBootstrap(): void {
+    void this.expireOutdatedDerogations().catch((error) => {
+      this.logger.error(
+        'Impossible de clôturer les dérogations arrivées à échéance au démarrage.',
+        error instanceof Error ? error.stack : undefined,
+      );
+    });
+    this.scheduleNextDeadlineSweep();
+  }
+
+  onApplicationShutdown(): void {
+    if (this.deadlineTimer) {
+      clearTimeout(this.deadlineTimer);
+    }
+  }
+
+  private scheduleNextDeadlineSweep(): void {
+    const now = new Date();
+    const next = new Date(now);
+    // La Martinique reste en UTC-4 toute l’année : 16 h locale = 20 h UTC.
+    next.setUTCHours(20, 0, 0, 0);
+    if (next.getTime() <= now.getTime()) {
+      next.setUTCDate(next.getUTCDate() + 1);
+    }
+
+    const delay = Math.max(0, next.getTime() - now.getTime());
+    if (this.deadlineTimer) clearTimeout(this.deadlineTimer);
+    this.deadlineTimer = setTimeout(() => {
+      this.deadlineTimer = undefined;
+      void this.expireOutdatedDerogations(new Date())
+        .catch((error) => {
+          this.logger.error(
+            'La clôture des dérogations à 16 h a échoué.',
+            error instanceof Error ? error.stack : undefined,
+          );
+        })
+        .finally(() => this.scheduleNextDeadlineSweep());
+    }, delay);
+    this.deadlineTimer.unref();
+  }
 
   async createDraft(
     authenticatedUser: AuthenticatedUser,
@@ -117,7 +163,7 @@ export class DerogationsService {
           existingDerogation.status === DerogationStatus.UTILISEE
         ) {
           throw new ConflictException(
-            'La dérogation liée à cette période a déjà été utilisée.',
+            'La dérogation associée à cette période a déjà été appliquée à la demande.',
           );
         }
 
@@ -126,6 +172,7 @@ export class DerogationsService {
           await this.calculateDerogationExpiryWithSettings(
             leaveRequest.startDate,
           );
+        this.ensureBeforeDecisionCutoff(requestedAt, expiresAt);
 
         const derogation =
           existingDerogation ??
@@ -187,7 +234,7 @@ export class DerogationsService {
 
       if (!derogation.leaveRequestId) {
         throw new BadRequestException(
-          'La demande de congé liée à cette dérogation n’existe plus.',
+          'La demande de congé associée à cette dérogation n’existe plus.',
         );
       }
 
@@ -214,6 +261,7 @@ export class DerogationsService {
       derogation.expiresAt = await this.calculateDerogationExpiryWithSettings(
         leaveRequest.startDate,
       );
+      this.ensureBeforeDecisionCutoff(new Date(), derogation.expiresAt);
 
       await manager.getRepository(Derogation).save(derogation);
     });
@@ -236,7 +284,7 @@ export class DerogationsService {
 
       if (!derogation.leaveRequestId) {
         throw new BadRequestException(
-          'La demande de congé liée à cette dérogation n’existe plus.',
+          'La demande de congé associée à cette dérogation n’existe plus.',
         );
       }
 
@@ -266,6 +314,7 @@ export class DerogationsService {
       derogation.expiresAt = await this.calculateDerogationExpiryWithSettings(
         leaveRequest.startDate,
       );
+      this.ensureBeforeDecisionCutoff(requestedAt, derogation.expiresAt);
 
       await manager.getRepository(Derogation).save(derogation);
 
@@ -466,15 +515,13 @@ export class DerogationsService {
       }
 
       if (this.isExpired(derogation)) {
-        derogation.status = DerogationStatus.EXPIREE;
-        await repository.save(derogation);
         expiredDuringDecision = true;
         return;
       }
 
       if (!derogation.leaveRequestId) {
         throw new BadRequestException(
-          'La demande de congé liée à cette dérogation n’existe plus.',
+          'La demande de congé associée à cette dérogation n’existe plus.',
         );
       }
 
@@ -489,13 +536,13 @@ export class DerogationsService {
 
       if (!leaveRequest) {
         throw new BadRequestException(
-          'La demande de congé liée à cette dérogation n’existe plus.',
+          'La demande de congé associée à cette dérogation n’existe plus.',
         );
       }
 
       if (leaveRequest.status !== LeaveRequestStatus.BROUILLON) {
         throw new BadRequestException(
-          'La demande de congé liée n’est plus au statut BROUILLON.',
+          'La demande de congé associée n’est plus au statut BROUILLON.',
         );
       }
 
@@ -523,6 +570,7 @@ export class DerogationsService {
 
         if (!isGranted) {
           derogation.status = DerogationStatus.REFUSEE;
+          derogation.expiresAt = null;
           await repository.save(derogation);
 
           await this.createHistory(manager, {
@@ -606,6 +654,7 @@ export class DerogationsService {
       derogation.status = isGranted
         ? DerogationStatus.ACCORDEE
         : DerogationStatus.REFUSEE;
+      derogation.expiresAt = null;
       await repository.save(derogation);
 
       await this.createHistory(manager, {
@@ -641,11 +690,30 @@ export class DerogationsService {
         },
         manager,
       );
+
+      if (derogation.decidedByRhId) {
+        await this.notificationsService.create(
+          {
+            userId: derogation.decidedByRhId,
+            type: 'DEROGATION_FINAL_DECISION_INFO',
+            title: isGranted
+              ? 'Dérogation validée par le Directeur'
+              : 'Dérogation refusée par le Directeur',
+            message: isGranted
+              ? `La dérogation pour la période du ${leaveRequest.startDate} au ${leaveRequest.endDate} a terminé son traitement et peut être appliquée à la demande de congé.`
+              : `La dérogation pour la période du ${leaveRequest.startDate} au ${leaveRequest.endDate} a été refusée lors de la décision finale.`,
+            leaveRequestId: leaveRequest.id,
+            derogationId: derogation.id,
+          },
+          manager,
+        );
+      }
     });
 
     if (expiredDuringDecision) {
+      await this.expireOutdatedDerogations();
       throw new BadRequestException(
-        'Cette dérogation a expiré et ne peut plus être traitée.',
+        'Le délai de traitement de cette dérogation est dépassé. La limite était fixée à 16 h (heure de Martinique).',
       );
     }
 
@@ -677,21 +745,6 @@ export class DerogationsService {
     const now = new Date();
     const repository = manager.getRepository(Derogation);
 
-    await repository
-      .createQueryBuilder()
-      .update(Derogation)
-      .set({ status: DerogationStatus.EXPIREE })
-      .where('leave_request_id = :leaveRequestId', {
-        leaveRequestId: data.leaveRequest.id,
-      })
-      .andWhere('status = :status', {
-        status: DerogationStatus.ACCORDEE,
-      })
-      .andWhere('used_at IS NULL')
-      .andWhere('expires_at IS NOT NULL')
-      .andWhere('expires_at <= :now', { now })
-      .execute();
-
     const derogation = await repository
       .createQueryBuilder('derogation')
       .setLock('pessimistic_write')
@@ -705,7 +758,6 @@ export class DerogationsService {
         status: DerogationStatus.ACCORDEE,
       })
       .andWhere('derogation.usedAt IS NULL')
-      .andWhere('derogation.expiresAt > :now', { now })
       .getOne();
 
     if (
@@ -716,7 +768,7 @@ export class DerogationsService {
       )
     ) {
       throw new BadRequestException(
-        'Une dérogation validée par la RH puis accordée par le Directeur, valide et correspondant exactement à cette demande est obligatoire.',
+        'Une dérogation validée par la RH puis le Directeur et correspondant exactement à cette demande est obligatoire.',
       );
     }
 
@@ -826,9 +878,6 @@ export class DerogationsService {
       data.leaveRequest.startDate;
     derogation.requestedEndDate =
       data.leaveRequest.endDate;
-    derogation.expiresAt = await this.calculateDerogationExpiryWithSettings(
-      data.leaveRequest.startDate,
-    );
     derogation.usedAt = null;
 
     if (
@@ -836,6 +885,7 @@ export class DerogationsService {
       stillMatchesApprovedRequest
     ) {
       derogation.status = DerogationStatus.ACCORDEE;
+      derogation.expiresAt = null;
 
       await repository.save(derogation);
 
@@ -850,6 +900,10 @@ export class DerogationsService {
     derogation.decidedByRhId = null;
     derogation.decisionComment = null;
     derogation.decidedAt = null;
+    derogation.expiresAt = await this.calculateDerogationExpiryWithSettings(
+      data.leaveRequest.startDate,
+    );
+    this.ensureBeforeDecisionCutoff(new Date(), derogation.expiresAt);
 
     await repository.save(derogation);
 
@@ -883,7 +937,6 @@ export class DerogationsService {
 
     if (
       ![
-        DerogationStatus.EN_ATTENTE_RH,
         DerogationStatus.EN_ATTENTE_RH,
         DerogationStatus.ACCORDEE,
       ].includes(derogation.status)
@@ -934,6 +987,17 @@ export class DerogationsService {
     );
   }
 
+  private ensureBeforeDecisionCutoff(
+    now: Date,
+    cutoff: Date | null,
+  ): void {
+    if (cutoff && now.getTime() >= cutoff.getTime()) {
+      throw new BadRequestException(
+        'Le délai de traitement de la dérogation est terminé. La limite est fixée à J-3 à 16 h (heure de Martinique).',
+      );
+    }
+  }
+
   private validateDerogationWindow(
     notice: ReturnType<typeof evaluateSubmissionNotice>,
   ): void {
@@ -945,7 +1009,7 @@ export class DerogationsService {
 
     if (notice.daysBeforeStart < 3) {
       throw new BadRequestException(
-        'Une dérogation ne peut plus être demandée à partir de J-2.',
+        'Une dérogation ne peut plus être demandée après J-3 à 16 h (heure de Martinique).',
       );
     }
 
@@ -957,7 +1021,7 @@ export class DerogationsService {
 
     if (!notice.isDerogationWindow) {
       throw new BadRequestException(
-        `Les dérogations sont autorisées uniquement entre J-29 et J-3. Cette demande exige normalement un délai de ${notice.requiredNoticeDays} jours.`,
+        `Les dérogations sont autorisées uniquement entre J-29 et J-3, avec une limite à 16 h le dernier jour. Cette demande exige normalement un délai de ${notice.requiredNoticeDays} jours.`,
       );
     }
   }
@@ -967,7 +1031,7 @@ export class DerogationsService {
   ): void {
     if (leaveRequest.status !== LeaveRequestStatus.BROUILLON) {
       throw new BadRequestException(
-        'Une dérogation ne peut être liée qu’à une demande de congé au statut EN_ATTENTE_RH.',
+        'Une dérogation ne peut être associée qu’à une demande de congé en brouillon.',
       );
     }
   }
@@ -975,9 +1039,12 @@ export class DerogationsService {
   private ensureDerogationIsDraft(
     derogation: Derogation,
   ): void {
-    if (derogation.status !== DerogationStatus.EN_ATTENTE_RH) {
+    if (
+      derogation.status !== DerogationStatus.EN_ATTENTE_RH ||
+      derogation.decidedByRhId !== null
+    ) {
       throw new BadRequestException(
-        'Seule une dérogation au statut EN_ATTENTE_RH peut être modifiée, supprimée ou transmise à la RH.',
+        'Seule une dérogation encore en attente de décision RH peut être modifiée, supprimée ou transmise.',
       );
     }
   }
@@ -1051,20 +1118,96 @@ export class DerogationsService {
     );
   }
 
-  private async expireOutdatedDerogations(): Promise<void> {
-    await this.derogationRepository
-      .createQueryBuilder()
-      .update(Derogation)
-      .set({ status: DerogationStatus.EXPIREE })
-      .where('status IN (:...statuses)', {
+  async expireOutdatedDerogations(now = new Date()): Promise<number> {
+    const candidates = await this.derogationRepository
+      .createQueryBuilder('derogation')
+      .leftJoinAndSelect('derogation.employee', 'employee')
+      .leftJoinAndSelect('derogation.leaveRequest', 'leaveRequest')
+      .where('derogation.status IN (:...statuses)', {
         statuses: EXPIRABLE_DEROGATION_STATUSES,
       })
-      .andWhere('used_at IS NULL')
-      .andWhere('expires_at IS NOT NULL')
-      .andWhere('expires_at <= :now', {
-        now: new Date(),
-      })
-      .execute();
+      .andWhere('derogation.usedAt IS NULL')
+      .andWhere('derogation.expiresAt IS NOT NULL')
+      .andWhere('derogation.expiresAt <= :now', { now })
+      .orderBy('derogation.expiresAt', 'ASC')
+      .getMany();
+
+    let expired = 0;
+
+    for (const candidate of candidates) {
+      const didExpire = await this.dataSource.transaction(async (manager) => {
+        const repository = manager.getRepository(Derogation);
+        const derogation = await repository
+          .createQueryBuilder('derogation')
+          .setLock('pessimistic_write')
+          .where('derogation.id = :id', { id: candidate.id })
+          .getOne();
+
+        if (
+          !derogation ||
+          !EXPIRABLE_DEROGATION_STATUSES.includes(derogation.status) ||
+          derogation.usedAt !== null ||
+          !derogation.expiresAt ||
+          derogation.expiresAt.getTime() > now.getTime()
+        ) {
+          return false;
+        }
+
+        const directorStage = derogation.decidedByRhId !== null;
+        derogation.status = DerogationStatus.EXPIREE;
+        await repository.save(derogation);
+
+        const leaveRequestId = derogation.leaveRequestId;
+        const employeeName = candidate.employee
+          ? `${candidate.employee.prenom} ${candidate.employee.nom}`
+          : 'le collaborateur';
+        const period = `${candidate.requestedStartDate} au ${candidate.requestedEndDate}`;
+
+        await this.notificationsService.create(
+          {
+            userId: derogation.employeeId,
+            type: 'DEROGATION_DEADLINE_EXPIRED',
+            title: 'Délai de traitement de la dérogation dépassé',
+            message: `Le délai de traitement de votre dérogation pour la période du ${period} s’est terminé à 16 h (heure de Martinique).`,
+            leaveRequestId,
+            derogationId: derogation.id,
+          },
+          manager,
+        );
+
+        await this.notificationsService.createForActiveRoles(
+          [directorStage ? UserRole.DIRECTEUR : UserRole.RH],
+          {
+            type: 'DEROGATION_DEADLINE_EXPIRED_ACTION',
+            title: 'Délai de dérogation dépassé',
+            message: `La dérogation n°${derogation.id} de ${employeeName} n’a pas été traitée avant l’échéance de 16 h.`,
+            leaveRequestId,
+            derogationId: derogation.id,
+          },
+          manager,
+        );
+
+        if (directorStage && derogation.decidedByRhId) {
+          await this.notificationsService.create(
+            {
+              userId: derogation.decidedByRhId,
+              type: 'DEROGATION_DEADLINE_EXPIRED_INFO',
+              title: 'Dérogation clôturée à l’échéance',
+              message: `La dérogation n°${derogation.id} de ${employeeName}, transmise au Directeur, a atteint son échéance à 16 h sans décision finale.`,
+              leaveRequestId,
+              derogationId: derogation.id,
+            },
+            manager,
+          );
+        }
+
+        return true;
+      });
+
+      if (didExpire) expired += 1;
+    }
+
+    return expired;
   }
 
   private async createHistory(

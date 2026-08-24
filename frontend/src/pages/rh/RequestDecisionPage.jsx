@@ -217,7 +217,7 @@ export function RhRequestDecisionPage() {
           {`${request.employee?.prenom?.[0] ?? ''}${request.employee?.nom?.[0] ?? ''}`.toUpperCase()}
         </span>
         <div>
-          <span className="manager-request-detail-hero__eyebrow">DEMANDE DE CONGÉ N°{request.id}</span>
+          <span className="manager-request-detail-hero__eyebrow">DEMANDE DE CONGÉ N°{request.displayNumber ?? request.id}</span>
           <div className="manager-request-detail-hero__titleline">
             <h2>{employeeName}</h2>
             <span className={`manager-requests-badge manager-requests-badge--${status.tone}`}>
@@ -371,7 +371,7 @@ export function RhRequestDecisionPage() {
               )}
 
               {request.status === 'EN_ATTENTE_VALIDATION' && request.employee?.role !== 'RH' && !isOwnRequest && !request.decisionAccess && (
-                <p>Cette demande relève actuellement de son valideur prévu. Pour un service géré par un Responsable, la RH ne peut intervenir que si elle est désignée comme valideur temporaire ou valideur de secours.</p>
+                <p>Cette demande relève actuellement de son valideur prévu.</p>
               )}
 
               {request.decisionAt && (

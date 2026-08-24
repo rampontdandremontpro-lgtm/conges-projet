@@ -72,9 +72,9 @@ describe('leave-request-notice.util', () => {
     expect(result.isDerogationWindow).toBe(true);
   });
 
-  it('calcule l’expiration d’une dérogation au début de J-2', () => {
+  it('calcule la fin du délai de traitement à J-3 à 16 h en Martinique', () => {
     expect(calculateDerogationExpiry('2026-02-10', 3).toISOString()).toBe(
-      '2026-02-08T00:00:00.000Z',
+      '2026-02-07T20:00:00.000Z',
     );
   });
 });

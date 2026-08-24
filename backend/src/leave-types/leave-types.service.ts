@@ -3,6 +3,7 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  OnModuleInit,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Not, Repository } from 'typeorm';
@@ -11,12 +12,23 @@ import { CreateLeaveTypeDto } from './dto/create-leave-type.dto';
 import { UpdateLeaveTypeDto } from './dto/update-leave-type.dto';
 import { LeaveType, LeaveTypeCategory } from './leave-type.entity';
 
+const REQUIRED_ABSENCE_TYPES = [
+  'Congé supplémentaire de naissance',
+  'Congé parental',
+  'Congé parental d’éducation',
+  'Congé d’adoption',
+] as const;
+
 @Injectable()
-export class LeaveTypesService {
+export class LeaveTypesService implements OnModuleInit {
   constructor(
     @InjectRepository(LeaveType)
     private readonly leaveTypeRepository: Repository<LeaveType>,
   ) {}
+
+  async onModuleInit(): Promise<void> {
+    await this.ensureRequiredAbsenceTypes();
+  }
 
   async create(dto: CreateLeaveTypeDto): Promise<LeaveType> {
     const name = dto.name.trim();
@@ -100,6 +112,32 @@ export class LeaveTypesService {
     const leaveType = await this.findOne(id);
     leaveType.isActive = true;
     return this.leaveTypeRepository.save(leaveType);
+  }
+
+  private async ensureRequiredAbsenceTypes(): Promise<void> {
+    for (const name of REQUIRED_ABSENCE_TYPES) {
+      const existing = await this.leaveTypeRepository.findOneBy({ name });
+      if (existing) {
+        continue;
+      }
+
+      await this.leaveTypeRepository.save(
+        this.leaveTypeRepository.create({
+          name,
+          category: LeaveTypeCategory.DECLARATION_ABSENCE,
+          deductsPaidLeaveBalance: false,
+          documentRequired: false,
+          documentCanBeAddedLater: false,
+          employeeCanCreate: false,
+          rhOnly: true,
+          allowsDays: true,
+          allowsHalfDays: false,
+          allowsHours: false,
+          requiresValidation: false,
+          isActive: true,
+        }),
+      );
+    }
   }
 
   private resolveValues(

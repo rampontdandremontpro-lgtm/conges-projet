@@ -424,7 +424,15 @@ export class ExportsService {
           d.requested_start_date AS Date_debut,
           d.requested_end_date AS Date_fin,
           d.reason AS Motif,
-          d.status AS Statut,
+          CASE
+            WHEN d.status = 'EN_ATTENTE_RH' AND d.decided_by_rh_id IS NULL THEN 'En attente'
+            WHEN d.status = 'EN_ATTENTE_RH' AND d.decided_by_rh_id IS NOT NULL THEN 'En cours de traitement'
+            WHEN d.status = 'ACCORDEE' THEN 'Validée - traitement terminé'
+            WHEN d.status = 'REFUSEE' THEN 'Refusée'
+            WHEN d.status = 'UTILISEE' THEN 'Appliquée'
+            WHEN d.status = 'EXPIREE' THEN 'Délai dépassé'
+            ELSE d.status
+          END AS Statut,
           d.requested_at AS Demandee_le,
           CASE
             WHEN rh.id IS NULL THEN ''
@@ -432,9 +440,8 @@ export class ExportsService {
           END AS Decidee_par,
           d.decision_comment AS Commentaire_decision,
           d.decided_at AS Decidee_le,
-          d.expires_at AS Expire_le,
-          d.used_at AS Utilisee_le,
-          d.leave_request_id AS Demande_conge_liee
+          d.used_at AS Appliquee_le,
+          d.leave_request_id AS Demande_conge
         FROM derogations d
         INNER JOIN users u ON u.id = d.employee_id
         LEFT JOIN services s ON s.id = u.service_id

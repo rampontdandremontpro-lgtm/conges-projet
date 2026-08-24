@@ -19,21 +19,21 @@ import '@/styles/rh/derogations.css'
 const PAGE_SIZE = 8
 
 const STATUS_META = {
-  EN_ATTENTE_RH: { label: 'En attente RH', tone: 'pending' },
-  EN_ATTENTE_DIRECTEUR: { label: 'En attente Direction', tone: 'pending' },
-  ACCORDEE: { label: 'Accordée', tone: 'granted' },
+  EN_ATTENTE_RH: { label: 'En attente', tone: 'pending' },
+  EN_ATTENTE_DIRECTEUR: { label: 'En cours de traitement', tone: 'pending' },
+  ACCORDEE: { label: 'Validée · traitement terminé', tone: 'granted' },
   REFUSEE: { label: 'Refusée', tone: 'refused' },
-  UTILISEE: { label: 'Utilisée', tone: 'used' },
-  EXPIREE: { label: 'Expirée', tone: 'expired' },
+  UTILISEE: { label: 'Appliquée', tone: 'used' },
+  EXPIREE: { label: 'Délai dépassé', tone: 'expired' },
 }
 
 const FILTERS = [
   { id: 'all', label: 'Toutes' },
   { id: 'pending', label: 'En attente' },
-  { id: 'granted', label: 'Accordées' },
+  { id: 'granted', label: 'Validées' },
   { id: 'refused', label: 'Refusées' },
-  { id: 'used', label: 'Utilisées' },
-  { id: 'expired', label: 'Expirées' },
+  { id: 'used', label: 'Appliquées' },
+  { id: 'expired', label: 'Délai dépassé' },
 ]
 
 function normalize(value) {
@@ -87,6 +87,19 @@ function formatDateTime(value) {
     hour: '2-digit',
     minute: '2-digit',
   }).format(date)
+}
+
+function formatDeadline(value) {
+  if (!value) return '—'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return '—'
+  const day = new Intl.DateTimeFormat('fr-FR', {
+    timeZone: 'America/Martinique',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  }).format(date)
+  return `${day} à 16 h`
 }
 
 function formatPeriod(item) {
@@ -249,15 +262,11 @@ function DerogationDetailDrawer({ itemId, onClose, onChanged }) {
                 <strong>{formatDateTime(item.requestedAt)}</strong>
               </div>
               <div>
-                <small>Valable jusqu’au</small>
-                <strong>{formatDateTime(item.expiresAt)}</strong>
-              </div>
-              <div>
-                <small>Demande de congé liée</small>
+                <small>Demande de congé</small>
                 <strong>{item.leaveRequestId ? `N°${item.leaveRequestId}` : '—'}</strong>
               </div>
               <div>
-                <small>Statut du brouillon lié</small>
+                <small>Statut</small>
                 <strong>{item.leaveRequest?.status ? String(item.leaveRequest.status).replaceAll('_', ' ') : '—'}</strong>
               </div>
             </div>
@@ -285,7 +294,7 @@ function DerogationDetailDrawer({ itemId, onClose, onChanged }) {
                 </div>
                 {item.decisionComment && <p>{item.decisionComment}</p>}
                 {item.status === 'UTILISEE' && item.usedAt && (
-                  <p className="rh-derogation-used">Dérogation utilisée le {formatDateTime(item.usedAt)}.</p>
+                  <p className="rh-derogation-used">Dérogation appliquée à la demande le {formatDateTime(item.usedAt)}.</p>
                 )}
               </div>
             )}
@@ -298,11 +307,20 @@ function DerogationDetailDrawer({ itemId, onClose, onChanged }) {
                     <strong>{isDirector ? 'Décision finale du Directeur' : 'Validation RH'}</strong>
                     <p>
                       {isDirector
-                        ? 'La RH a validé cette dérogation. Vérifiez la période avant la décision finale.'
-                        : 'Vérifiez la période avant de transmettre la dérogation au Directeur ou de la refuser.'}
+                        ? 'La RH a validé cette dérogation. Vérifiez la demande avant la décision finale.'
+                        : 'Vérifiez la demande avant de la transmettre au Directeur ou de la refuser.'}
                     </p>
                   </div>
                 </div>
+
+                {item.expiresAt && (
+                  <div className="rh-derogation-deadline">
+                    <Icon name="clock" size={16} />
+                    <span>
+                      Délai de traitement : <strong>jusqu’au {formatDeadline(item.expiresAt)}</strong> (heure de Martinique).
+                    </span>
+                  </div>
+                )}
 
                 <label className="rh-derogation-comment">
                   <span>Commentaire de décision <em>obligatoire en cas de refus</em></span>
@@ -400,6 +418,13 @@ export function RhDerogationsPage() {
   }, [feedback])
 
   const query = searchParams.get('q') ?? ''
+  const requestedDerogationId = Number(searchParams.get('derogation'))
+
+  useEffect(() => {
+    if (Number.isInteger(requestedDerogationId) && requestedDerogationId > 0) {
+      setSelectedId(requestedDerogationId)
+    }
+  }, [requestedDerogationId])
 
   useEffect(() => {
     const nextFilter = searchParams.get('filter')

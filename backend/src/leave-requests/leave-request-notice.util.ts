@@ -67,9 +67,11 @@ export function calculateDerogationExpiry(
   derogationLastAllowedDay = 3,
 ): Date {
   const startDate = parseDate(startDateValue);
+  // Dernier délai de traitement : J-3 à 16 h en Martinique (UTC-4 fixe).
   startDate.setUTCDate(
-    startDate.getUTCDate() - (derogationLastAllowedDay - 1),
+    startDate.getUTCDate() - derogationLastAllowedDay,
   );
+  startDate.setUTCHours(20, 0, 0, 0);
   return startDate;
 }
 

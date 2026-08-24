@@ -29,10 +29,11 @@ const FILTER_STATUSES = {
     'ANNULATION_EN_ATTENTE_ACCORD',
     'DECLAREE',
     'JUSTIFICATIF_EN_ATTENTE',
+    'JUSTIFICATIF_REJETE',
     'A_VERIFIER_PAR_RH',
   ]),
   validated: new Set(['VALIDEE', 'ENREGISTREE']),
-  refused: new Set(['REFUSEE', 'JUSTIFICATIF_REJETE']),
+  refused: new Set(['REFUSEE']),
   drafts: new Set(['BROUILLON']),
 }
 

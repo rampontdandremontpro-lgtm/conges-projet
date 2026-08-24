@@ -55,7 +55,7 @@ export const NOTIFICATION_PREFERENCES_BY_ROLE: Record<
     event('absence_authorized', 'Absence autorisée', [
       'ABSENCE_DECLARATION_AUTHORIZED',
     ]),
-    event('absence_refused', 'Absence refusée', [
+    event('absence_refused', 'Absence annulée par la RH', [
       'ABSENCE_DECLARATION_REFUSED',
     ]),
     event('supporting_document_accepted', 'Justificatif accepté', [
@@ -73,8 +73,9 @@ export const NOTIFICATION_PREFERENCES_BY_ROLE: Record<
     event('derogation_approved', 'Dérogation accordée', [
       'DEROGATION_APPROVED',
     ]),
-    event('derogation_refused', 'Dérogation refusée', [
+    event('derogation_refused', 'Dérogation refusée ou délai dépassé', [
       'DEROGATION_REFUSED',
+      'DEROGATION_DEADLINE_EXPIRED',
     ]),
     event('balance_corrected', 'Solde de congés corrigé', [
       'BALANCE_CORRECTED',
@@ -121,7 +122,7 @@ export const NOTIFICATION_PREFERENCES_BY_ROLE: Record<
     ]),
     event(
       'service_absence_decision',
-      'Absence autorisée ou refusée dans mon service',
+      'Absence autorisée ou annulée dans mon service',
       ['ABSENCE_DECLARATION_DECISION_INFO'],
     ),
     event('overlap_alert', 'Nouvelle alerte de chevauchement', [
@@ -166,7 +167,7 @@ export const NOTIFICATION_PREFERENCES_BY_ROLE: Record<
     event('my_absence_authorized', 'Mon absence autorisée', [
       'ABSENCE_DECLARATION_AUTHORIZED',
     ]),
-    event('my_absence_refused', 'Mon absence refusée', [
+    event('my_absence_refused', 'Mon absence annulée par la RH', [
       'ABSENCE_DECLARATION_REFUSED',
     ]),
     event('my_supporting_document_accepted', 'Mon justificatif accepté', [
@@ -181,8 +182,9 @@ export const NOTIFICATION_PREFERENCES_BY_ROLE: Record<
     event('my_derogation_approved', 'Ma dérogation accordée', [
       'DEROGATION_APPROVED',
     ]),
-    event('my_derogation_refused', 'Ma dérogation refusée', [
+    event('my_derogation_refused', 'Ma dérogation refusée ou délai dépassé', [
       'DEROGATION_REFUSED',
+      'DEROGATION_DEADLINE_EXPIRED',
     ]),
     event('my_balance_corrected', 'Mon solde corrigé', [
       'BALANCE_CORRECTED',
@@ -215,14 +217,17 @@ export const NOTIFICATION_PREFERENCES_BY_ROLE: Record<
     event('supporting_document_to_review', 'Justificatif à vérifier', [
       'SUPPORTING_DOCUMENT_TO_REVIEW',
     ]),
-    event('absence_to_decide', 'Absence à autoriser ou refuser', [
+    event('absence_to_decide', 'Absence à autoriser ou justificatif à vérifier', [
       'ABSENCE_DECLARATION_TO_REVIEW',
     ]),
     event('new_derogation', 'Nouvelle demande de dérogation', [
       'DEROGATION_SUBMITTED_RH',
+      'DEROGATION_REMINDER_RH_*',
+      'DEROGATION_DEADLINE_EXPIRED_ACTION',
     ]),
-    event('derogation_expiring', 'Dérogation arrivant bientôt à expiration', [
-      'DEROGATION_EXPIRING',
+    event('derogation_final_decision', 'Décision finale sur une dérogation', [
+      'DEROGATION_FINAL_DECISION_INFO',
+      'DEROGATION_DEADLINE_EXPIRED_INFO',
     ]),
     event('negative_balance_alert', 'Alerte de solde négatif', [
       'NEGATIVE_BALANCE_ALERT',
@@ -282,8 +287,9 @@ export const NOTIFICATION_PREFERENCES_BY_ROLE: Record<
     event('my_derogation_approved', 'Ma dérogation accordée', [
       'DEROGATION_APPROVED',
     ]),
-    event('my_derogation_refused', 'Ma dérogation refusée', [
+    event('my_derogation_refused', 'Ma dérogation refusée ou délai dépassé', [
       'DEROGATION_REFUSED',
+      'DEROGATION_DEADLINE_EXPIRED',
     ]),
     event('my_balance_corrected', 'Mon solde corrigé', [
       'BALANCE_CORRECTED',
@@ -320,7 +326,11 @@ export const NOTIFICATION_PREFERENCES_BY_ROLE: Record<
     event(
       'derogation_needs_intervention',
       'Nouvelle demande de dérogation nécessitant mon intervention',
-      ['DEROGATION_WAITING_DIRECTOR'],
+      [
+        'DEROGATION_WAITING_DIRECTOR',
+        'DEROGATION_REMINDER_DIRECTOR_*',
+        'DEROGATION_DEADLINE_EXPIRED_ACTION',
+      ],
     ),
     event('important_overlap_alert', 'Alerte de chevauchement importante', [
       'OVERLAP_ALERT',

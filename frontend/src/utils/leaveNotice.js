@@ -55,6 +55,14 @@ export function evaluateNotice({ startIso, endIso, settings, seasonal }) {
       ? rules.specialDeadlineDays
       : rules.normalDeadlineDays
 
+  const derogationCutoff = new Date(startDate)
+  derogationCutoff.setUTCDate(
+    derogationCutoff.getUTCDate() - rules.derogationLastAllowedDay,
+  )
+  // 16 h en Martinique = 20 h UTC (UTC-4 fixe).
+  derogationCutoff.setUTCHours(20, 0, 0, 0)
+  const now = new Date()
+
   return {
     daysBeforeStart,
     requiredNoticeDays,
@@ -63,7 +71,9 @@ export function evaluateNotice({ startIso, endIso, settings, seasonal }) {
     isNoticeCompliant: daysBeforeStart >= requiredNoticeDays,
     isDerogationWindow:
       daysBeforeStart >= rules.derogationLastAllowedDay &&
-      daysBeforeStart < rules.normalDeadlineDays,
+      daysBeforeStart < rules.normalDeadlineDays &&
+      now.getTime() < derogationCutoff.getTime(),
+    derogationCutoff,
   }
 }
 

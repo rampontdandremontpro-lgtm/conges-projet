@@ -366,3 +366,19 @@
 .page-container.rh-derogations-page {
   padding-top: 0;
 }
+
+.rh-derogation-deadline {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 13px;
+  padding: 10px 11px;
+  border: 1px solid #f5d59b;
+  border-radius: 11px;
+  background: #fff9ed;
+  color: #8b5a14;
+  font-size: 11px;
+  line-height: 1.45;
+}
+.rh-derogation-deadline svg { flex: 0 0 auto; margin-top: 1px; }
+.rh-derogation-deadline strong { color: #7b4707; }

@@ -16,7 +16,7 @@ function overlapStatusLabel(status) {
     DECLAREE: 'Déclarée',
     JUSTIFICATIF_EN_ATTENTE: 'Justificatif en attente',
     A_VERIFIER_PAR_RH: 'À vérifier par RH',
-    JUSTIFICATIF_REJETE: 'Justificatif rejeté',
+    JUSTIFICATIF_REJETE: 'Justificatif attendu',
     ENREGISTREE: 'Enregistrée',
   }
   return labels[status] ?? status ?? '—'

@@ -244,7 +244,7 @@ export function DirectorRequestDecisionPage() {
           {`${request.employee?.prenom?.[0] ?? ''}${request.employee?.nom?.[0] ?? ''}`.toUpperCase()}
         </span>
         <div className="director-request-hero-content">
-          <span className="manager-request-detail-hero__eyebrow">DEMANDE DE CONGÉ N°{request.id}</span>
+          <span className="manager-request-detail-hero__eyebrow">DEMANDE DE CONGÉ N°{request.displayNumber ?? request.id}</span>
           <div className="manager-request-detail-hero__titleline">
             <h2>{employeeName}</h2>
             {request.status === 'EN_ATTENTE_VALIDATION' && request.isUrgent ? (

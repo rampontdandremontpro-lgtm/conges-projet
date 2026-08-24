@@ -233,7 +233,7 @@ export function RequestDetailPage() {
         </span>
         <div className="request-detail-hero__main">
           <span className="request-detail-hero__eyebrow">
-            {isLeave ? `Demande de congé n°${request.id}` : `Déclaration d’absence n°${request.id}`}
+            {isLeave ? `Demande de congé n°${request.displayNumber ?? request.id}` : `Déclaration d’absence n°${request.id}`}
           </span>
           <div className="request-detail-hero__title-row">
             <h2>{title}</h2>

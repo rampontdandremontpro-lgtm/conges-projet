@@ -37,7 +37,8 @@ const STATUS_META = {
   DECLAREE: { label: 'Déclarée', tone: 'declared' },
   JUSTIFICATIF_EN_ATTENTE: { label: 'Justificatif attendu', tone: 'waiting' },
   A_VERIFIER_PAR_RH: { label: 'À vérifier', tone: 'pending' },
-  JUSTIFICATIF_REJETE: { label: 'Refusée', tone: 'rejected' },
+  // Compatibilité avec les anciennes données : un justificatif rejeté signifie désormais qu’un nouveau justificatif est attendu.
+  JUSTIFICATIF_REJETE: { label: 'Justificatif attendu', tone: 'waiting' },
   ENREGISTREE: { label: 'Autorisée', tone: 'approved' },
   ANNULEE: { label: 'Annulée', tone: 'cancelled' },
 }
@@ -45,9 +46,8 @@ const STATUS_META = {
 const FILTERS = [
   { id: 'all', label: 'Toutes' },
   { id: 'pending', label: 'À vérifier' },
-  { id: 'waiting', label: 'À compléter' },
+  { id: 'waiting', label: 'Justificatif attendu' },
   { id: 'approved', label: 'Autorisées' },
-  { id: 'rejected', label: 'Refusées' },
   { id: 'cancelled', label: 'Annulées' },
 ]
 
@@ -75,9 +75,8 @@ function statusMeta(status) {
 function statusMatches(status, filter) {
   if (filter === 'all') return true
   if (filter === 'pending') return ['A_VERIFIER_PAR_RH', 'DECLAREE'].includes(status)
-  if (filter === 'waiting') return status === 'JUSTIFICATIF_EN_ATTENTE'
+  if (filter === 'waiting') return ['JUSTIFICATIF_EN_ATTENTE', 'JUSTIFICATIF_REJETE'].includes(status)
   if (filter === 'approved') return status === 'ENREGISTREE'
-  if (filter === 'rejected') return status === 'JUSTIFICATIF_REJETE'
   if (filter === 'cancelled') return status === 'ANNULEE'
   return true
 }
@@ -554,7 +553,7 @@ function DetailDrawer({
       closePreview()
       onFeedback?.(
         'success',
-        'Justificatif refusé. L’absence passe automatiquement au statut Refusée.',
+        'Justificatif refusé. Un nouveau justificatif est maintenant attendu.',
       )
     } catch (error) {
       onFeedback?.('error', errorMessage(error))
@@ -731,9 +730,9 @@ function DetailDrawer({
             </div>
           )}
           {declaration.status === 'JUSTIFICATIF_REJETE' && (
-            <div className="rh-absence-detail-notice rh-absence-detail-notice--red">
-              <Icon name="alert" size={17} />
-              <span>Le justificatif a été refusé : cette absence est automatiquement considérée comme refusée.</span>
+            <div className="rh-absence-detail-notice rh-absence-detail-notice--orange">
+              <Icon name="clock" size={17} />
+              <span>Le justificatif a été refusé. Un nouveau justificatif est attendu ; l’absence reste gérée par la RH.</span>
             </div>
           )}
 
@@ -839,7 +838,6 @@ export function RhAbsencesPage() {
     pending: managedDeclarations.filter((item) => statusMatches(item.status, 'pending')).length,
     waiting: managedDeclarations.filter((item) => statusMatches(item.status, 'waiting')).length,
     approved: managedDeclarations.filter((item) => statusMatches(item.status, 'approved')).length,
-    rejected: managedDeclarations.filter((item) => statusMatches(item.status, 'rejected')).length,
     cancelled: managedDeclarations.filter((item) => statusMatches(item.status, 'cancelled')).length,
   }), [managedDeclarations])
 
@@ -928,7 +926,7 @@ export function RhAbsencesPage() {
         <div className="rh-absences-toolbar">
           <div>
             <h2>Gestion des absences</h2>
-            <p>Déclarations à vérifier et absences autorisées au même endroit.</p>
+            <p>Suivi des absences enregistrées et des justificatifs associés.</p>
           </div>
           <button type="button" className="rh-absences-create" onClick={() => setCreateOpen(true)}>
             <Icon name="plus" size={17} /> Enregistrer une absence

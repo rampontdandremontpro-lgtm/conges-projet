@@ -763,7 +763,9 @@ export class LeaveRequestsService {
       );
     }
 
-    return leaveRequest;
+    return Object.assign(leaveRequest, {
+      displayNumber: await this.getAnnualDisplayNumber(leaveRequest),
+    });
   }
 
   async updateRequest(
@@ -1409,6 +1411,10 @@ export class LeaveRequestsService {
       );
     }
 
+    Object.assign(leaveRequest, {
+      displayNumber: await this.getAnnualDisplayNumber(leaveRequest),
+    });
+
     const treatment =
       await this.validatorResolutionService.describeTreatment(
         leaveRequest,
@@ -1528,6 +1534,51 @@ export class LeaveRequestsService {
     throw new ForbiddenException(
       'Cette demande ne relève pas de votre périmètre.',
     );
+  }
+
+  private async getAnnualDisplayNumber(
+    leaveRequest: LeaveRequest,
+  ): Promise<number> {
+    if (!leaveRequest.submittedAt) {
+      return leaveRequest.id;
+    }
+
+    const localSubmittedDate = getMartiniqueDateString(
+      leaveRequest.submittedAt,
+    );
+    const [year, month] = localSubmittedDate
+      .split('-')
+      .map(Number);
+    const periodStartYear = month >= 6 ? year : year - 1;
+    const periodStart = new Date(
+      `${periodStartYear}-06-01T00:00:00.000-04:00`,
+    );
+    const periodEnd = new Date(
+      `${periodStartYear + 1}-06-01T00:00:00.000-04:00`,
+    );
+
+    const count = await this.leaveRequestRepository
+      .createQueryBuilder('annualRequest')
+      .where('annualRequest.status != :draftStatus', {
+        draftStatus: LeaveRequestStatus.BROUILLON,
+      })
+      .andWhere('annualRequest.submittedAt IS NOT NULL')
+      .andWhere('annualRequest.submittedAt >= :periodStart', {
+        periodStart,
+      })
+      .andWhere('annualRequest.submittedAt < :periodEnd', {
+        periodEnd,
+      })
+      .andWhere(
+        '(annualRequest.submittedAt < :submittedAt OR (annualRequest.submittedAt = :submittedAt AND annualRequest.id <= :requestId))',
+        {
+          submittedAt: leaveRequest.submittedAt,
+          requestId: leaveRequest.id,
+        },
+      )
+      .getCount();
+
+    return Math.max(1, count);
   }
 
   private async findDecidedRequest(

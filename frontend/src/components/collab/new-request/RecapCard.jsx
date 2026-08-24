@@ -7,12 +7,12 @@ import { buildNoticeRules, evaluateNotice } from '@/utils/leaveNotice'
 import { calculateDeductedDaysPreview } from '@/utils/leaveDuration'
 
 const DEROGATION_LABELS = {
-  EN_ATTENTE_RH: 'En attente de décision RH',
-  EN_ATTENTE_DIRECTEUR: 'Validée par la RH · en attente du Directeur',
-  ACCORDEE: 'Accordée par la RH et le Directeur',
-  REFUSEE: 'Refusée par la RH',
-  EXPIREE: 'Expirée',
-  UTILISEE: 'Utilisée',
+  EN_ATTENTE_RH: 'En attente',
+  EN_ATTENTE_DIRECTEUR: 'En cours de traitement',
+  ACCORDEE: 'Validée · traitement terminé',
+  REFUSEE: 'Refusée',
+  EXPIREE: 'Délai dépassé',
+  UTILISEE: 'Appliquée à la demande',
 }
 
 function departureTimingLabel(daysBeforeStart) {
@@ -29,7 +29,7 @@ function lateSubmissionMessage(daysBeforeStart, derogationLastAllowedDay) {
   if (daysBeforeStart < 0) {
     return 'La date de départ est déjà passée. Cette demande ne peut plus être soumise.'
   }
-  return `${departureTimingLabel(daysBeforeStart)}. Une dérogation RH n’est possible que jusqu’à ${derogationLastAllowedDay} jours avant le départ.`
+  return `${departureTimingLabel(daysBeforeStart)}. Une dérogation n’est possible que jusqu’à J-${derogationLastAllowedDay}, à 16 h.`
 }
 
 function SoldeRow({ label, value, tone }) {
@@ -218,7 +218,7 @@ export function RecapCard({
                   <span>
                     Dérogation nécessaire
                     <em>
-                      Entre J-29 et J-3 — délai exigé {notice.requiredNoticeDays} jours
+                      Entre J-29 et J-3, jusqu’à 16 h le dernier jour — délai exigé {notice.requiredNoticeDays} jours
                       {notice.isLongLeave || notice.overlapsSummerPeriod
                         ? ' (période spéciale)'
                         : ''}

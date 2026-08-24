@@ -308,7 +308,7 @@ export function RhExportsPage() {
             icon="shield"
             tone="violet"
             title="Dérogations"
-            description="Demandes de dérogation, motif, statut, décision RH et utilisation éventuelle."
+            description="Demandes de dérogation, motif, statut, décisions et application à la demande."
             count={counts.derogations ?? 0}
             countLabel={plural(counts.derogations ?? 0, 'dérogation', 'dérogations').replace(/^\d+\s/, '')}
           >

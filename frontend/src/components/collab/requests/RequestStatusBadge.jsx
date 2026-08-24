@@ -34,9 +34,9 @@ const STATUS_META = {
     icon: 'alert',
   },
   JUSTIFICATIF_REJETE: {
-    label: 'Justificatif rejeté',
-    tone: 'danger',
-    icon: 'alert',
+    label: 'Justificatif attendu',
+    tone: 'warning',
+    icon: 'file',
   },
   ENREGISTREE: { label: 'Enregistrée', tone: 'teal', icon: 'check' },
 }
