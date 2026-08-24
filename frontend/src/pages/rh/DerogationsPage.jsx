@@ -293,9 +293,6 @@ function DerogationDetailDrawer({ itemId, onClose, onChanged }) {
                   </div>
                 </div>
                 {item.decisionComment && <p>{item.decisionComment}</p>}
-                {item.status === 'UTILISEE' && item.usedAt && (
-                  <p className="rh-derogation-used">Dérogation appliquée à la demande le {formatDateTime(item.usedAt)}.</p>
-                )}
               </div>
             )}
 
@@ -474,7 +471,7 @@ export function RhDerogationsPage() {
         <div className="rh-derogations-toolbar">
           <div>
             <h2>{isDirector ? 'Dérogations à valider' : 'Gestion des dérogations'}</h2>
-            <p>{isDirector ? 'Dérogations déjà validées par la RH et en attente de votre décision finale.' : 'Premier niveau de validation des demandes exceptionnelles avant transmission au Directeur.'}</p>
+            {isDirector && <p>Dérogations déjà validées par la RH et en attente de votre décision finale.</p>}
           </div>
         </div>
 

@@ -307,7 +307,6 @@ export function RhHolidaysPage() {
           <div className="rh-holidays-list-head">
             <div>
               <h3>{counts.all} jour{counts.all > 1 ? 's' : ''} non ouvré{counts.all > 1 ? 's' : ''} en {MONTH_NAMES[monthParts(month).monthNumber - 1].toLowerCase()}</h3>
-              <p>Jours fériés officiels et fermetures GMES actives.</p>
             </div>
             <span className="rh-holidays-total">{counts.all} au total</span>
           </div>

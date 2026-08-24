@@ -187,7 +187,6 @@ export function RhExportsPage() {
           <span className="rh-export-section-heading__icon"><Icon name="filter" size={19} /></span>
           <div>
             <h2>Critères d’export</h2>
-            <p>Définissez le périmètre avant de choisir les données à télécharger.</p>
           </div>
           <button type="button" className="rh-export-reset" onClick={resetFilters}>
             <Icon name="refresh" size={15} /> Réinitialiser
@@ -235,10 +234,6 @@ export function RhExportsPage() {
           </label>
         </div>
 
-        <div className="rh-export-filter-note">
-          <Icon name="info" size={15} />
-          <span>La période s’applique aux congés, absences, dérogations et mouvements. Les soldes correspondent à la situation actuelle.</span>
-        </div>
         {invalidPeriod && <div className="rh-export-period-error">La date de début doit être antérieure à la date de fin.</div>}
       </section>
 

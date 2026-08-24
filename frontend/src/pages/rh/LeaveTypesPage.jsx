@@ -430,7 +430,6 @@ export function RhLeaveTypesPage() {
         <div className="rh-leave-types-toolbar">
           <div>
             <h2>Types de congés et absences</h2>
-            <p>Configurez les types proposés dans GMES et leurs règles de saisie.</p>
           </div>
           <button type="button" className="rh-leave-types-new" onClick={openCreate}>
             <Icon name="plus" size={17} /> Nouveau type

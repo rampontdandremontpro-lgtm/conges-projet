@@ -926,7 +926,6 @@ export function RhAbsencesPage() {
         <div className="rh-absences-toolbar">
           <div>
             <h2>Gestion des absences</h2>
-            <p>Suivi des absences enregistrées et des justificatifs associés.</p>
           </div>
           <button type="button" className="rh-absences-create" onClick={() => setCreateOpen(true)}>
             <Icon name="plus" size={17} /> Enregistrer une absence

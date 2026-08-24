@@ -413,7 +413,6 @@ export function RhBalancesPage() {
         <div className="rh-balances-toolbar">
           <div>
             <h2>Soldes des collaborateurs</h2>
-            <p>Consultez les soldes, les réservations et l’historique des mouvements au même endroit.</p>
           </div>
           <div className="rh-balances-filters">
             <label>

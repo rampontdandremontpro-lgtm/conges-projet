@@ -312,7 +312,6 @@ export function RhDocumentsPage() {
         <div className="rh-documents-toolbar">
           <div>
             <h2>Bibliothèque documentaire</h2>
-            <p>Retrouvez les justificatifs et les documents officiels générés dans GMES.</p>
           </div>
 
           <button type="button" className="rh-documents-reset" onClick={resetFilters}>

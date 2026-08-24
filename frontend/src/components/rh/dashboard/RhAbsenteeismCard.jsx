@@ -1,4 +1,4 @@
-const DONUT_COLORS = ['#2f86ef', '#45b8e8', '#10b981', '#f97316', '#ef6c78', '#8f7ee7']
+const getDonutColor = (index) => `hsl(${(210 + (index * 47)) % 360} 72% 52%)`
 
 function formatRate(value) {
   return new Intl.NumberFormat('fr-FR', {
@@ -21,7 +21,7 @@ export function RhAbsenteeismCard({ absenteeism }) {
     const start = totalDays > 0 ? (cursor / totalDays) * 360 : 0
     cursor += Number(item.days ?? 0)
     const end = totalDays > 0 ? (cursor / totalDays) * 360 : 0
-    return `${DONUT_COLORS[index % DONUT_COLORS.length]} ${start}deg ${end}deg`
+    return `${getDonutColor(index)} ${start}deg ${end}deg`
   })
 
   return (
@@ -53,7 +53,7 @@ export function RhAbsenteeismCard({ absenteeism }) {
             <div className="rh-absenteeism-empty">Aucune absence enregistrée sur la période.</div>
           ) : rows.map((item, index) => (
             <div className="rh-absenteeism-legend__row" key={`${item.label}-${index}`}>
-              <span className="rh-absenteeism-legend__dot" style={{ backgroundColor: DONUT_COLORS[index % DONUT_COLORS.length] }} />
+              <span className="rh-absenteeism-legend__dot" style={{ backgroundColor: getDonutColor(index) }} />
               <span className="rh-absenteeism-legend__label">{item.label}</span>
               <strong>{formatRate(item.rate)}%</strong>
             </div>
