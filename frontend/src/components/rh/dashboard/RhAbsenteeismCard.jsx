@@ -1,0 +1,65 @@
+const DONUT_COLORS = ['#2f86ef', '#45b8e8', '#10b981', '#f97316', '#ef6c78', '#8f7ee7']
+
+function formatRate(value) {
+  return new Intl.NumberFormat('fr-FR', {
+    minimumFractionDigits: Number(value ?? 0) > 0 && Number(value ?? 0) < 1 ? 1 : 0,
+    maximumFractionDigits: 1,
+  }).format(Number(value ?? 0))
+}
+
+function buildRows(items) {
+  return Array.isArray(items) ? items : []
+}
+
+export function RhAbsenteeismCard({ absenteeism }) {
+  const rows = buildRows(absenteeism?.byType)
+  const totalDays = rows.reduce((sum, item) => sum + Number(item.days ?? 0), 0)
+  const globalRate = Number(absenteeism?.globalRate ?? 0)
+
+  let cursor = 0
+  const segments = rows.map((item, index) => {
+    const start = totalDays > 0 ? (cursor / totalDays) * 360 : 0
+    cursor += Number(item.days ?? 0)
+    const end = totalDays > 0 ? (cursor / totalDays) * 360 : 0
+    return `${DONUT_COLORS[index % DONUT_COLORS.length]} ${start}deg ${end}deg`
+  })
+
+  return (
+    <section className="dash-card rh-absenteeism-card">
+      <header className="dash-card__header">
+        <div className="dash-card__heading">
+          <h2 className="dash-card__title">Taux d&apos;absentéisme</h2>
+          <span className="dash-card__period">Année en cours · congés payés exclus</span>
+        </div>
+      </header>
+
+      <div className="rh-absenteeism-layout">
+        <div className="rh-absenteeism-donut-wrap">
+          <div
+            className="rh-absenteeism-donut"
+            style={{ background: totalDays > 0 ? `conic-gradient(${segments.join(', ')})` : '#edf3f9' }}
+            role="img"
+            aria-label={`Taux d'absentéisme global ${formatRate(globalRate)} %`}
+          >
+            <div className="rh-absenteeism-donut__center">
+              <strong>{formatRate(globalRate)}%</strong>
+              <span>global</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="rh-absenteeism-legend">
+          {rows.length === 0 ? (
+            <div className="rh-absenteeism-empty">Aucune absence enregistrée sur la période.</div>
+          ) : rows.map((item, index) => (
+            <div className="rh-absenteeism-legend__row" key={`${item.label}-${index}`}>
+              <span className="rh-absenteeism-legend__dot" style={{ backgroundColor: DONUT_COLORS[index % DONUT_COLORS.length] }} />
+              <span className="rh-absenteeism-legend__label">{item.label}</span>
+              <strong>{formatRate(item.rate)}%</strong>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}

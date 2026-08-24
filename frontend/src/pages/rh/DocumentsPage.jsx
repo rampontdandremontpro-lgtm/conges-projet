@@ -75,7 +75,7 @@ function SkeletonRows() {
 }
 
 export function RhDocumentsPage() {
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const search = (searchParams.get('q') ?? '').trim().toLowerCase()
 
   const [state, setState] = useState({
@@ -85,7 +85,9 @@ export function RhDocumentsPage() {
     users: [],
     services: [],
   })
-  const [tab, setTab] = useState('all')
+  const requestedTab = searchParams.get('tab') ?? 'all'
+  const initialTab = TABS.some((item) => item.id === requestedTab) ? requestedTab : 'all'
+  const [tab, setTab] = useState(initialTab)
   const [serviceId, setServiceId] = useState('')
   const [employeeId, setEmployeeId] = useState('')
   const [status, setStatus] = useState('')
@@ -100,6 +102,19 @@ export function RhDocumentsPage() {
     error: false,
   })
   const [busyId, setBusyId] = useState(null)
+
+  useEffect(() => {
+    const nextTab = TABS.some((item) => item.id === requestedTab) ? requestedTab : 'all'
+    setTab(nextTab)
+  }, [requestedTab])
+
+  const selectTab = (nextTab) => {
+    setTab(nextTab)
+    const nextParams = new URLSearchParams(searchParams)
+    if (nextTab === 'all') nextParams.delete('tab')
+    else nextParams.set('tab', nextTab)
+    setSearchParams(nextParams, { replace: true })
+  }
 
   const load = useCallback(async ({ silent = false } = {}) => {
     if (!silent) {
@@ -314,7 +329,7 @@ export function RhDocumentsPage() {
               role="tab"
               aria-selected={tab === item.id}
               className={`rh-documents-tab${tab === item.id ? ' is-active' : ''}`}
-              onClick={() => setTab(item.id)}
+              onClick={() => selectTab(item.id)}
             >
               {item.label}
               <span>{counts[item.id]}</span>

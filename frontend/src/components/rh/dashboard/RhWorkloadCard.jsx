@@ -1,5 +1,3 @@
-import { Icon } from '@/components/ui/Icon'
-
 export function RhWorkloadCard({ workload, onNavigate }) {
   const total = workload?.total ?? 0
 
@@ -21,29 +19,19 @@ export function RhWorkloadCard({ workload, onNavigate }) {
       </div>
 
       <div className="rh-workload-grid">
-        <button type="button" className="rh-workload-metric rh-workload-metric--blue" onClick={() => onNavigate('/app/rh-requests')}>
+        <button type="button" className="rh-workload-metric rh-workload-metric--blue" onClick={() => onNavigate('/app/rh-all-requests?status=pending')}>
           <span>Demandes</span>
           <strong>{workload?.leaveRequests ?? 0}</strong>
         </button>
-        <button type="button" className="rh-workload-metric rh-workload-metric--cyan" onClick={() => onNavigate('/app/rh-absences')}>
-          <span>Absences</span>
-          <strong>{workload?.absences ?? 0}</strong>
-        </button>
-        <button type="button" className="rh-workload-metric rh-workload-metric--orange" onClick={() => onNavigate('/app/rh-justificatifs')}>
+        <button type="button" className="rh-workload-metric rh-workload-metric--orange" onClick={() => onNavigate('/app/rh-pdf-documents?tab=justificatifs')}>
           <span>Justificatifs</span>
           <strong>{workload?.documents ?? 0}</strong>
         </button>
-        <button type="button" className="rh-workload-metric rh-workload-metric--green" onClick={() => onNavigate('/app/rh-derogations')}>
+        <button type="button" className="rh-workload-metric rh-workload-metric--green" onClick={() => onNavigate('/app/rh-derogations?filter=pending')}>
           <span>Dérogations</span>
           <strong>{workload?.derogations ?? 0}</strong>
         </button>
       </div>
-
-      <button type="button" className="rh-dashboard-primary-link" onClick={() => onNavigate('/app/rh-requests')}>
-        <Icon name="list" size={17} />
-        <span>Voir les demandes</span>
-        <Icon name="arrowRight" size={15} />
-      </button>
     </section>
   )
 }

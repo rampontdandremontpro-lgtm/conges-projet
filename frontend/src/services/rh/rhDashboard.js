@@ -17,6 +17,104 @@ function resultFailed(result) {
   return result.status === 'rejected'
 }
 
+function martiniqueToday() {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Martinique',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date())
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]))
+  return `${values.year}-${values.month}-${values.day}`
+}
+
+function utcDate(value) {
+  return new Date(`${value}T00:00:00.000Z`)
+}
+
+function dateKey(value) {
+  return `${value.getUTCFullYear()}-${String(value.getUTCMonth() + 1).padStart(2, '0')}-${String(value.getUTCDate()).padStart(2, '0')}`
+}
+
+function businessDaysForUser(startDate, endDate, hireDate, holidayDates) {
+  const effectiveStart = hireDate && hireDate > startDate ? hireDate : startDate
+  if (effectiveStart > endDate) return 0
+
+  const current = utcDate(effectiveStart)
+  const end = utcDate(endDate)
+  let total = 0
+
+  while (current.getTime() <= end.getTime()) {
+    const weekday = current.getUTCDay()
+    if (weekday !== 0 && weekday !== 6 && !holidayDates.has(dateKey(current))) {
+      total += 1
+    }
+    current.setUTCDate(current.getUTCDate() + 1)
+  }
+
+  return total
+}
+
+function roundRate(value, total) {
+  if (total <= 0) return 0
+  return Math.round(Math.max(0, (value / total) * 100) * 10) / 10
+}
+
+function buildAbsenteeism({ absences, absenceTypes, users, holidays, startDate, endDate }) {
+  const holidayDates = new Set(
+    holidays
+      .filter((holiday) => holiday?.isActive !== false && holiday?.deductible === false)
+      .map((holiday) => holiday.date)
+      .filter(Boolean),
+  )
+
+  const capacityDays = users.reduce(
+    (total, user) => total + businessDaysForUser(startDate, endDate, user.hireDate, holidayDates),
+    0,
+  )
+
+  const byType = new Map(
+    absenceTypes
+      .filter((type) => type?.category === 'DECLARATION_ABSENCE')
+      .map((type) => [String(type.name ?? 'Absence').trim() || 'Absence', 0]),
+  )
+  let absenceDays = 0
+
+  for (const absence of absences) {
+    if (
+      absence?.status !== 'ENREGISTREE' ||
+      !absence.startDate ||
+      !absence.endDate ||
+      absence.startDate > endDate ||
+      absence.endDate < startDate
+    ) {
+      continue
+    }
+
+    const days = Number(absence.durationDays ?? 0)
+    if (!Number.isFinite(days) || days <= 0) continue
+
+    absenceDays += days
+    const label = absence.leaveType?.name ?? 'Absence'
+    byType.set(label, (byType.get(label) ?? 0) + days)
+  }
+
+  return {
+    periodStart: startDate,
+    periodEnd: endDate,
+    globalRate: roundRate(absenceDays, capacityDays),
+    absenceDays: Math.round(absenceDays * 100) / 100,
+    capacityDays,
+    byType: [...byType.entries()]
+      .map(([label, days]) => ({
+        label,
+        days: Math.round(days * 100) / 100,
+        rate: roundRate(days, capacityDays),
+      }))
+      .sort((left, right) => right.days - left.days || left.label.localeCompare(right.label, 'fr')),
+  }
+}
+
 function itemDate(item) {
   return (
     item.submittedAt ??
@@ -90,7 +188,7 @@ function buildPriorityItems({
     urgent: false,
     urgencyRank: 200,
     dueDate: null,
-    to: '/app/rh-pdf-documents',
+    to: '/app/rh-pdf-documents?tab=justificatifs',
   }))
 
   const derogationItems = derogations.map((derogation) => ({
@@ -107,7 +205,7 @@ function buildPriorityItems({
     urgent: true,
     urgencyRank: 700,
     dueDate: derogation.requestedStartDate ?? null,
-    to: '/app/rh-derogations',
+    to: '/app/rh-derogations?filter=pending',
   }))
 
   return [...leaveItems, ...absenceItems, ...documentItems, ...derogationItems]
@@ -126,18 +224,25 @@ function buildPriorityItems({
 }
 
 export async function getRhDashboardData() {
+  const today = martiniqueToday()
+  const currentYearStart = `${today.slice(0, 4)}-01-01`
+
   const [
     leaveResult,
     absenceResult,
     documentsResult,
     derogationsResult,
     usersResult,
+    holidaysResult,
+    leaveTypesResult,
   ] = await Promise.allSettled([
     apiClient.get('/leave-requests/pending'),
     apiClient.get('/absence-declarations/management'),
     apiClient.get('/documents/management'),
     apiClient.get('/derogations/management'),
     apiClient.get('/users'),
+    apiClient.get('/holidays', { params: { year: Number(today.slice(0, 4)) } }),
+    apiClient.get('/leave-types/management'),
   ])
 
   const leaveRequests = resultValue(leaveResult).filter(
@@ -184,9 +289,17 @@ export async function getRhDashboardData() {
 
   const totalToProcess =
     leaveRequests.length +
-    absencesToVerify.length +
     documentsToVerify.length +
     derogationsPending.length
+
+  const absenteeism = buildAbsenteeism({
+    absences: allAbsences,
+    absenceTypes: resultValue(leaveTypesResult),
+    users: activeUsers,
+    holidays: resultValue(holidaysResult),
+    startDate: currentYearStart,
+    endDate: today,
+  })
 
   return {
     generatedAt: new Date().toISOString(),
@@ -210,6 +323,7 @@ export async function getRhDashboardData() {
           : 100,
       members: unavailableUsers.slice(0, 5),
     },
+    absenteeism,
     priorities: buildPriorityItems({
       leaveRequests,
       absences: absencesToVerify,
@@ -228,6 +342,8 @@ export async function getRhDashboardData() {
       resultFailed(documentsResult) ? 'documents' : null,
       resultFailed(derogationsResult) ? 'dérogations' : null,
       resultFailed(usersResult) ? 'utilisateurs' : null,
+      resultFailed(holidaysResult) ? 'jours fériés (taux d’absentéisme)' : null,
+      resultFailed(leaveTypesResult) ? 'types d’absence (taux d’absentéisme)' : null,
     ].filter(Boolean),
   }
 }

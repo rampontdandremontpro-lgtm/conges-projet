@@ -1,9 +1,17 @@
-import { Icon } from '@/components/ui/Icon'
+import { todayISO } from '@/utils/format'
+
+function presenceStatus(percentage) {
+  return percentage > 50
+    ? { label: 'Situation stable', tone: 'is-ok' }
+    : { label: 'À surveiller', tone: 'is-warning' }
+}
 
 export function RhPresenceCard({ presence, onNavigate }) {
   const total = presence?.total ?? 0
   const present = presence?.present ?? 0
   const percentage = presence?.percentage ?? 100
+  const status = presenceStatus(percentage)
+  const today = todayISO()
 
   return (
     <section className="dash-card rh-global-presence-card">
@@ -12,8 +20,8 @@ export function RhPresenceCard({ presence, onNavigate }) {
           <h2 className="dash-card__title">Présence aujourd&apos;hui</h2>
           <span className="dash-card__period">Vue globale de l&apos;organisation</span>
         </div>
-        <span className={`rh-workload-status ${percentage >= 80 ? 'is-ok' : 'is-warning'}`}>
-          {percentage >= 80 ? 'Situation stable' : 'À surveiller'}
+        <span className={`rh-workload-status ${status.tone}`}>
+          {status.label}
         </span>
       </header>
 
@@ -27,25 +35,19 @@ export function RhPresenceCard({ presence, onNavigate }) {
       </div>
 
       <div className="rh-presence-stats">
-        <div>
+        <button type="button" onClick={() => onNavigate('/app/rh-statistics')}>
           <span>Présents</span>
           <strong>{present}</strong>
-        </div>
-        <div>
+        </button>
+        <button type="button" onClick={() => onNavigate(`/app/rh-all-requests?status=approved&from=${today}&to=${today}`)}>
           <span>En vacances</span>
           <strong>{presence?.onLeave ?? 0}</strong>
-        </div>
-        <div>
+        </button>
+        <button type="button" onClick={() => onNavigate('/app/rh-absences')}>
           <span>Absents</span>
           <strong>{presence?.absent ?? 0}</strong>
-        </div>
+        </button>
       </div>
-
-      <button type="button" className="rh-dashboard-primary-link" onClick={() => onNavigate('/app/rh-authorized-absences')}>
-        <Icon name="users" size={17} />
-        <span>Voir les absences</span>
-        <Icon name="arrowRight" size={15} />
-      </button>
     </section>
   )
 }

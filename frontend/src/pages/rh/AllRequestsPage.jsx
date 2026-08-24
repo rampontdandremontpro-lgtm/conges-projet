@@ -144,8 +144,11 @@ export function RhAllRequestsPage() {
     requests: [],
     filterOptions: { services: [], leaveTypes: [] },
   })
-  const [statusFilter, setStatusFilter] = useState('all')
+  const requestedStatus = searchParams.get('status') ?? 'all'
+  const statusFilter = STATUS_FILTERS.some((filter) => filter.id === requestedStatus) ? requestedStatus : 'all'
   const search = searchParams.get('q') ?? ''
+  const dateFrom = searchParams.get('from') ?? ''
+  const dateTo = searchParams.get('to') ?? ''
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [serviceFilter, setServiceFilter] = useState('all')
   const [typeFilter, setTypeFilter] = useState('all')
@@ -239,12 +242,21 @@ export function RhAllRequestsPage() {
     if (!statusMatchesFilter(effectiveStatus(request), statusFilter)) return false
     if (serviceFilter !== 'all' && String(request.service?.id) !== serviceFilter) return false
     if (typeFilter !== 'all' && String(request.leaveType?.id) !== typeFilter) return false
+    if (dateFrom && request.endDate && request.endDate < dateFrom) return false
+    if (dateTo && request.startDate && request.startDate > dateTo) return false
     return requestMatchesSearch(request, search)
-  }).sort(sortMostUrgentFirst), [search, serviceFilter, state.requests, statusFilter, typeFilter])
+  }).sort(sortMostUrgentFirst), [dateFrom, dateTo, search, serviceFilter, state.requests, statusFilter, typeFilter])
 
   useEffect(() => {
     setPage(1)
-  }, [search, serviceFilter, statusFilter, typeFilter])
+  }, [dateFrom, dateTo, search, serviceFilter, statusFilter, typeFilter])
+
+  const updateQueryParam = (key, value) => {
+    const nextParams = new URLSearchParams(searchParams)
+    if (value && value !== 'all') nextParams.set(key, value)
+    else nextParams.delete(key)
+    setSearchParams(nextParams, { replace: true })
+  }
 
   const totalPages = Math.max(1, Math.ceil(filteredRequests.length / PAGE_SIZE))
   const safePage = Math.min(page, totalPages)
@@ -269,7 +281,7 @@ export function RhAllRequestsPage() {
                 role="tab"
                 aria-selected={statusFilter === filter.id}
                 className={`rh-all-requests-tab${statusFilter === filter.id ? ' is-active' : ''}`}
-                onClick={() => setStatusFilter(filter.id)}
+                onClick={() => updateQueryParam('status', filter.id)}
               >
                 <span>{filter.label}</span>
                 <span className="rh-all-requests-tab__count">{counts[filter.id]}</span>
@@ -307,6 +319,14 @@ export function RhAllRequestsPage() {
                 {leaveTypes.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
               </select>
             </label>
+            <label>
+              <span>Date du congé · du</span>
+              <input type="date" value={dateFrom} onChange={(event) => updateQueryParam('from', event.target.value)} />
+            </label>
+            <label>
+              <span>Date du congé · au</span>
+              <input type="date" min={dateFrom || undefined} value={dateTo} onChange={(event) => updateQueryParam('to', event.target.value)} />
+            </label>
             <button
               type="button"
               className="rh-all-requests-reset"
@@ -315,6 +335,8 @@ export function RhAllRequestsPage() {
                 setTypeFilter('all')
                 const nextParams = new URLSearchParams(searchParams)
                 nextParams.delete('q')
+                nextParams.delete('from')
+                nextParams.delete('to')
                 setSearchParams(nextParams, { replace: true })
               }}
             >
@@ -333,6 +355,7 @@ export function RhAllRequestsPage() {
               <span>Durée</span>
               <span>Statut</span>
               <span>Soumis le</span>
+              <span>Refusée le</span>
               <span aria-hidden="true" />
             </div>
 
@@ -375,6 +398,7 @@ export function RhAllRequestsPage() {
                     <span className="rh-all-requests-duration">{formatDays(Number(request.deductedDays) || 0)} j</span>
                     <span><span className={`rh-request-status rh-request-status--${meta.tone}`}>{meta.label}</span></span>
                     <span>{formatDateTime(request.submittedAt)}</span>
+                    <span>{effectiveStatus(request) === 'REFUSEE' ? formatDateTime(request.decisionAt) : '—'}</span>
                     <span className="rh-all-requests-open"><Icon name="eye" size={17} /></span>
                   </button>
                 )

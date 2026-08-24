@@ -13,8 +13,6 @@ import {
   getAbsenceDocuments,
   getLeaveDocuments,
   getLeaveRequest,
-  requestLeaveCancellation,
-  respondLeaveCancellation,
   uploadAbsenceJustificatif,
 } from '@/services/collab/requestDetails'
 import { formatDateNumericFR, formatDays, formatRangeNumericFR, todayISO } from '@/utils/format'
@@ -98,8 +96,6 @@ export function RequestDetailPage() {
   const [state, setState] = useState({ loading: true, request: null, documents: [], error: false })
   const [busy, setBusy] = useState(null)
   const [feedback, setFeedback] = useState(null)
-  const [cancellationReasonOpen, setCancellationReasonOpen] = useState(false)
-  const [cancellationReason, setCancellationReason] = useState('')
 
   const load = useCallback(async () => {
     if ((!isLeave && !isAbsence) || !Number.isFinite(numericId)) {
@@ -182,32 +178,6 @@ export function RequestDetailPage() {
     if (!window.confirm('Annuler cette demande de congé ?')) return
     run('cancel', () => cancelLeaveRequest(numericId), 'Demande annulée.')
   }
-
-  const handleRequestCancellation = async () => {
-    const reason = cancellationReason.trim()
-    if (reason.length < 3) {
-      setFeedback({ kind: 'error', message: 'Le motif doit contenir au moins 3 caractères.' })
-      return
-    }
-    await run(
-      'cancellation-request',
-      () => requestLeaveCancellation(numericId, reason),
-      'Demande d’annulation transmise à la RH.',
-    )
-    setCancellationReasonOpen(false)
-    setCancellationReason('')
-  }
-
-  const handleCancellationResponse = (consent) => {
-    const label = consent ? 'accepter' : 'refuser'
-    if (!window.confirm(`Confirmer que vous souhaitez ${label} cette annulation ?`)) return
-    run(
-      `consent-${consent}`,
-      () => respondLeaveCancellation(numericId, consent),
-      consent ? 'Votre accord a été enregistré.' : 'L’annulation a été refusée.',
-    )
-  }
-
 
   const handleJustificatif = async (event) => {
     const file = event.target.files?.[0]
@@ -368,26 +338,14 @@ export function RequestDetailPage() {
             )}
 
             {isLeave && request.status === 'VALIDEE' && (
-              <button type="button" className="request-detail-button request-detail-button--orange" onClick={() => setCancellationReasonOpen((current) => !current)}>
-                <Icon name="refresh" size={16} /> Demander l’annulation
-              </button>
-            )}
-
-            {isLeave && request.status === 'ANNULATION_EN_ATTENTE_ACCORD' && request.employeeCancellationConsent === null && (
-              <>
-                <div className="request-detail-consent-note">La RH demande votre accord pour annuler ce congé validé.</div>
-                <button type="button" className="request-detail-button request-detail-button--success" disabled={Boolean(busy)} onClick={() => handleCancellationResponse(true)}>
-                  <Icon name="check" size={16} /> Accepter l’annulation
-                </button>
-                <button type="button" className="request-detail-button request-detail-button--danger-outline" disabled={Boolean(busy)} onClick={() => handleCancellationResponse(false)}>
-                  Refuser l’annulation
-                </button>
-              </>
-            )}
-
-            {isLeave && request.status === 'ANNULATION_EN_ATTENTE_ACCORD' && request.employeeCancellationConsent === true && (
               <div className="request-detail-consent-note request-detail-consent-note--ok">
-                <Icon name="check" size={15} /> Votre accord est enregistré. La RH doit finaliser l’annulation.
+                <Icon name="check" size={15} /> Cette demande est validée et devient en lecture seule. Le collaborateur ne peut plus la refuser ni l’annuler.
+              </div>
+            )}
+
+            {isLeave && request.status === 'ANNULATION_EN_ATTENTE_ACCORD' && (
+              <div className="request-detail-consent-note">
+                Une annulation est en cours de traitement par la RH. Aucune action n’est disponible depuis l’espace collaborateur.
               </div>
             )}
 
@@ -438,17 +396,6 @@ export function RequestDetailPage() {
               </div>
             )}
 
-            {cancellationReasonOpen && request.status === 'VALIDEE' && (
-              <div className="request-detail-cancellation-form">
-                <label htmlFor="cancellation-reason">Motif de l’annulation</label>
-                <textarea id="cancellation-reason" rows="4" maxLength="2000" value={cancellationReason} onChange={(event) => setCancellationReason(event.target.value)} placeholder="Expliquez la raison de votre demande…" />
-                <small>{cancellationReason.trim().length}/2000 · minimum 3 caractères</small>
-                <div>
-                  <button type="button" onClick={() => { setCancellationReasonOpen(false); setCancellationReason('') }} disabled={Boolean(busy)}>Fermer</button>
-                  <button type="button" onClick={handleRequestCancellation} disabled={Boolean(busy) || cancellationReason.trim().length < 3}>{busy === 'cancellation-request' ? 'Envoi…' : 'Envoyer'}</button>
-                </div>
-              </div>
-            )}
           </section>
         </aside>
       </div>

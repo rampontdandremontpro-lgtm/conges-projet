@@ -361,7 +361,9 @@ export function RhDerogationsPage() {
   const isDirector = user?.role === 'DIRECTEUR'
   const [searchParams] = useSearchParams()
   const [state, setState] = useState({ loading: true, error: false, items: [] })
-  const [filter, setFilter] = useState('all')
+  const requestedFilter = searchParams.get('filter')
+  const initialFilter = FILTERS.some((item) => item.id === requestedFilter) ? requestedFilter : 'all'
+  const [filter, setFilter] = useState(initialFilter)
   const [page, setPage] = useState(1)
   const [selectedId, setSelectedId] = useState(null)
   const [feedback, setFeedback] = useState(null)
@@ -398,6 +400,14 @@ export function RhDerogationsPage() {
   }, [feedback])
 
   const query = searchParams.get('q') ?? ''
+
+  useEffect(() => {
+    const nextFilter = searchParams.get('filter')
+    if (FILTERS.some((item) => item.id === nextFilter) && nextFilter !== filter) {
+      setFilter(nextFilter)
+      setPage(1)
+    }
+  }, [filter, searchParams])
 
   const counts = useMemo(() => ({
     all: state.items.length,

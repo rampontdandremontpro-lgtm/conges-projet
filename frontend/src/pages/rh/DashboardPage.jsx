@@ -9,6 +9,7 @@ import { RhPresenceCard } from '@/components/rh/dashboard/RhPresenceCard'
 import { RhPriorityCard } from '@/components/rh/dashboard/RhPriorityCard'
 import { RhAbsentsCard } from '@/components/rh/dashboard/RhAbsentsCard'
 import { RhAlertsCard } from '@/components/rh/dashboard/RhAlertsCard'
+import { RhAbsenteeismCard } from '@/components/rh/dashboard/RhAbsenteeismCard'
 import { getRhDashboardData } from '@/services/rh/rhDashboard'
 
 import '@/styles/collab/dashboard/index.css'
@@ -113,16 +114,21 @@ export function DashboardRh() {
         </div>
       )}
 
-      <div className="rh-dashboard-grid">
-        <div className="rh-dashboard-column rh-dashboard-column--main">
+      <div className="rh-dashboard-top-grid">
+        <div className="rh-dashboard-column rh-dashboard-main-column">
           <RhWorkloadCard workload={data.workload} onNavigate={navigate} />
-          <RhPriorityCard items={data.priorities} onNavigate={navigate} />
+
+          <div className="rh-dashboard-action-grid">
+            <RhPriorityCard items={data.priorities} onNavigate={navigate} />
+            <RhAbsentsCard presence={data.presence} onNavigate={navigate} />
+          </div>
+
+          <RhAlertsCard alerts={data.alerts} />
         </div>
 
-        <div className="rh-dashboard-column rh-dashboard-column--side">
+        <div className="rh-dashboard-column">
           <RhPresenceCard presence={data.presence} onNavigate={navigate} />
-          <RhAbsentsCard presence={data.presence} onNavigate={navigate} />
-          <RhAlertsCard alerts={data.alerts} />
+          <RhAbsenteeismCard absenteeism={data.absenteeism} />
         </div>
       </div>
     </PageContainer>

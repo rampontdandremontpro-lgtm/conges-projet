@@ -26,24 +26,20 @@ export function RhAlertsCard({ alerts }) {
     },
   ].filter((item) => item.visible)
 
+  if (items.length === 0) return null
+
   return (
     <section className="dash-card rh-alerts-card">
       <header className="dash-card__header">
         <h2 className="dash-card__title">Alertes</h2>
       </header>
-      {items.length === 0 ? (
-        <div className="alert-list">
-          <div className="alert-pill alert-pill--success">Aucune alerte RH prioritaire.</div>
-        </div>
-      ) : (
-        <div className="alert-list">
-          {items.map((item) => (
-            <div key={item.key} className={`alert-pill rh-alert-pill--${item.className}`}>
-              {item.text}
-            </div>
-          ))}
-        </div>
-      )}
+      <div className="alert-list">
+        {items.map((item) => (
+          <div key={item.key} className={`alert-pill rh-alert-pill--${item.className}`}>
+            {item.text}
+          </div>
+        ))}
+      </div>
     </section>
   )
 }

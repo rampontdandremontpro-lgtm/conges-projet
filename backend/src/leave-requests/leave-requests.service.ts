@@ -2058,13 +2058,11 @@ export class LeaveRequestsService {
       const leaveRequest =
         await this.findRequestForDecisionUpdate(manager, id);
 
-      const isOwner =
-        leaveRequest.employeeId === authenticatedUser.id;
       const isRh = authenticatedUser.role === UserRole.RH;
 
-      if (!isOwner && !isRh) {
+      if (!isRh) {
         throw new ForbiddenException(
-          'Seul le collaborateur concerné ou la RH peut demander cette annulation.',
+          'Après validation, seule la RH peut initier une annulation.',
         );
       }
 
@@ -2080,12 +2078,8 @@ export class LeaveRequestsService {
       leaveRequest.cancellationRequestedById =
         authenticatedUser.id;
       leaveRequest.cancellationReason = reason;
-      leaveRequest.employeeCancellationConsent = isOwner
-        ? true
-        : null;
-      leaveRequest.employeeCancellationResponseAt = isOwner
-        ? requestedAt
-        : null;
+      leaveRequest.employeeCancellationConsent = true;
+      leaveRequest.employeeCancellationResponseAt = requestedAt;
       leaveRequest.cancelledAt = null;
       leaveRequest.status =
         LeaveRequestStatus.ANNULATION_EN_ATTENTE_ACCORD;
@@ -2106,7 +2100,7 @@ export class LeaveRequestsService {
           comment: reason,
           metadata: {
             initiatedByRole: authenticatedUser.role,
-            employeeConsent: isOwner ? true : null,
+            employeeConsent: true,
           },
         },
         manager,
@@ -2117,70 +2111,13 @@ export class LeaveRequestsService {
   }
 
   async respondToCancellation(
-    id: number,
-    authenticatedUser: AuthenticatedUser,
-    dto: RespondCancellationDto,
+    _id: number,
+    _authenticatedUser: AuthenticatedUser,
+    _dto: RespondCancellationDto,
   ): Promise<LeaveRequest> {
-    await this.dataSource.transaction(async (manager) => {
-      const leaveRequest =
-        await this.findRequestForDecisionUpdate(manager, id);
-
-      if (leaveRequest.employeeId !== authenticatedUser.id) {
-        throw new ForbiddenException(
-          'Seul le collaborateur concerné peut répondre à cette demande d’annulation.',
-        );
-      }
-
-      if (
-        leaveRequest.status !==
-        LeaveRequestStatus.ANNULATION_EN_ATTENTE_ACCORD
-      ) {
-        throw new BadRequestException(
-          'Cette demande n’est pas en attente d’un accord d’annulation.',
-        );
-      }
-
-      if (leaveRequest.employeeCancellationConsent !== null) {
-        throw new ConflictException(
-          'Une réponse a déjà été enregistrée pour cette demande d’annulation.',
-        );
-      }
-
-      const respondedAt = new Date();
-      leaveRequest.employeeCancellationConsent = dto.consent;
-      leaveRequest.employeeCancellationResponseAt = respondedAt;
-
-      if (!dto.consent) {
-        leaveRequest.status = LeaveRequestStatus.VALIDEE;
-      }
-
-      leaveRequest.version += 1;
-      await manager.getRepository(LeaveRequest).save(leaveRequest);
-
-      await this.auditService.recordStatusChange(
-        {
-          actorId: authenticatedUser.id,
-          action: dto.consent
-            ? AuditAction.ANNULATION_ACCEPTEE_PAR_COLLABORATEUR
-            : AuditAction.ANNULATION_REFUSEE_PAR_COLLABORATEUR,
-          resourceType: 'LEAVE_REQUESTS',
-          resourceId: leaveRequest.id,
-          oldStatus:
-            LeaveRequestStatus.ANNULATION_EN_ATTENTE_ACCORD,
-          newStatus: dto.consent
-            ? LeaveRequestStatus.ANNULATION_EN_ATTENTE_ACCORD
-            : LeaveRequestStatus.VALIDEE,
-          comment: null,
-          metadata: {
-            consent: dto.consent,
-            respondedAt,
-          },
-        },
-        manager,
-      );
-    });
-
-    return this.findCancellationRequest(id, authenticatedUser);
+    throw new ForbiddenException(
+      'Après validation, le collaborateur ne peut ni accepter, ni refuser, ni annuler la demande. La gestion d’une annulation relève de la RH.',
+    );
   }
 
   async completeCancellationAfterValidation(
