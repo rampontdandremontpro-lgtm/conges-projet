@@ -3,15 +3,17 @@
   --rh-history-navy: #0b315d;
   --rh-history-muted: #7188a8;
   --rh-history-border: #dfe8f3;
-  width: min(100%, 1320px);
+  width: 100%;
   max-width: none;
-  margin: 0 auto;
+  margin: 0;
   padding-top: 0;
   padding-bottom: 38px;
   color: var(--rh-history-navy);
 }
 
 .rh-history-card {
+  width: 100%;
+  min-width: 0;
   overflow: hidden;
   border: 1px solid var(--rh-history-border);
   border-radius: 22px;
@@ -27,9 +29,9 @@
 
 .rh-history-filters {
   display: grid;
-  grid-template-columns: 150px 150px minmax(165px, 1fr) minmax(165px, 1fr) minmax(180px, 1.1fr) auto;
+  grid-template-columns: 150px 150px minmax(175px, 1fr) minmax(175px, 1fr) minmax(195px, 1.1fr) auto;
   align-items: end;
-  gap: 10px;
+  gap: 12px;
 }
 
 .rh-history-filters label {
@@ -41,7 +43,7 @@
 .rh-history-filters label > span {
   padding-left: 2px;
   color: #7890ae;
-  font-size: 9.8px;
+  font-size: 10.4px;
   font-weight: 850;
   letter-spacing: .045em;
   text-transform: uppercase;
@@ -50,15 +52,15 @@
 .rh-history-filters input,
 .rh-history-filters select {
   width: 100%;
-  min-height: 42px;
+  min-height: 44px;
   border: 1px solid #d9e5f2;
   border-radius: 11px;
   outline: none;
   background: #fff;
-  padding: 0 11px;
+  padding: 0 12px;
   color: #244365;
   font: inherit;
-  font-size: 12px;
+  font-size: 12.7px;
 }
 
 .rh-history-filters input:focus,
@@ -69,17 +71,17 @@
 
 .rh-history-reset {
   display: inline-flex;
-  min-height: 42px;
+  min-height: 44px;
   align-items: center;
   justify-content: center;
   gap: 7px;
-  padding: 0 14px;
+  padding: 0 16px;
   border: 1px solid #d9e4f1;
   border-radius: 11px;
   background: #fff;
   color: #52749d;
   font: inherit;
-  font-size: 11.8px;
+  font-size: 12.4px;
   font-weight: 850;
   cursor: pointer;
 }
@@ -90,58 +92,73 @@
   color: #2475ef;
 }
 
+/* Desktop: le tableau occupe réellement toute la largeur disponible. */
 .rh-history-table-wrap {
-  overflow-x: auto;
+  width: 100%;
+  min-width: 0;
+  overflow-x: visible;
   border-top: 1px solid var(--rh-history-border);
 }
 
 .rh-history-table {
-  min-width: 1260px;
+  width: 100%;
+  min-width: 0;
 }
 
 .rh-history-row {
   display: grid;
+  width: 100%;
+  min-width: 0;
   grid-template-columns:
-    125px
-    145px
-    145px
-    minmax(145px, .95fr)
-    130px
-    minmax(190px, 1.15fr)
-    minmax(205px, 1.2fr)
-    minmax(155px, .9fr);
+    minmax(112px, .78fr)
+    minmax(132px, .9fr)
+    minmax(132px, .9fr)
+    minmax(165px, 1.05fr)
+    minmax(115px, .72fr)
+    minmax(175px, 1.22fr)
+    minmax(190px, 1.28fr);
   align-items: center;
-  column-gap: 10px;
+  column-gap: 12px;
 }
 
 .rh-history-row--head {
-  min-height: 50px;
-  padding: 0 24px;
+  min-height: 52px;
+  padding: 0 20px;
   background: #f5f8fc;
-  color: #7b91af;
-  font-size: 9.8px;
+  color: #7088a8;
+  font-size: 10.2px;
   font-weight: 850;
   letter-spacing: .045em;
   text-transform: uppercase;
 }
 
+.rh-history-row--head > span,
+.rh-history-row--body > span {
+  min-width: 0;
+  text-align: center;
+}
+
+/* Les deux colonnes d'identité restent volontairement alignées à gauche. */
+.rh-history-row--head > span:nth-child(2),
+.rh-history-row--head > span:nth-child(3),
+.rh-history-user,
+.rh-history-collaborator {
+  text-align: left;
+}
+
 .rh-history-row--body {
-  min-height: 78px;
-  padding: 11px 24px;
+  min-height: 92px;
+  padding: 13px 20px;
   border-top: 1px solid #e9eff6;
   background: #fff;
   color: #355b82;
-  font-size: 12.2px;
-  line-height: 1.42;
+  font-size: 12.9px;
+  line-height: 1.45;
   transition: background .14s ease;
 }
 
 .rh-history-row--body:hover {
   background: #fbfdff;
-}
-
-.rh-history-row--body > span {
-  min-width: 0;
 }
 
 .rh-history-date {
@@ -151,43 +168,61 @@
 
 .rh-history-user strong {
   color: #0b315d;
-  font-size: 12.6px;
+  font-size: 13.2px;
   font-weight: 850;
 }
 
 .rh-history-collaborator,
-.rh-history-resource,
-.rh-history-comment {
+.rh-history-resource {
   overflow-wrap: anywhere;
+}
+
+.rh-history-action-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
 }
 
 .rh-history-action {
   display: inline-flex;
   max-width: 100%;
-  min-height: 27px;
+  min-height: 30px;
   align-items: center;
   justify-content: center;
-  padding: 4px 9px;
+  padding: 5px 11px;
   border: 1px solid #c9dcfb;
   border-radius: 999px;
   background: #eef5ff;
   color: #2168cb;
-  font-size: 10.5px;
+  font-size: 11.2px;
   font-weight: 850;
   line-height: 1.2;
   text-align: center;
 }
 
-.rh-history-value {
+.rh-history-action-comment {
   display: block;
   max-width: 100%;
-  padding: 8px 9px;
+  color: #738aa8;
+  font-size: 10.8px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.rh-history-value {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  padding: 9px 10px;
   border: 1px solid #e1e9f3;
   border-radius: 10px;
   background: #f7f9fc;
   color: #496786;
-  font-size: 10.8px;
-  line-height: 1.5;
+  font-size: 11.4px;
+  line-height: 1.48;
+  text-align: left;
   white-space: pre-line;
   overflow-wrap: anywhere;
 }
@@ -236,15 +271,132 @@
   align-items: center;
   justify-content: space-between;
   gap: 14px;
-  padding: 10px 24px;
+  padding: 10px 20px;
   border-top: 1px solid #e9eff6;
   color: #8095b0;
-  font-size: 11.8px;
+  font-size: 12.2px;
 }
 
-@media (max-width: 1180px) {
+/* Les filtres se replient avant que le tableau ne manque de place. */
+@media (max-width: 1220px) {
   .rh-history-filters {
-    grid-template-columns: repeat(3, minmax(160px, 1fr));
+    grid-template-columns: repeat(3, minmax(170px, 1fr));
+  }
+
+  .rh-history-row {
+    grid-template-columns:
+      minmax(105px, .72fr)
+      minmax(122px, .84fr)
+      minmax(122px, .84fr)
+      minmax(150px, 1fr)
+      minmax(105px, .68fr)
+      minmax(160px, 1.16fr)
+      minmax(170px, 1.2fr);
+    column-gap: 9px;
+  }
+
+  .rh-history-row--head,
+  .rh-history-row--body {
+    padding-inline: 15px;
+  }
+}
+
+/* Tablette : plus de tableau horizontal. Chaque action devient une fiche fluide. */
+@media (max-width: 980px) {
+  .page-container.rh-history-page {
+    width: 100%;
+    padding-bottom: 28px;
+  }
+
+  .rh-history-card {
+    overflow: visible;
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+  }
+
+  .rh-history-toolbar {
+    margin-bottom: 14px;
+    border: 1px solid var(--rh-history-border);
+    border-radius: 18px;
+    box-shadow: 0 8px 24px rgba(20, 55, 95, .055);
+  }
+
+  .rh-history-table-wrap {
+    overflow: visible;
+    border-top: 0;
+  }
+
+  .rh-history-table {
+    display: grid;
+    width: 100%;
+    gap: 12px;
+  }
+
+  .rh-history-row--head {
+    display: none;
+  }
+
+  .rh-history-row--body {
+    display: grid;
+    width: 100%;
+    min-height: 0;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px 12px;
+    padding: 16px;
+    border: 1px solid var(--rh-history-border);
+    border-radius: 16px;
+    box-shadow: 0 7px 20px rgba(20, 55, 95, .045);
+  }
+
+  .rh-history-row--body > span {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    padding: 10px 11px;
+    border: 1px solid #e7eef7;
+    border-radius: 11px;
+    background: #fbfdff;
+    text-align: left;
+  }
+
+  .rh-history-row--body > span::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 5px;
+    color: #7b91af;
+    font-size: 9.5px;
+    font-weight: 850;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+  }
+
+  .rh-history-action-cell {
+    align-items: flex-start;
+  }
+
+  .rh-history-value {
+    padding: 0;
+    border: 0;
+    background: transparent;
+  }
+
+  .rh-history-value--new {
+    background: transparent;
+  }
+
+  .rh-history-state {
+    min-height: 260px;
+    border: 1px solid var(--rh-history-border);
+    border-radius: 16px;
+    background: #fff;
+  }
+
+  .rh-history-footer {
+    margin-top: 12px;
+    border: 1px solid var(--rh-history-border);
+    border-radius: 14px;
+    background: #fff;
   }
 }
 
@@ -253,5 +405,15 @@
   .rh-history-toolbar { min-height: 0; padding: 15px; }
   .rh-history-filters { grid-template-columns: 1fr; }
   .rh-history-reset { width: 100%; }
-  .rh-history-footer { align-items: flex-start; flex-direction: column; padding: 12px 16px; }
+
+  .rh-history-row--body {
+    grid-template-columns: 1fr;
+    padding: 12px;
+  }
+
+  .rh-history-footer {
+    align-items: stretch;
+    flex-direction: column;
+    padding: 12px 14px;
+  }
 }

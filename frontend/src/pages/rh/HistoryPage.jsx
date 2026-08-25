@@ -20,6 +20,12 @@ const ACTION_LABELS = {
   DEROGATION_UTILISEE: 'Dérogation appliquée',
   HOLIDAY_WORK_STATUS_CHANGED: 'Jour férié chômé / travaillé',
   RH_BALANCE_CORRECTED: 'Correction de solde',
+  RH_STATISTICS_VIEWED: 'Consultation des statistiques',
+  RH_LEAVE_REQUESTS_EXPORTED: 'Export des demandes de congé',
+  RH_ABSENCE_DECLARATIONS_EXPORTED: 'Export des absences',
+  RH_LEAVE_BALANCES_EXPORTED: 'Export des soldes',
+  RH_BALANCE_MOVEMENTS_EXPORTED: 'Export des mouvements de solde',
+  RH_DEROGATIONS_EXPORTED: 'Export des dérogations',
   SETTING_UPDATED: 'Modification du paramétrage',
   SUMMER_PERIOD_UPDATED: 'Modification de la période estivale',
   HTTP_POST: 'Création',
@@ -41,6 +47,8 @@ const RESOURCE_LABELS = {
   VALIDATOR_REPLACEMENTS: 'Remplacement temporaire',
   SERVICE_BACKUP_VALIDATOR: 'Valideur de secours',
   LEAVE_TYPES: 'Type de congé / absence',
+  REPORT: 'Statistiques',
+  EXPORT: 'Export',
 }
 
 function fullName(user) {
@@ -120,6 +128,13 @@ const VALUE_LABELS = {
   leaveRequestId: 'N° demande de congé',
   name: 'Libellé',
   isActive: 'Actif',
+  role: 'Rôle',
+  format: 'Format',
+  rowCount: 'Nombre de lignes',
+  dataType: 'Type de données',
+  service: 'Service',
+  collaborator: 'Collaborateur',
+  leaveTypeId: 'Type de congé / absence',
   employeeId: 'Collaborateur',
   serviceId: 'Service',
   validatorId: 'Valideur',
@@ -316,7 +331,6 @@ export function RhHistoryPage() {
               <span>Élément</span>
               <span>Ancienne valeur</span>
               <span>Nouvelle valeur</span>
-              <span>Commentaire / motif</span>
             </div>
 
             {loading ? (
@@ -325,16 +339,19 @@ export function RhHistoryPage() {
               <div className="rh-history-state"><Icon name="clock" size={26} /><strong>Aucune action RH</strong><span>Aucune action ne correspond aux filtres actuels.</span></div>
             ) : pageRows.map((log) => {
               const employee = log.collaborator ?? usersById.get(collaboratorId(log))
+              const comment = commentSummary(log)
               return (
                 <div className="rh-history-row rh-history-row--body" role="row" key={log.id}>
-                  <span className="rh-history-date">{formatDateTime(log.createdAt)}</span>
-                  <span className="rh-history-user"><strong>{fullName(log.actor)}</strong></span>
-                  <span className="rh-history-collaborator">{employee ? fullName(employee) : '—'}</span>
-                  <span><span className="rh-history-action">{actionLabel(log)}</span></span>
-                  <span className="rh-history-resource">{resourceLabel(log)}</span>
-                  <span><span className="rh-history-value">{valueSummary(log.oldValue)}</span></span>
-                  <span><span className="rh-history-value rh-history-value--new">{valueSummary(log.newValue)}</span></span>
-                  <span className="rh-history-comment">{commentSummary(log)}</span>
+                  <span className="rh-history-date" data-label="Date et heure">{formatDateTime(log.createdAt)}</span>
+                  <span className="rh-history-user" data-label="Utilisateur RH"><strong>{fullName(log.actor)}</strong></span>
+                  <span className="rh-history-collaborator" data-label="Collaborateur">{employee ? fullName(employee) : '—'}</span>
+                  <span className="rh-history-action-cell" data-label="Action">
+                    <span className="rh-history-action">{actionLabel(log)}</span>
+                    {comment !== '—' && <small className="rh-history-action-comment">{comment}</small>}
+                  </span>
+                  <span className="rh-history-resource" data-label="Élément">{resourceLabel(log)}</span>
+                  <span data-label="Ancienne valeur"><span className="rh-history-value">{valueSummary(log.oldValue)}</span></span>
+                  <span data-label="Nouvelle valeur"><span className="rh-history-value rh-history-value--new">{valueSummary(log.newValue)}</span></span>
                 </div>
               )
             })}
