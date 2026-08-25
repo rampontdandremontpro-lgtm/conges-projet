@@ -90,7 +90,7 @@
 
 .rh-export-filters-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 14px;
   margin-top: 20px;
 }
@@ -447,3 +447,6 @@
 .rh-exports-page {
   padding-top: 0;
 }
+
+.rh-export-card.is-empty { opacity: .58; filter: grayscale(.18); background: #f8fafc; }
+.rh-export-card.is-empty .rh-export-card__actions { pointer-events: none; }

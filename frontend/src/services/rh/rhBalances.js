@@ -1,7 +1,7 @@
 import { apiClient } from '@/services/apiClient'
 
-export async function getRhBalancesOverview() {
-  const { data } = await apiClient.get('/leave-balances/management')
+export async function getRhBalancesOverview(referencePeriod) {
+  const { data } = await apiClient.get('/leave-balances/management', { params: referencePeriod ? { referencePeriod } : undefined })
   return data
 }
 
@@ -15,10 +15,11 @@ export async function getRhEmployeeBalanceHistory(employeeId) {
   return data
 }
 
-export async function correctRhBalance(balanceId, days, reason) {
+export async function correctRhBalance(balanceId, days, reason, notifyEmployee = false) {
   const { data } = await apiClient.post(`/leave-balances/${balanceId}/correction`, {
     days,
     reason,
+    notifyEmployee,
   })
   window.dispatchEvent(new CustomEvent('gmes:data-changed', { detail: { source: 'leave-balances' } }))
   return data

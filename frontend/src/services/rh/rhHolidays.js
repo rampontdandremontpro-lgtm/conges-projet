@@ -38,3 +38,14 @@ export async function disableRhClosure(id) {
   notifyChanged()
   return data
 }
+
+
+export async function updateRhHolidayWorkStatus({ date, holidayType, isChomed }) {
+  const { data } = await apiClient.patch('/holidays/work-status', {
+    date,
+    holidayType,
+    isChomed,
+  })
+  notifyChanged()
+  return data
+}

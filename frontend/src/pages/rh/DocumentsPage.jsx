@@ -43,17 +43,17 @@ const CATEGORY_META = {
 const STATUS_META = {
   EN_ATTENTE: { label: 'En attente', tone: 'pending' },
   ACCEPTE: { label: 'Validé', tone: 'accepted' },
-  REJETE: { label: 'Refusé', tone: 'rejected' },
+  REJETE: { label: 'Justificatif attendu', tone: 'pending' },
 }
 
 function initials(employee) {
   if (!employee) return '—'
-  return `${employee.prenom?.[0] ?? ''}${employee.nom?.[0] ?? ''}`.toUpperCase()
+  return `${employee.nom?.[0] ?? ''}${employee.prenom?.[0] ?? ''}`.toUpperCase()
 }
 
 function employeeName(employee) {
   if (!employee) return 'Collaborateur indisponible'
-  return `${employee.prenom ?? ''} ${employee.nom ?? ''}`.trim()
+  return `${employee.nom ?? ''} ${employee.prenom ?? ''}`.trim()
 }
 
 function formatFileSize(size) {
@@ -124,7 +124,7 @@ export function RhDocumentsPage() {
     try {
       const [documents, users, services] = await Promise.all([
         getRhDocumentLibrary({
-          serviceId,
+          serviceId: serviceId === 'external' ? '' : serviceId,
           employeeId,
           status,
           startDate,
@@ -171,27 +171,41 @@ export function RhDocumentsPage() {
     if (preview.blobUrl) URL.revokeObjectURL(preview.blobUrl)
   }, [preview.blobUrl])
 
-  const services = useMemo(() => (
+  const externalServiceIds = useMemo(() => new Set(
     state.services
+      .filter((service) => service?.serviceType === 'EXTERNE' || service?.externalCompanyName)
+      .map((service) => String(service.id)),
+  ), [state.services])
+
+  const services = useMemo(() => {
+    const internal = state.services
       .filter((service) => service?.id && service?.name)
+      .filter((service) => service?.serviceType !== 'EXTERNE' && !service?.externalCompanyName)
       .map((service) => ({ id: String(service.id), name: service.name }))
       .sort((left, right) => left.name.localeCompare(right.name, 'fr'))
-  ), [state.services])
+    if (externalServiceIds.size > 0) internal.push({ id: 'external', name: 'Mis à disposition' })
+    return internal
+  }, [externalServiceIds, state.services])
 
   const employees = useMemo(() => (
     state.users
-      .filter((user) => user?.role !== 'ADMIN')
-      .filter((user) => !serviceId || String(user?.service?.id ?? user?.serviceId ?? '') === serviceId)
+      .filter((user) => !['ADMIN', 'DIRECTEUR'].includes(user?.role))
+      .filter((user) => {
+        if (!serviceId) return true
+        const userServiceId = String(user?.service?.id ?? user?.serviceId ?? '')
+        return serviceId === 'external' ? externalServiceIds.has(userServiceId) : userServiceId === serviceId
+      })
       .sort((a, b) => (
         `${a.nom ?? ''} ${a.prenom ?? ''}`.localeCompare(
           `${b.nom ?? ''} ${b.prenom ?? ''}`,
           'fr',
         )
       ))
-  ), [serviceId, state.users])
+  ), [externalServiceIds, serviceId, state.users])
 
   const documentsAfterTabAndSearch = useMemo(() => (
     state.documents.filter((document) => {
+      if (serviceId === 'external' && !externalServiceIds.has(String(document.service?.id ?? ''))) return false
       if (tab !== 'all' && CATEGORY_BY_KIND[document.documentKind] !== tab) {
         return false
       }
@@ -208,7 +222,7 @@ export function RhDocumentsPage() {
 
       return haystack.includes(search)
     })
-  ), [search, state.documents, tab])
+  ), [externalServiceIds, search, serviceId, state.documents, tab])
 
   const counts = useMemo(() => {
     const result = {
@@ -353,7 +367,7 @@ export function RhDocumentsPage() {
               <option value="">Tous les collaborateurs</option>
               {employees.map((user) => (
                 <option key={user.id} value={user.id}>
-                  {user.prenom} {user.nom}
+                  {user.nom} {user.prenom}
                 </option>
               ))}
             </select>
@@ -365,7 +379,6 @@ export function RhDocumentsPage() {
               <option value="">Tous les statuts</option>
               <option value="EN_ATTENTE">En attente</option>
               <option value="ACCEPTE">Validé</option>
-              <option value="REJETE">Refusé</option>
             </select>
           </label>
 

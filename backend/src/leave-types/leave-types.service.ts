@@ -202,7 +202,7 @@ export class LeaveTypesService implements OnModuleInit {
 
     if (values.documentCanBeAddedLater && !values.documentRequired) {
       throw new BadRequestException(
-        'Le dépôt différé ne peut être activé que pour un justificatif obligatoire.',
+        'L’ajout ultérieur ne peut être activé que pour un justificatif obligatoire.',
       );
     }
 

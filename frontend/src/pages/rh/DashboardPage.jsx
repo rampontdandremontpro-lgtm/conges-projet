@@ -24,15 +24,16 @@ const INITIAL_STATE = {
 export function DashboardRh() {
   const navigate = useNavigate()
   const [state, setState] = useState(INITIAL_STATE)
+  const [absenteeismPeriod, setAbsenteeismPeriod] = useState('year')
 
   const load = useCallback(async () => {
     try {
-      const data = await getRhDashboardData()
+      const data = await getRhDashboardData(absenteeismPeriod)
       setState({ loading: false, error: false, data })
     } catch {
       setState({ loading: false, error: true, data: null })
     }
-  }, [])
+  }, [absenteeismPeriod])
 
   useEffect(() => {
     load()
@@ -128,7 +129,7 @@ export function DashboardRh() {
 
         <div className="rh-dashboard-column">
           <RhPresenceCard presence={data.presence} onNavigate={navigate} />
-          <RhAbsenteeismCard absenteeism={data.absenteeism} />
+          <RhAbsenteeismCard absenteeism={data.absenteeism} period={absenteeismPeriod} onPeriodChange={setAbsenteeismPeriod} />
         </div>
       </div>
     </PageContainer>

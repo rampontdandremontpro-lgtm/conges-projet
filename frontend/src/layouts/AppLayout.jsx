@@ -92,6 +92,7 @@ function getRhBackgroundVariant(pathname, role) {
   if (pathname === '/app/rh-holidays') return 'holidays'
   if (pathname === '/app/rh-summer-period') return 'summer'
   if (pathname === '/app/rh-validators') return 'validators'
+  if (pathname === '/app/rh-history') return 'history'
 
   if (
     pathname === '/app/new-request' ||

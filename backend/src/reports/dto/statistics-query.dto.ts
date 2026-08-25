@@ -19,8 +19,6 @@ export enum StatisticsDataType {
 const STATISTICS_ROLES = [
   UserRole.COLLABORATEUR,
   UserRole.RESPONSABLE_SERVICE,
-  UserRole.RH,
-  UserRole.DIRECTEUR,
 ] as const;
 
 export class StatisticsQueryDto {
@@ -44,6 +42,16 @@ export class StatisticsQueryDto {
   @IsInt()
   @Min(1)
   serviceId?: number;
+
+  @IsOptional()
+  @IsIn(['EXTERNE'])
+  serviceScope?: 'EXTERNE';
+
+  @IsOptional()
+  @Transform(({ value }) => Number(value))
+  @IsInt()
+  @Min(1)
+  leaveTypeId?: number;
 
   @IsOptional()
   @IsIn(STATISTICS_ROLES)

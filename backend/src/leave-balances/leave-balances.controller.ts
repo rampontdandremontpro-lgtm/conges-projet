@@ -42,8 +42,8 @@ export class LeaveBalancesController {
 
   @Get('management')
   @Roles(UserRole.RH)
-  getManagementOverview() {
-    return this.leaveBalancesService.getManagementOverview();
+  getManagementOverview(@Query() query: LeaveBalanceQueryDto) {
+    return this.leaveBalancesService.getManagementOverview(query);
   }
 
   @Get('my/history')

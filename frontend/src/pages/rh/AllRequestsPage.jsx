@@ -52,7 +52,7 @@ function formatDateTime(value) {
 }
 
 function initials(employee) {
-  return `${employee?.prenom?.[0] ?? ''}${employee?.nom?.[0] ?? ''}`.toUpperCase() || '—'
+  return `${employee?.nom?.[0] ?? ''}${employee?.prenom?.[0] ?? ''}`.toUpperCase() || '—'
 }
 
 function effectiveStatus(request) {
@@ -208,27 +208,29 @@ export function RhAllRequestsPage() {
     return () => window.clearTimeout(timer)
   }, [feedback])
 
+  const externalServiceIds = useMemo(() => new Set(
+    state.filterOptions.services
+      .filter((service) => service?.serviceType === 'EXTERNE' || service?.externalCompanyName)
+      .map((service) => String(service.id)),
+  ), [state.filterOptions.services])
+
   const services = useMemo(() => {
     const values = new Map()
     state.filterOptions.services.forEach((service) => {
-      if (service?.id && service?.name) values.set(String(service.id), service.name)
-    })
-    state.requests.forEach((request) => {
-      if (request.service?.id && request.service?.name) values.set(String(request.service.id), request.service.name)
+      if (!service?.id || !service?.name) return
+      if (service.serviceType === 'EXTERNE' || service.externalCompanyName) return
+      values.set(String(service.id), service.name)
     })
     return [...values.entries()].sort((left, right) => left[1].localeCompare(right[1], 'fr'))
-  }, [state.filterOptions.services, state.requests])
+  }, [state.filterOptions.services])
 
   const leaveTypes = useMemo(() => {
     const values = new Map()
     state.filterOptions.leaveTypes.forEach((leaveType) => {
       if (leaveType?.id && leaveType?.name) values.set(String(leaveType.id), leaveType.name)
     })
-    state.requests.forEach((request) => {
-      if (request.leaveType?.id && request.leaveType?.name) values.set(String(request.leaveType.id), request.leaveType.name)
-    })
     return [...values.entries()].sort((left, right) => left[1].localeCompare(right[1], 'fr'))
-  }, [state.filterOptions.leaveTypes, state.requests])
+  }, [state.filterOptions.leaveTypes])
 
   const counts = useMemo(() => ({
     all: state.requests.length,
@@ -240,12 +242,13 @@ export function RhAllRequestsPage() {
 
   const filteredRequests = useMemo(() => state.requests.filter((request) => {
     if (!statusMatchesFilter(effectiveStatus(request), statusFilter)) return false
-    if (serviceFilter !== 'all' && String(request.service?.id) !== serviceFilter) return false
+    if (serviceFilter === 'external' && !externalServiceIds.has(String(request.service?.id))) return false
+    if (serviceFilter !== 'all' && serviceFilter !== 'external' && String(request.service?.id) !== serviceFilter) return false
     if (typeFilter !== 'all' && String(request.leaveType?.id) !== typeFilter) return false
     if (dateFrom && request.endDate && request.endDate < dateFrom) return false
     if (dateTo && request.startDate && request.startDate > dateTo) return false
     return requestMatchesSearch(request, search)
-  }).sort(sortMostUrgentFirst), [dateFrom, dateTo, search, serviceFilter, state.requests, statusFilter, typeFilter])
+  }).sort(sortMostUrgentFirst), [dateFrom, dateTo, externalServiceIds, search, serviceFilter, state.requests, statusFilter, typeFilter])
 
   useEffect(() => {
     setPage(1)
@@ -310,6 +313,7 @@ export function RhAllRequestsPage() {
               <select value={serviceFilter} onChange={(event) => setServiceFilter(event.target.value)}>
                 <option value="all">Tous les services</option>
                 {services.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
+                {externalServiceIds.size > 0 && <option value="external">Mis à disposition</option>}
               </select>
             </label>
             <label>
@@ -388,7 +392,7 @@ export function RhAllRequestsPage() {
                     <span className="rh-all-requests-person">
                       <span className="rh-all-requests-avatar">{initials(request.employee)}</span>
                       <span>
-                        <strong>{request.employee?.prenom} {request.employee?.nom}</strong>
+                        <strong>{request.employee?.nom} {request.employee?.prenom}</strong>
                         <small>{request.service?.name ?? 'Service non renseigné'}</small>
                       </span>
                     </span>

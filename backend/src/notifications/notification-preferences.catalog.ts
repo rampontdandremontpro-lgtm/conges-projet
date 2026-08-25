@@ -17,11 +17,13 @@ function event(
   key: string,
   label: string,
   notificationTypes: string[] = [],
+  defaults: Partial<Pick<NotificationPreferenceDefinition, 'defaultApplication' | 'defaultEmail'>> = {},
 ): NotificationPreferenceDefinition {
   return {
     key,
     label,
     ...DEFAULTS,
+    ...defaults,
     notificationTypes,
   };
 }
@@ -237,16 +239,18 @@ export const NOTIFICATION_PREFERENCES_BY_ROLE: Record<
     ]),
     event('balance_correction_done', 'Correction de solde effectuée', [
       'BALANCE_CORRECTION_INFO',
-    ]),
+    ], { defaultApplication: false }),
     event(
       'temporary_replacement_changed',
       'Remplacement temporaire créé, modifié ou supprimé',
       ['VALIDATOR_REPLACEMENT_CHANGED'],
+      { defaultApplication: false },
     ),
     event(
       'backup_validator_changed',
       'Valideur de secours ajouté ou retiré',
       ['BACKUP_VALIDATOR_CHANGED'],
+      { defaultApplication: false },
     ),
     event('director_unavailability_recorded', 'Indisponibilité du Directeur enregistrée', [
       'CONGE_DIRECTEUR_INFORMATION',
@@ -268,34 +272,6 @@ export const NOTIFICATION_PREFERENCES_BY_ROLE: Record<
     ]),
     event('rh_report_available', 'Rapport récapitulatif RH disponible', [
       'BALANCE_RECAP_*',
-    ]),
-    event('my_leave_approved', 'Ma demande approuvée par le Directeur', [
-      'LEAVE_REQUEST_VALIDEE',
-    ]),
-    event('my_leave_refused', 'Ma demande refusée', [
-      'LEAVE_REQUEST_REFUSEE',
-      'LEAVE_REQUEST_EXPIRED',
-    ]),
-    event('my_absence_updated', 'Mon absence enregistrée ou mise à jour', [
-      'ABSENCE_DECLARATION_RECORDED',
-      'ABSENCE_DECLARATION_AUTHORIZED',
-      'ABSENCE_DECLARATION_REFUSED',
-    ]),
-    event('my_supporting_document_required', 'Justificatif ou document à fournir', [
-      'SUPPORTING_DOCUMENT_REQUIRED',
-    ]),
-    event('my_derogation_approved', 'Ma dérogation accordée', [
-      'DEROGATION_APPROVED',
-    ]),
-    event('my_derogation_refused', 'Ma dérogation refusée ou délai dépassé', [
-      'DEROGATION_REFUSED',
-      'DEROGATION_DEADLINE_EXPIRED',
-    ]),
-    event('my_balance_corrected', 'Mon solde corrigé', [
-      'BALANCE_CORRECTED',
-      'EXCEPTIONAL_CARRYOVER_APPROVED',
-      'REFERENCE_PERIOD_CLOSED',
-      'BALANCE_REMINDER_*',
     ]),
   ],
 

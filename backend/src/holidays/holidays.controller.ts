@@ -21,6 +21,7 @@ import { UserRole } from '../users/user.entity';
 import { CreateHolidayDto } from './dto/create-holiday.dto';
 import { SyncHolidaysDto } from './dto/sync-holidays.dto';
 import { UpdateHolidayDto } from './dto/update-holiday.dto';
+import { UpdateHolidayWorkStatusDto } from './dto/update-holiday-work-status.dto';
 import { HolidaysService } from './holidays.service';
 
 type AuthenticatedRequest = Request & {
@@ -42,6 +43,15 @@ export class HolidaysController {
       request.user,
       createHolidayDto,
     );
+  }
+
+  @Patch('work-status')
+  @Roles(UserRole.ADMIN, UserRole.RH)
+  updateWorkStatus(
+    @Req() request: AuthenticatedRequest,
+    @Body() dto: UpdateHolidayWorkStatusDto,
+  ) {
+    return this.holidaysService.updateWorkStatus(request.user, dto);
   }
 
   @Post('sync/martinique')

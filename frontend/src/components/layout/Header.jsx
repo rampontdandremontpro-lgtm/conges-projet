@@ -18,7 +18,7 @@ function headerTitle(pathname) {
   if (pathname === '/app/profile') return 'Mon profil'
   if (pathname === '/app/settings') return 'Paramètres'
   if (/^\/app\/director-availability\/(leave|absence)\/\d+$/.test(pathname)) return 'Modifier mon indisponibilité'
-  if (pathname === '/app/history') return 'Historique'
+  if (pathname === '/app/history' || pathname === '/app/rh-history') return 'Historique'
 
   const section = pathname.startsWith('/app/') ? pathname.slice('/app/'.length) : ''
   return (section ? getSectionLabel(section) : null) ?? 'GMES'
@@ -57,7 +57,7 @@ export function Header({ onOpenMobile, mobileOpen = false }) {
     /^\/app\/rh-(?:all-requests|requests)\/\d+$/.test(pathname) ||
     /^\/app\/director-(?:all-requests|requests)\/\d+$/.test(pathname)
   const showSearch = !hideSearch
-  const searchEnabled = ['/app/my-requests', '/app/notifications', '/app/requests', '/app/alerts', '/app/service-presence', '/app/rh-all-requests', '/app/rh-absences', '/app/rh-derogations', '/app/rh-balances', '/app/rh-pdf-documents', '/app/rh-leave-types', '/app/admin-leave-types', '/app/admin-users', '/app/admin-services', '/app/admin-technical-logs', '/app/rh-validators', '/app/director-all-requests', '/app/director-presence', '/app/director-unavailability', '/app/my-documents'].includes(pathname)
+  const searchEnabled = ['/app/my-requests', '/app/notifications', '/app/requests', '/app/alerts', '/app/service-presence', '/app/rh-all-requests', '/app/rh-absences', '/app/rh-derogations', '/app/rh-balances', '/app/rh-pdf-documents', '/app/rh-leave-types', '/app/admin-leave-types', '/app/admin-users', '/app/admin-services', '/app/admin-technical-logs', '/app/rh-validators', '/app/rh-history', '/app/director-all-requests', '/app/director-presence', '/app/director-unavailability', '/app/my-documents'].includes(pathname)
   const searchValue = searchEnabled ? searchParams.get('q') ?? '' : undefined
 
   useEffect(() => {

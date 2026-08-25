@@ -13,6 +13,12 @@ import { AuditQueryDto } from './dto/audit-query.dto';
 export class AuditController {
   constructor(private readonly auditService: AuditService) {}
 
+  @Get('rh-history')
+  @Roles(UserRole.RH)
+  findRhHistory(@Query() query: AuditQueryDto) {
+    return this.auditService.findRhHistory(query);
+  }
+
   @Get()
   findAll(@Query() query: AuditQueryDto) {
     return this.auditService.findAll(query);

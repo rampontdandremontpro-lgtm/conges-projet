@@ -11,7 +11,14 @@ function buildRows(items) {
   return Array.isArray(items) ? items : []
 }
 
-export function RhAbsenteeismCard({ absenteeism }) {
+const PERIOD_OPTIONS = [
+  { value: 'month', label: 'Ce mois' },
+  { value: '3months', label: '3 derniers mois' },
+  { value: '6months', label: '6 derniers mois' },
+  { value: 'year', label: 'Cette année' },
+]
+
+export function RhAbsenteeismCard({ absenteeism, period = 'year', onPeriodChange }) {
   const rows = buildRows(absenteeism?.byType)
   const totalDays = rows.reduce((sum, item) => sum + Number(item.days ?? 0), 0)
   const globalRate = Number(absenteeism?.globalRate ?? 0)
@@ -29,8 +36,16 @@ export function RhAbsenteeismCard({ absenteeism }) {
       <header className="dash-card__header">
         <div className="dash-card__heading">
           <h2 className="dash-card__title">Taux d&apos;absentéisme</h2>
-          <span className="dash-card__period">Année en cours · congés payés exclus</span>
+          <span className="dash-card__period">Congés payés exclus</span>
         </div>
+        <label className="rh-absenteeism-period-filter">
+          <span>Période</span>
+          <select value={period} onChange={(event) => onPeriodChange?.(event.target.value)}>
+            {PERIOD_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>{option.label}</option>
+            ))}
+          </select>
+        </label>
       </header>
 
       <div className="rh-absenteeism-layout">

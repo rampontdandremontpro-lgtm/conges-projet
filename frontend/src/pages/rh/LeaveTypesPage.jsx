@@ -264,7 +264,7 @@ function LeaveTypeDrawer({ type, onClose, onSaved }) {
                 <span className="rh-leave-types-switch" />
               </label>
               <label className={`rh-leave-types-switch-row${!form.documentRequired ? ' is-disabled' : ''}`}>
-                <div><strong>Dépôt différé autorisé</strong><small>Le justificatif peut être ajouté après la déclaration.</small></div>
+                <div><strong>Ajout ultérieur autorisé</strong><small>Le justificatif peut être ajouté après la déclaration.</small></div>
                 <input
                   type="checkbox"
                   checked={form.documentCanBeAddedLater}
@@ -429,7 +429,6 @@ export function RhLeaveTypesPage() {
       <section className="rh-leave-types-card">
         <div className="rh-leave-types-toolbar">
           <div>
-            <h2>Types de congés et absences</h2>
           </div>
           <button type="button" className="rh-leave-types-new" onClick={openCreate}>
             <Icon name="plus" size={17} /> Nouveau type
@@ -493,7 +492,7 @@ export function RhLeaveTypesPage() {
                       <span className={`rh-leave-types-badge rh-leave-types-badge--${category.tone}`}>{category.label}</span>
                       <span className={type.deductsPaidLeaveBalance ? 'rh-leave-types-yes' : 'rh-leave-types-muted'}>{type.deductsPaidLeaveBalance ? 'Déduit' : 'Non'}</span>
                       <span className={`rh-leave-types-badge${type.documentRequired ? ' rh-leave-types-badge--warning' : ' rh-leave-types-badge--neutral'}`}>
-                        {type.documentRequired ? (type.documentCanBeAddedLater ? 'Obligatoire · différé' : 'Obligatoire') : 'Non requis'}
+                        {type.documentRequired ? (type.documentCanBeAddedLater ? 'Obligatoire · ultérieur' : 'Obligatoire') : 'Non requis'}
                       </span>
                       <span className="rh-leave-types-units">{unitsLabel(type)}</span>
                       <span>{creationLabel(type)}</span>

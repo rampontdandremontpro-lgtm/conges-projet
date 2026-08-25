@@ -17,7 +17,11 @@ export async function getRhAllRequestFilterOptions() {
     .sort((left, right) => String(left.name).localeCompare(String(right.name), 'fr'))
 
   const leaveTypes = (Array.isArray(leaveTypesData) ? leaveTypesData : [])
-    .filter((type) => type?.id && type?.name && type?.category === 'DEMANDE_CONGE')
+    .filter((type) => {
+      if (!type?.id || !type?.name || type?.category !== 'DEMANDE_CONGE') return false
+      const name = String(type.name).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+      return name.includes('paye') || name.includes('sans solde')
+    })
     .sort((left, right) => String(left.name).localeCompare(String(right.name), 'fr'))
 
   return { services, leaveTypes }

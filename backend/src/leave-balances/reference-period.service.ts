@@ -357,7 +357,7 @@ export class ReferencePeriodService {
           LeaveBalanceCounterType.N_PLUS_1,
         );
 
-        const transferredFromN = this.round(sourceN?.availableDays ?? 0);
+        const transferredFromN = this.roundUpAtPeriodClose(sourceN?.availableDays ?? 0);
         const removedOldNMinus1 = this.round(
           sourceNMinus1?.availableDays ?? 0,
         );
@@ -663,6 +663,12 @@ export class ReferencePeriodService {
       balances.find((balance) => balance.counterType === counterType)
         ?.availableDays ?? 0,
     );
+  }
+
+  private roundUpAtPeriodClose(value: number): number {
+    const rounded = this.round(value);
+    if (rounded <= 0) return 0;
+    return Math.ceil(rounded - Number.EPSILON);
   }
 
   private round(value: number): number {

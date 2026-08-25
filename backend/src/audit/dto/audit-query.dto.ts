@@ -44,6 +44,6 @@ export class AuditQueryDto {
   @Type(() => Number)
   @IsInt()
   @Min(1)
-  @Max(500)
+  @Max(2000)
   limit?: number;
 }

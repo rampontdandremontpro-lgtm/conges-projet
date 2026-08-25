@@ -54,6 +54,7 @@ export const NAVIGATION = {
     { id: 'rh-summer-period', label: 'Période estivale', to: '/app/rh-summer-period', icon: 'sun', group: 'PARAMÉTRAGE' },
     { id: 'rh-validators', label: 'Valideurs', to: '/app/rh-validators', icon: 'users', group: 'PARAMÉTRAGE' },
 
+    { id: 'rh-history', label: 'Historique', to: '/app/rh-history', icon: 'clock', group: 'OUTILS' },
     { id: 'notifications', label: 'Notifications', to: '/app/notifications', icon: 'bell', group: 'OUTILS' },
   ],
   [ROLES.DIRECTEUR]: [

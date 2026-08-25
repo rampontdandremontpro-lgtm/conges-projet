@@ -36,6 +36,52 @@ function dateKey(value) {
   return `${value.getUTCFullYear()}-${String(value.getUTCMonth() + 1).padStart(2, '0')}-${String(value.getUTCDate()).padStart(2, '0')}`
 }
 
+function periodRange(period, today) {
+  const end = utcDate(today)
+  const start = new Date(end.getTime())
+
+  if (period === 'month') {
+    start.setUTCDate(1)
+  } else if (period === '3months') {
+    start.setUTCMonth(start.getUTCMonth() - 2, 1)
+  } else if (period === '6months') {
+    start.setUTCMonth(start.getUTCMonth() - 5, 1)
+  } else {
+    start.setUTCMonth(0, 1)
+  }
+
+  return { startDate: dateKey(start), endDate: today }
+}
+
+function clippedAbsenceDays(absence, startDate, endDate, holidayDates) {
+  const overlapStart = absence.startDate < startDate ? startDate : absence.startDate
+  const overlapEnd = absence.endDate > endDate ? endDate : absence.endDate
+  if (!overlapStart || !overlapEnd || overlapStart > overlapEnd) return 0
+
+  if (overlapStart === absence.startDate && overlapEnd === absence.endDate && absence.durationHours != null) {
+    const day = utcDate(overlapStart)
+    const weekday = day.getUTCDay()
+    if (weekday === 0 || weekday === 6 || holidayDates.has(overlapStart)) return 0
+    return Math.max(0, Number(absence.durationHours) || 0) / 7
+  }
+
+  const current = utcDate(overlapStart)
+  const end = utcDate(overlapEnd)
+  let days = 0
+  while (current.getTime() <= end.getTime()) {
+    const key = dateKey(current)
+    const weekday = current.getUTCDay()
+    if (weekday !== 0 && weekday !== 6 && !holidayDates.has(key)) {
+      let fraction = 1
+      if (key === absence.startDate && absence.startPeriod === 'APRES_MIDI') fraction -= 0.5
+      if (key === absence.endDate && absence.endPeriod === 'MATIN') fraction -= 0.5
+      days += Math.max(0, fraction)
+    }
+    current.setUTCDate(current.getUTCDate() + 1)
+  }
+  return days
+}
+
 function businessDaysForUser(startDate, endDate, hireDate, holidayDates) {
   const effectiveStart = hireDate && hireDate > startDate ? hireDate : startDate
   if (effectiveStart > endDate) return 0
@@ -75,7 +121,7 @@ function buildAbsenteeism({ absences, absenceTypes, users, holidays, startDate, 
 
   const byType = new Map(
     absenceTypes
-      .filter((type) => type?.category === 'DECLARATION_ABSENCE')
+      .filter((type) => type?.category === 'DECLARATION_ABSENCE' && type?.isActive !== false)
       .map((type) => [String(type.name ?? 'Absence').trim() || 'Absence', 0]),
   )
   let absenceDays = 0
@@ -91,7 +137,7 @@ function buildAbsenteeism({ absences, absenceTypes, users, holidays, startDate, 
       continue
     }
 
-    const days = Number(absence.durationDays ?? 0)
+    const days = clippedAbsenceDays(absence, startDate, endDate, holidayDates)
     if (!Number.isFinite(days) || days <= 0) continue
 
     absenceDays += days
@@ -223,9 +269,9 @@ function buildPriorityItems({
     .slice(0, 6)
 }
 
-export async function getRhDashboardData() {
+export async function getRhDashboardData(absenteeismPeriod = 'year') {
   const today = martiniqueToday()
-  const currentYearStart = `${today.slice(0, 4)}-01-01`
+  const { startDate: absenteeismStart, endDate: absenteeismEnd } = periodRange(absenteeismPeriod, today)
 
   const [
     leaveResult,
@@ -241,7 +287,7 @@ export async function getRhDashboardData() {
     apiClient.get('/documents/management'),
     apiClient.get('/derogations/management'),
     apiClient.get('/users'),
-    apiClient.get('/holidays', { params: { year: Number(today.slice(0, 4)) } }),
+    apiClient.get('/holidays'),
     apiClient.get('/leave-types/management'),
   ])
 
@@ -267,6 +313,9 @@ export async function getRhDashboardData() {
 
   const activeUsers = resultValue(usersResult).filter(
     (user) => user.isActive !== false && user.role !== 'ADMIN',
+  )
+  const absenteeismUsers = activeUsers.filter(
+    (user) => !['RH', 'DIRECTEUR'].includes(user.role),
   )
   const presentUsers = activeUsers.filter(
     (user) => user.presenceStatus === 'PRESENT',
@@ -295,10 +344,10 @@ export async function getRhDashboardData() {
   const absenteeism = buildAbsenteeism({
     absences: allAbsences,
     absenceTypes: resultValue(leaveTypesResult),
-    users: activeUsers,
+    users: absenteeismUsers,
     holidays: resultValue(holidaysResult),
-    startDate: currentYearStart,
-    endDate: today,
+    startDate: absenteeismStart,
+    endDate: absenteeismEnd,
   })
 
   return {
@@ -323,7 +372,7 @@ export async function getRhDashboardData() {
           : 100,
       members: unavailableUsers.slice(0, 5),
     },
-    absenteeism,
+    absenteeism: { ...absenteeism, period: absenteeismPeriod },
     priorities: buildPriorityItems({
       leaveRequests,
       absences: absencesToVerify,

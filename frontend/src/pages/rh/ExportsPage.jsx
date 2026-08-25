@@ -18,6 +18,8 @@ function defaultFilters() {
     endDate: dateInputValue(year, 12, 31),
     serviceId: '',
     employeeId: '',
+    leaveTypeId: '',
+    referencePeriod: '',
   }
 }
 
@@ -54,7 +56,7 @@ function ExportCard({
   children,
 }) {
   return (
-    <article className={`rh-export-card rh-export-card--${tone}`}>
+    <article className={`rh-export-card rh-export-card--${tone}${Number(count) === 0 ? ' is-empty' : ''}`}>
       <div className="rh-export-card__top">
         <span className="rh-export-card__icon"><Icon name={icon} size={21} /></span>
         <div className="rh-export-card__count">
@@ -64,7 +66,7 @@ function ExportCard({
       </div>
       <div className="rh-export-card__copy">
         <h3>{title}</h3>
-        <p>{description}</p>
+        {description && <p>{description}</p>}
       </div>
       <div className="rh-export-card__actions">{children}</div>
     </article>
@@ -123,6 +125,7 @@ export function RhExportsPage() {
   const employees = useMemo(() => {
     const list = overview.filters?.employees ?? []
     if (!filters.serviceId) return list
+    if (filters.serviceId === 'external') return list.filter((employee) => employee.serviceType === 'EXTERNE')
     return list.filter((employee) => String(employee.serviceId ?? '') === String(filters.serviceId))
   }, [filters.serviceId, overview.filters?.employees])
 
@@ -133,7 +136,7 @@ export function RhExportsPage() {
         const selectedEmployee = overview.filters?.employees?.find(
           (employee) => String(employee.id) === String(current.employeeId),
         )
-        if (selectedEmployee && value && String(selectedEmployee.serviceId ?? '') !== String(value)) {
+        if (selectedEmployee && value && (value === 'external' ? selectedEmployee.serviceType !== 'EXTERNE' : String(selectedEmployee.serviceId ?? '') !== String(value))) {
           next.employeeId = ''
         }
       }
@@ -216,9 +219,10 @@ export function RhExportsPage() {
             <span>Service</span>
             <select value={filters.serviceId} onChange={(event) => changeFilter('serviceId', event.target.value)}>
               <option value="">Tous les services</option>
-              {(overview.filters?.services ?? []).map((service) => (
+              {(overview.filters?.services ?? []).filter((service) => service.serviceType !== 'EXTERNE' && !service.externalCompanyName).map((service) => (
                 <option key={service.id} value={service.id}>{service.name}</option>
               ))}
+              {(overview.filters?.services ?? []).some((service) => service.serviceType === 'EXTERNE' || service.externalCompanyName) && <option value="external">Mis à disposition</option>}
             </select>
           </label>
           <label>
@@ -227,8 +231,26 @@ export function RhExportsPage() {
               <option value="">Tous les collaborateurs</option>
               {employees.map((employee) => (
                 <option key={employee.id} value={employee.id}>
-                  {employee.prenom} {employee.nom}{employee.serviceName ? ` — ${employee.serviceName}` : ''}
+                  {employee.nom} {employee.prenom}{employee.serviceName ? ` — ${employee.serviceName}` : ''}
                 </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            <span>Type</span>
+            <select value={filters.leaveTypeId} onChange={(event) => changeFilter('leaveTypeId', event.target.value)}>
+              <option value="">Tous les types</option>
+              {(overview.filters?.leaveTypes ?? []).map((type) => (
+                <option key={type.id} value={type.id}>{type.name}</option>
+              ))}
+            </select>
+          </label>
+          <label>
+            <span>Période de solde</span>
+            <select value={filters.referencePeriod} onChange={(event) => changeFilter('referencePeriod', event.target.value)}>
+              <option value="">Période actuelle</option>
+              {(overview.filters?.referencePeriods ?? []).map((period) => (
+                <option key={period} value={period}>{String(period).replace('-', '/')}</option>
               ))}
             </select>
           </label>
@@ -249,13 +271,12 @@ export function RhExportsPage() {
             icon="calendar"
             tone="blue"
             title="Demandes de congés"
-            description="Demandes soumises sur la période sélectionnée, avec type, durée, statut et décision."
             count={counts.leaveRequests ?? 0}
             countLabel={plural(counts.leaveRequests ?? 0, 'demande', 'demandes').replace(/^\d+\s/, '')}
           >
             <div className="rh-export-format-group">
-              <FormatButton format="csv" disabled={invalidPeriod} busy={downloading === 'leaves:csv'} onClick={() => handleExport('leaves', 'csv')} />
-              <FormatButton format="xlsx" disabled={invalidPeriod} busy={downloading === 'leaves:xlsx'} onClick={() => handleExport('leaves', 'xlsx')} />
+              <FormatButton format="csv" disabled={invalidPeriod || Number(counts.leaveRequests ?? 0) === 0} busy={downloading === 'leaves:csv'} onClick={() => handleExport('leaves', 'csv')} />
+              <FormatButton format="xlsx" disabled={invalidPeriod || Number(counts.leaveRequests ?? 0) === 0} busy={downloading === 'leaves:xlsx'} onClick={() => handleExport('leaves', 'xlsx')} />
             </div>
           </ExportCard>
 
@@ -263,13 +284,12 @@ export function RhExportsPage() {
             icon="file"
             tone="orange"
             title="Absences"
-            description="Déclarations d’absence, durées, statuts et informations de vérification RH."
             count={counts.absenceDeclarations ?? 0}
             countLabel={plural(counts.absenceDeclarations ?? 0, 'absence', 'absences').replace(/^\d+\s/, '')}
           >
             <div className="rh-export-format-group">
-              <FormatButton format="csv" disabled={invalidPeriod} busy={downloading === 'absences:csv'} onClick={() => handleExport('absences', 'csv')} />
-              <FormatButton format="xlsx" disabled={invalidPeriod} busy={downloading === 'absences:xlsx'} onClick={() => handleExport('absences', 'xlsx')} />
+              <FormatButton format="csv" disabled={invalidPeriod || Number(counts.absenceDeclarations ?? 0) === 0} busy={downloading === 'absences:csv'} onClick={() => handleExport('absences', 'csv')} />
+              <FormatButton format="xlsx" disabled={invalidPeriod || Number(counts.absenceDeclarations ?? 0) === 0} busy={downloading === 'absences:xlsx'} onClick={() => handleExport('absences', 'xlsx')} />
             </div>
           </ExportCard>
 
@@ -277,7 +297,6 @@ export function RhExportsPage() {
             icon="wallet"
             tone="green"
             title="Soldes collaborateurs"
-            description="Situation actuelle des compteurs et historique traçable des mouvements de soldes."
             count={counts.leaveBalances ?? 0}
             countLabel={plural(counts.leaveBalances ?? 0, 'collaborateur', 'collaborateurs').replace(/^\d+\s/, '')}
           >
@@ -285,15 +304,15 @@ export function RhExportsPage() {
               <div>
                 <span>Soldes actuels</span>
                 <div className="rh-export-format-group">
-                  <FormatButton format="csv" disabled={invalidPeriod} busy={downloading === 'balances:csv'} onClick={() => handleExport('balances', 'csv')} />
-                  <FormatButton format="xlsx" disabled={invalidPeriod} busy={downloading === 'balances:xlsx'} onClick={() => handleExport('balances', 'xlsx')} />
+                  <FormatButton format="csv" disabled={invalidPeriod || Number(counts.leaveBalances ?? 0) === 0} busy={downloading === 'balances:csv'} onClick={() => handleExport('balances', 'csv')} />
+                  <FormatButton format="xlsx" disabled={invalidPeriod || Number(counts.leaveBalances ?? 0) === 0} busy={downloading === 'balances:xlsx'} onClick={() => handleExport('balances', 'xlsx')} />
                 </div>
               </div>
               <div>
                 <span>{counts.balanceMovements ?? 0} mouvements sur la période</span>
                 <div className="rh-export-format-group">
-                  <FormatButton format="csv" disabled={invalidPeriod} busy={downloading === 'movements:csv'} onClick={() => handleExport('movements', 'csv')} />
-                  <FormatButton format="xlsx" disabled={invalidPeriod} busy={downloading === 'movements:xlsx'} onClick={() => handleExport('movements', 'xlsx')} />
+                  <FormatButton format="csv" disabled={invalidPeriod || Number(counts.balanceMovements ?? 0) === 0} busy={downloading === 'movements:csv'} onClick={() => handleExport('movements', 'csv')} />
+                  <FormatButton format="xlsx" disabled={invalidPeriod || Number(counts.balanceMovements ?? 0) === 0} busy={downloading === 'movements:xlsx'} onClick={() => handleExport('movements', 'xlsx')} />
                 </div>
               </div>
             </div>
@@ -303,13 +322,12 @@ export function RhExportsPage() {
             icon="shield"
             tone="violet"
             title="Dérogations"
-            description="Demandes de dérogation, motif, statut, décisions et application à la demande."
             count={counts.derogations ?? 0}
             countLabel={plural(counts.derogations ?? 0, 'dérogation', 'dérogations').replace(/^\d+\s/, '')}
           >
             <div className="rh-export-format-group">
-              <FormatButton format="csv" disabled={invalidPeriod} busy={downloading === 'derogations:csv'} onClick={() => handleExport('derogations', 'csv')} />
-              <FormatButton format="xlsx" disabled={invalidPeriod} busy={downloading === 'derogations:xlsx'} onClick={() => handleExport('derogations', 'xlsx')} />
+              <FormatButton format="csv" disabled={invalidPeriod || Number(counts.derogations ?? 0) === 0} busy={downloading === 'derogations:csv'} onClick={() => handleExport('derogations', 'csv')} />
+              <FormatButton format="xlsx" disabled={invalidPeriod || Number(counts.derogations ?? 0) === 0} busy={downloading === 'derogations:xlsx'} onClick={() => handleExport('derogations', 'xlsx')} />
             </div>
           </ExportCard>
         </section>

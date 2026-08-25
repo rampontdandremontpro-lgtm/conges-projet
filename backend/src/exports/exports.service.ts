@@ -16,7 +16,10 @@ type ExportRow = Record<string, string | number | boolean | Date | null>;
 
 type CountRow = { total: string | number };
 
-type ServiceOptionRow = { id: string | number; name: string };
+type ServiceOptionRow = { id: string | number; name: string; serviceType: string; externalCompanyName: string | null };
+
+type LeaveTypeOptionRow = { id: string | number; name: string; category: string };
+type ReferencePeriodRow = { referencePeriod: string };
 
 type EmployeeOptionRow = {
   id: string | number;
@@ -24,6 +27,7 @@ type EmployeeOptionRow = {
   prenom: string;
   serviceId: string | number | null;
   serviceName: string | null;
+  serviceType: string | null;
 };
 
 @Injectable()
@@ -42,6 +46,8 @@ export class ExportsService {
     const [
       services,
       employees,
+      leaveTypes,
+      referencePeriods,
       leaveCount,
       absenceCount,
       balanceCount,
@@ -50,7 +56,7 @@ export class ExportsService {
     ] = await Promise.all([
       this.dataSource.query<ServiceOptionRow[]>(
         `
-          SELECT id, name
+          SELECT id, name, service_type AS serviceType, external_company_name AS externalCompanyName
           FROM services
           WHERE is_active = 1
           ORDER BY name ASC
@@ -63,7 +69,8 @@ export class ExportsService {
             u.nom,
             u.prenom,
             u.service_id AS serviceId,
-            s.name AS serviceName
+            s.name AS serviceName,
+            s.service_type AS serviceType
           FROM users u
           LEFT JOIN services s ON s.id = u.service_id
           WHERE u.is_active = 1
@@ -71,16 +78,33 @@ export class ExportsService {
           ORDER BY u.nom ASC, u.prenom ASC
         `,
       ),
+      this.dataSource.query<LeaveTypeOptionRow[]>(
+        `
+          SELECT id, name, category
+          FROM leave_types
+          WHERE is_active = 1
+          ORDER BY category, name
+        `,
+      ),
+      this.dataSource.query<ReferencePeriodRow[]>(
+        `
+          SELECT DISTINCT reference_period AS referencePeriod
+          FROM leave_balances
+          ORDER BY reference_period DESC
+        `,
+      ),
       this.dataSource.query<CountRow[]>(
         `
           SELECT COUNT(*) AS total
           FROM leave_requests lr
           INNER JOIN users u ON u.id = lr.employee_id
-          WHERE lr.status != 'BROUILLON'
+          WHERE lr.status = 'VALIDEE'
             AND (? IS NULL OR lr.start_date <= ?)
             AND (? IS NULL OR lr.end_date >= ?)
             AND (? IS NULL OR u.service_id = ?)
+            AND (? IS NULL OR EXISTS (SELECT 1 FROM services sx WHERE sx.id = u.service_id AND sx.service_type = ?))
             AND (? IS NULL OR u.id = ?)
+            AND (? IS NULL OR lr.leave_type_id = ?)
         `,
         [
           query.endDate ?? null,
@@ -88,6 +112,8 @@ export class ExportsService {
           query.startDate ?? null,
           query.startDate ?? null,
           ...commonParams,
+          query.leaveTypeId ?? null,
+          query.leaveTypeId ?? null,
         ],
       ),
       this.dataSource.query<CountRow[]>(
@@ -99,7 +125,9 @@ export class ExportsService {
             AND (? IS NULL OR ad.start_date <= ?)
             AND (? IS NULL OR ad.end_date >= ?)
             AND (? IS NULL OR u.service_id = ?)
+            AND (? IS NULL OR EXISTS (SELECT 1 FROM services sx WHERE sx.id = u.service_id AND sx.service_type = ?))
             AND (? IS NULL OR u.id = ?)
+            AND (? IS NULL OR ad.leave_type_id = ?)
         `,
         [
           query.endDate ?? null,
@@ -107,6 +135,8 @@ export class ExportsService {
           query.startDate ?? null,
           query.startDate ?? null,
           ...commonParams,
+          query.leaveTypeId ?? null,
+          query.leaveTypeId ?? null,
         ],
       ),
       this.dataSource.query<CountRow[]>(
@@ -116,21 +146,29 @@ export class ExportsService {
           WHERE u.is_active = 1
             AND u.role != 'ADMIN'
             AND (? IS NULL OR u.service_id = ?)
+            AND (? IS NULL OR EXISTS (SELECT 1 FROM services sx WHERE sx.id = u.service_id AND sx.service_type = ?))
             AND (? IS NULL OR u.id = ?)
+            AND (? IS NULL OR EXISTS (
+              SELECT 1 FROM leave_balances lbf
+              WHERE lbf.employee_id = u.id AND lbf.reference_period = ?
+            ))
         `,
-        commonParams,
+        [...commonParams, query.referencePeriod ?? null, query.referencePeriod ?? null],
       ),
       this.dataSource.query<CountRow[]>(
         `
           SELECT COUNT(*) AS total
           FROM balance_movements bm
           INNER JOIN users u ON u.id = bm.employee_id
+          INNER JOIN leave_balances lbf ON lbf.id = bm.leave_balance_id
           WHERE (? IS NULL OR DATE(bm.created_at) >= ?)
             AND (? IS NULL OR DATE(bm.created_at) <= ?)
             AND (? IS NULL OR u.service_id = ?)
+            AND (? IS NULL OR EXISTS (SELECT 1 FROM services sx WHERE sx.id = u.service_id AND sx.service_type = ?))
             AND (? IS NULL OR u.id = ?)
+            AND (? IS NULL OR lbf.reference_period = ?)
         `,
-        [...periodParams, ...commonParams],
+        [...periodParams, ...commonParams, query.referencePeriod ?? null, query.referencePeriod ?? null],
       ),
       this.dataSource.query<CountRow[]>(
         `
@@ -140,7 +178,9 @@ export class ExportsService {
           WHERE (? IS NULL OR d.requested_start_date <= ?)
             AND (? IS NULL OR d.requested_end_date >= ?)
             AND (? IS NULL OR u.service_id = ?)
+            AND (? IS NULL OR EXISTS (SELECT 1 FROM services sx WHERE sx.id = u.service_id AND sx.service_type = ?))
             AND (? IS NULL OR u.id = ?)
+            AND (? IS NULL OR d.leave_type_id = ?)
         `,
         [
           query.endDate ?? null,
@@ -148,6 +188,8 @@ export class ExportsService {
           query.startDate ?? null,
           query.startDate ?? null,
           ...commonParams,
+          query.leaveTypeId ?? null,
+          query.leaveTypeId ?? null,
         ],
       ),
     ]);
@@ -157,7 +199,11 @@ export class ExportsService {
         services: services.map((service) => ({
           id: Number(service.id),
           name: service.name,
+          serviceType: service.serviceType,
+          externalCompanyName: service.externalCompanyName,
         })),
+        leaveTypes: leaveTypes.map((type) => ({ id: Number(type.id), name: type.name, category: type.category })),
+        referencePeriods: referencePeriods.map((row) => row.referencePeriod),
         employees: employees.map((employee) => ({
           id: Number(employee.id),
           nom: employee.nom,
@@ -165,6 +211,7 @@ export class ExportsService {
           serviceId:
             employee.serviceId === null ? null : Number(employee.serviceId),
           serviceName: employee.serviceName,
+          serviceType: employee.serviceType,
         })),
       },
       counts: {
@@ -187,7 +234,7 @@ export class ExportsService {
       `
         SELECT
           lr.id AS Identifiant,
-          CONCAT(u.prenom, ' ', u.nom) AS Collaborateur,
+          CONCAT(u.nom, ' ', u.prenom) AS Collaborateur,
           u.email AS Email,
           s.name AS Service,
           COALESCE(s.external_company_name, '') AS Entreprise_externe,
@@ -207,11 +254,13 @@ export class ExportsService {
         INNER JOIN users u ON u.id = lr.employee_id
         INNER JOIN services s ON s.id = lr.service_id
         INNER JOIN leave_types lt ON lt.id = lr.leave_type_id
-        WHERE lr.status != 'BROUILLON'
+        WHERE lr.status = 'VALIDEE'
           AND (? IS NULL OR lr.start_date <= ?)
           AND (? IS NULL OR lr.end_date >= ?)
           AND (? IS NULL OR u.service_id = ?)
+            AND (? IS NULL OR EXISTS (SELECT 1 FROM services sx WHERE sx.id = u.service_id AND sx.service_type = ?))
           AND (? IS NULL OR u.id = ?)
+          AND (? IS NULL OR lr.leave_type_id = ?)
         ORDER BY lr.start_date DESC, lr.id DESC
       `,
       [
@@ -220,6 +269,8 @@ export class ExportsService {
         query.startDate ?? null,
         query.startDate ?? null,
         ...this.commonFilterParams(query),
+        query.leaveTypeId ?? null,
+        query.leaveTypeId ?? null,
       ],
     );
 
@@ -243,7 +294,7 @@ export class ExportsService {
       `
         SELECT
           ad.id AS Identifiant,
-          CONCAT(u.prenom, ' ', u.nom) AS Collaborateur,
+          CONCAT(u.nom, ' ', u.prenom) AS Collaborateur,
           u.email AS Email,
           s.name AS Service,
           COALESCE(s.external_company_name, '') AS Entreprise_externe,
@@ -266,7 +317,9 @@ export class ExportsService {
           AND (? IS NULL OR ad.start_date <= ?)
           AND (? IS NULL OR ad.end_date >= ?)
           AND (? IS NULL OR u.service_id = ?)
+            AND (? IS NULL OR EXISTS (SELECT 1 FROM services sx WHERE sx.id = u.service_id AND sx.service_type = ?))
           AND (? IS NULL OR u.id = ?)
+          AND (? IS NULL OR ad.leave_type_id = ?)
         ORDER BY ad.start_date DESC, ad.id DESC
       `,
       [
@@ -275,6 +328,8 @@ export class ExportsService {
         query.startDate ?? null,
         query.startDate ?? null,
         ...this.commonFilterParams(query),
+        query.leaveTypeId ?? null,
+        query.leaveTypeId ?? null,
       ],
     );
 
@@ -303,14 +358,14 @@ export class ExportsService {
       `
         SELECT
           u.id AS Identifiant,
-          CONCAT(u.prenom, ' ', u.nom) AS Collaborateur,
+          CONCAT(u.nom, ' ', u.prenom) AS Collaborateur,
           u.email AS Email,
           COALESCE(s.name, '') AS Service,
           COALESCE(latest.reference_period, '') AS Periode_reference,
           COALESCE(nm1.available_days, 0) AS Conges_a_utiliser,
-          COALESCE(n.acquired_days, 0) AS En_acquisition,
+          COALESCE(n.acquired_days, 0) AS En_cours_acquisition,
           COALESCE(nm1.reserved_days, 0) AS Jours_reserves,
-          COALESCE(nm1.available_days, 0) - COALESCE(nm1.reserved_days, 0) AS Disponible_apres_reservations,
+          COALESCE(nm1.available_days, 0) - COALESCE(nm1.reserved_days, 0) AS Disponible_apres_validation,
           GREATEST(
             COALESCE(nm1.updated_at, '1970-01-01 00:00:00'),
             COALESCE(n.updated_at, '1970-01-01 00:00:00')
@@ -320,6 +375,7 @@ export class ExportsService {
         LEFT JOIN (
           SELECT employee_id, MAX(reference_period) AS reference_period
           FROM leave_balances
+          WHERE (? IS NULL OR reference_period = ?)
           GROUP BY employee_id
         ) latest ON latest.employee_id = u.id
         LEFT JOIN leave_balances nm1
@@ -333,10 +389,18 @@ export class ExportsService {
         WHERE u.is_active = 1
           AND u.role != 'ADMIN'
           AND (? IS NULL OR u.service_id = ?)
+            AND (? IS NULL OR EXISTS (SELECT 1 FROM services sx WHERE sx.id = u.service_id AND sx.service_type = ?))
           AND (? IS NULL OR u.id = ?)
+          AND (? IS NULL OR latest.reference_period = ?)
         ORDER BY u.nom ASC, u.prenom ASC
       `,
-      this.commonFilterParams(query),
+      [
+        query.referencePeriod ?? null,
+        query.referencePeriod ?? null,
+        ...this.commonFilterParams(query),
+        query.referencePeriod ?? null,
+        query.referencePeriod ?? null,
+      ],
     );
 
     await this.auditExport(actor, 'RH_LEAVE_BALANCES_EXPORTED', query, rows.length);
@@ -358,8 +422,7 @@ export class ExportsService {
     const rows = await this.dataSource.query<ExportRow[]>(
       `
         SELECT
-          bm.id AS Identifiant,
-          CONCAT(u.prenom, ' ', u.nom) AS Collaborateur,
+          CONCAT(u.nom, ' ', u.prenom) AS Collaborateur,
           u.email AS Email,
           COALESCE(s.name, '') AS Service,
           lb.reference_period AS Periode_reference,
@@ -372,7 +435,7 @@ export class ExportsService {
           bm.leave_request_id AS Demande_conge_liee,
           CASE
             WHEN actor.id IS NULL THEN ''
-            ELSE CONCAT(actor.prenom, ' ', actor.nom)
+            ELSE CONCAT(actor.nom, ' ', actor.prenom)
           END AS Effectue_par,
           bm.created_at AS Date_mouvement
         FROM balance_movements bm
@@ -383,12 +446,16 @@ export class ExportsService {
         WHERE (? IS NULL OR DATE(bm.created_at) >= ?)
           AND (? IS NULL OR DATE(bm.created_at) <= ?)
           AND (? IS NULL OR u.service_id = ?)
+            AND (? IS NULL OR EXISTS (SELECT 1 FROM services sx WHERE sx.id = u.service_id AND sx.service_type = ?))
           AND (? IS NULL OR u.id = ?)
+          AND (? IS NULL OR lb.reference_period = ?)
         ORDER BY bm.created_at DESC, bm.id DESC
       `,
       [
         ...this.periodFilterParams(query),
         ...this.commonFilterParams(query),
+        query.referencePeriod ?? null,
+        query.referencePeriod ?? null,
       ],
     );
 
@@ -417,7 +484,7 @@ export class ExportsService {
       `
         SELECT
           d.id AS Identifiant,
-          CONCAT(u.prenom, ' ', u.nom) AS Collaborateur,
+          CONCAT(u.nom, ' ', u.prenom) AS Collaborateur,
           u.email AS Email,
           COALESCE(s.name, '') AS Service,
           lt.name AS Type_de_conge,
@@ -436,7 +503,7 @@ export class ExportsService {
           d.requested_at AS Demandee_le,
           CASE
             WHEN rh.id IS NULL THEN ''
-            ELSE CONCAT(rh.prenom, ' ', rh.nom)
+            ELSE CONCAT(rh.nom, ' ', rh.prenom)
           END AS Decidee_par,
           d.decision_comment AS Commentaire_decision,
           d.decided_at AS Decidee_le,
@@ -450,7 +517,9 @@ export class ExportsService {
         WHERE (? IS NULL OR d.requested_start_date <= ?)
           AND (? IS NULL OR d.requested_end_date >= ?)
           AND (? IS NULL OR u.service_id = ?)
+            AND (? IS NULL OR EXISTS (SELECT 1 FROM services sx WHERE sx.id = u.service_id AND sx.service_type = ?))
           AND (? IS NULL OR u.id = ?)
+          AND (? IS NULL OR d.leave_type_id = ?)
         ORDER BY d.requested_at DESC, d.id DESC
       `,
       [
@@ -459,6 +528,8 @@ export class ExportsService {
         query.startDate ?? null,
         query.startDate ?? null,
         ...this.commonFilterParams(query),
+        query.leaveTypeId ?? null,
+        query.leaveTypeId ?? null,
       ],
     );
 
@@ -484,10 +555,12 @@ export class ExportsService {
     }
   }
 
-  private commonFilterParams(query: ExportQueryDto): Array<number | null> {
+  private commonFilterParams(query: ExportQueryDto): Array<string | number | null> {
     return [
       query.serviceId ?? null,
       query.serviceId ?? null,
+      query.serviceScope ?? null,
+      query.serviceScope ?? null,
       query.employeeId ?? null,
       query.employeeId ?? null,
     ];
@@ -522,7 +595,10 @@ export class ExportsService {
         startDate: query.startDate ?? null,
         endDate: query.endDate ?? null,
         serviceId: query.serviceId ?? null,
+        serviceScope: query.serviceScope ?? null,
         employeeId: query.employeeId ?? null,
+        leaveTypeId: query.leaveTypeId ?? null,
+        referencePeriod: query.referencePeriod ?? null,
         rowCount,
       },
     });
@@ -541,7 +617,7 @@ export class ExportsService {
       const normalizedRows = rows.map((row) => {
         const normalized: Record<string, unknown> = {};
         for (const header of headers) {
-          normalized[header] = this.normalizeCellValue(row[header]);
+          normalized[header] = this.normalizeExportValue(header, row[header]);
         }
         return normalized;
       });
@@ -558,7 +634,7 @@ export class ExportsService {
       headers.map((header) => this.escapeCsv(header)).join(';'),
       ...rows.map((row) =>
         headers
-          .map((header) => this.escapeCsv(this.normalizeCsvValue(row[header])))
+          .map((header) => this.escapeCsv(String(this.normalizeExportValue(header, row[header]) ?? '')))
           .join(';'),
       ),
     ];
@@ -574,21 +650,25 @@ export class ExportsService {
     return rows.length > 0 ? Object.keys(rows[0]) : [];
   }
 
-  private normalizeCellValue(value: ExportRow[string]): unknown {
-    if (value instanceof Date) {
-      return value;
+  private normalizeExportValue(header: string, value: ExportRow[string]): unknown {
+    if (value === null || value === undefined) return '';
+    const key = header.toLowerCase();
+    if (key.includes('periode_reference') && typeof value === 'string') {
+      return value.replace('-', '/');
     }
-    if (value === null || value === undefined) {
-      return '';
+    const isDateField = key.startsWith('date_') || key.endsWith('_le') || key.includes('mise_a_jour') || key.includes('mouvement');
+    if (isDateField) {
+      const date = value instanceof Date ? value : new Date(String(value));
+      if (!Number.isNaN(date.getTime())) {
+        const hasTime = value instanceof Date || String(value).includes(':') || String(value).includes('T');
+        return new Intl.DateTimeFormat('fr-FR', {
+          timeZone: 'America/Martinique',
+          day: '2-digit', month: '2-digit', year: 'numeric',
+          ...(hasTime ? { hour: '2-digit', minute: '2-digit' } : {}),
+        }).format(date);
+      }
     }
     return value;
-  }
-
-  private normalizeCsvValue(value: ExportRow[string]): string {
-    if (value instanceof Date) {
-      return value.toISOString();
-    }
-    return value === null || value === undefined ? '' : String(value);
   }
 
   private escapeCsv(value: string): string {

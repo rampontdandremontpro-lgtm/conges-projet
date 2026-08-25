@@ -35,6 +35,7 @@ import { RhLeaveTypesPage } from '@/pages/rh/LeaveTypesPage'
 import { RhHolidaysPage } from '@/pages/rh/HolidaysPage'
 import { RhSummerPeriodPage } from '@/pages/rh/SummerPeriodPage'
 import { RhValidatorsPage } from '@/pages/rh/ValidatorsPage'
+import { RhHistoryPage } from '@/pages/rh/HistoryPage'
 import { DirectorAllRequestsPage } from '@/pages/director/AllRequestsPage'
 import { DirectorRequestDecisionPage } from '@/pages/director/RequestDecisionPage'
 import { DirectorPresencePage } from '@/pages/director/PresencePage'
@@ -300,6 +301,14 @@ export const router = createBrowserRouter([
         element: (
           <RoleRoute roles={[ROLES.RH]}>
             <RhValidatorsPage />
+          </RoleRoute>
+        ),
+      },
+      {
+        path: 'rh-history',
+        element: (
+          <RoleRoute roles={[ROLES.RH]}>
+            <RhHistoryPage />
           </RoleRoute>
         ),
       },

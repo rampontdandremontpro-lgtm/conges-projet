@@ -46,11 +46,11 @@ function normalize(value) {
 
 function fullName(user) {
   if (!user) return '—'
-  return `${user.prenom ?? ''} ${user.nom ?? ''}`.trim() || '—'
+  return `${user.nom ?? ''} ${user.prenom ?? ''}`.trim() || '—'
 }
 
 function initials(user) {
-  return `${user?.prenom?.[0] ?? ''}${user?.nom?.[0] ?? ''}`.toUpperCase() || '—'
+  return `${user?.nom?.[0] ?? ''}${user?.prenom?.[0] ?? ''}`.toUpperCase() || '—'
 }
 
 function statusMeta(status) {

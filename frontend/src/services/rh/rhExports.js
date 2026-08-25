@@ -5,8 +5,11 @@ function buildParams(filters = {}, format) {
 
   if (filters.startDate) params.startDate = filters.startDate
   if (filters.endDate) params.endDate = filters.endDate
-  if (filters.serviceId) params.serviceId = filters.serviceId
+  if (filters.serviceId === 'external') params.serviceScope = 'EXTERNE'
+  else if (filters.serviceId) params.serviceId = filters.serviceId
   if (filters.employeeId) params.employeeId = filters.employeeId
+  if (filters.leaveTypeId) params.leaveTypeId = filters.leaveTypeId
+  if (filters.referencePeriod) params.referencePeriod = filters.referencePeriod
   if (format) params.format = format
 
   return params

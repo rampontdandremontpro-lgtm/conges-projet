@@ -398,6 +398,7 @@ export class DocumentsService {
           DocumentStatus.SUPPRIME,
         ],
       })
+      .andWhere("COALESCE(leaveEmployee.role, absenceEmployee.role, '') <> :directorRole", { directorRole: UserRole.DIRECTEUR })
       .orderBy('document.uploadedAt', 'DESC');
 
     if (query.status) {
@@ -536,7 +537,8 @@ export class DocumentsService {
             LeaveRequestStatus.ANNULATION_EN_ATTENTE_ACCORD,
             LeaveRequestStatus.ANNULEE_APRES_VALIDATION,
           ],
-        });
+        })
+        .andWhere('libraryEmployee.role <> :libraryDirectorRole', { libraryDirectorRole: UserRole.DIRECTEUR });
 
       if (query.serviceId) {
         requestQb.andWhere('libraryRequest.serviceId = :libraryServiceId', {

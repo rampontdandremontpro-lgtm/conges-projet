@@ -7,6 +7,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
 
+import { AuditService } from '../audit/audit.service';
 import type { AuthenticatedUser } from '../auth/jwt-payload.interface';
 import { User } from '../users/user.entity';
 import { Setting } from './setting.entity';
@@ -44,6 +45,7 @@ export class SettingsService {
   constructor(
     @InjectRepository(Setting)
     private readonly settingRepository: Repository<Setting>,
+    private readonly auditService: AuditService,
   ) {}
 
   onAfternoonStartHourChange(
@@ -163,10 +165,10 @@ export class SettingsService {
     ]);
 
     if (
-      normalDeadlineDays < 1 ||
-      specialDeadlineDays < normalDeadlineDays ||
-      specialDurationThresholdDays < 1 ||
-      derogationLastAllowedDay < 3
+      normalDeadlineDays < 0 || normalDeadlineDays > 90 ||
+      specialDeadlineDays < 0 || specialDeadlineDays > 90 ||
+      specialDurationThresholdDays < 1 || specialDurationThresholdDays > 90 ||
+      derogationLastAllowedDay < 1 || derogationLastAllowedDay > 90
     ) {
       throw new BadRequestException(
         'Les paramètres de délai de dépôt sont incohérents.',
@@ -234,6 +236,7 @@ export class SettingsService {
     authenticatedUser: AuthenticatedUser,
   ): Promise<Setting> {
     const setting = await this.findOne(key);
+    const previousValue = setting.settingValue;
     const value = dto.settingValue.trim();
 
     this.validateKnownSettingValue(setting.settingKey, value);
@@ -247,6 +250,15 @@ export class SettingsService {
     }
 
     await this.settingRepository.save(setting);
+
+    await this.auditService.record({
+      actorId: authenticatedUser.id,
+      action: 'SETTING_UPDATED',
+      resourceType: 'SETTINGS',
+      resourceId: setting.id,
+      oldValue: { key: setting.settingKey, value: previousValue },
+      newValue: { key: setting.settingKey, value: setting.settingValue, description: setting.description },
+    });
 
     if (setting.settingKey === 'AFTERNOON_START_HOUR') {
       this.notifyAfternoonStartHourChanged();
@@ -265,6 +277,8 @@ export class SettingsService {
 
     const startSetting = await this.findOne('SUMMER_PERIOD_START');
     const endSetting = await this.findOne('SUMMER_PERIOD_END');
+    const previousStart = startSetting.settingValue;
+    const previousEnd = endSetting.settingValue;
 
     startSetting.settingValue = start;
     startSetting.updatedById = authenticatedUser.id;
@@ -272,6 +286,15 @@ export class SettingsService {
     endSetting.updatedById = authenticatedUser.id;
 
     await this.settingRepository.save([startSetting, endSetting]);
+
+    await this.auditService.record({
+      actorId: authenticatedUser.id,
+      action: 'SUMMER_PERIOD_UPDATED',
+      resourceType: 'SETTINGS',
+      resourceId: null,
+      oldValue: { summerPeriodStart: previousStart, summerPeriodEnd: previousEnd },
+      newValue: { summerPeriodStart: start, summerPeriodEnd: end },
+    });
 
     return {
       summerPeriodStart: await this.findOne('SUMMER_PERIOD_START'),
@@ -294,9 +317,11 @@ export class SettingsService {
 
     if (integerKeys.has(key)) {
       const parsed = Number(value);
-      if (!Number.isInteger(parsed) || parsed < 0 || parsed > 365) {
+      const min = key === 'SPECIAL_DURATION_THRESHOLD_DAYS' || key === 'DEROGATION_LAST_ALLOWED_DAY' ? 1 : 0;
+      const max = 90;
+      if (!Number.isInteger(parsed) || parsed < min || parsed > max) {
         throw new BadRequestException(
-          `La valeur du paramètre ${key} doit être un entier compris entre 0 et 365.`,
+          `La valeur du paramètre ${key} doit être un entier compris entre ${min} et ${max}.`,
         );
       }
     }

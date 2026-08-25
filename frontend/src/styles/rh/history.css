@@ -1,0 +1,18 @@
+.rh-history-page { padding-top: 34px; }
+.rh-history-card { width: min(1380px, calc(100vw - 300px)); margin: 0 auto; overflow: hidden; border: 1px solid #dce6f3; border-radius: 18px; background: #fff; box-shadow: 0 9px 28px rgba(29, 71, 126, .08); }
+.rh-history-filters { display: grid; grid-template-columns: repeat(5, minmax(145px, 1fr)) auto; gap: 12px; align-items: end; padding: 18px; border-bottom: 1px solid #e7edf6; }
+.rh-history-filters label { display: grid; gap: 6px; color: #627896; font-size: 11px; font-weight: 800; text-transform: uppercase; }
+.rh-history-filters input,.rh-history-filters select { min-height: 40px; border: 1px solid #dbe5f2; border-radius: 10px; padding: 0 10px; background: #f9fbfe; color: #18375f; font: inherit; text-transform: none; }
+.rh-history-filters button { display: inline-flex; min-height: 40px; align-items: center; justify-content: center; gap: 6px; border-radius: 10px; background: #eef4fb; color: #34618f; font-weight: 800; }
+.rh-history-table-wrap { overflow-x: auto; }
+.rh-history-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.rh-history-table th { padding: 13px 14px; background: #f5f8fc; color: #7286a2; text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: .03em; }
+.rh-history-table td { max-width: 260px; padding: 14px; border-top: 1px solid #edf1f7; color: #496482; vertical-align: top; }
+.rh-history-table td:first-child { white-space: nowrap; }
+.rh-history-table strong { color: #17365e; }
+.rh-history-action { display: inline-flex; padding: 5px 8px; border-radius: 999px; background: #edf5ff; color: #1764c0; font-weight: 800; }
+.rh-history-empty { padding: 44px !important; text-align: center; color: #8798af !important; }
+.rh-history-footer { padding: 12px 18px; border-top: 1px solid #edf1f7; color: #7a8da8; font-size: 12px; }
+@media (max-width: 1180px) { .rh-history-card { width: calc(100vw - 260px); } .rh-history-filters { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 860px) { .rh-history-card { width: calc(100vw - 28px); } .rh-history-filters { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 560px) { .rh-history-filters { grid-template-columns: 1fr; } }

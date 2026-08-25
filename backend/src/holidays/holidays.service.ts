@@ -12,6 +12,7 @@ import { AuditService } from '../audit/audit.service';
 import type { AuthenticatedUser } from '../auth/jwt-payload.interface';
 import { CreateHolidayDto } from './dto/create-holiday.dto';
 import { UpdateHolidayDto } from './dto/update-holiday.dto';
+import { UpdateHolidayWorkStatusDto } from './dto/update-holiday-work-status.dto';
 import { Holiday, HolidayType } from './holiday.entity';
 
 const OFFICIAL_API_BASE_URL =
@@ -201,13 +202,11 @@ export class HolidaysService {
         const wasInactive = !current.isActive;
         const changed =
           current.name !== name.trim() ||
-          current.deductible !== false ||
           current.source !== OFFICIAL_API_SOURCE ||
           wasInactive;
 
         if (changed) {
           current.name = name.trim();
-          current.deductible = false;
           current.source = OFFICIAL_API_SOURCE;
           current.isActive = true;
           current.createdById = authenticatedUser.id;
@@ -245,6 +244,64 @@ export class HolidaysService {
     });
 
     return result;
+  }
+
+  async updateWorkStatus(
+    authenticatedUser: AuthenticatedUser,
+    dto: UpdateHolidayWorkStatusDto,
+  ): Promise<Holiday> {
+    if (dto.holidayType === HolidayType.FERMETURE_GMES) {
+      throw new BadRequestException(
+        'Le caractère chômé des fermetures GMES est géré par leur statut de fermeture.',
+      );
+    }
+
+    const year = Number(dto.date.slice(0, 4));
+    this.validateYear(year);
+    const officialDay = (await this.getRawMartiniqueCalendarDays(year)).find(
+      (day) => day.date === dto.date && day.holidayType === dto.holidayType,
+    );
+    if (!officialDay) {
+      throw new NotFoundException('Le jour férié sélectionné est introuvable dans le calendrier Martinique.');
+    }
+
+    let holiday = await this.holidayRepository.findOneBy({
+      date: dto.date,
+      holidayType: dto.holidayType,
+    });
+    const previous = holiday ? { deductible: holiday.deductible } : null;
+    if (!holiday) {
+      holiday = this.holidayRepository.create({
+        date: officialDay.date,
+        name: officialDay.name,
+        holidayType: officialDay.holidayType,
+        deductible: !dto.isChomed,
+        source: officialDay.source,
+        createdById: authenticatedUser.id,
+        isActive: true,
+      });
+    } else {
+      holiday.name = officialDay.name;
+      holiday.source = officialDay.source;
+      holiday.deductible = !dto.isChomed;
+      holiday.createdById = authenticatedUser.id;
+      holiday.isActive = true;
+    }
+
+    const saved = await this.holidayRepository.save(holiday);
+    await this.auditService.record({
+      actorId: authenticatedUser.id,
+      action: 'HOLIDAY_WORK_STATUS_CHANGED',
+      resourceType: 'HOLIDAY',
+      resourceId: saved.id,
+      oldValue: previous,
+      newValue: {
+        date: saved.date,
+        name: saved.name,
+        isChomed: saved.deductible === false,
+      },
+    });
+    return saved;
   }
 
   async findAllActive(year?: number): Promise<Holiday[]> {
@@ -464,6 +521,34 @@ export class HolidaysService {
   }
 
   private async getMartiniqueCalendarDays(year: number): Promise<Holiday[]> {
+    const rawDays = await this.getRawMartiniqueCalendarDays(year);
+    const stored = await this.holidayRepository.find({
+      where: {
+        date: Between(`${year}-01-01`, `${year}-12-31`),
+        isActive: true,
+      },
+    });
+    const storedByKey = new Map(
+      stored
+        .filter((item) => item.holidayType !== HolidayType.FERMETURE_GMES)
+        .map((item) => [`${item.date}|${item.holidayType}`, item]),
+    );
+
+    return rawDays.map((day) => {
+      const override = storedByKey.get(`${day.date}|${day.holidayType}`);
+      return override
+        ? this.holidayRepository.create({
+            ...day,
+            id: override.id,
+            deductible: override.deductible,
+            createdById: override.createdById,
+            isActive: override.isActive,
+          })
+        : day;
+    });
+  }
+
+  private async getRawMartiniqueCalendarDays(year: number): Promise<Holiday[]> {
     try {
       const [martiniqueDays, metropolitanDays] = await Promise.all([
         this.fetchOfficialDaysCached('martinique', year),
@@ -653,19 +738,8 @@ export class HolidaysService {
     holidayType: HolidayType,
     deductible?: boolean,
   ): boolean {
-    if (
-      holidayType === HolidayType.NATIONAL ||
-      holidayType === HolidayType.MARTINIQUE
-    ) {
-      if (deductible === true) {
-        throw new BadRequestException(
-          'Un jour férié national ou martiniquais ne peut pas être décompté comme un jour travaillé.',
-        );
-      }
-
+    if (holidayType === HolidayType.FERMETURE_GMES) {
       return false;
     }
-
     return deductible ?? false;
-  }
-}
+  }}

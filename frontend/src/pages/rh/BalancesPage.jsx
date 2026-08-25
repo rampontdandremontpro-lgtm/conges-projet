@@ -20,8 +20,8 @@ const PAGE_SIZE = 8
 
 const MOVEMENT_META = {
   ACQUISITION: { label: 'Acquisition', tone: 'positive' },
-  RESERVATION: { label: 'Réservation', tone: 'negative' },
-  LIBERATION_RESERVATION: { label: 'Libération réservation', tone: 'positive' },
+  RESERVATION: { label: 'En attente', tone: 'negative' },
+  LIBERATION_RESERVATION: { label: 'Libération attente', tone: 'positive' },
   DEDUCTION: { label: 'Déduction', tone: 'negative' },
   CORRECTION_POSITIVE: { label: 'Correction crédit', tone: 'positive' },
   CORRECTION_NEGATIVE: { label: 'Correction débit', tone: 'negative' },
@@ -38,11 +38,11 @@ function normalize(value) {
 }
 
 function fullName(employee) {
-  return `${employee?.prenom ?? ''} ${employee?.nom ?? ''}`.trim() || '—'
+  return `${employee?.nom ?? ''} ${employee?.prenom ?? ''}`.trim() || '—'
 }
 
 function initials(employee) {
-  return `${employee?.prenom?.[0] ?? ''}${employee?.nom?.[0] ?? ''}`.toUpperCase() || '—'
+  return `${employee?.nom?.[0] ?? ''}${employee?.prenom?.[0] ?? ''}`.toUpperCase() || '—'
 }
 
 function formatDateTime(value) {
@@ -57,6 +57,32 @@ function formatDateTime(value) {
     hour: '2-digit',
     minute: '2-digit',
   }).format(date)
+}
+
+function formatReferencePeriod(value) {
+  return String(value ?? '').replace('-', '/') || '—'
+}
+
+function formatBalanceDays(value) {
+  return new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(Number(value ?? 0))
+}
+
+function currentReferencePeriod() {
+  const parts = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Martinique', year: 'numeric', month: '2-digit' }).formatToParts(new Date())
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]))
+  const year = Number(values.year)
+  const start = Number(values.month) >= 6 ? year : year - 1
+  return `${start}-${start + 1}`
+}
+
+function adjacentPeriods() {
+  const current = currentReferencePeriod()
+  const start = Number(current.slice(0, 4))
+  return [
+    { value: `${start - 1}-${start}`, label: `N-1 · ${start - 1}/${start}` },
+    { value: current, label: `N · ${start}/${start + 1}` },
+    { value: `${start + 1}-${start + 2}`, label: `N+1 · ${start + 1}/${start + 2}` },
+  ]
 }
 
 function errorMessage(error) {
@@ -88,6 +114,7 @@ function BalanceDetailDrawer({ row, onClose, onChanged }) {
   const [direction, setDirection] = useState('credit')
   const [days, setDays] = useState('')
   const [reason, setReason] = useState('')
+  const [notifyEmployee, setNotifyEmployee] = useState(false)
   const [busy, setBusy] = useState(false)
   const [feedback, setFeedback] = useState('')
 
@@ -143,10 +170,11 @@ function BalanceDetailDrawer({ row, onClose, onChanged }) {
     setFeedback('')
     try {
       const signedDays = direction === 'debit' ? -amount : amount
-      await correctRhBalance(Number(counterId), signedDays, reason.trim())
+      await correctRhBalance(Number(counterId), signedDays, reason.trim(), notifyEmployee)
       await load({ silent: true })
       setDays('')
       setReason('')
+      setNotifyEmployee(false)
       setShowCorrection(false)
       onChanged(`Correction enregistrée pour ${fullName(row.employee)}.`)
     } catch (error) {
@@ -191,7 +219,7 @@ function BalanceDetailDrawer({ row, onClose, onChanged }) {
               <div className="rh-balances-summary-card__title">
                 <div>
                   <h3>Situation actuelle</h3>
-                  <p>Période {latestPeriod(state.balances) ?? 'non initialisée'}</p>
+                  <p>Période {formatReferencePeriod(latestPeriod(state.balances))}</p>
                 </div>
                 <button
                   type="button"
@@ -205,9 +233,9 @@ function BalanceDetailDrawer({ row, onClose, onChanged }) {
 
               <div className="rh-balances-kpis">
                 <div><small>Congés à utiliser</small><strong>{formatDays(usableDays)} j</strong><span>N-1</span></div>
-                <div><small>En acquisition</small><strong>{formatDays(Number(acquisition?.acquiredDays ?? 0))} j</strong><span>N</span></div>
-                <div><small>Réservé</small><strong>{formatDays(reserved)} j</strong><span>Demandes en attente</span></div>
-                <div className="rh-balances-kpis__available"><small>Disponible</small><strong>{formatDays(availableAfter)} j</strong><span>Après réservations</span></div>
+                <div><small>En cours d’acquisition</small><strong>{formatBalanceDays(Number(acquisition?.acquiredDays ?? 0))} j</strong><span>N</span></div>
+                <div><small>En attente</small><strong>{formatBalanceDays(reserved)} j</strong><span>Demandes en attente</span></div>
+                <div className="rh-balances-kpis__available"><small>Disponible</small><strong>{formatBalanceDays(availableAfter)} j</strong><span>Après validation</span></div>
               </div>
 
               {correctionCounters.length === 0 && (
@@ -229,7 +257,7 @@ function BalanceDetailDrawer({ row, onClose, onChanged }) {
                     <select value={counterId} onChange={(event) => setCounterId(event.target.value)}>
                       {correctionCounters.map((balance) => (
                         <option key={balance.id} value={balance.id}>
-                          {balance.counterType === 'N-1' ? 'Congés à utiliser (N-1)' : 'En acquisition (N)'} — {balance.referencePeriod}
+                          {balance.counterType === 'N-1' ? 'Congés à utiliser (N-1)' : 'En cours d’acquisition (N)'} — {formatReferencePeriod(balance.referencePeriod)}
                         </option>
                       ))}
                     </select>
@@ -252,6 +280,11 @@ function BalanceDetailDrawer({ row, onClose, onChanged }) {
                   <label>
                     <span>Motif de la correction <b>*</b></span>
                     <textarea value={reason} onChange={(event) => setReason(event.target.value)} rows="3" placeholder="Expliquez précisément la raison de cette correction…" />
+                  </label>
+
+                  <label className="rh-balances-notify">
+                    <input type="checkbox" checked={notifyEmployee} onChange={(event) => setNotifyEmployee(event.target.checked)} />
+                    <span>Notifier le collaborateur</span>
                   </label>
 
                   {feedback && <div className="rh-balances-correction__error">{feedback}</div>}
@@ -286,8 +319,8 @@ function BalanceDetailDrawer({ row, onClose, onChanged }) {
                       <div className="rh-balances-history rh-balances-history--row" key={movement.id}>
                         <span>{formatDateTime(movement.createdAt)}</span>
                         <span className={`rh-balances-movement rh-balances-movement--${meta.tone}`}>{meta.label}</span>
-                        <span>{movement.leaveBalance?.counterType ?? '—'}<small>{movement.leaveBalance?.referencePeriod ?? ''}</small></span>
-                        <strong className={change > 0 ? 'is-positive' : change < 0 ? 'is-negative' : ''}>{change > 0 ? '+' : ''}{formatDays(change)} j</strong>
+                        <span>{movement.leaveBalance?.counterType ?? '—'}<small>{formatReferencePeriod(movement.leaveBalance?.referencePeriod)}</small></span>
+                        <strong className={change > 0 ? 'is-positive' : change < 0 ? 'is-negative' : ''}>{change > 0 ? '+' : ''}{formatBalanceDays(change)} j</strong>
                         <span title={movement.reason ?? ''}>{movement.reason || '—'}</span>
                         <span>{movement.actor ? fullName(movement.actor) : 'Système'}</span>
                       </div>
@@ -310,7 +343,7 @@ export function RhBalancesPage() {
   const [filterState, setFilterState] = useState({ services: [], users: [] })
   const [serviceFilter, setServiceFilter] = useState('all')
   const [employeeFilter, setEmployeeFilter] = useState('all')
-  const [reservationFilter, setReservationFilter] = useState('all')
+  const [periodFilter, setPeriodFilter] = useState(currentReferencePeriod())
   const [selected, setSelected] = useState(null)
   const [page, setPage] = useState(1)
   const [feedback, setFeedback] = useState('')
@@ -318,12 +351,12 @@ export function RhBalancesPage() {
   const load = useCallback(async ({ silent = false } = {}) => {
     if (!silent) setState((current) => ({ ...current, loading: true, error: false }))
     try {
-      const rows = await getRhBalancesOverview()
+      const rows = await getRhBalancesOverview(periodFilter)
       setState({ loading: false, error: false, rows })
     } catch {
       if (!silent) setState((current) => ({ ...current, loading: false, error: true }))
     }
-  }, [])
+  }, [periodFilter])
 
   const loadFilters = useCallback(async () => {
     try {
@@ -361,9 +394,15 @@ export function RhBalancesPage() {
     return () => window.clearTimeout(timer)
   }, [feedback])
 
+  const externalServiceIds = useMemo(() => new Set(
+    filterState.services
+      .filter((service) => service?.serviceType === 'EXTERNE' || service?.externalCompanyName)
+      .map((service) => String(service.id)),
+  ), [filterState.services])
+
   const services = useMemo(() => (
     filterState.services
-      .filter((service) => service?.id && service?.name)
+      .filter((service) => service?.id && service?.name && service?.serviceType !== 'EXTERNE' && !service?.externalCompanyName)
       .map((service) => ({ id: String(service.id), name: service.name }))
       .sort((left, right) => left.name.localeCompare(right.name, 'fr'))
   ), [filterState.services])
@@ -371,17 +410,20 @@ export function RhBalancesPage() {
   const employees = useMemo(() => (
     filterState.users
       .filter((user) => user?.role !== 'ADMIN' && user?.isActive !== false)
-      .filter((user) => serviceFilter === 'all' || String(user?.service?.id ?? user?.serviceId ?? '') === serviceFilter)
+      .filter((user) => {
+        const serviceId = String(user?.service?.id ?? user?.serviceId ?? '')
+        if (serviceFilter === 'external') return externalServiceIds.has(serviceId)
+        return serviceFilter === 'all' || serviceId === serviceFilter
+      })
       .sort((left, right) => (`${left.nom ?? ''} ${left.prenom ?? ''}`).localeCompare(`${right.nom ?? ''} ${right.prenom ?? ''}`, 'fr'))
-  ), [filterState.users, serviceFilter])
+  ), [externalServiceIds, filterState.users, serviceFilter])
 
   const filtered = useMemo(() => {
     const needle = normalize(search)
     return state.rows.filter((row) => {
-      if (serviceFilter !== 'all' && String(row.employee?.service?.id ?? '') !== serviceFilter) return false
+      if (serviceFilter === 'external' && !externalServiceIds.has(String(row.employee?.service?.id ?? ''))) return false
+      if (serviceFilter !== 'all' && serviceFilter !== 'external' && String(row.employee?.service?.id ?? '') !== serviceFilter) return false
       if (employeeFilter !== 'all' && String(row.employee?.id ?? '') !== employeeFilter) return false
-      if (reservationFilter === 'with' && Number(row.reservedDays ?? 0) <= 0) return false
-      if (reservationFilter === 'without' && Number(row.reservedDays ?? 0) > 0) return false
       if (!needle) return true
       const haystack = normalize([
         row.employee?.prenom,
@@ -392,9 +434,9 @@ export function RhBalancesPage() {
       ].join(' '))
       return needle.split(/\s+/).every((token) => haystack.includes(token))
     })
-  }, [state.rows, search, serviceFilter, employeeFilter, reservationFilter])
+  }, [employeeFilter, externalServiceIds, search, serviceFilter, state.rows])
 
-  useEffect(() => setPage(1), [search, serviceFilter, employeeFilter, reservationFilter])
+  useEffect(() => setPage(1), [search, serviceFilter, employeeFilter, periodFilter])
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const safePage = Math.min(page, pageCount)
@@ -411,9 +453,6 @@ export function RhBalancesPage() {
 
       <section className="rh-balances-card">
         <div className="rh-balances-toolbar">
-          <div>
-            <h2>Soldes des collaborateurs</h2>
-          </div>
           <div className="rh-balances-filters">
             <label>
               <span>Service</span>
@@ -426,6 +465,7 @@ export function RhBalancesPage() {
               >
                 <option value="all">Tous les services</option>
                 {services.map((service) => <option value={service.id} key={service.id}>{service.name}</option>)}
+                {externalServiceIds.size > 0 && <option value="external">Services externes</option>}
               </select>
             </label>
             <label>
@@ -433,16 +473,14 @@ export function RhBalancesPage() {
               <select value={employeeFilter} onChange={(event) => setEmployeeFilter(event.target.value)}>
                 <option value="all">Tous les collaborateurs</option>
                 {employees.map((user) => (
-                  <option value={user.id} key={user.id}>{user.prenom} {user.nom}</option>
+                  <option value={user.id} key={user.id}>{user.nom} {user.prenom}</option>
                 ))}
               </select>
             </label>
             <label>
-              <span>Réservations</span>
-              <select value={reservationFilter} onChange={(event) => setReservationFilter(event.target.value)}>
-                <option value="all">Toutes les situations</option>
-                <option value="with">Avec réservation</option>
-                <option value="without">Sans réservation</option>
+              <span>Période</span>
+              <select value={periodFilter} onChange={(event) => setPeriodFilter(event.target.value)}>
+                {adjacentPeriods().map((period) => <option key={period.value} value={period.value}>{period.label}</option>)}
               </select>
             </label>
           </div>
@@ -468,8 +506,7 @@ export function RhBalancesPage() {
               <div className="rh-balances-row rh-balances-row--head">
                 <span>Collaborateur</span>
                 <span>Congés à utiliser</span>
-                <span>En acquisition</span>
-                <span>Réservé</span>
+                <span>En attente</span>
                 <span>Disponible</span>
                 <span>Période</span>
                 <span aria-hidden="true" />
@@ -485,11 +522,10 @@ export function RhBalancesPage() {
                     <span className="rh-balances-avatar">{initials(row.employee)}</span>
                     <span><strong>{fullName(row.employee)}</strong><small>{row.employee.service?.name ?? String(row.employee.role ?? '').replaceAll('_', ' ')}</small></span>
                   </span>
-                  <strong>{formatDays(row.usableDays)} j</strong>
-                  <span>{formatDays(row.acquisitionDays)} j</span>
-                  <span className={Number(row.reservedDays) > 0 ? 'rh-balances-reserved' : ''}>{formatDays(row.reservedDays)} j</span>
-                  <strong className="rh-balances-available">{formatDays(row.availableAfterReservations)} j</strong>
-                  <span>{row.referencePeriod ?? 'Non initialisé'}</span>
+                  <strong>{formatBalanceDays(row.usableDays)} j</strong>
+                  <span className={Number(row.reservedDays) > 0 ? 'rh-balances-reserved' : ''}>{formatBalanceDays(row.reservedDays)} j</span>
+                  <strong className="rh-balances-available">{formatBalanceDays(row.availableAfterReservations)} j</strong>
+                  <span>{row.referencePeriod ? formatReferencePeriod(row.referencePeriod) : 'Non initialisé'}</span>
                   <span className="rh-balances-eye"><Icon name="eye" size={17} /></span>
                 </button>
               ))}

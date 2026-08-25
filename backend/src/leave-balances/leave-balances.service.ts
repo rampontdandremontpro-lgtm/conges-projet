@@ -12,6 +12,7 @@ import {
   Repository,
 } from 'typeorm';
 
+import { AuditService } from '../audit/audit.service';
 import type { AuthenticatedUser } from '../auth/jwt-payload.interface';
 import { NotificationsService } from '../notifications/notifications.service';
 import { User, UserRole } from '../users/user.entity';
@@ -82,6 +83,7 @@ export class LeaveBalancesService {
 
     private readonly usersService: UsersService,
     private readonly notificationsService: NotificationsService,
+    private readonly auditService: AuditService,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -207,6 +209,7 @@ export class LeaveBalancesService {
   ): Promise<LeaveBalanceView> {
     const correction = this.round(dto.days);
     let employeeId = 0;
+    let balanceBeforeValue = 0;
     let balanceAfterValue = 0;
 
     await this.dataSource.transaction(async (manager) => {
@@ -217,6 +220,7 @@ export class LeaveBalancesService {
 
       const balanceBefore = this.round(balance.availableDays);
       const balanceAfter = this.round(balanceBefore + correction);
+      balanceBeforeValue = balanceBefore;
       const potentialAfter = this.round(
         balanceAfter - balance.reservedDays,
       );
@@ -259,13 +263,32 @@ export class LeaveBalancesService {
     });
 
     if (employeeId > 0) {
+      await this.auditService.record({
+        actorId: authenticatedUser.id,
+        action: 'RH_BALANCE_CORRECTED',
+        resourceType: 'LEAVE_BALANCE',
+        resourceId: balanceId,
+        oldValue: { employeeId, availableDays: balanceBeforeValue },
+        newValue: {
+          employeeId,
+          availableDays: balanceAfterValue,
+          correctionDays: correction,
+          reason: dto.reason.trim(),
+          collaboratorNotified: dto.notifyEmployee === true,
+        },
+      });
+    }
+
+    if (employeeId > 0 && dto.notifyEmployee === true) {
       await this.notificationsService.create({
         userId: employeeId,
         type: 'BALANCE_CORRECTED',
         title: 'Solde de congés corrigé',
         message: `Votre solde de congés a été corrigé. Nouveau solde : ${balanceAfterValue} jour(s).`,
       });
+    }
 
+    if (employeeId > 0) {
       await this.notificationsService.createForActiveRoles(
         [UserRole.RH],
         {
@@ -279,7 +302,7 @@ export class LeaveBalancesService {
     return this.getBalanceView(balanceId);
   }
 
-  async getManagementOverview() {
+  async getManagementOverview(query: LeaveBalanceQueryDto = {}) {
     const employees = (await this.usersService.findAll())
       .filter((employee) => employee.role !== UserRole.ADMIN && employee.isActive)
       .sort((first, second) => {
@@ -300,7 +323,11 @@ export class LeaveBalancesService {
       const referencePeriods = [
         ...new Set(employeeBalances.map((balance) => balance.referencePeriod)),
       ].sort((first, second) => second.localeCompare(first));
-      const referencePeriod = referencePeriods[0] ?? null;
+      const referencePeriod = query.referencePeriod && referencePeriods.includes(query.referencePeriod)
+        ? query.referencePeriod
+        : query.referencePeriod
+          ? null
+          : referencePeriods[0] ?? null;
       const scoped = referencePeriod
         ? employeeBalances.filter(
             (balance) => balance.referencePeriod === referencePeriod,
@@ -329,7 +356,7 @@ export class LeaveBalancesService {
           role: employee.role,
           isActive: employee.isActive,
           service: employee.service
-            ? { id: employee.service.id, name: employee.service.name }
+            ? { id: employee.service.id, name: employee.service.name, serviceType: employee.service.serviceType, externalCompanyName: employee.service.externalCompanyName }
             : null,
         },
         referencePeriod,

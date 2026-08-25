@@ -2,6 +2,7 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 
 import { AuditService } from '../audit/audit.service';
+import { HolidaysService } from '../holidays/holidays.service';
 import type { AuthenticatedUser } from '../auth/jwt-payload.interface';
 import {
   StatisticsDataType,
@@ -47,15 +48,41 @@ interface UserCapacityRow {
   hireDate: string | null;
 }
 
-interface LeaveTypeRow {
-  label: string;
-  category: string;
-  total: string | number;
+interface LeaveDayRow {
+  id: string | number;
+  employeeId: string | number;
+  serviceId: string | number;
+  leaveTypeId: string | number;
+  leaveTypeName: string;
+  startDate: string;
+  endDate: string;
+  startPeriod: 'MATIN' | 'APRES_MIDI' | null;
+  endPeriod: 'MATIN' | 'APRES_MIDI' | null;
+  status: string;
 }
 
-interface MonthRow {
-  monthKey: string;
-  total: string | number;
+interface AbsenceDayRow {
+  id: string | number;
+  employeeId: string | number;
+  serviceId: string | number;
+  leaveTypeId: string | number;
+  leaveTypeName: string;
+  startDate: string;
+  endDate: string;
+  startPeriod: 'MATIN' | 'APRES_MIDI' | null;
+  endPeriod: 'MATIN' | 'APRES_MIDI' | null;
+  durationHours: string | number | null;
+  status: string;
+}
+
+interface DayMetrics {
+  total: number;
+  workingTotal: number;
+  byService: Map<number, number>;
+  workingByService: Map<number, number>;
+  workingByEmployeeDate: Map<string, { serviceId: number; days: number }>;
+  byType: Map<string, number>;
+  byMonth: Map<string, number>;
 }
 
 @Injectable()
@@ -63,6 +90,7 @@ export class ReportsService {
   constructor(
     private readonly dataSource: DataSource,
     private readonly auditService: AuditService,
+    private readonly holidaysService: HolidaysService,
   ) {}
 
   async getDirectorStatistics(
@@ -78,18 +106,20 @@ export class ReportsService {
     const leaveWhere = `
       lr.start_date <= ?
       AND lr.end_date >= ?
-      AND lr.status <> 'BROUILLON'
+      AND lr.status NOT IN ('BROUILLON','REFUSEE','ANNULEE','ANNULEE_APRES_VALIDATION','EXPIREE_NON_VALIDEE')
+      ${query.leaveTypeId ? 'AND lr.leave_type_id = ?' : ''}
       AND ${userFilter.sql}
     `;
     const absenceWhere = `
       ad.start_date <= ?
       AND ad.end_date >= ?
       AND ad.status <> 'BROUILLON'
+      ${query.leaveTypeId ? 'AND ad.leave_type_id = ?' : ''}
       AND ${userFilter.sql}
     `;
 
-    const leaveParams = [endDate, startDate, ...userFilter.params];
-    const absenceParams = [endDate, startDate, ...userFilter.params];
+    const leaveParams = [endDate, startDate, ...(query.leaveTypeId ? [query.leaveTypeId] : []), ...userFilter.params];
+    const absenceParams = [endDate, startDate, ...(query.leaveTypeId ? [query.leaveTypeId] : []), ...userFilter.params];
 
     const [
       leaveTotalsRows,
@@ -101,10 +131,8 @@ export class ReportsService {
       holidays,
       leaveByServiceRows,
       absenceByServiceRows,
-      leaveTypeRows,
-      absenceTypeRows,
-      leaveMonthRows,
-      absenceMonthRows,
+      leaveDayRows,
+      absenceDayRows,
     ] = await Promise.all([
       includeLeave
         ? this.dataSource.query<LeaveTotalsRow[]>(
@@ -173,6 +201,7 @@ export class ReportsService {
           FROM services s
           WHERE s.is_active = 1
           ${query.serviceId ? 'AND s.id = ?' : ''}
+          ${query.serviceScope === 'EXTERNE' ? "AND s.service_type = 'EXTERNE'" : ''}
           ORDER BY name
         `,
         query.serviceId ? [query.serviceId] : [],
@@ -185,16 +214,7 @@ export class ReportsService {
         `,
         userFilter.params,
       ),
-      this.dataSource.query<Array<{ date: string }>>(
-        `
-          SELECT DISTINCT date
-          FROM holidays
-          WHERE is_active = 1
-            AND deductible = 0
-            AND date BETWEEN ? AND ?
-        `,
-        [startDate, endDate],
-      ),
+      this.holidaysService.findNonDeductibleBetween(startDate, endDate),
       includeLeave
         ? this.dataSource.query<ServiceAggregateRow[]>(
             `
@@ -229,66 +249,63 @@ export class ReportsService {
           )
         : Promise.resolve([] as ServiceAggregateRow[]),
       includeLeave
-        ? this.dataSource.query<LeaveTypeRow[]>(
+        ? this.dataSource.query<LeaveDayRow[]>(
             `
-              SELECT lt.name AS label, 'DEMANDE_CONGE' AS category, COUNT(*) AS total
+              SELECT
+                lr.id,
+                lr.employee_id AS employeeId,
+                lr.service_id AS serviceId,
+                lr.leave_type_id AS leaveTypeId,
+                lt.name AS leaveTypeName,
+                lr.start_date AS startDate,
+                lr.end_date AS endDate,
+                lr.start_period AS startPeriod,
+                lr.end_period AS endPeriod,
+                lr.status
               FROM leave_requests lr
               INNER JOIN users u ON u.id = lr.employee_id
               INNER JOIN leave_types lt ON lt.id = lr.leave_type_id
               WHERE ${leaveWhere}
-              GROUP BY lt.id, lt.name
-              ORDER BY total DESC, lt.name
             `,
             leaveParams,
           )
-        : Promise.resolve([] as LeaveTypeRow[]),
+        : Promise.resolve([] as LeaveDayRow[]),
       includeAbsence
-        ? this.dataSource.query<LeaveTypeRow[]>(
+        ? this.dataSource.query<AbsenceDayRow[]>(
             `
-              SELECT lt.name AS label, 'DECLARATION_ABSENCE' AS category, COUNT(*) AS total
+              SELECT
+                ad.id,
+                ad.employee_id AS employeeId,
+                ad.service_id AS serviceId,
+                ad.leave_type_id AS leaveTypeId,
+                lt.name AS leaveTypeName,
+                ad.start_date AS startDate,
+                ad.end_date AS endDate,
+                ad.start_period AS startPeriod,
+                ad.end_period AS endPeriod,
+                ad.duration_hours AS durationHours,
+                ad.status
               FROM absence_declarations ad
               INNER JOIN users u ON u.id = ad.employee_id
               INNER JOIN leave_types lt ON lt.id = ad.leave_type_id
               WHERE ${absenceWhere}
-              GROUP BY lt.id, lt.name
-              ORDER BY total DESC, lt.name
             `,
             absenceParams,
           )
-        : Promise.resolve([] as LeaveTypeRow[]),
-      includeLeave
-        ? this.dataSource.query<MonthRow[]>(
-            `
-              SELECT DATE_FORMAT(lr.start_date, '%Y-%m') AS monthKey, COUNT(*) AS total
-              FROM leave_requests lr
-              INNER JOIN users u ON u.id = lr.employee_id
-              WHERE ${leaveWhere}
-              GROUP BY DATE_FORMAT(lr.start_date, '%Y-%m')
-              ORDER BY monthKey
-            `,
-            leaveParams,
-          )
-        : Promise.resolve([] as MonthRow[]),
-      includeAbsence
-        ? this.dataSource.query<MonthRow[]>(
-            `
-              SELECT DATE_FORMAT(ad.start_date, '%Y-%m') AS monthKey, COUNT(*) AS total
-              FROM absence_declarations ad
-              INNER JOIN users u ON u.id = ad.employee_id
-              WHERE ${absenceWhere}
-              GROUP BY DATE_FORMAT(ad.start_date, '%Y-%m')
-              ORDER BY monthKey
-            `,
-            absenceParams,
-          )
-        : Promise.resolve([] as MonthRow[]),
+        : Promise.resolve([] as AbsenceDayRow[]),
     ]);
 
     const leaveTotals = leaveTotalsRows[0];
     const absenceTotals = absenceTotalsRows[0];
-    const leaveDays = this.number(leaveTotals?.leaveDays);
-    const absenceDays = this.number(absenceTotals?.absenceDays);
     const holidayDates = new Set(holidays.map((holiday) => holiday.date));
+    const leaveMetrics = this.buildLeaveDayMetrics(leaveDayRows, startDate, endDate, holidayDates);
+    const absenceMetrics = this.buildAbsenceDayMetrics(absenceDayRows, startDate, endDate, holidayDates);
+    const unavailableWorking = this.combineUnavailableWorkingDays(
+      includeLeave ? leaveMetrics : this.emptyDayMetrics(),
+      includeAbsence ? absenceMetrics : this.emptyDayMetrics(),
+    );
+    const leaveDays = includeLeave ? leaveMetrics.total : 0;
+    const absenceDays = includeAbsence ? absenceMetrics.total : 0;
     const capacityByService = new Map<number, number>();
     const employeesByService = new Map<number, number>();
 
@@ -326,8 +343,9 @@ export class ReportsService {
       const serviceId = this.number(service.id);
       const leave = leaveByService.get(serviceId);
       const absence = absenceByService.get(serviceId);
-      const serviceLeaveDays = this.number(leave?.days);
-      const serviceAbsenceDays = this.number(absence?.days);
+      const serviceLeaveDays = leaveMetrics.byService.get(serviceId) ?? 0;
+      const serviceAbsenceDays = absenceMetrics.byService.get(serviceId) ?? 0;
+      const serviceUnavailableWorkingDays = unavailableWorking.byService.get(serviceId) ?? 0;
       const capacity = capacityByService.get(serviceId) ?? 0;
 
       return {
@@ -336,7 +354,7 @@ export class ReportsService {
         activeEmployees: employeesByService.get(serviceId) ?? 0,
         presenceRate: this.presenceRate(
           capacity,
-          serviceLeaveDays + serviceAbsenceDays,
+          serviceUnavailableWorkingDays,
         ),
         leaveRequests: this.number(leave?.total),
         validatedRequests: this.number(leave?.validated),
@@ -346,26 +364,28 @@ export class ReportsService {
         leaveDays: serviceLeaveDays,
         absenceDays: serviceAbsenceDays,
       };
-    });
+    }).filter((row) => row.activeEmployees > 0);
 
-    const byLeaveType = [...leaveTypeRows, ...absenceTypeRows]
-      .map((row) => ({
-        label: row.label,
-        category: row.category,
-        total: this.number(row.total),
-      }))
-      .sort((left, right) => right.total - left.total || left.label.localeCompare(right.label));
+    // Les graphiques utilisent des jours réellement compris dans la période
+    // sélectionnée. Une demande qui chevauche deux mois est donc ventilée
+    // entre ces deux mois au lieu d'être entièrement affectée au mois de départ.
+    const byLeaveType = [
+      ...[...leaveMetrics.byType.entries()].map(([label, total]) => ({
+        label,
+        category: 'DEMANDE_CONGE',
+        total: this.round(total),
+      })),
+      ...[...absenceMetrics.byType.entries()].map(([label, total]) => ({
+        label,
+        category: 'DECLARATION_ABSENCE',
+        total: this.round(total),
+      })),
+    ].sort((left, right) => right.total - left.total || left.label.localeCompare(right.label, 'fr'));
 
-    const leaveMonths = new Map(
-      leaveMonthRows.map((row) => [row.monthKey, this.number(row.total)]),
-    );
-    const absenceMonths = new Map(
-      absenceMonthRows.map((row) => [row.monthKey, this.number(row.total)]),
-    );
     const byMonth = this.monthKeysBetween(startDate, endDate).map((monthKey) => ({
       monthKey,
-      leaveRequests: leaveMonths.get(monthKey) ?? 0,
-      absenceDeclarations: absenceMonths.get(monthKey) ?? 0,
+      leaveDays: this.round(leaveMetrics.byMonth.get(monthKey) ?? 0),
+      absenceDays: this.round(absenceMetrics.byMonth.get(monthKey) ?? 0),
     }));
 
     const processedRequests =
@@ -377,6 +397,8 @@ export class ReportsService {
       generatedAt: new Date(),
       filters: {
         serviceId: query.serviceId ?? null,
+        serviceScope: query.serviceScope ?? null,
+        leaveTypeId: query.leaveTypeId ?? null,
         role: query.role ?? null,
         dataType,
       },
@@ -386,7 +408,7 @@ export class ReportsService {
         activeEmployees: users.length,
         presenceRate: this.presenceRate(
           totalCapacity,
-          leaveDays + absenceDays,
+          unavailableWorking.total,
         ),
         leaveRequests: this.number(leaveTotals?.leaveRequests),
         validatedRequests: this.number(leaveTotals?.validatedRequests),
@@ -421,6 +443,8 @@ export class ReportsService {
         startDate,
         endDate,
         serviceId: query.serviceId ?? null,
+        serviceScope: query.serviceScope ?? null,
+        leaveTypeId: query.leaveTypeId ?? null,
         role: query.role ?? null,
         dataType,
       },
@@ -458,12 +482,14 @@ export class ReportsService {
     sql: string;
     params: Array<string | number>;
   } {
-    const conditions = ["u.is_active = 1", "u.role <> 'ADMIN'"];
+    const conditions = ["u.is_active = 1", "u.role NOT IN ('ADMIN','RH','DIRECTEUR')"];
     const params: Array<string | number> = [];
 
     if (query.serviceId) {
       conditions.push('u.service_id = ?');
       params.push(query.serviceId);
+    } else if (query.serviceScope === 'EXTERNE') {
+      conditions.push("u.service_id IN (SELECT id FROM services WHERE service_type = 'EXTERNE')");
     }
 
     if (query.role) {
@@ -475,6 +501,250 @@ export class ReportsService {
       sql: conditions.join(' AND '),
       params,
     };
+  }
+
+  private buildLeaveDayMetrics(
+    rows: LeaveDayRow[],
+    startDate: string,
+    endDate: string,
+    holidayDates: Set<string>,
+  ): DayMetrics {
+    const metrics = this.emptyDayMetrics();
+
+    for (const row of rows) {
+      if (row.status !== 'VALIDEE') continue;
+      const serviceId = this.number(row.serviceId);
+      const daily = this.leaveDailyValues(row, holidayDates);
+      const workingDaily = this.workingDailyValues(row, holidayDates);
+
+      for (const [date, days] of daily) {
+        if (date < startDate || date > endDate || days <= 0) continue;
+        metrics.total += days;
+        metrics.byService.set(serviceId, (metrics.byService.get(serviceId) ?? 0) + days);
+        metrics.byType.set(row.leaveTypeName, (metrics.byType.get(row.leaveTypeName) ?? 0) + days);
+        const monthKey = date.slice(0, 7);
+        metrics.byMonth.set(monthKey, (metrics.byMonth.get(monthKey) ?? 0) + days);
+      }
+
+      for (const [date, days] of workingDaily) {
+        if (date < startDate || date > endDate || days <= 0) continue;
+        metrics.workingTotal += days;
+        metrics.workingByService.set(
+          serviceId,
+          (metrics.workingByService.get(serviceId) ?? 0) + days,
+        );
+        this.addWorkingEmployeeDay(
+          metrics,
+          this.number(row.employeeId),
+          serviceId,
+          date,
+          days,
+        );
+      }
+    }
+
+    return this.roundDayMetrics(metrics);
+  }
+
+  private buildAbsenceDayMetrics(
+    rows: AbsenceDayRow[],
+    startDate: string,
+    endDate: string,
+    holidayDates: Set<string>,
+  ): DayMetrics {
+    const metrics = this.emptyDayMetrics();
+
+    for (const row of rows) {
+      if (row.status !== 'ENREGISTREE') continue;
+      const serviceId = this.number(row.serviceId);
+      const daily = this.absenceDailyValues(row, holidayDates);
+
+      for (const [date, days] of daily) {
+        if (date < startDate || date > endDate || days <= 0) continue;
+        metrics.total += days;
+        metrics.workingTotal += days;
+        metrics.byService.set(serviceId, (metrics.byService.get(serviceId) ?? 0) + days);
+        metrics.workingByService.set(
+          serviceId,
+          (metrics.workingByService.get(serviceId) ?? 0) + days,
+        );
+        this.addWorkingEmployeeDay(
+          metrics,
+          this.number(row.employeeId),
+          serviceId,
+          date,
+          days,
+        );
+        metrics.byType.set(row.leaveTypeName, (metrics.byType.get(row.leaveTypeName) ?? 0) + days);
+        const monthKey = date.slice(0, 7);
+        metrics.byMonth.set(monthKey, (metrics.byMonth.get(monthKey) ?? 0) + days);
+      }
+    }
+
+    return this.roundDayMetrics(metrics);
+  }
+
+  private leaveDailyValues(
+    row: LeaveDayRow,
+    holidayDates: Set<string>,
+  ): Map<string, number> {
+    const values = new Map<string, number>();
+    const start = this.utcDate(row.startDate);
+    const end = this.utcDate(row.endDate);
+    const startPeriod = row.startPeriod ?? 'MATIN';
+    const endPeriod = row.endPeriod ?? 'APRES_MIDI';
+    const current = new Date(start);
+
+    while (current.getTime() <= end.getTime()) {
+      const date = this.dateKey(current);
+      const isSunday = current.getUTCDay() === 0;
+      if (!isSunday && !holidayDates.has(date)) {
+        let value = 1;
+        if (date === row.startDate && startPeriod === 'APRES_MIDI') value -= 0.5;
+        if (date === row.endDate && endPeriod === 'MATIN') value -= 0.5;
+        if (value > 0) values.set(date, value);
+      }
+      current.setUTCDate(current.getUTCDate() + 1);
+    }
+
+    // Règle GMES : une fin le vendredi après-midi décompte aussi le samedi.
+    if (end.getUTCDay() === 5 && endPeriod === 'APRES_MIDI') {
+      const saturday = new Date(end);
+      saturday.setUTCDate(saturday.getUTCDate() + 1);
+      const saturdayKey = this.dateKey(saturday);
+      if (!holidayDates.has(saturdayKey)) values.set(saturdayKey, 1);
+    }
+
+    return values;
+  }
+
+  private workingDailyValues(
+    row: Pick<LeaveDayRow, 'startDate' | 'endDate' | 'startPeriod' | 'endPeriod'>,
+    holidayDates: Set<string>,
+  ): Map<string, number> {
+    const values = new Map<string, number>();
+    const start = this.utcDate(row.startDate);
+    const end = this.utcDate(row.endDate);
+    const startPeriod = row.startPeriod ?? 'MATIN';
+    const endPeriod = row.endPeriod ?? 'APRES_MIDI';
+    const current = new Date(start);
+
+    while (current.getTime() <= end.getTime()) {
+      const date = this.dateKey(current);
+      const weekday = current.getUTCDay();
+      if (weekday !== 0 && weekday !== 6 && !holidayDates.has(date)) {
+        let value = 1;
+        if (date === row.startDate && startPeriod === 'APRES_MIDI') value -= 0.5;
+        if (date === row.endDate && endPeriod === 'MATIN') value -= 0.5;
+        if (value > 0) values.set(date, value);
+      }
+      current.setUTCDate(current.getUTCDate() + 1);
+    }
+
+    return values;
+  }
+
+  private absenceDailyValues(
+    row: AbsenceDayRow,
+    holidayDates: Set<string>,
+  ): Map<string, number> {
+    if (row.durationHours !== null && row.startDate === row.endDate) {
+      const date = this.utcDate(row.startDate);
+      const weekday = date.getUTCDay();
+      const key = this.dateKey(date);
+      if (weekday === 0 || weekday === 6 || holidayDates.has(key)) return new Map();
+      const hours = this.number(row.durationHours);
+      return hours > 0 ? new Map([[key, this.round(hours / 7)]]) : new Map();
+    }
+
+    return this.workingDailyValues(row, holidayDates);
+  }
+
+  private addWorkingEmployeeDay(
+    metrics: DayMetrics,
+    employeeId: number,
+    serviceId: number,
+    date: string,
+    days: number,
+  ): void {
+    const key = `${employeeId}:${date}`;
+    const previous = metrics.workingByEmployeeDate.get(key)?.days ?? 0;
+    metrics.workingByEmployeeDate.set(key, {
+      serviceId,
+      days: Math.min(1, this.round(previous + days)),
+    });
+  }
+
+  private combineUnavailableWorkingDays(
+    leaveMetrics: DayMetrics,
+    absenceMetrics: DayMetrics,
+  ): { total: number; byService: Map<number, number> } {
+    const combined = new Map<string, { serviceId: number; days: number }>();
+
+    for (const source of [
+      leaveMetrics.workingByEmployeeDate,
+      absenceMetrics.workingByEmployeeDate,
+    ]) {
+      for (const [key, entry] of source.entries()) {
+        const previous = combined.get(key)?.days ?? 0;
+        combined.set(key, {
+          serviceId: entry.serviceId,
+          days: Math.min(1, this.round(previous + entry.days)),
+        });
+      }
+    }
+
+    const byService = new Map<number, number>();
+    let total = 0;
+    for (const entry of combined.values()) {
+      total += entry.days;
+      byService.set(
+        entry.serviceId,
+        (byService.get(entry.serviceId) ?? 0) + entry.days,
+      );
+    }
+
+    for (const [serviceId, days] of byService.entries()) {
+      byService.set(serviceId, this.round(days));
+    }
+
+    return { total: this.round(total), byService };
+  }
+
+  private emptyDayMetrics(): DayMetrics {
+    return {
+      total: 0,
+      workingTotal: 0,
+      byService: new Map<number, number>(),
+      workingByService: new Map<number, number>(),
+      workingByEmployeeDate: new Map<string, { serviceId: number; days: number }>(),
+      byType: new Map<string, number>(),
+      byMonth: new Map<string, number>(),
+    };
+  }
+
+  private roundDayMetrics(metrics: DayMetrics): DayMetrics {
+    metrics.total = this.round(metrics.total);
+    metrics.workingTotal = this.round(metrics.workingTotal);
+
+    for (const [key, value] of metrics.byService.entries()) {
+      metrics.byService.set(key, this.round(value));
+    }
+    for (const [key, value] of metrics.workingByService.entries()) {
+      metrics.workingByService.set(key, this.round(value));
+    }
+    for (const [key, value] of metrics.byType.entries()) {
+      metrics.byType.set(key, this.round(value));
+    }
+    for (const [key, value] of metrics.byMonth.entries()) {
+      metrics.byMonth.set(key, this.round(value));
+    }
+
+    return metrics;
+  }
+
+  private round(value: number): number {
+    return Math.round((value + Number.EPSILON) * 100) / 100;
   }
 
   private businessDaysForUser(

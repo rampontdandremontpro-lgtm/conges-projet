@@ -1,6 +1,8 @@
 import { Type } from 'class-transformer';
 import {
+  IsBoolean,
   IsNumber,
+  IsOptional,
   IsString,
   Length,
   Max,
@@ -21,4 +23,8 @@ export class CorrectLeaveBalanceDto {
   @IsString()
   @Length(3, 1000)
   reason!: string;
+
+  @IsOptional()
+  @IsBoolean()
+  notifyEmployee?: boolean;
 }

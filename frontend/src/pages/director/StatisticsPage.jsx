@@ -4,6 +4,7 @@ import { Icon } from '@/components/ui/Icon'
 import {
   getDirectorStatistics,
   getDirectorStatisticsServices,
+  getDirectorStatisticsLeaveTypes,
 } from '@/services/director/directorStatistics'
 
 import '@/styles/director/statistics.css'
@@ -20,15 +21,8 @@ const ROLE_OPTIONS = [
   { value: 'all', label: 'Tous les rôles' },
   { value: 'COLLABORATEUR', label: 'Collaborateur' },
   { value: 'RESPONSABLE_SERVICE', label: 'Responsable de service' },
-  { value: 'RH', label: 'RH' },
-  { value: 'DIRECTEUR', label: 'Directeur' },
 ]
 
-const DATA_TYPE_OPTIONS = [
-  { value: 'ALL', label: 'Congés et absences' },
-  { value: 'LEAVE', label: 'Congés' },
-  { value: 'ABSENCE', label: 'Absences' },
-]
 
 const DONUT_COLORS = ['#2f86ef', '#45b8e8', '#10b981', '#f97316', '#ef6c78', '#8f7ee7']
 
@@ -106,7 +100,7 @@ function LineChart({ rows, dataType }) {
   const bottom = 42
   const plotWidth = width - left - right
   const plotHeight = height - top - bottom
-  const values = rows.flatMap((row) => [row.leaveRequests ?? 0, row.absenceDeclarations ?? 0])
+  const values = rows.flatMap((row) => [row.leaveDays ?? 0, row.absenceDays ?? 0])
   const maxValue = Math.max(1, ...values)
   const stepX = rows.length > 1 ? plotWidth / (rows.length - 1) : plotWidth
 
@@ -141,13 +135,13 @@ function LineChart({ rows, dataType }) {
 
         {dataType !== 'ABSENCE' && (
           <>
-            <polyline className="director-line-chart__line director-line-chart__line--leave" points={pointString('leaveRequests')} />
+            <polyline className="director-line-chart__line director-line-chart__line--leave" points={pointString('leaveDays')} />
             {rows.map((row, index) => {
               const x = left + (rows.length === 1 ? plotWidth / 2 : index * stepX)
-              const y = top + plotHeight - ((Number(row.leaveRequests ?? 0) / maxValue) * plotHeight)
+              const y = top + plotHeight - ((Number(row.leaveDays ?? 0) / maxValue) * plotHeight)
               return (
                 <g key={`leave-${row.monthKey}`}>
-                  <title>{`${monthLabel(row.monthKey)} : ${row.leaveRequests ?? 0} congé(s)`}</title>
+                  <title>{`${monthLabel(row.monthKey)} : ${formatNumber(row.leaveDays ?? 0)} jour(s) de congé`}</title>
                   <circle
                     className="director-line-chart__dot director-line-chart__dot--leave"
                     cx={x}
@@ -163,13 +157,13 @@ function LineChart({ rows, dataType }) {
 
         {dataType !== 'LEAVE' && (
           <>
-            <polyline className="director-line-chart__line director-line-chart__line--absence" points={pointString('absenceDeclarations')} />
+            <polyline className="director-line-chart__line director-line-chart__line--absence" points={pointString('absenceDays')} />
             {rows.map((row, index) => {
               const x = left + (rows.length === 1 ? plotWidth / 2 : index * stepX)
-              const y = top + plotHeight - ((Number(row.absenceDeclarations ?? 0) / maxValue) * plotHeight)
+              const y = top + plotHeight - ((Number(row.absenceDays ?? 0) / maxValue) * plotHeight)
               return (
                 <g key={`absence-${row.monthKey}`}>
-                  <title>{`${monthLabel(row.monthKey)} : ${row.absenceDeclarations ?? 0} absence(s)`}</title>
+                  <title>{`${monthLabel(row.monthKey)} : ${formatNumber(row.absenceDays ?? 0)} jour(s) d’absence`}</title>
                   <circle
                     className="director-line-chart__dot director-line-chart__dot--absence"
                     cx={x}
@@ -218,7 +212,7 @@ function DonutChart({ rows }) {
         <div className="director-donut" style={{ background: total > 0 ? `conic-gradient(${segments.join(', ')})` : '#edf3f9' }}>
           <div className="director-donut__center">
             <strong>{formatNumber(total, 0)}</strong>
-            <span>dossiers</span>
+            <span>jours</span>
           </div>
         </div>
       </div>
@@ -273,6 +267,7 @@ function ServiceBars({ rows }) {
 export function DirectorStatisticsPage({
   getStatistics = getDirectorStatistics,
   getStatisticsServices = getDirectorStatisticsServices,
+  getStatisticsLeaveTypes = getDirectorStatisticsLeaveTypes,
 } = {}) {
   const defaultPeriod = resolvePresetPeriod('year')
   const [periodPreset, setPeriodPreset] = useState('year')
@@ -280,9 +275,10 @@ export function DirectorStatisticsPage({
   const [customEndDate, setCustomEndDate] = useState(defaultPeriod.endDate)
   const [serviceFilter, setServiceFilter] = useState('all')
   const [roleFilter, setRoleFilter] = useState('all')
-  const [dataType, setDataType] = useState('ALL')
+  const [typeFilter, setTypeFilter] = useState('ALL')
   const [serviceScope, setServiceScope] = useState('INTERNE')
   const [services, setServices] = useState([])
+  const [leaveTypes, setLeaveTypes] = useState([])
   const [state, setState] = useState({ loading: true, error: false, data: null })
 
   const period = useMemo(() => {
@@ -295,10 +291,11 @@ export function DirectorStatisticsPage({
   const params = useMemo(() => ({
     startDate: period.startDate,
     endDate: period.endDate,
-    ...(serviceFilter !== 'all' ? { serviceId: Number(serviceFilter) } : {}),
+    ...(serviceFilter === 'external' ? { serviceScope: 'EXTERNE' } : serviceFilter !== 'all' ? { serviceId: Number(serviceFilter) } : {}),
     ...(roleFilter !== 'all' ? { role: roleFilter } : {}),
-    dataType,
-  }), [dataType, period.endDate, period.startDate, roleFilter, serviceFilter])
+    ...(typeFilter.startsWith('leave:') ? { leaveTypeId: Number(typeFilter.slice(6)), dataType: 'LEAVE' } : {}),
+    ...(typeFilter === 'ABSENCE' ? { dataType: 'ABSENCE' } : typeFilter === 'ALL' ? { dataType: 'ALL' } : {}),
+  }), [period.endDate, period.startDate, roleFilter, serviceFilter, typeFilter])
 
   const load = useCallback(async () => {
     if (!period.startDate || !period.endDate || period.startDate > period.endDate) return
@@ -318,6 +315,13 @@ export function DirectorStatisticsPage({
       .catch(() => setServices([]))
   }, [getStatisticsServices])
 
+
+  useEffect(() => {
+    getStatisticsLeaveTypes()
+      .then((result) => setLeaveTypes(Array.isArray(result) ? result : []))
+      .catch(() => setLeaveTypes([]))
+  }, [getStatisticsLeaveTypes])
+
   useEffect(() => {
     load()
   }, [load])
@@ -331,6 +335,10 @@ export function DirectorStatisticsPage({
   useEffect(() => {
     if (serviceFilter === 'all') return
 
+    if (serviceFilter === 'external') {
+      setServiceScope('EXTERNE')
+      return
+    }
     const selectedService = services.find((service) => String(service.id) === serviceFilter)
     if (!selectedService) return
 
@@ -341,6 +349,7 @@ export function DirectorStatisticsPage({
     )
   }, [serviceFilter, services])
 
+  const dataType = typeFilter === 'ABSENCE' ? 'ABSENCE' : typeFilter.startsWith('leave:') ? 'LEAVE' : 'ALL'
   const totals = state.data?.totals ?? {}
   const byService = state.data?.byService ?? []
   const byLeaveType = state.data?.byLeaveType ?? []
@@ -368,7 +377,7 @@ export function DirectorStatisticsPage({
   }
 
   const periodInvalid = periodPreset === 'custom' && (!customStartDate || !customEndDate || customStartDate > customEndDate)
-  const resultsKey = `${periodPreset}-${customStartDate}-${customEndDate}-${serviceFilter}-${roleFilter}-${dataType}`
+  const resultsKey = `${periodPreset}-${customStartDate}-${customEndDate}-${serviceFilter}-${roleFilter}-${typeFilter}`
 
   return (
     <div className="director-statistics-page">
@@ -398,9 +407,11 @@ export function DirectorStatisticsPage({
           <select value={serviceFilter} onChange={(event) => setServiceFilter(event.target.value)}>
             <option value="all">Tous les services</option>
             {services
+              .filter((service) => service.serviceType !== 'EXTERNE' && !service.externalCompanyName)
               .slice()
               .sort((left, right) => serviceLabel(left).localeCompare(serviceLabel(right), 'fr'))
               .map((service) => <option key={service.id} value={String(service.id)}>{serviceLabel(service)}</option>)}
+            {services.some((service) => service.serviceType === 'EXTERNE' || service.externalCompanyName) && <option value="external">Mis à disposition</option>}
           </select>
         </label>
 
@@ -413,8 +424,12 @@ export function DirectorStatisticsPage({
 
         <label className="director-stat-filter director-stat-filter--select">
           <span>Type</span>
-          <select value={dataType} onChange={(event) => setDataType(event.target.value)}>
-            {DATA_TYPE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+          <select value={typeFilter} onChange={(event) => setTypeFilter(event.target.value)}>
+            <option value="ALL">Tous les types</option>
+            <option value="ABSENCE">Absences</option>
+            {leaveTypes.slice().sort((a, b) => String(a.name).localeCompare(String(b.name), 'fr')).map((type) => (
+              <option key={type.id} value={`leave:${type.id}`}>{type.name}</option>
+            ))}
           </select>
         </label>
       </section>
@@ -439,13 +454,13 @@ export function DirectorStatisticsPage({
       ) : (
         <div className="director-stat-results" key={resultsKey}>
           <div className="director-stat-kpis">
-            <StatCard icon="users" tone="green" delay={0} value={`${formatNumber(totals.presenceRate)} %`} label="Taux de présence" detail="sur les jours ouvrés disponibles" />
+            <StatCard icon="users" tone="green" delay={0} value={`${formatNumber(totals.presenceRate)} %`} label="Taux de présence" detail="" />
             <StatCard icon="calendar" tone="blue" delay={70} value={`${formatNumber(totals.leaveDays)} j`} label="Jours de congés pris" detail={`${totals.validatedRequests ?? 0} demande${Number(totals.validatedRequests ?? 0) > 1 ? 's' : ''} validée${Number(totals.validatedRequests ?? 0) > 1 ? 's' : ''}`} />
             <StatCard icon="alert" tone="red" delay={140} value={`${formatNumber(totals.absenceDays)} j`} label="Jours d’absence" detail={`${totals.recordedAbsences ?? 0} absence${Number(totals.recordedAbsences ?? 0) > 1 ? 's' : ''} enregistrée${Number(totals.recordedAbsences ?? 0) > 1 ? 's' : ''}`} />
             {dataType === 'ABSENCE' ? (
               <StatCard icon="check" tone="orange" delay={210} value={formatNumber(totals.recordedAbsences, 0)} label="Absences enregistrées" detail={`${totals.absenceDeclarations ?? 0} déclaration${Number(totals.absenceDeclarations ?? 0) > 1 ? 's' : ''}`} />
             ) : (
-              <StatCard icon="check" tone="orange" delay={210} value={formatNumber(totals.processedRequests, 0)} label="Demandes traitées" detail={`${totals.pendingRequests ?? 0} encore en attente`} />
+              <StatCard icon="check" tone="orange" delay={210} value={formatNumber(totals.processedRequests, 0)} label="Demandes traitées" detail={`${totals.pendingRequests ?? 0} en attente`} />
             )}
           </div>
 
@@ -456,7 +471,7 @@ export function DirectorStatisticsPage({
                   <h2>Présence par service</h2>
                   <p>Taux de présence sur la période sélectionnée</p>
                 </div>
-                <div className="director-stat-service-toggle" role="group" aria-label="Type de services">
+                {serviceFilter === 'all' && <div className="director-stat-service-toggle" role="group" aria-label="Type de services">
                   <button
                     type="button"
                     className={serviceScope === 'INTERNE' ? 'is-active' : ''}
@@ -473,7 +488,7 @@ export function DirectorStatisticsPage({
                     <Icon name="users" size={15} />
                     Service externe
                   </button>
-                </div>
+                </div>}
               </header>
               <ServiceBars rows={visibleServiceRows} />
             </section>
@@ -482,7 +497,7 @@ export function DirectorStatisticsPage({
               <header className="director-stat-card__header">
                 <div>
                   <h2>Répartition par type</h2>
-                  <p>Congés et absences enregistrés</p>
+                  <p>Nombre de jours par type</p>
                 </div>
               </header>
               <DonutChart rows={byLeaveType} />

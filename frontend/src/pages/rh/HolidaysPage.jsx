@@ -6,6 +6,7 @@ import {
   disableRhClosure,
   getRhHolidays,
   updateRhClosure,
+  updateRhHolidayWorkStatus,
 } from '@/services/rh/rhHolidays'
 import '@/styles/rh/holidays.css'
 
@@ -101,6 +102,7 @@ export function RhHolidaysPage() {
   const [filter, setFilter] = useState('all')
   const [state, setState] = useState({ loading: true, error: false, holidays: [] })
   const [drawer, setDrawer] = useState(null)
+  const [officialChomed, setOfficialChomed] = useState(true)
   const [form, setForm] = useState({ name: '', date: martiniqueToday() })
   const [saving, setSaving] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(null)
@@ -176,6 +178,7 @@ export function RhHolidaysPage() {
       setDrawer({ mode: 'edit', holiday })
       return
     }
+    setOfficialChomed(holiday.deductible === false)
     setDrawer({ mode: 'official', holiday })
   }
 
@@ -203,6 +206,25 @@ export function RhHolidaysPage() {
       await load({ silent: true })
     } catch (error) {
       setFeedback(error?.response?.data?.message || 'Impossible d’enregistrer la fermeture.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const saveOfficialWorkStatus = async () => {
+    if (!drawer?.holiday) return
+    setSaving(true)
+    try {
+      await updateRhHolidayWorkStatus({
+        date: drawer.holiday.date,
+        holidayType: drawer.holiday.holidayType,
+        isChomed: officialChomed,
+      })
+      setFeedback('Caractère chômé du jour férié mis à jour.')
+      setDrawer(null)
+      await load({ silent: true })
+    } catch (error) {
+      setFeedback(error?.response?.data?.message || 'Impossible de modifier le caractère chômé de ce jour férié.')
     } finally {
       setSaving(false)
     }
@@ -292,14 +314,14 @@ export function RhHolidaysPage() {
           </div>
 
           <div className="rh-holidays-legend">
-            <span><i className="is-official" />Jour férié officiel</span>
+            <span><i className="is-official" />Jour férié</span>
             <span><i className="is-closure" />Fermeture GMES</span>
             <span><i className="is-today" />Aujourd’hui</span>
           </div>
 
           <div className="rh-holidays-source">
             <Icon name="shield" size={15} />
-            <span>Référence Martinique centralisée côté serveur, avec repli légal automatique en cas d’indisponibilité de la source officielle.</span>
+            <span>Jours fériés de Martinique utilisés pour les calculs de congés et de présence.</span>
           </div>
         </section>
 
@@ -360,7 +382,7 @@ export function RhHolidaysPage() {
                     <span className="rh-holidays-name">{holiday.name}</span>
                     <HolidayBadge holiday={holiday} />
                     <span className={`rh-holidays-status${holiday.holidayType === 'FERMETURE_GMES' ? ' is-active' : ' is-protected'}`}>
-                      {holiday.holidayType === 'FERMETURE_GMES' ? 'Active' : 'Officiel'}
+                      {holiday.holidayType === 'FERMETURE_GMES' ? 'Active' : (holiday.deductible === false ? 'Chômé' : 'Travaillé')}
                     </span>
                     <span className="rh-holidays-actions">
                       {holiday.holidayType === 'FERMETURE_GMES' ? (
@@ -375,7 +397,7 @@ export function RhHolidaysPage() {
                           <Icon name="trash" size={15} />
                         </button>
                       ) : (
-                        <span title="Jour officiel protégé"><Icon name="shield" size={15} /></span>
+                        <span title="Paramétrer le caractère chômé"><Icon name="edit" size={15} /></span>
                       )}
                     </span>
                   </div>
@@ -391,9 +413,9 @@ export function RhHolidaysPage() {
           <aside className="rh-holidays-drawer" role="dialog" aria-modal="true" aria-label={drawer.mode === 'create' ? 'Ajouter une fermeture' : 'Détail du jour'}>
             <div className="rh-holidays-drawer__head">
               <div>
-                <small>{drawer.mode === 'official' ? 'JOUR FÉRIÉ OFFICIEL' : drawer.mode === 'edit' ? 'FERMETURE GMES' : 'NOUVELLE FERMETURE'}</small>
+                <small>{drawer.mode === 'official' ? 'JOUR FÉRIÉ' : drawer.mode === 'edit' ? 'FERMETURE GMES' : 'NOUVELLE FERMETURE'}</small>
                 <h2>{drawer.mode === 'create' ? 'Ajouter une fermeture' : drawer.holiday?.name}</h2>
-                <p>{drawer.mode === 'official' ? 'Ce jour provient du calendrier officiel Martinique et ne peut pas être modifié ici.' : 'Les fermetures GMES sont exclues automatiquement du décompte des congés.'}</p>
+                <p>{drawer.mode === 'official' ? 'Le jour reste férié ; seul son caractère chômé dans l’organisation est paramétrable.' : 'Les fermetures GMES sont exclues automatiquement du décompte des congés.'}</p>
               </div>
               <button type="button" className="rh-holidays-close" onClick={closeDrawer} aria-label="Fermer">×</button>
             </div>
@@ -403,10 +425,25 @@ export function RhHolidaysPage() {
                 <section className="rh-holidays-detail-card">
                   <div><small>Date</small><strong>{formatDate(drawer.holiday.date)}</strong></div>
                   <div><small>Type</small><HolidayBadge holiday={drawer.holiday} /></div>
-                  <div><small>Statut</small><span className="rh-holidays-status is-protected">Officiel · protégé</span></div>
-                  <div><small>Source</small><strong>{drawer.holiday.source || 'Calendrier officiel Martinique'}</strong></div>
+                  <div><small>État</small><span className="rh-holidays-status is-protected">{officialChomed ? 'Chômé' : 'Travaillé'}</span></div>
+                  <div><small>Source</small><strong>{drawer.holiday.source || 'Calendrier Martinique'}</strong></div>
                 </section>
-                <div className="rh-holidays-protected-note"><Icon name="shield" size={17} />Les jours fériés officiels sont gérés automatiquement et restent en lecture seule dans cet écran.</div>
+                <section className="rh-holidays-form-card">
+                  <label>
+                    <span>Jour chômé dans l’organisation</span>
+                    <select value={officialChomed ? 'yes' : 'no'} onChange={(event) => setOfficialChomed(event.target.value === 'yes')}>
+                      <option value="yes">Oui</option>
+                      <option value="no">Non</option>
+                    </select>
+                    <small>Oui : journée non travaillée dans les calculs. Non : journée considérée comme travaillée.</small>
+                  </label>
+                </section>
+                <div className="rh-holidays-form-actions">
+                  <button type="button" className="rh-holidays-secondary" onClick={closeDrawer}>Annuler</button>
+                  <button type="button" className="rh-holidays-primary" onClick={saveOfficialWorkStatus} disabled={saving}>
+                    {saving ? 'Enregistrement…' : 'Enregistrer'}
+                  </button>
+                </div>
               </div>
             ) : (
               <form className="rh-holidays-form" onSubmit={submitClosure}>

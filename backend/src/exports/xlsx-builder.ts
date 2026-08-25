@@ -12,18 +12,25 @@ export function buildXlsx(
 ): Buffer {
   const safeSheetName = sheetName.replace(/[\\/*?:[\]]/g, ' ').slice(0, 31);
   const sheetRows = [
-    buildRow(headers.map((value) => ({ value, header: true })), 1),
+    buildRow(headers.map((value) => ({ value, header: true })), 1, true),
     ...rows.map((row, index) =>
       buildRow(
         headers.map((header) => ({ value: row[header], header: false })),
         index + 2,
+        false,
+        index % 2 === 1,
       ),
     ),
   ].join('');
   const lastColumn = columnName(Math.max(headers.length, 1));
   const columns = headers
     .map((header, index) => {
-      const width = Math.min(Math.max(header.length + 3, 12), 35);
+      const contentWidth = rows.reduce((max, row) => {
+        const raw = row[header];
+        const length = raw === null || raw === undefined ? 0 : String(raw).length;
+        return Math.max(max, length);
+      }, header.length);
+      const width = Math.min(Math.max(contentWidth + 3, 12), 38);
       return `<col min="${index + 1}" max="${index + 1}" width="${width}" customWidth="1"/>`;
     })
     .join('');
@@ -96,11 +103,11 @@ export function buildXlsx(
       data: Buffer.from(
         xml(`
           <styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
-            <fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts>
-            <fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills>
-            <borders count="1"><border/></borders>
+            <fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><color rgb="FFFFFFFF"/><sz val="11"/><name val="Calibri"/></font></fonts>
+            <fills count="4"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF2F6FB2"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFF4F8FC"/><bgColor indexed="64"/></patternFill></fill></fills>
+            <borders count="2"><border/><border><left style="thin"><color rgb="FFD7E0EA"/></left><right style="thin"><color rgb="FFD7E0EA"/></right><top style="thin"><color rgb="FFD7E0EA"/></top><bottom style="thin"><color rgb="FFD7E0EA"/></bottom></border></borders>
             <cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
-            <cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/></cellXfs>
+            <cellXfs count="3"><xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment vertical="center"/></xf><xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment vertical="center"/></xf><xf numFmtId="0" fontId="0" fillId="3" borderId="1" xfId="0" applyFill="1" applyBorder="1" applyAlignment="1"><alignment vertical="center"/></xf></cellXfs>
             <cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>
           </styleSheet>
         `),
@@ -117,11 +124,14 @@ export function buildXlsx(
 function buildRow(
   cells: Array<{ value: unknown; header: boolean }>,
   rowNumber: number,
+  headerRow = false,
+  alternate = false,
 ): string {
   const xmlCells = cells
-    .map((cell, index) => buildCell(cell.value, rowNumber, index + 1, cell.header))
+    .map((cell, index) => buildCell(cell.value, rowNumber, index + 1, cell.header, alternate))
     .join('');
-  return `<row r="${rowNumber}">${xmlCells}</row>`;
+  const height = headerRow ? 24 : 20;
+  return `<row r="${rowNumber}" ht="${height}" customHeight="1">${xmlCells}</row>`;
 }
 
 function buildCell(
@@ -129,9 +139,11 @@ function buildCell(
   rowNumber: number,
   columnNumber: number,
   header: boolean,
+  alternate: boolean,
 ): string {
   const reference = `${columnName(columnNumber)}${rowNumber}`;
-  const style = header ? ' s="1"' : '';
+  const styleId = header ? 1 : alternate ? 2 : 0;
+  const style = ` s="${styleId}"`;
 
   if (value === null || value === undefined || value === '') {
     return `<c r="${reference}"${style}/>`;
