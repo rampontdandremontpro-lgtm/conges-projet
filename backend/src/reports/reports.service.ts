@@ -71,6 +71,7 @@ interface AbsenceDayRow {
   endDate: string;
   startPeriod: 'MATIN' | 'APRES_MIDI' | null;
   endPeriod: 'MATIN' | 'APRES_MIDI' | null;
+  durationDays: string | number | null;
   durationHours: string | number | null;
   status: string;
 }
@@ -283,6 +284,7 @@ export class ReportsService {
                 ad.end_date AS endDate,
                 ad.start_period AS startPeriod,
                 ad.end_period AS endPeriod,
+                ad.duration_days AS durationDays,
                 ad.duration_hours AS durationHours,
                 ad.status
               FROM absence_declarations ad
@@ -557,13 +559,21 @@ export class ReportsService {
     for (const row of rows) {
       if (row.status !== 'ENREGISTREE') continue;
       const serviceId = this.number(row.serviceId);
-      const daily = this.absenceDailyValues(row, holidayDates);
 
-      for (const [date, days] of daily) {
+      const declaredDaily = this.absenceDailyValues(row);
+      for (const [date, days] of declaredDaily) {
         if (date < startDate || date > endDate || days <= 0) continue;
         metrics.total += days;
-        metrics.workingTotal += days;
         metrics.byService.set(serviceId, (metrics.byService.get(serviceId) ?? 0) + days);
+        metrics.byType.set(row.leaveTypeName, (metrics.byType.get(row.leaveTypeName) ?? 0) + days);
+        const monthKey = date.slice(0, 7);
+        metrics.byMonth.set(monthKey, (metrics.byMonth.get(monthKey) ?? 0) + days);
+      }
+
+      const workingDaily = this.absenceWorkingDailyValues(row, holidayDates);
+      for (const [date, days] of workingDaily) {
+        if (date < startDate || date > endDate || days <= 0) continue;
+        metrics.workingTotal += days;
         metrics.workingByService.set(
           serviceId,
           (metrics.workingByService.get(serviceId) ?? 0) + days,
@@ -575,9 +585,6 @@ export class ReportsService {
           date,
           days,
         );
-        metrics.byType.set(row.leaveTypeName, (metrics.byType.get(row.leaveTypeName) ?? 0) + days);
-        const monthKey = date.slice(0, 7);
-        metrics.byMonth.set(monthKey, (metrics.byMonth.get(monthKey) ?? 0) + days);
       }
     }
 
@@ -647,7 +654,45 @@ export class ReportsService {
     return values;
   }
 
-  private absenceDailyValues(
+  private absenceDailyValues(row: AbsenceDayRow): Map<string, number> {
+    const values = new Map<string, number>();
+    const startDate = this.sqlDate(row.startDate);
+    const endDate = this.sqlDate(row.endDate);
+
+    if (row.durationHours !== null && startDate === endDate) {
+      const hours = this.number(row.durationHours);
+      return hours > 0 ? new Map([[startDate, this.round(hours / 7)]]) : values;
+    }
+
+    const start = this.utcDate(startDate);
+    const end = this.utcDate(endDate);
+    const startPeriod = row.startPeriod ?? 'MATIN';
+    const endPeriod = row.endPeriod ?? 'APRES_MIDI';
+    const current = new Date(start);
+
+    while (current.getTime() <= end.getTime()) {
+      const date = this.dateKey(current);
+      let value = 1;
+      if (date === startDate && startPeriod === 'APRES_MIDI') value -= 0.5;
+      if (date === endDate && endPeriod === 'MATIN') value -= 0.5;
+      if (value > 0) values.set(date, value);
+      current.setUTCDate(current.getUTCDate() + 1);
+    }
+
+    if (row.durationDays !== null) {
+      const expected = this.number(row.durationDays);
+      const calculated = [...values.values()].reduce((sum, value) => sum + value, 0);
+      const difference = this.round(expected - calculated);
+      if (Math.abs(difference) > 0.001 && values.size > 0) {
+        const lastKey = [...values.keys()][values.size - 1];
+        values.set(lastKey, Math.max(0, this.round((values.get(lastKey) ?? 0) + difference)));
+      }
+    }
+
+    return values;
+  }
+
+  private absenceWorkingDailyValues(
     row: AbsenceDayRow,
     holidayDates: Set<string>,
   ): Map<string, number> {
@@ -657,10 +702,9 @@ export class ReportsService {
     if (row.durationHours !== null && startDate === endDate) {
       const date = this.utcDate(startDate);
       const weekday = date.getUTCDay();
-      const key = this.dateKey(date);
-      if (weekday === 0 || weekday === 6 || holidayDates.has(key)) return new Map();
+      if (weekday === 0 || weekday === 6 || holidayDates.has(startDate)) return new Map();
       const hours = this.number(row.durationHours);
-      return hours > 0 ? new Map([[key, this.round(hours / 7)]]) : new Map();
+      return hours > 0 ? new Map([[startDate, this.round(hours / 7)]]) : new Map();
     }
 
     return this.workingDailyValues(

@@ -65,6 +65,20 @@ function formatNumber(value, maximumFractionDigits = 1) {
   return new Intl.NumberFormat('fr-FR', { maximumFractionDigits }).format(Number(value ?? 0))
 }
 
+function resolveAxisScale(values) {
+  const rawMax = Math.max(1, ...values.map((value) => Number(value ?? 0)))
+  const targetIntervals = 4
+  const roughStep = rawMax / targetIntervals
+  const magnitude = 10 ** Math.floor(Math.log10(Math.max(roughStep, 1)))
+  const normalized = roughStep / magnitude
+  const niceFactor = normalized <= 1 ? 1 : normalized <= 2 ? 2 : normalized <= 5 ? 5 : 10
+  const step = Math.max(1, niceFactor * magnitude)
+  const max = Math.max(step, Math.ceil(rawMax / step) * step)
+  const ticks = []
+  for (let value = 0; value <= max + Number.EPSILON; value += step) ticks.push(value)
+  return { max, ticks }
+}
+
 function serviceLabel(service) {
   if (!service) return ''
   return service.externalCompanyName
@@ -101,18 +115,16 @@ function LineChart({ rows, dataType }) {
   const plotWidth = width - left - right
   const plotHeight = height - top - bottom
   const values = rows.flatMap((row) => [row.leaveDays ?? 0, row.absenceDays ?? 0])
-  const maxValue = Math.max(1, ...values)
+  const axis = resolveAxisScale(values)
   const stepX = rows.length > 1 ? plotWidth / (rows.length - 1) : plotWidth
 
   const pointString = (key) => rows
     .map((row, index) => {
       const x = left + (rows.length === 1 ? plotWidth / 2 : index * stepX)
-      const y = top + plotHeight - ((Number(row[key] ?? 0) / maxValue) * plotHeight)
+      const y = top + plotHeight - ((Number(row[key] ?? 0) / axis.max) * plotHeight)
       return `${x},${y}`
     })
     .join(' ')
-
-  const ticks = [0, 0.25, 0.5, 0.75, 1]
 
   if (rows.length === 0) {
     return <div className="director-stat-empty">Aucune donnée sur cette période.</div>
@@ -121,13 +133,13 @@ function LineChart({ rows, dataType }) {
   return (
     <div className="director-line-chart">
       <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Évolution des congés et absences">
-        {ticks.map((ratio) => {
-          const y = top + plotHeight - ratio * plotHeight
+        {axis.ticks.map((tick) => {
+          const y = top + plotHeight - (tick / axis.max) * plotHeight
           return (
-            <g key={ratio}>
+            <g key={tick}>
               <line className="director-line-chart__grid" x1={left} x2={width - right} y1={y} y2={y} />
               <text className="director-line-chart__axis" x={left - 10} y={y + 4} textAnchor="end">
-                {Math.round(maxValue * ratio)}
+                {formatNumber(tick)}
               </text>
             </g>
           )
@@ -138,7 +150,7 @@ function LineChart({ rows, dataType }) {
             <polyline className="director-line-chart__line director-line-chart__line--leave" points={pointString('leaveDays')} />
             {rows.map((row, index) => {
               const x = left + (rows.length === 1 ? plotWidth / 2 : index * stepX)
-              const y = top + plotHeight - ((Number(row.leaveDays ?? 0) / maxValue) * plotHeight)
+              const y = top + plotHeight - ((Number(row.leaveDays ?? 0) / axis.max) * plotHeight)
               return (
                 <g key={`leave-${row.monthKey}`}>
                   <title>{`${monthLabel(row.monthKey)} : ${formatNumber(row.leaveDays ?? 0)} jour(s) de congé`}</title>
@@ -160,7 +172,7 @@ function LineChart({ rows, dataType }) {
             <polyline className="director-line-chart__line director-line-chart__line--absence" points={pointString('absenceDays')} />
             {rows.map((row, index) => {
               const x = left + (rows.length === 1 ? plotWidth / 2 : index * stepX)
-              const y = top + plotHeight - ((Number(row.absenceDays ?? 0) / maxValue) * plotHeight)
+              const y = top + plotHeight - ((Number(row.absenceDays ?? 0) / axis.max) * plotHeight)
               return (
                 <g key={`absence-${row.monthKey}`}>
                   <title>{`${monthLabel(row.monthKey)} : ${formatNumber(row.absenceDays ?? 0)} jour(s) d’absence`}</title>

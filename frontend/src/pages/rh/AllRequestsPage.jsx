@@ -232,15 +232,19 @@ export function RhAllRequestsPage() {
     return [...values.entries()].sort((left, right) => left[1].localeCompare(right[1], 'fr'))
   }, [state.filterOptions.leaveTypes])
 
-  const counts = useMemo(() => ({
-    all: state.requests.length,
-    pending: state.requests.filter((request) => statusMatchesFilter(effectiveStatus(request), 'pending')).length,
-    approved: state.requests.filter((request) => statusMatchesFilter(effectiveStatus(request), 'approved')).length,
-    refused: state.requests.filter((request) => statusMatchesFilter(effectiveStatus(request), 'refused')).length,
-    cancelled: state.requests.filter((request) => statusMatchesFilter(effectiveStatus(request), 'cancelled')).length,
-  }), [state.requests])
+  const counts = useMemo(() => {
+    const requests = state.requests.filter((request) => request.employee?.role !== 'DIRECTEUR')
+    return {
+      all: requests.length,
+      pending: requests.filter((request) => statusMatchesFilter(effectiveStatus(request), 'pending')).length,
+      approved: requests.filter((request) => statusMatchesFilter(effectiveStatus(request), 'approved')).length,
+      refused: requests.filter((request) => statusMatchesFilter(effectiveStatus(request), 'refused')).length,
+      cancelled: requests.filter((request) => statusMatchesFilter(effectiveStatus(request), 'cancelled')).length,
+    }
+  }, [state.requests])
 
   const filteredRequests = useMemo(() => state.requests.filter((request) => {
+    if (request.employee?.role === 'DIRECTEUR') return false
     if (!statusMatchesFilter(effectiveStatus(request), statusFilter)) return false
     if (serviceFilter === 'external' && !externalServiceIds.has(String(request.service?.id))) return false
     if (serviceFilter !== 'all' && serviceFilter !== 'external' && String(request.service?.id) !== serviceFilter) return false

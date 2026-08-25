@@ -671,8 +671,8 @@ export class LeaveRequestsService {
       });
 
     if (authenticatedUser.role === UserRole.RH) {
-      query.andWhere('employee.role != :rhRole', {
-        rhRole: UserRole.RH,
+      query.andWhere('employee.role NOT IN (:...rhExcludedRoles)', {
+        rhExcludedRoles: [UserRole.RH, UserRole.DIRECTEUR],
       });
     }
 

@@ -2,10 +2,12 @@ import { useEffect, useMemo, useState } from 'react'
 
 import { Icon } from '@/components/ui/Icon'
 import { PageContainer } from '@/components/ui/PageContainer'
+import { PaginationBar } from '@/components/ui/PaginationBar'
 import { getRhHistoryLogs, getRhHistoryUsers } from '@/services/rh/rhHistory'
 import '@/styles/rh/history.css'
 
 const MARTINIQUE_TIME_ZONE = 'America/Martinique'
+const PAGE_SIZE = 8
 
 const ACTION_LABELS = {
   DEMANDE_VALIDEE: 'Validation de demande',
@@ -214,6 +216,7 @@ export function RhHistoryPage() {
   const [logs, setLogs] = useState([])
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(true)
+  const [page, setPage] = useState(1)
   const [filters, setFilters] = useState({ start: '', end: '', actor: '', collaborator: '', action: '' })
 
   useEffect(() => {
@@ -228,9 +231,18 @@ export function RhHistoryPage() {
     return () => { active = false }
   }, [])
 
-  const rhUsers = useMemo(() => users.filter((user) => user.role === 'RH').sort((a, b) => fullName(a).localeCompare(fullName(b), 'fr')), [users])
-  const collaborators = useMemo(() => users.filter((user) => !['ADMIN', 'DIRECTEUR'].includes(user.role)).sort((a, b) => fullName(a).localeCompare(fullName(b), 'fr')), [users])
-  const actionOptions = useMemo(() => [...new Set(logs.map((log) => actionLabel(log)))].sort((a, b) => a.localeCompare(b, 'fr')), [logs])
+  const rhUsers = useMemo(
+    () => users.filter((user) => user.role === 'RH').sort((a, b) => fullName(a).localeCompare(fullName(b), 'fr')),
+    [users],
+  )
+  const collaborators = useMemo(
+    () => users.filter((user) => !['ADMIN', 'DIRECTEUR'].includes(user.role)).sort((a, b) => fullName(a).localeCompare(fullName(b), 'fr')),
+    [users],
+  )
+  const actionOptions = useMemo(
+    () => [...new Set(logs.map((log) => actionLabel(log)))].sort((a, b) => a.localeCompare(b, 'fr')),
+    [logs],
+  )
   const usersById = useMemo(() => new Map(users.map((user) => [Number(user.id), user])), [users])
 
   const visible = useMemo(() => logs.filter((log) => {
@@ -243,30 +255,103 @@ export function RhHistoryPage() {
     return true
   }), [filters, logs])
 
+  useEffect(() => setPage(1), [filters])
+
+  const pageCount = Math.max(1, Math.ceil(visible.length / PAGE_SIZE))
+  const safePage = Math.min(page, pageCount)
+  const pageRows = visible.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE)
+
+  const resetFilters = () => {
+    setFilters({ start: '', end: '', actor: '', collaborator: '', action: '' })
+    setPage(1)
+  }
+
   return (
     <PageContainer className="rh-history-page">
       <section className="rh-history-card">
-        <div className="rh-history-filters">
-          <label><span>Du</span><input type="date" value={filters.start} onChange={(e) => setFilters((f) => ({ ...f, start: e.target.value }))} /></label>
-          <label><span>Au</span><input type="date" value={filters.end} onChange={(e) => setFilters((f) => ({ ...f, end: e.target.value }))} /></label>
-          <label><span>Utilisateur RH</span><select value={filters.actor} onChange={(e) => setFilters((f) => ({ ...f, actor: e.target.value }))}><option value="">Tous</option>{rhUsers.map((u) => <option key={u.id} value={u.id}>{fullName(u)}</option>)}</select></label>
-          <label><span>Collaborateur</span><select value={filters.collaborator} onChange={(e) => setFilters((f) => ({ ...f, collaborator: e.target.value }))}><option value="">Tous</option>{collaborators.map((u) => <option key={u.id} value={u.id}>{fullName(u)}</option>)}</select></label>
-          <label><span>Type d’action</span><select value={filters.action} onChange={(e) => setFilters((f) => ({ ...f, action: e.target.value }))}><option value="">Tous</option>{actionOptions.map((a) => <option key={a} value={a}>{a}</option>)}</select></label>
-          <button type="button" onClick={() => setFilters({ start: '', end: '', actor: '', collaborator: '', action: '' })}><Icon name="refresh" size={15} /> Réinitialiser</button>
+        <div className="rh-history-toolbar">
+          <div className="rh-history-filters">
+            <label>
+              <span>Du</span>
+              <input type="date" value={filters.start} onChange={(event) => setFilters((current) => ({ ...current, start: event.target.value }))} />
+            </label>
+            <label>
+              <span>Au</span>
+              <input type="date" value={filters.end} onChange={(event) => setFilters((current) => ({ ...current, end: event.target.value }))} />
+            </label>
+            <label>
+              <span>Utilisateur RH</span>
+              <select value={filters.actor} onChange={(event) => setFilters((current) => ({ ...current, actor: event.target.value }))}>
+                <option value="">Tous</option>
+                {rhUsers.map((user) => <option key={user.id} value={user.id}>{fullName(user)}</option>)}
+              </select>
+            </label>
+            <label>
+              <span>Collaborateur</span>
+              <select value={filters.collaborator} onChange={(event) => setFilters((current) => ({ ...current, collaborator: event.target.value }))}>
+                <option value="">Tous</option>
+                {collaborators.map((user) => <option key={user.id} value={user.id}>{fullName(user)}</option>)}
+              </select>
+            </label>
+            <label>
+              <span>Type d’action</span>
+              <select value={filters.action} onChange={(event) => setFilters((current) => ({ ...current, action: event.target.value }))}>
+                <option value="">Tous</option>
+                {actionOptions.map((action) => <option key={action} value={action}>{action}</option>)}
+              </select>
+            </label>
+            <button type="button" className="rh-history-reset" onClick={resetFilters}>
+              <Icon name="refresh" size={15} /> Réinitialiser
+            </button>
+          </div>
         </div>
 
         <div className="rh-history-table-wrap">
-          <table className="rh-history-table">
-            <thead><tr><th>Date et heure</th><th>Utilisateur RH</th><th>Collaborateur</th><th>Action</th><th>Élément</th><th>Ancienne valeur</th><th>Nouvelle valeur</th><th>Commentaire / motif</th></tr></thead>
-            <tbody>
-              {loading ? <tr><td colSpan="8" className="rh-history-empty">Chargement…</td></tr> : visible.length === 0 ? <tr><td colSpan="8" className="rh-history-empty">Aucune action RH ne correspond aux filtres.</td></tr> : visible.map((log) => {
-                const employee = log.collaborator ?? usersById.get(collaboratorId(log))
-                return <tr key={log.id}><td>{formatDateTime(log.createdAt)}</td><td><strong>{fullName(log.actor)}</strong></td><td>{employee ? fullName(employee) : '—'}</td><td><span className="rh-history-action">{actionLabel(log)}</span></td><td>{resourceLabel(log)}</td><td><span className="rh-history-value">{valueSummary(log.oldValue)}</span></td><td><span className="rh-history-value">{valueSummary(log.newValue)}</span></td><td>{commentSummary(log)}</td></tr>
-              })}
-            </tbody>
-          </table>
+          <div className="rh-history-table">
+            <div className="rh-history-row rh-history-row--head" role="row">
+              <span>Date et heure</span>
+              <span>Utilisateur RH</span>
+              <span>Collaborateur</span>
+              <span>Action</span>
+              <span>Élément</span>
+              <span>Ancienne valeur</span>
+              <span>Nouvelle valeur</span>
+              <span>Commentaire / motif</span>
+            </div>
+
+            {loading ? (
+              <div className="rh-history-state"><span className="rh-history-spinner" /><strong>Chargement de l’historique…</strong></div>
+            ) : visible.length === 0 ? (
+              <div className="rh-history-state"><Icon name="clock" size={26} /><strong>Aucune action RH</strong><span>Aucune action ne correspond aux filtres actuels.</span></div>
+            ) : pageRows.map((log) => {
+              const employee = log.collaborator ?? usersById.get(collaboratorId(log))
+              return (
+                <div className="rh-history-row rh-history-row--body" role="row" key={log.id}>
+                  <span className="rh-history-date">{formatDateTime(log.createdAt)}</span>
+                  <span className="rh-history-user"><strong>{fullName(log.actor)}</strong></span>
+                  <span className="rh-history-collaborator">{employee ? fullName(employee) : '—'}</span>
+                  <span><span className="rh-history-action">{actionLabel(log)}</span></span>
+                  <span className="rh-history-resource">{resourceLabel(log)}</span>
+                  <span><span className="rh-history-value">{valueSummary(log.oldValue)}</span></span>
+                  <span><span className="rh-history-value rh-history-value--new">{valueSummary(log.newValue)}</span></span>
+                  <span className="rh-history-comment">{commentSummary(log)}</span>
+                </div>
+              )
+            })}
+          </div>
         </div>
-        <div className="rh-history-footer">{visible.length} action{visible.length > 1 ? 's' : ''}</div>
+
+        {!loading && visible.length > 0 && (
+          <div className="rh-history-footer">
+            <span>{visible.length} action{visible.length > 1 ? 's' : ''}</span>
+            <PaginationBar
+              page={safePage}
+              pageSize={PAGE_SIZE}
+              totalItems={visible.length}
+              onPageChange={setPage}
+            />
+          </div>
+        )}
       </section>
     </PageContainer>
   )
