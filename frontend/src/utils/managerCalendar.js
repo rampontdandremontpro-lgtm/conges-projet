@@ -10,7 +10,7 @@ const PERSON_PALETTE = [
 ]
 
 export function getPersonColor(person) {
-  const source = String(person?.id ?? `${person?.prenom ?? ''}${person?.nom ?? ''}`)
+  const source = String(person?.id ?? `${person?.nom ?? ''}${person?.prenom ?? ''}`)
   let hash = 0
   for (let index = 0; index < source.length; index += 1) {
     hash = ((hash << 5) - hash) + source.charCodeAt(index)

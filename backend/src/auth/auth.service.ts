@@ -61,7 +61,7 @@ export class AuthService {
     try {
       await this.mailService.sendPasswordResetEmail({
         email: user.email,
-        displayName: `${user.prenom} ${user.nom}`.trim(),
+        displayName: `${user.nom} ${user.prenom}`.trim(),
         token,
         expiresAt,
       });

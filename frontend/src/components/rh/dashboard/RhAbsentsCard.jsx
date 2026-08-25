@@ -1,7 +1,7 @@
 import { Icon } from '@/components/ui/Icon'
 
 function initials(user) {
-  return `${user?.prenom?.[0] ?? ''}${user?.nom?.[0] ?? ''}`.toUpperCase() || '—'
+  return `${user?.nom?.[0] ?? ''}${user?.prenom?.[0] ?? ''}`.toUpperCase() || '—'
 }
 
 function statusLabel(status) {
@@ -39,7 +39,7 @@ export function RhAbsentsCard({ presence, onNavigate }) {
             <div key={member.id} className="rh-absent-row">
               <span className="rh-absent-avatar">{initials(member)}</span>
               <span className="rh-absent-identity">
-                <strong>{member.prenom} {member.nom}</strong>
+                <strong>{member.nom} {member.prenom}</strong>
                 <small>{member.service?.name ?? 'Service non renseigné'}</small>
               </span>
               <span className={`rh-absent-status rh-absent-status--${String(member.presenceStatus ?? '').toLowerCase()}`}>

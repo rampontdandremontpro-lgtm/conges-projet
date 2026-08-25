@@ -232,7 +232,7 @@ export function ManagerPresencePage() {
     const normalizedQuery = normalize(query)
     const matchingIds = new Set(
       (calendarState.data.members ?? [])
-        .filter((member) => normalize(`${member.prenom} ${member.nom} ${member.role}`).includes(normalizedQuery))
+        .filter((member) => normalize(`${member.nom} ${member.prenom} ${member.role}`).includes(normalizedQuery))
         .map((member) => Number(member.id)),
     )
 
@@ -484,7 +484,7 @@ export function ManagerPresencePage() {
             <div className="manager-calendar-decision__summary">
               <div>
                 <span>Collaborateur</span>
-                <strong>{calendarDecision.request?.employee?.prenom} {calendarDecision.request?.employee?.nom}</strong>
+                <strong>{calendarDecision.request?.employee?.nom} {calendarDecision.request?.employee?.prenom}</strong>
               </div>
               <div>
                 <span>Type</span>
@@ -537,7 +537,7 @@ export function ManagerPresencePage() {
       <SignatureModal
         open={signatureOpen}
         requestLabel={calendarDecision?.request
-          ? `${calendarDecision.request.employee?.prenom ?? ''} ${calendarDecision.request.employee?.nom ?? ''} · ${calendarDecision.request.startDate} au ${calendarDecision.request.endDate}`
+          ? `${calendarDecision.request.employee?.nom ?? ''} ${calendarDecision.request.employee?.prenom ?? ''} · ${calendarDecision.request.startDate} au ${calendarDecision.request.endDate}`
           : ''}
         submitting={decisionSubmitting}
         onClose={() => !decisionSubmitting && setSignatureOpen(false)}

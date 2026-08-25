@@ -52,7 +52,7 @@ function formatDateTime(value) {
 }
 
 function initials(employee) {
-  return `${employee?.prenom?.[0] ?? ''}${employee?.nom?.[0] ?? ''}`.toUpperCase() || '—'
+  return `${employee?.nom?.[0] ?? ''}${employee?.prenom?.[0] ?? ''}`.toUpperCase() || '—'
 }
 
 function effectiveStatus(request) {
@@ -324,7 +324,7 @@ export function ManagerRequestsPage() {
                     <span className="manager-all-requests-person">
                       <span className="manager-all-requests-avatar">{initials(request.employee)}</span>
                       <span>
-                        <strong>{request.employee?.prenom} {request.employee?.nom}</strong>
+                        <strong>{request.employee?.nom} {request.employee?.prenom}</strong>
                         <small>{request.service?.name ?? 'Service non renseigné'}</small>
                       </span>
                     </span>

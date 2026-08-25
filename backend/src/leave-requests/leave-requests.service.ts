@@ -388,7 +388,7 @@ export class LeaveRequestsService {
         {
           type: 'CONGE_DIRECTEUR_INFORMATION',
           title: 'Indisponibilité du Directeur',
-          message: `${employee.prenom} ${employee.nom} a enregistré une indisponibilité du ${savedRequest.startDate} au ${savedRequest.endDate}.`,
+          message: `${employee.nom} ${employee.prenom} a enregistré une indisponibilité du ${savedRequest.startDate} au ${savedRequest.endDate}.`,
           leaveRequestId: savedRequest.id,
         },
         manager,
@@ -532,7 +532,7 @@ export class LeaveRequestsService {
         {
           type: 'CONGE_DIRECTEUR_MODIFIE',
           title: 'Indisponibilité du Directeur modifiée',
-          message: `${leaveRequest.employee.prenom} ${leaveRequest.employee.nom} a modifié son indisponibilité : du ${leaveRequest.startDate} au ${leaveRequest.endDate}.`,
+          message: `${leaveRequest.employee.nom} ${leaveRequest.employee.prenom} a modifié son indisponibilité : du ${leaveRequest.startDate} au ${leaveRequest.endDate}.`,
           leaveRequestId: leaveRequest.id,
         },
         manager,
@@ -589,7 +589,7 @@ export class LeaveRequestsService {
         {
           type: 'CONGE_DIRECTEUR_ANNULE',
           title: 'Indisponibilité du Directeur annulée',
-          message: `${leaveRequest.employee.prenom} ${leaveRequest.employee.nom} a annulé son indisponibilité du ${leaveRequest.startDate} au ${leaveRequest.endDate}.`,
+          message: `${leaveRequest.employee.nom} ${leaveRequest.employee.prenom} a annulé son indisponibilité du ${leaveRequest.startDate} au ${leaveRequest.endDate}.`,
           leaveRequestId: leaveRequest.id,
         },
         manager,
@@ -668,6 +668,9 @@ export class LeaveRequestsService {
       .leftJoinAndSelect('leaveRequest.finalDecider', 'finalDecider')
       .where('leaveRequest.status != :draftStatus', {
         draftStatus: LeaveRequestStatus.BROUILLON,
+      })
+      .andWhere('employee.role != :directorRole', {
+        directorRole: UserRole.DIRECTEUR,
       });
 
     if (authenticatedUser.role === UserRole.RH) {
@@ -1028,7 +1031,7 @@ export class LeaveRequestsService {
           {
             type: 'LEAVE_REQUEST_MODIFIED',
             title: 'Demande de congé modifiée',
-            message: `${leaveRequest.employee.prenom} ${leaveRequest.employee.nom} a modifié sa demande. Une nouvelle soumission sera nécessaire.`,
+            message: `${leaveRequest.employee.nom} ${leaveRequest.employee.prenom} a modifié sa demande. Une nouvelle soumission sera nécessaire.`,
             leaveRequestId: leaveRequest.id,
           },
           manager,
@@ -1750,7 +1753,7 @@ export class LeaveRequestsService {
           {
             type: 'LEAVE_REQUEST_RH_FINALIZATION',
             title: 'Demande à finaliser',
-            message: `La demande n°${leaveRequest.id} de ${leaveRequest.employee.prenom} ${leaveRequest.employee.nom} a été validée au premier niveau et attend votre validation finale.`,
+            message: `La demande n°${leaveRequest.id} de ${leaveRequest.employee.nom} ${leaveRequest.employee.prenom} a été validée au premier niveau et attend votre validation finale.`,
             leaveRequestId: leaveRequest.id,
           },
           manager,
@@ -2089,7 +2092,7 @@ export class LeaveRequestsService {
           {
             type: 'LEAVE_REQUEST_CANCELLED',
             title: 'Demande de congé annulée',
-            message: `${leaveRequest.employee.prenom} ${leaveRequest.employee.nom} a annulé sa demande du ${leaveRequest.startDate} au ${leaveRequest.endDate}.`,
+            message: `${leaveRequest.employee.nom} ${leaveRequest.employee.prenom} a annulé sa demande du ${leaveRequest.startDate} au ${leaveRequest.endDate}.`,
             leaveRequestId: leaveRequest.id,
           },
           manager,
@@ -2435,7 +2438,7 @@ export class LeaveRequestsService {
       leaveRequest.lockedAt !== null
     ) {
       const decisionMessage = leaveRequest.finalDecider
-        ? ` Cette demande a déjà été traitée par ${leaveRequest.finalDecider.prenom} ${leaveRequest.finalDecider.nom}.`
+        ? ` Cette demande a déjà été traitée par ${leaveRequest.finalDecider.nom} ${leaveRequest.finalDecider.prenom}.`
         : '';
 
       throw new ConflictException(

@@ -127,7 +127,7 @@ export function DashboardReminderPopup({ role, onNavigate }) {
 
               <div className="dashboard-reminder-item__body">
                 <div>
-                  <strong>{`${item.employee?.prenom ?? ''} ${item.employee?.nom ?? ''}`.trim() || 'Collaborateur'}</strong>
+                  <strong>{`${item.employee?.nom ?? ''} ${item.employee?.prenom ?? ''}`.trim() || 'Collaborateur'}</strong>
                   <span>{item.leaveType?.name ?? (item.kind === 'derogation' ? 'Dérogation' : 'Demande de congé')} · {item.service?.name ?? 'Service'}</span>
                   <small>
                     Du {formatDate(item.startDate)} au {formatDate(item.endDate)} · {reminderLabel(item)}

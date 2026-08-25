@@ -445,7 +445,7 @@ export class DocumentPdfService {
       const rows: Array<[string, string]> = [
         [
           'Collaborateur',
-          `${leaveRequest.employee.prenom} ${leaveRequest.employee.nom}`,
+          `${leaveRequest.employee.nom} ${leaveRequest.employee.prenom}`,
         ],
         ['Service', leaveRequest.service.name],
         ['Type de congé', leaveRequest.leaveType.name],
@@ -461,7 +461,7 @@ export class DocumentPdfService {
         [
           'Demande d’annulation initiée par',
           leaveRequest.cancellationRequestedBy
-            ? `${leaveRequest.cancellationRequestedBy.prenom} ${leaveRequest.cancellationRequestedBy.nom}`
+            ? `${leaveRequest.cancellationRequestedBy.nom} ${leaveRequest.cancellationRequestedBy.prenom}`
             : 'Utilisateur non disponible',
         ],
         [
@@ -584,7 +584,7 @@ export class DocumentPdfService {
         });
 
         const employeeName =
-          `${leaveRequest.employee.prenom} ${leaveRequest.employee.nom}`;
+          `${leaveRequest.employee.nom} ${leaveRequest.employee.prenom}`;
 
         [
           [employeeName, 532],
@@ -842,7 +842,7 @@ export class DocumentPdfService {
       generatedAt: generatedAt.toISOString(),
       leaveRequestId: leaveRequest.id,
       employeeId: leaveRequest.employeeId,
-      employeeName: `${leaveRequest.employee.prenom} ${leaveRequest.employee.nom}`,
+      employeeName: `${leaveRequest.employee.nom} ${leaveRequest.employee.prenom}`,
       serviceId: leaveRequest.serviceId,
       serviceName: leaveRequest.service.name,
       leaveTypeId: leaveRequest.leaveTypeId,
@@ -866,7 +866,7 @@ export class DocumentPdfService {
       finalDeciderId: leaveRequest.finalDeciderId,
       finalDeciderRole: leaveRequest.finalDeciderRole,
       finalDeciderName: leaveRequest.finalDecider
-        ? `${leaveRequest.finalDecider.prenom} ${leaveRequest.finalDecider.nom}`
+        ? `${leaveRequest.finalDecider.nom} ${leaveRequest.finalDecider.prenom}`
         : null,
       decisionAt: leaveRequest.decisionAt?.toISOString(),
       validatorSignatureType:
@@ -2080,7 +2080,7 @@ export class DocumentPdfService {
         });
 
         const employeeName =
-          `${leaveRequest.employee.prenom} ${leaveRequest.employee.nom}`;
+          `${leaveRequest.employee.nom} ${leaveRequest.employee.prenom}`;
 
         [
           [employeeName, 344],
@@ -2156,7 +2156,7 @@ export class DocumentPdfService {
           [this.formatDateTime(leaveRequest.submittedAt), 1004],
           [this.formatDateTime(leaveRequest.decisionAt), 1042],
           [
-            `${leaveRequest.finalDecider?.prenom ?? ''} ${leaveRequest.finalDecider?.nom ?? ''}`.trim(),
+            `${leaveRequest.finalDecider?.nom ?? ''} ${leaveRequest.finalDecider?.prenom ?? ''}`.trim(),
             1080,
           ],
           [this.formatRole(leaveRequest.finalDeciderRole), 1118],
@@ -2369,9 +2369,9 @@ export class DocumentPdfService {
     });
 
     const leftName =
-      `${leaveRequest.employee.prenom} ${leaveRequest.employee.nom}`;
+      `${leaveRequest.employee.nom} ${leaveRequest.employee.prenom}`;
     const rightName =
-      `${leaveRequest.finalDecider!.prenom} ${leaveRequest.finalDecider!.nom}`;
+      `${leaveRequest.finalDecider!.nom} ${leaveRequest.finalDecider!.prenom}`;
 
     this.drawExactPdfText(document, leftName, {
       xPx: 158,
@@ -2920,7 +2920,7 @@ export class DocumentPdfService {
       title: 'Signature du collaborateur',
       signatureType: leaveRequest.employeeSignatureType!,
       signatureData: leaveRequest.employeeSignatureData!,
-      signerName: `${leaveRequest.employee.prenom} ${leaveRequest.employee.nom}`,
+      signerName: `${leaveRequest.employee.nom} ${leaveRequest.employee.prenom}`,
       signerRole: 'Collaborateur',
       signedAt: leaveRequest.employeeSignedAt!,
     });
@@ -2933,7 +2933,7 @@ export class DocumentPdfService {
       title: 'Signature du valideur',
       signatureType: leaveRequest.validatorSignatureType!,
       signatureData: leaveRequest.validatorSignatureData!,
-      signerName: `${leaveRequest.finalDecider!.prenom} ${leaveRequest.finalDecider!.nom}`,
+      signerName: `${leaveRequest.finalDecider!.nom} ${leaveRequest.finalDecider!.prenom}`,
       signerRole: this.formatRole(leaveRequest.finalDeciderRole),
       signedAt: leaveRequest.validatorSignedAt!,
     });
@@ -3459,7 +3459,7 @@ export class DocumentPdfService {
       title: 'Signature du collaborateur',
       signatureType: leaveRequest.employeeSignatureType!,
       signatureData: leaveRequest.employeeSignatureData!,
-      signerName: `${leaveRequest.employee.prenom} ${leaveRequest.employee.nom}`,
+      signerName: `${leaveRequest.employee.nom} ${leaveRequest.employee.prenom}`,
       signerRole: 'Collaborateur',
       signedAt: leaveRequest.employeeSignedAt!,
     });
@@ -3472,7 +3472,7 @@ export class DocumentPdfService {
       title: 'Signature du valideur',
       signatureType: leaveRequest.validatorSignatureType!,
       signatureData: leaveRequest.validatorSignatureData!,
-      signerName: `${leaveRequest.finalDecider!.prenom} ${leaveRequest.finalDecider!.nom}`,
+      signerName: `${leaveRequest.finalDecider!.nom} ${leaveRequest.finalDecider!.prenom}`,
       signerRole: this.formatRole(
         leaveRequest.finalDeciderRole,
       ),

@@ -241,6 +241,22 @@ export const router = createBrowserRouter([
         ),
       },
       {
+        path: 'rh-users',
+        element: (
+          <RoleRoute roles={[ROLES.RH]}>
+            <AdminUsersPage rhMode />
+          </RoleRoute>
+        ),
+      },
+      {
+        path: 'rh-presence',
+        element: (
+          <RoleRoute roles={[ROLES.RH]}>
+            <DirectorPresencePage />
+          </RoleRoute>
+        ),
+      },
+      {
         path: 'rh-balances',
         element: (
           <RoleRoute roles={[ROLES.RH]}>

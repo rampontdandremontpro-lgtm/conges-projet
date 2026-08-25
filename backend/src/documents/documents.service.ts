@@ -203,7 +203,7 @@ export class DocumentsService {
         title: becomesReadyForReview
           ? 'Justificatif à vérifier'
           : 'Nouveau justificatif reçu',
-        message: `${declaration.employee.prenom} ${declaration.employee.nom} a ajouté un justificatif à sa déclaration d’absence.`,
+        message: `${declaration.employee.nom} ${declaration.employee.prenom} a ajouté un justificatif à sa déclaration d’absence.`,
         absenceDeclarationId,
       },
     );
@@ -245,7 +245,7 @@ export class DocumentsService {
       {
         type: 'SUPPORTING_DOCUMENT_RECEIVED',
         title: 'Nouveau justificatif reçu',
-        message: `${leaveRequest.employee.prenom} ${leaveRequest.employee.nom} a ajouté un justificatif à sa demande de congé.`,
+        message: `${leaveRequest.employee.nom} ${leaveRequest.employee.prenom} a ajouté un justificatif à sa demande de congé.`,
         leaveRequestId,
       },
     );

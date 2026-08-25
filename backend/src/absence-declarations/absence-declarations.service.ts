@@ -386,7 +386,7 @@ export class AbsenceDeclarationsService {
         {
           type: 'ABSENCE_DIRECTEUR_INFORMATION',
           title: 'Indisponibilité du Directeur',
-          message: `${declaration.employee.prenom} ${declaration.employee.nom} a enregistré une indisponibilité du ${declaration.startDate} au ${declaration.endDate}.`,
+          message: `${declaration.employee.nom} ${declaration.employee.prenom} a enregistré une indisponibilité du ${declaration.startDate} au ${declaration.endDate}.`,
           absenceDeclarationId: declaration.id,
         },
       );
@@ -404,7 +404,7 @@ export class AbsenceDeclarationsService {
         {
           type: 'ABSENCE_DECLARATION_SUBMITTED_RH',
           title: 'Nouvelle déclaration d’absence',
-          message: `${declaration.employee.prenom} ${declaration.employee.nom} a déclaré une absence du ${declaration.startDate} au ${declaration.endDate}.`,
+          message: `${declaration.employee.nom} ${declaration.employee.prenom} a déclaré une absence du ${declaration.startDate} au ${declaration.endDate}.`,
           absenceDeclarationId: declaration.id,
         },
       );
@@ -415,7 +415,7 @@ export class AbsenceDeclarationsService {
           {
             type: 'ABSENCE_DECLARATION_SUBMITTED_MANAGER',
             title: 'Nouvelle absence dans votre service',
-            message: `${declaration.employee.prenom} ${declaration.employee.nom} a déclaré une absence du ${declaration.startDate} au ${declaration.endDate}.`,
+            message: `${declaration.employee.nom} ${declaration.employee.prenom} a déclaré une absence du ${declaration.startDate} au ${declaration.endDate}.`,
             absenceDeclarationId: declaration.id,
           },
         );
@@ -429,7 +429,7 @@ export class AbsenceDeclarationsService {
           {
             type: 'ABSENCE_DECLARATION_TO_REVIEW',
             title: 'Absence à vérifier',
-            message: `La déclaration d’absence de ${declaration.employee.prenom} ${declaration.employee.nom} est prête à être vérifiée.`,
+            message: `La déclaration d’absence de ${declaration.employee.nom} ${declaration.employee.prenom} est prête à être vérifiée.`,
             absenceDeclarationId: declaration.id,
           },
         );
@@ -535,7 +535,7 @@ export class AbsenceDeclarationsService {
       {
         type: 'ABSENCE_DIRECTEUR_MODIFIEE',
         title: 'Indisponibilité du Directeur modifiée',
-        message: `${declaration.employee.prenom} ${declaration.employee.nom} a modifié son indisponibilité : du ${declaration.startDate} au ${declaration.endDate}.`,
+        message: `${declaration.employee.nom} ${declaration.employee.prenom} a modifié son indisponibilité : du ${declaration.startDate} au ${declaration.endDate}.`,
         absenceDeclarationId: declaration.id,
       },
     );
@@ -575,7 +575,7 @@ export class AbsenceDeclarationsService {
       {
         type: 'ABSENCE_DIRECTEUR_ANNULEE',
         title: 'Indisponibilité du Directeur annulée',
-        message: `${declaration.employee.prenom} ${declaration.employee.nom} a annulé son indisponibilité du ${declaration.startDate} au ${declaration.endDate}.`,
+        message: `${declaration.employee.nom} ${declaration.employee.prenom} a annulé son indisponibilité du ${declaration.startDate} au ${declaration.endDate}.`,
         absenceDeclarationId: declaration.id,
       },
     );
@@ -626,7 +626,7 @@ export class AbsenceDeclarationsService {
         {
           type: 'ABSENCE_DECLARATION_DECISION_INFO',
           title: 'Absence autorisée dans votre service',
-          message: `L’absence de ${declaration.employee.prenom} ${declaration.employee.nom} du ${declaration.startDate} au ${declaration.endDate} a été autorisée.`,
+          message: `L’absence de ${declaration.employee.nom} ${declaration.employee.prenom} du ${declaration.startDate} au ${declaration.endDate} a été autorisée.`,
           absenceDeclarationId: declaration.id,
         },
       );
@@ -726,7 +726,7 @@ export class AbsenceDeclarationsService {
           {
             type: 'ABSENCE_DECLARATION_DECISION_INFO',
             title: 'Absence annulée dans votre service',
-            message: `L’absence de ${declaration.employee.prenom} ${declaration.employee.nom} du ${declaration.startDate} au ${declaration.endDate} a été annulée par la RH.`,
+            message: `L’absence de ${declaration.employee.nom} ${declaration.employee.prenom} du ${declaration.startDate} au ${declaration.endDate} a été annulée par la RH.`,
             absenceDeclarationId: declaration.id,
           },
         );
@@ -926,13 +926,21 @@ export class AbsenceDeclarationsService {
       );
     }
 
-    if (leaveType.rhOnly && actorRole !== UserRole.RH) {
+    if (
+      leaveType.rhOnly &&
+      actorRole !== UserRole.RH &&
+      actorRole !== UserRole.DIRECTEUR
+    ) {
       throw new ForbiddenException(
         'Ce type d’absence peut être saisi uniquement par la RH.',
       );
     }
 
-    if (!leaveType.employeeCanCreate && actorRole !== UserRole.RH) {
+    if (
+      !leaveType.employeeCanCreate &&
+      actorRole !== UserRole.RH &&
+      actorRole !== UserRole.DIRECTEUR
+    ) {
       throw new ForbiddenException(
         'Ce type d’absence ne peut pas être déclaré par un collaborateur.',
       );

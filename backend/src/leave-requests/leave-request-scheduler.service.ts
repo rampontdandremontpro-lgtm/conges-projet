@@ -317,7 +317,7 @@ export class LeaveRequestSchedulerService
           daysBeforeStart <= 7
             ? 'Rappel urgent — demande à traiter'
             : 'Rappel — demande de congé à traiter',
-        message: `La demande n°${request.id} de ${request.employee.prenom} ${request.employee.nom} débute dans ${daysBeforeStart} jour(s).`,
+        message: `La demande n°${request.id} de ${request.employee.nom} ${request.employee.prenom} débute dans ${daysBeforeStart} jour(s).`,
         leaveRequestId: request.id,
       });
       created += 1;
@@ -405,7 +405,7 @@ export class LeaveRequestSchedulerService
         {
           type: 'LEAVE_REQUEST_EXPIRED_INFO',
           title: 'Demande expirée sans validation',
-          message: `La demande n°${request.id} de ${request.employee.prenom} ${request.employee.nom} a expiré sans décision.`,
+          message: `La demande n°${request.id} de ${request.employee.nom} ${request.employee.prenom} a expiré sans décision.`,
           leaveRequestId: request.id,
         },
         manager,

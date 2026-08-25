@@ -36,7 +36,7 @@ function errorMessage(error) {
 }
 
 function personName(user) {
-  return `${user?.prenom ?? ''} ${user?.nom ?? ''}`.trim() || user?.email || 'Utilisateur'
+  return `${user?.nom ?? ''} ${user?.prenom ?? ''}`.trim() || user?.email || 'Utilisateur'
 }
 
 function resourceType(log) {
@@ -114,7 +114,7 @@ function activityDetail(log) {
   const resource = resourceLabel(log)
 
   if (resource === 'Utilisateur') {
-    const fullName = `${body.prenom ?? ''} ${body.nom ?? ''}`.trim()
+    const fullName = `${body.nom ?? ''} ${body.prenom ?? ''}`.trim()
     if (fullName) return fullName
     if (body.email) return body.email
   }

@@ -71,7 +71,7 @@ export class ReferencePeriodService {
       const employee = employeeBalances[0].employee;
       employees.push({
         employeeId,
-        employeeName: `${employee.prenom} ${employee.nom}`,
+        employeeName: `${employee.nom} ${employee.prenom}`,
         nMinus1Remaining: this.available(
           employeeBalances,
           LeaveBalanceCounterType.N_MINUS_1,

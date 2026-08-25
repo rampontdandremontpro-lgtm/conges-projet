@@ -41,7 +41,7 @@ function seniorityLabel(hireDate) {
 }
 
 function profileInitials(profile) {
-  return `${profile?.prenom?.[0] ?? ''}${profile?.nom?.[0] ?? ''}`.toUpperCase()
+  return `${profile?.nom?.[0] ?? ''}${profile?.prenom?.[0] ?? ''}`.toUpperCase()
 }
 
 function ProfileSkeleton() {
@@ -136,7 +136,7 @@ export function ProfilePage() {
         </div>
         <div className="profile-hero__identity">
           <div className="profile-hero__title-row">
-            <h2>{profile.prenom} {profile.nom}</h2>
+            <h2>{profile.nom} {profile.prenom}</h2>
             <span className="profile-hero__role">{ROLE_LABELS[profile.role] ?? profile.role}</span>
           </div>
           <p className="profile-hero__service">{profile.service?.name ?? 'Service non renseigné'}</p>

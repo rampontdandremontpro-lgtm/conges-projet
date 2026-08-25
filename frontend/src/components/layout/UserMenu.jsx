@@ -16,7 +16,7 @@ export function UserMenu() {
     return null
   }
 
-  const initials = `${user.prenom?.[0] ?? ''}${user.nom?.[0] ?? ''}`.toUpperCase()
+  const initials = `${user.nom?.[0] ?? ''}${user.prenom?.[0] ?? ''}`.toUpperCase()
   const roleLabel = ROLE_LABELS[effectiveRole] ?? effectiveRole
 
   function handleProfileSwitch(mode) {
@@ -45,7 +45,7 @@ export function UserMenu() {
         </span>
         <span className="user-menu__info">
           <span className="user-menu__name">
-            {user.prenom} {user.nom}
+            {user.nom} {user.prenom}
           </span>
           <span className="user-menu__role">{roleLabel}</span>
         </span>

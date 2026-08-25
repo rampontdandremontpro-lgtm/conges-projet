@@ -119,7 +119,7 @@ export function DirectorRequestDecisionPage() {
 
   const employeeName = useMemo(() => {
     const employee = state.request?.employee
-    return employee ? `${employee.prenom} ${employee.nom}` : ''
+    return employee ? `${employee.nom} ${employee.prenom}` : ''
   }, [state.request])
 
   const handleValidate = () => {
@@ -241,7 +241,7 @@ export function DirectorRequestDecisionPage() {
 
       <section className="manager-request-detail-hero">
         <span className="manager-request-detail-hero__avatar">
-          {`${request.employee?.prenom?.[0] ?? ''}${request.employee?.nom?.[0] ?? ''}`.toUpperCase()}
+          {`${request.employee?.nom?.[0] ?? ''}${request.employee?.prenom?.[0] ?? ''}`.toUpperCase()}
         </span>
         <div className="director-request-hero-content">
           <span className="manager-request-detail-hero__eyebrow">DEMANDE DE CONGÉ N°{request.displayNumber ?? request.id}</span>
@@ -328,7 +328,7 @@ export function DirectorRequestDecisionPage() {
                       <strong>Personnes déjà absentes ou en attente sur la période</strong>
                       {availability.overlaps.map((item) => (
                         <div className="manager-request-overlap-row" key={`${item.source}-${item.sourceId}`}>
-                          <span>{item.prenom} {item.nom}</span>
+                          <span>{item.nom} {item.prenom}</span>
                           <small>{formatRangeNumericFR(item.startDate, item.endDate)}</small>
                         </div>
                       ))}
@@ -393,7 +393,7 @@ export function DirectorRequestDecisionPage() {
               {request.finalDecider && (
                 <div className="manager-request-actions-card__decision-meta">
                   <small>Décideur</small>
-                  <strong>{request.finalDecider.prenom} {request.finalDecider.nom}</strong>
+                  <strong>{request.finalDecider.nom} {request.finalDecider.prenom}</strong>
                 </div>
               )}
 

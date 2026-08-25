@@ -92,10 +92,13 @@ export function RhPrepareRequestPage() {
 
   const handlePick = (iso) => {
     setSelection((prev) => {
-      if (prev.startDate && iso === prev.startDate) return { ...prev, startDate: null, endDate: null }
-      if (!prev.startDate || (prev.startDate && prev.endDate)) return { ...prev, startDate: iso, endDate: null }
-      if (iso < prev.startDate) return { ...prev, startDate: iso, endDate: prev.startDate }
-      return { ...prev, endDate: iso }
+      if (!prev.startDate) return { ...prev, startDate: iso, endDate: iso }
+      if (prev.startDate === prev.endDate) {
+        if (iso === prev.startDate) return { ...prev, startDate: null, endDate: null }
+        if (iso < prev.startDate) return { ...prev, startDate: iso, endDate: prev.startDate }
+        return { ...prev, endDate: iso }
+      }
+      return { ...prev, startDate: iso, endDate: iso }
     })
   }
 
@@ -128,7 +131,7 @@ export function RhPrepareRequestPage() {
         endPeriod: selection.endPeriod,
       })
       notifyAppDataChanged({ source: 'leave-request', action: 'prepared-by-rh', id: saved.id })
-      const employeeName = `${selectedEmployee?.prenom ?? ''} ${selectedEmployee?.nom ?? ''}`.trim() || 'le collaborateur'
+      const employeeName = `${selectedEmployee?.nom ?? ''} ${selectedEmployee?.prenom ?? ''}`.trim() || 'le collaborateur'
       navigate('/app/rh-all-requests', {
         replace: true,
         state: {
@@ -145,7 +148,7 @@ export function RhPrepareRequestPage() {
   }
 
   const hasCompleteRange = Boolean(selection.startDate && selection.endDate && selection.startDate !== selection.endDate)
-  const employeeName = selectedEmployee ? `${selectedEmployee.prenom} ${selectedEmployee.nom}` : ''
+  const employeeName = selectedEmployee ? `${selectedEmployee.nom} ${selectedEmployee.prenom}` : ''
 
   return (
     <div className="nr-page rh-prepare-page">
@@ -176,7 +179,7 @@ export function RhPrepareRequestPage() {
                 <option value="">Sélectionner un collaborateur…</option>
                 {collaborators.map((user) => (
                   <option key={user.id} value={user.id}>
-                    {user.prenom} {user.nom}{user.service?.name ? ` — ${user.service.name}` : ''}
+                    {user.nom} {user.prenom}{user.service?.name ? ` — ${user.service.name}` : ''}
                   </option>
                 ))}
               </select>
@@ -184,7 +187,7 @@ export function RhPrepareRequestPage() {
 
             {selectedEmployee && (
               <div className="rh-prepare-selected-employee">
-                <span className="rh-prepare-selected-employee__avatar">{`${selectedEmployee.prenom?.[0] ?? ''}${selectedEmployee.nom?.[0] ?? ''}`.toUpperCase()}</span>
+                <span className="rh-prepare-selected-employee__avatar">{`${selectedEmployee.nom?.[0] ?? ''}${selectedEmployee.prenom?.[0] ?? ''}`.toUpperCase()}</span>
                 <div>
                   <strong>{employeeName}</strong>
                   <span>{selectedEmployee.service?.name ?? 'Service non renseigné'} · {selectedEmployee.email}</span>

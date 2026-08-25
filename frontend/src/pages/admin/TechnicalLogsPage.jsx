@@ -97,7 +97,7 @@ function errorMessage(error) {
 
 function actorName(log) {
   if (!log?.actor) return 'Système'
-  return `${log.actor.prenom ?? ''} ${log.actor.nom ?? ''}`.trim() || log.actor.email || 'Utilisateur'
+  return `${log.actor.nom ?? ''} ${log.actor.prenom ?? ''}`.trim() || log.actor.email || 'Utilisateur'
 }
 
 function actorRole(log) {
@@ -199,7 +199,7 @@ function extractDisplayName(log) {
 
   const prenom = log?.newValue?.body?.prenom ?? log?.newValue?.prenom
   const nom = log?.newValue?.body?.nom ?? log?.newValue?.nom
-  const full = `${prenom ?? ''} ${nom ?? ''}`.trim()
+  const full = `${nom ?? ''} ${prenom ?? ''}`.trim()
   return full || ''
 }
 
@@ -377,7 +377,7 @@ export function AdminTechnicalLogsPage() {
 
     for (const user of users) {
       const id = String(user.id)
-      const name = `${user.prenom ?? ''} ${user.nom ?? ''}`.trim() || user.email || `Utilisateur ${id}`
+      const name = `${user.nom ?? ''} ${user.prenom ?? ''}`.trim() || user.email || `Utilisateur ${id}`
       map.set(id, { id, name })
     }
 

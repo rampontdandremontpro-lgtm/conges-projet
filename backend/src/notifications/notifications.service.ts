@@ -377,7 +377,7 @@ export class NotificationsService {
               urgent
                 ? 'Rappel urgent — demande à traiter'
                 : 'Rappel — demande de congé à traiter',
-            message: `La demande n°${request.id} de ${request.employee.prenom} ${request.employee.nom} débute dans ${daysBeforeStart} jour(s).`,
+            message: `La demande n°${request.id} de ${request.employee.nom} ${request.employee.prenom} débute dans ${daysBeforeStart} jour(s).`,
             leaveRequestId: request.id,
           });
         }
@@ -396,7 +396,7 @@ export class NotificationsService {
             userId,
             type: lateType,
             title: 'Retard de validation — demande à traiter',
-            message: `La demande n°${request.id} de ${request.employee.prenom} ${request.employee.nom} attend une décision depuis ${pendingDays} jour(s).`,
+            message: `La demande n°${request.id} de ${request.employee.nom} ${request.employee.prenom} attend une décision depuis ${pendingDays} jour(s).`,
             leaveRequestId: request.id,
           });
         }
@@ -481,7 +481,7 @@ export class NotificationsService {
             title: urgent
               ? 'Rappel urgent — dérogation à traiter'
               : 'Rappel — dérogation à traiter',
-            message: `La dérogation n°${derogation.id} de ${derogation.employee.prenom} ${derogation.employee.nom} doit être traitée avant J-3 à 16 h (heure de Martinique).`,
+            message: `La dérogation n°${derogation.id} de ${derogation.employee.nom} ${derogation.employee.prenom} doit être traitée avant J-3 à 16 h (heure de Martinique).`,
             leaveRequestId: derogation.leaveRequestId,
             derogationId: derogation.id,
           });
@@ -796,7 +796,7 @@ export class NotificationsService {
           userId,
           type,
           title: 'Nouvelle demande de congé',
-          message: `${leaveRequest.employee.prenom} ${leaveRequest.employee.nom} a soumis une demande du ${leaveRequest.startDate} au ${leaveRequest.endDate}.`,
+          message: `${leaveRequest.employee.nom} ${leaveRequest.employee.prenom} a soumis une demande du ${leaveRequest.startDate} au ${leaveRequest.endDate}.`,
           leaveRequestId: leaveRequest.id,
         },
         manager,
@@ -846,7 +846,7 @@ export class NotificationsService {
           userId,
           type,
           title: 'Nouvelle demande de congé',
-          message: `${leaveRequest.employee.prenom} ${leaveRequest.employee.nom} a soumis une demande du ${leaveRequest.startDate} au ${leaveRequest.endDate}.`,
+          message: `${leaveRequest.employee.nom} ${leaveRequest.employee.prenom} a soumis une demande du ${leaveRequest.startDate} au ${leaveRequest.endDate}.`,
           leaveRequestId: leaveRequest.id,
         },
         manager,
@@ -920,7 +920,7 @@ export class NotificationsService {
       {
         type: `LEAVE_REQUEST_${decision}_INFO`,
         title,
-        message: `La demande n°${leaveRequest.id} de ${leaveRequest.employee.prenom} ${leaveRequest.employee.nom} a été ${decision === 'VALIDEE' ? 'validée' : 'refusée'}.`,
+        message: `La demande n°${leaveRequest.id} de ${leaveRequest.employee.nom} ${leaveRequest.employee.prenom} a été ${decision === 'VALIDEE' ? 'validée' : 'refusée'}.`,
         leaveRequestId: leaveRequest.id,
       },
       manager,

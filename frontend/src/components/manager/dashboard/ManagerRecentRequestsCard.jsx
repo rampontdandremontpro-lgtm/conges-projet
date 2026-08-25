@@ -2,7 +2,7 @@ import { Icon } from '@/components/ui/Icon'
 import { formatDays, formatRangeNumericFR } from '@/utils/format'
 
 function initials(employee) {
-  return `${employee?.prenom?.[0] ?? ''}${employee?.nom?.[0] ?? ''}`.toUpperCase() || '—'
+  return `${employee?.nom?.[0] ?? ''}${employee?.prenom?.[0] ?? ''}`.toUpperCase() || '—'
 }
 
 export function ManagerRecentRequestsCard({ requests, loading, error, onRetry, onViewAll, onOpenRequest }) {
@@ -46,7 +46,7 @@ export function ManagerRecentRequestsCard({ requests, loading, error, onRetry, o
               <span className="manager-request-avatar">{initials(request.employee)}</span>
               <span className="manager-request-main">
                 <span className="manager-request-topline">
-                  <strong>{request.employee?.prenom} {request.employee?.nom}</strong>
+                  <strong>{request.employee?.nom} {request.employee?.prenom}</strong>
                   {request.isUrgent && <span className="manager-request-urgent">Urgente</span>}
                 </span>
                 <span className="manager-request-meta">

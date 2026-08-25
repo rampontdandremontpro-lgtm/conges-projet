@@ -147,12 +147,21 @@ export function LeaveCalendar({
   }, [holidays])
 
   useEffect(() => {
-    if (startDate && !endDate) {
+    if (!startDate) {
+      setPhase('idle')
+      setHovering(null)
+      return
+    }
+
+    if (!endDate) {
       setPhase('selecting')
       return
     }
-    setPhase('idle')
-    setHovering(null)
+
+    if (startDate !== endDate) {
+      setPhase('idle')
+      setHovering(null)
+    }
   }, [startDate, endDate])
 
   const effectiveEnd = phase === 'selecting' && hovering ? hovering : endDate
@@ -182,22 +191,17 @@ export function LeaveCalendar({
       return
     }
 
-    if (phase === 'selecting' && startDate && iso === startDate) {
-      onPick(iso)
+    if (phase === 'selecting' && startDate) {
+      if (iso !== startDate) {
+        onPick(iso)
+      }
       setPhase('idle')
       setHovering(null)
       return
     }
 
-    if (phase === 'idle' || !startDate || endDate) {
-      onPick(iso)
-      setPhase('selecting')
-      setHovering(null)
-      return
-    }
-
     onPick(iso)
-    setPhase('idle')
+    setPhase('selecting')
     setHovering(null)
   }
 

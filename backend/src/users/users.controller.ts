@@ -70,13 +70,13 @@ export class UsersController {
   }
 
   @Get('management/global-presence')
-  @Roles(UserRole.DIRECTEUR)
+  @Roles(UserRole.RH, UserRole.DIRECTEUR)
   getGlobalPresence() {
     return this.usersService.getGlobalPresence();
   }
 
   @Get('management/global-presence/calendar')
-  @Roles(UserRole.DIRECTEUR)
+  @Roles(UserRole.RH, UserRole.DIRECTEUR)
   getGlobalPresenceCalendar(
     @Query('month') month?: string,
   ) {
@@ -128,12 +128,14 @@ export class UsersController {
   }
 
   @Post()
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.RH)
   create(
+    @Req() request: AuthenticatedRequest,
     @Body() createUserDto: CreateUserDto,
   ) {
     return this.usersService.create(
       createUserDto,
+      request.user.role,
     );
   }
 

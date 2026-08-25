@@ -29,7 +29,7 @@ function memberSubtitle(member) {
 }
 
 function initials(person) {
-  return `${person?.prenom?.[0] ?? ''}${person?.nom?.[0] ?? ''}`.toUpperCase()
+  return `${person?.nom?.[0] ?? ''}${person?.prenom?.[0] ?? ''}`.toUpperCase()
 }
 
 function getMemberDay(day, memberId) {
@@ -127,7 +127,7 @@ export function ManagerPresenceCalendar({ data, month, filter, onMonthChange, cu
                 <div className="manager-month-planning__person">
                   <span className="manager-month-planning__avatar" style={{ background: personColor.soft, color: personColor.solid }}>{initials(member)}</span>
                   <span className="manager-month-planning__person-copy">
-                    <strong>{member.prenom} {member.nom}</strong>
+                    <strong>{member.nom} {member.prenom}</strong>
                     <small>{memberSubtitle(member)}</small>
                   </span>
                 </div>
@@ -157,7 +157,7 @@ export function ManagerPresenceCalendar({ data, month, filter, onMonthChange, cu
                     <div
                       key={`${member.id}-${date}`}
                       className={`manager-month-planning__cell${meta.isWeekend ? ' is-weekend' : ''}${isHoliday ? ' is-holiday' : ''}${isToday ? ' is-today' : ''}${pendingRequestIds.length > 0 ? ' has-pending-request' : ''}`}
-                      title={`${member.prenom} ${member.nom} · ${date} · ${label}${holidayLabel}${pendingLabel}`}
+                      title={`${member.nom} ${member.prenom} · ${date} · ${label}${holidayLabel}${pendingLabel}`}
                     >
                       <DaySlot status={memberDay.morningStatus} baseClass={baseClass} />
                       <DaySlot status={memberDay.afternoonStatus} baseClass={baseClass} />
@@ -176,7 +176,7 @@ export function ManagerPresenceCalendar({ data, month, filter, onMonthChange, cu
                             type="button"
                             className="manager-month-planning__pending-request"
                             title="Demande en attente — cliquer pour valider"
-                            aria-label={`Valider la demande en attente de ${member.prenom} ${member.nom}`}
+                            aria-label={`Valider la demande en attente de ${member.nom} ${member.prenom}`}
                             onClick={(event) => {
                               event.stopPropagation()
                               onPendingRequestClick?.(pendingRequestIds[0])

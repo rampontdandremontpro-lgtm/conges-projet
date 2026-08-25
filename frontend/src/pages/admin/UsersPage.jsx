@@ -59,13 +59,13 @@ function errorMessage(error) {
 }
 
 function fullName(user) {
-  return `${user?.prenom ?? ''} ${user?.nom ?? ''}`.trim() || 'Utilisateur'
+  return `${user?.nom ?? ''} ${user?.prenom ?? ''}`.trim() || 'Utilisateur'
 }
 
 function initials(user) {
-  const first = String(user?.prenom ?? '').trim().charAt(0)
   const last = String(user?.nom ?? '').trim().charAt(0)
-  return `${first}${last}`.toUpperCase() || 'U'
+  const first = String(user?.prenom ?? '').trim().charAt(0)
+  return `${last}${first}`.toUpperCase() || 'U'
 }
 
 function formatDate(value) {
@@ -88,9 +88,12 @@ function formFromUser(user) {
   }
 }
 
-function UserDrawer({ mode, user, services, onClose, onSaved, onEdit }) {
+function UserDrawer({ mode, user, services, onClose, onSaved, onEdit, rhMode = false }) {
   const isCreate = mode === 'create'
   const isView = mode === 'view'
+  const roleOptions = rhMode
+    ? Object.entries(ROLE_LABELS).filter(([value]) => ['COLLABORATEUR', 'RESPONSABLE_SERVICE'].includes(value))
+    : Object.entries(ROLE_LABELS)
   const [form, setForm] = useState(() => formFromUser(user))
   const [busy, setBusy] = useState(false)
   const [feedback, setFeedback] = useState('')
@@ -228,7 +231,7 @@ function UserDrawer({ mode, user, services, onClose, onSaved, onEdit }) {
 
             <div className="admin-users-drawer__actions">
               <button type="button" className="admin-users-secondary" onClick={onClose}>Fermer</button>
-              <button type="button" className="admin-users-primary" onClick={() => onEdit(user)}><Icon name="edit" size={16} /> Modifier</button>
+              {!rhMode && <button type="button" className="admin-users-primary" onClick={() => onEdit(user)}><Icon name="edit" size={16} /> Modifier</button>}
             </div>
           </div>
         ) : (
@@ -246,7 +249,7 @@ function UserDrawer({ mode, user, services, onClose, onSaved, onEdit }) {
             <section className="admin-users-form__section">
               <div className="admin-users-section-title"><span>2</span><div><h3>Accès et rattachement</h3><p>Définissez le rôle et le service de l’utilisateur.</p></div></div>
               <div className="admin-users-form__grid">
-                <label className="is-wide"><span>Rôle <b>*</b></span><select value={form.role} onChange={(event) => setValue('role', event.target.value)}>{Object.entries(ROLE_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+                <label className="is-wide"><span>Rôle <b>*</b></span><select value={form.role} onChange={(event) => setValue('role', event.target.value)}>{roleOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
                 {form.role !== 'ADMIN' && (
                   <>
                     <label><span>Type <b>*</b></span><select value={form.employmentType} onChange={(event) => setValue('employmentType', event.target.value)}><option value="INTERNE">Interne</option><option value="EXTERNE">Externe</option></select></label>
@@ -289,7 +292,7 @@ function StatusConfirm({ user, busy, onCancel, onConfirm }) {
   )
 }
 
-export function AdminUsersPage() {
+export function AdminUsersPage({ rhMode = false }) {
   const { user: authenticatedUser } = useAuth()
   const [searchParams, setSearchParams] = useSearchParams()
   const [state, setState] = useState({ loading: true, error: false, users: [], services: [] })
@@ -359,7 +362,7 @@ export function AdminUsersPage() {
     if (filters.status === 'ACTIVE' && !item.isActive) return false
     if (filters.status === 'INACTIVE' && item.isActive) return false
     if (!query) return true
-    const searchable = `${item.prenom} ${item.nom} ${item.email} ${ROLE_LABELS[item.role] ?? item.role} ${item.service?.name ?? ''} ${item.employmentType === 'EXTERNE' ? 'externe' : 'interne'} ${item.isActive ? 'actif' : 'inactif'}`
+    const searchable = `${item.nom} ${item.prenom} ${item.email} ${ROLE_LABELS[item.role] ?? item.role} ${item.service?.name ?? ''} ${item.employmentType === 'EXTERNE' ? 'externe' : 'interne'} ${item.isActive ? 'actif' : 'inactif'}`
     return normalize(searchable).includes(query)
   }), [filters, query, state.users])
 
@@ -441,8 +444,14 @@ export function AdminUsersPage() {
                       <span className={`admin-users-type ${item.employmentType === 'EXTERNE' ? 'is-external' : 'is-internal'}`}>{item.employmentType === 'EXTERNE' ? 'Externe' : 'Interne'}</span>
                       <span className={`admin-users-status ${item.isActive ? 'is-active' : 'is-inactive'}`}>{item.isActive ? 'Actif' : 'Inactif'}</span>
                       <div className="admin-users-actions">
-                        <button type="button" title="Modifier" aria-label={`Modifier ${fullName(item)}`} onClick={(event) => { event.stopPropagation(); setDrawer({ mode: 'edit', user: item }) }}><Icon name="edit" size={16} /></button>
-                        <button type="button" className={item.isActive ? 'is-disable' : 'is-enable'} disabled={isSelf} title={isSelf ? 'Votre propre compte ne peut pas être désactivé ici' : item.isActive ? 'Désactiver' : 'Réactiver'} aria-label={item.isActive ? `Désactiver ${fullName(item)}` : `Réactiver ${fullName(item)}`} onClick={(event) => { event.stopPropagation(); if (!isSelf) setStatusTarget(item) }}><Icon name={item.isActive ? 'ban' : 'refresh'} size={16} /></button>
+                        {rhMode ? (
+                          <button type="button" title="Consulter" aria-label={`Consulter ${fullName(item)}`} onClick={(event) => { event.stopPropagation(); setDrawer({ mode: 'view', user: item }) }}><Icon name="eye" size={16} /></button>
+                        ) : (
+                          <>
+                            <button type="button" title="Modifier" aria-label={`Modifier ${fullName(item)}`} onClick={(event) => { event.stopPropagation(); setDrawer({ mode: 'edit', user: item }) }}><Icon name="edit" size={16} /></button>
+                            <button type="button" className={item.isActive ? 'is-disable' : 'is-enable'} disabled={isSelf} title={isSelf ? 'Votre propre compte ne peut pas être désactivé ici' : item.isActive ? 'Désactiver' : 'Réactiver'} aria-label={item.isActive ? `Désactiver ${fullName(item)}` : `Réactiver ${fullName(item)}`} onClick={(event) => { event.stopPropagation(); if (!isSelf) setStatusTarget(item) }}><Icon name={item.isActive ? 'ban' : 'refresh'} size={16} /></button>
+                          </>
+                        )}
                       </div>
                     </div>
                   )
@@ -454,8 +463,8 @@ export function AdminUsersPage() {
         )}
       </section>
 
-      {drawer && <UserDrawer mode={drawer.mode} user={drawer.user} services={state.services} onClose={() => setDrawer(null)} onEdit={(selected) => setDrawer({ mode: 'edit', user: selected })} onSaved={handleSaved} />}
-      {statusTarget && <StatusConfirm user={statusTarget} busy={statusBusy} onCancel={() => setStatusTarget(null)} onConfirm={confirmStatus} />}
+      {drawer && <UserDrawer mode={drawer.mode} user={drawer.user} services={state.services} rhMode={rhMode} onClose={() => setDrawer(null)} onEdit={(selected) => !rhMode && setDrawer({ mode: 'edit', user: selected })} onSaved={handleSaved} />}
+      {!rhMode && statusTarget && <StatusConfirm user={statusTarget} busy={statusBusy} onCancel={() => setStatusTarget(null)} onConfirm={confirmStatus} />}
     </PageContainer>
   )
 }

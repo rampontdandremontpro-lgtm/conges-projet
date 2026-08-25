@@ -11,6 +11,18 @@
   align-items: start;
 }
 
+
+.director-dashboard-paired {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+  align-items: stretch;
+}
+
+.director-dashboard-paired > .dash-card {
+  min-width: 0;
+  height: 100%;
+}
 .director-dashboard-column {
   display: flex;
   min-width: 0;
@@ -543,12 +555,20 @@
   .director-dashboard-grid {
     grid-template-columns: 1fr;
   }
+
+  .director-dashboard-paired {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 700px) {
   .page-container.director-dashboard-page {
     margin-top: 0;
     padding-top: var(--space-4);
+  }
+
+  .director-dashboard-paired {
+    grid-template-columns: 1fr;
   }
 
   .director-decision-metrics,

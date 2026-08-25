@@ -12,7 +12,7 @@ import {
 } from '@/utils/managerCalendar'
 
 function initials(person) {
-  return `${person?.prenom?.[0] ?? ''}${person?.nom?.[0] ?? ''}`.toUpperCase()
+  return `${person?.nom?.[0] ?? ''}${person?.prenom?.[0] ?? ''}`.toUpperCase()
 }
 
 function buildEvents(alerts) {
@@ -195,7 +195,7 @@ export function ManagerAlertsCalendar({
                 <div className="manager-month-planning__person">
                   <span className="manager-month-planning__avatar" style={{ background: personColor.soft, color: personColor.solid }}>{initials(person)}</span>
                   <span className="manager-month-planning__person-copy">
-                    <strong>{person.prenom} {person.nom}</strong>
+                    <strong>{person.nom} {person.prenom}</strong>
                     <small>{person.role === 'RESPONSABLE_SERVICE' ? 'Responsable de service' : 'Collaborateur'}</small>
                   </span>
                 </div>
@@ -228,7 +228,7 @@ export function ManagerAlertsCalendar({
                         key={`${person.id}-${date}`}
                         className={`${commonClass} is-clickable`}
                         onClick={() => onOpenRequest?.(primary.sourceId)}
-                        title={`Ouvrir la demande de ${person.prenom} ${person.nom}`}
+                        title={`Ouvrir la demande de ${person.nom} ${person.prenom}`}
                       >
                         {content}
                       </button>

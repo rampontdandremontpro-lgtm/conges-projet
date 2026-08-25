@@ -85,7 +85,7 @@ export function ManagerRequestDecisionPage() {
 
   const employeeName = useMemo(() => {
     const employee = state.request?.employee
-    return employee ? `${employee.prenom} ${employee.nom}` : ''
+    return employee ? `${employee.nom} ${employee.prenom}` : ''
   }, [state.request])
 
   const handleValidate = () => {
@@ -186,7 +186,7 @@ export function ManagerRequestDecisionPage() {
 
       <section className="manager-request-detail-hero">
         <span className="manager-request-detail-hero__avatar">
-          {`${request.employee?.prenom?.[0] ?? ''}${request.employee?.nom?.[0] ?? ''}`.toUpperCase()}
+          {`${request.employee?.nom?.[0] ?? ''}${request.employee?.prenom?.[0] ?? ''}`.toUpperCase()}
         </span>
         <div>
           <span className="manager-request-detail-hero__eyebrow">DEMANDE DE CONGÉ N°{request.displayNumber ?? request.id}</span>
@@ -264,7 +264,7 @@ export function ManagerRequestDecisionPage() {
                     <strong>Personnes déjà absentes ou en attente sur la période</strong>
                     {availability.overlaps.map((item) => (
                       <div className="manager-request-overlap-row" key={`${item.source}-${item.sourceId}`}>
-                        <span>{item.prenom} {item.nom}</span>
+                        <span>{item.nom} {item.prenom}</span>
                         <small>{formatRangeNumericFR(item.startDate, item.endDate)}</small>
                       </div>
                     ))}

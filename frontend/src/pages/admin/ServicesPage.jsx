@@ -53,7 +53,7 @@ function errorMessage(error) {
 }
 
 function personName(user) {
-  return `${user?.prenom ?? ''} ${user?.nom ?? ''}`.trim() || 'Utilisateur'
+  return `${user?.nom ?? ''} ${user?.prenom ?? ''}`.trim() || 'Utilisateur'
 }
 
 function serviceForm(service) {

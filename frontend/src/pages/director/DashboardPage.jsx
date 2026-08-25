@@ -41,7 +41,7 @@ function formatPeriod(request) {
 }
 
 function initials(user) {
-  return `${user?.prenom?.[0] ?? ''}${user?.nom?.[0] ?? ''}`.toUpperCase() || '?'
+  return `${user?.nom?.[0] ?? ''}${user?.prenom?.[0] ?? ''}`.toUpperCase() || '?'
 }
 
 function DecisionsCard({ decisions, onNavigate }) {
@@ -167,7 +167,7 @@ function PrioritiesCard({ requests, onNavigate }) {
               <span className="director-priority-avatar">{initials(request.employee)}</span>
               <span className="director-priority-main">
                 <span className="director-priority-top">
-                  <strong>{`${request.employee?.prenom ?? ''} ${request.employee?.nom ?? ''}`.trim() || 'Collaborateur'}</strong>
+                  <strong>{`${request.employee?.nom ?? ''} ${request.employee?.prenom ?? ''}`.trim() || 'Collaborateur'}</strong>
                   <em>{ROLE_LABELS[request.employee?.role] ?? 'Collaborateur'}</em>
                 </span>
                 <span>{request.leaveType?.name ?? 'Demande de congé'}</span>
@@ -343,12 +343,14 @@ export function DashboardDirecteur() {
       <div className="director-dashboard-grid">
         <div className="director-dashboard-column director-dashboard-column--main">
           <DecisionsCard decisions={data.decisions} onNavigate={navigate} />
-          <PrioritiesCard requests={data.priorities} onNavigate={navigate} />
+          <div className="director-dashboard-paired">
+            <PrioritiesCard requests={data.priorities} onNavigate={navigate} />
+            <ServicesCard presence={data.presence} onNavigate={navigate} />
+          </div>
         </div>
 
         <div className="director-dashboard-column director-dashboard-column--side">
           <GlobalPresenceCard presence={data.presence} onNavigate={navigate} />
-          <ServicesCard presence={data.presence} onNavigate={navigate} />
           <AttentionCard items={data.attention} onNavigate={navigate} />
         </div>
       </div>

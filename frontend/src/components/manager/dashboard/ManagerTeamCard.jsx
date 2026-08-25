@@ -7,7 +7,7 @@ const STATUS_LABELS = {
 }
 
 function initials(member) {
-  return `${member.prenom?.[0] ?? ''}${member.nom?.[0] ?? ''}`.toUpperCase() || '—'
+  return `${member.nom?.[0] ?? ''}${member.prenom?.[0] ?? ''}`.toUpperCase() || '—'
 }
 
 export function ManagerTeamCard({ presence, loading, error, onRetry, onOpenPresence }) {
@@ -51,7 +51,7 @@ export function ManagerTeamCard({ presence, loading, error, onRetry, onOpenPrese
             <div className="manager-team-row" key={member.id}>
               <span className="manager-team-avatar">{initials(member)}</span>
               <span className="manager-team-identity">
-                <strong>{member.prenom} {member.nom}</strong>
+                <strong>{member.nom} {member.prenom}</strong>
                 <small>{member.role === 'RESPONSABLE_SERVICE' ? 'Responsable de service' : 'Collaborateur'}</small>
               </span>
               <span className={`manager-team-status manager-team-status--${member.presenceStatus.toLowerCase()}`}>

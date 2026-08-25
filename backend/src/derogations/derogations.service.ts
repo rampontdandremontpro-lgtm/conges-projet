@@ -432,11 +432,12 @@ export class DerogationsService implements OnApplicationBootstrap, OnApplication
       );
 
     if (authenticatedUser.role === UserRole.DIRECTEUR) {
-      queryBuilder
-        .where('derogation.status = :directorPendingStatus', {
-          directorPendingStatus: DerogationStatus.EN_ATTENTE_RH,
-        })
-        .andWhere('derogation.decidedByRhId IS NOT NULL');
+      queryBuilder.where('derogation.decidedByRhId IS NOT NULL');
+      if (query.status) {
+        queryBuilder.andWhere('derogation.status = :status', {
+          status: query.status,
+        });
+      }
     } else if (query.status) {
       queryBuilder.where('derogation.status = :status', {
         status: query.status,
@@ -1159,7 +1160,7 @@ export class DerogationsService implements OnApplicationBootstrap, OnApplication
 
         const leaveRequestId = derogation.leaveRequestId;
         const employeeName = candidate.employee
-          ? `${candidate.employee.prenom} ${candidate.employee.nom}`
+          ? `${candidate.employee.nom} ${candidate.employee.prenom}`
           : 'le collaborateur';
         const period = `${candidate.requestedStartDate} au ${candidate.requestedEndDate}`;
 

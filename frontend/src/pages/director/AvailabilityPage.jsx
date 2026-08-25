@@ -6,7 +6,6 @@ import { LeaveCalendar } from '@/components/collab/new-request/LeaveCalendar'
 import { Icon } from '@/components/ui/Icon'
 import { Toast } from '@/components/ui/Toast'
 import {
-  createDirectorLeaveRequest,
   getHolidays,
   getLeaveTypes,
 } from '@/services/leaveRequests'
@@ -65,7 +64,7 @@ export function DirectorAvailabilityPage() {
   const { source: editSource, id: editIdParam } = useParams()
   const editId = editIdParam ? Number(editIdParam) : null
   const isEditing = Boolean(editId && ['leave', 'absence'].includes(editSource))
-  const [mode, setMode] = useState('LEAVE')
+  const [mode, setMode] = useState('ABSENCE')
   const [types, setTypes] = useState([])
   const [selectedTypeId, setSelectedTypeId] = useState(null)
   const [month, setMonth] = useState(() => currentMonth())
@@ -112,19 +111,30 @@ export function DirectorAvailabilityPage() {
 
       if (cancelled) return
 
-      const available = (typesData ?? []).filter(
-        (type) => type.isActive && type.employeeCanCreate && !type.rhOnly,
-      )
+      const available = (typesData ?? []).filter((type) => type.isActive)
       setTypes(available)
 
       const directorLeaveTypes = available.filter(
-        (type) =>
-          type.category === 'DEMANDE_CONGE' &&
-          String(type.name ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('fr-FR').trim() === 'conge',
+        (type) => type.category === 'DEMANDE_CONGE',
       )
+      const directorAbsenceTypes = available.filter(
+        (type) => type.category === 'DECLARATION_ABSENCE',
+      )
+      const normalizeTypeName = (value) => String(value ?? '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLocaleLowerCase('fr-FR')
+        .trim()
+      const preferredDirectorAbsence =
+        directorAbsenceTypes.find((type) => normalizeTypeName(type.name) === 'absence autorisee') ??
+        directorAbsenceTypes.find((type) => type.allowsDays && !type.documentRequired) ??
+        directorAbsenceTypes.find((type) => type.allowsDays) ??
+        directorAbsenceTypes[0] ??
+        null
 
       if (!existing) {
-        setSelectedTypeId(directorLeaveTypes[0]?.id ?? null)
+        setMode('ABSENCE')
+        setSelectedTypeId(preferredDirectorAbsence?.id ?? null)
         return
       }
 
@@ -194,12 +204,7 @@ export function DirectorAvailabilityPage() {
   }, [loadedHolidayYears, month.year, showToast])
 
   const leaveTypes = useMemo(
-    () =>
-      types.filter(
-        (type) =>
-          type.category === 'DEMANDE_CONGE' &&
-          String(type.name ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('fr-FR').trim() === 'conge',
-      ),
+    () => types.filter((type) => type.category === 'DEMANDE_CONGE'),
     [types],
   )
   const absenceTypes = useMemo(
@@ -229,25 +234,18 @@ export function DirectorAvailabilityPage() {
     }))
   }, [halfDaysAllowed, hoursOnly, selectedType])
 
-  const handleModeChange = (nextMode) => {
-    if (isEditing || nextMode === mode) return
-    const nextTypes = nextMode === 'LEAVE' ? leaveTypes : absenceTypes
-    const preferred =
-      nextMode === 'LEAVE'
-        ? nextTypes[0] ?? null
-        : nextTypes[0] ?? null
-
-    setMode(nextMode)
-    setSelectedTypeId(preferred?.id ?? null)
-    setDurationHours('')
-    setAbsenceDraft(null)
-  }
-
-  const handleTypeChange = (event) => {
-    setSelectedTypeId(Number(event.target.value))
-    setDurationHours('')
-    setAbsenceDraft(null)
-  }
+  const preferredAbsenceType = useMemo(() => {
+    const normalizeTypeName = (value) => String(value ?? '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLocaleLowerCase('fr-FR')
+      .trim()
+    return absenceTypes.find((type) => normalizeTypeName(type.name) === 'absence autorisee') ??
+      absenceTypes.find((type) => type.allowsDays && !type.documentRequired) ??
+      absenceTypes.find((type) => type.allowsDays) ??
+      absenceTypes[0] ??
+      null
+  }, [absenceTypes])
 
   const handlePick = (iso) => {
     if (hoursOnly) {
@@ -256,16 +254,19 @@ export function DirectorAvailabilityPage() {
     }
 
     setSelection((current) => {
-      if (current.startDate && iso === current.startDate) {
-        return { ...current, startDate: null, endDate: null }
+      if (!current.startDate) {
+        return { ...current, startDate: iso, endDate: iso }
       }
-      if (!current.startDate || current.endDate) {
-        return { ...current, startDate: iso, endDate: null }
+      if (current.startDate === current.endDate) {
+        if (iso === current.startDate) {
+          return { ...current, startDate: null, endDate: null }
+        }
+        if (iso < current.startDate) {
+          return { ...current, startDate: iso, endDate: current.startDate }
+        }
+        return { ...current, endDate: iso }
       }
-      if (iso < current.startDate) {
-        return { ...current, startDate: iso, endDate: current.startDate }
-      }
-      return { ...current, endDate: iso }
+      return { ...current, startDate: iso, endDate: iso }
     })
   }
 
@@ -285,7 +286,7 @@ export function DirectorAvailabilityPage() {
 
   const validationError = useMemo(() => {
     if (!selectedType) {
-      return mode === 'LEAVE' ? 'Aucun type de congé disponible.' : 'Aucun type d’absence disponible.'
+      return 'Aucun type d’absence utilisable n’est disponible pour enregistrer l’indisponibilité.'
     }
     if (!selection.startDate) return 'Sélectionnez la date de début.'
     if (!selection.endDate) return 'Sélectionnez la date de fin.'
@@ -305,9 +306,8 @@ export function DirectorAvailabilityPage() {
   }, [durationHours, hoursOnly, mode, selectedType, selection])
 
   const resetForm = () => {
-    const leavePreferred = leaveTypes[0] ?? null
-    setMode('LEAVE')
-    setSelectedTypeId(leavePreferred?.id ?? null)
+    setMode('ABSENCE')
+    setSelectedTypeId(preferredAbsenceType?.id ?? null)
     setSelection({
       startDate: null,
       endDate: null,
@@ -352,21 +352,6 @@ export function DirectorAvailabilityPage() {
         return
       }
 
-      if (mode === 'LEAVE') {
-        await createDirectorLeaveRequest({
-          leaveTypeId: Number(selectedType.id),
-          startDate: selection.startDate,
-          endDate: selection.endDate,
-          startPeriod: selection.startPeriod,
-          endPeriod: selection.endPeriod,
-          comment: normalizedComment(comment),
-        })
-        notifyAppDataChanged()
-        resetForm()
-        showToast('success', 'Votre congé a été enregistré directement.')
-        return
-      }
-
       const payload = {
         leaveTypeId: Number(selectedType.id),
         startDate: selection.startDate,
@@ -388,7 +373,7 @@ export function DirectorAvailabilityPage() {
       await submitAbsenceDeclaration(draft.id, { certifiedAccurate: true })
       notifyAppDataChanged()
       resetForm()
-      showToast('success', 'Votre absence a été enregistrée directement.')
+      showToast('success', 'Votre indisponibilité a été enregistrée directement.')
     } catch (error) {
       showToast('error', errorMessage(error))
     } finally {
@@ -404,7 +389,7 @@ export function DirectorAvailabilityPage() {
         <div className="director-availability-error-card">
           <span><Icon name="alert" size={24} /></span>
           <h2>Impossible de charger la page</h2>
-          <p>Les types de congés et d’absences sont momentanément indisponibles.</p>
+          <p>Les paramètres nécessaires à l’enregistrement de votre indisponibilité sont momentanément indisponibles.</p>
           <button type="button" onClick={() => window.location.reload()}>Réessayer</button>
         </div>
       </div>
@@ -419,60 +404,19 @@ export function DirectorAvailabilityPage() {
             <div className="director-availability-card__heading">
               <div>
                 <span className="director-availability-eyebrow">Mon indisponibilité</span>
-                <h2>{isEditing ? 'Quelle indisponibilité souhaitez-vous modifier ?' : 'Que souhaitez-vous enregistrer ?'}</h2>
+                <h2>{isEditing ? 'Je modifie mon indisponibilité' : "J'enregistre mon indisponibilité"}</h2>
               </div>
             </div>
 
-            <div className="director-availability-mode-grid">
-              <button
-                type="button"
-                className={`director-availability-mode${mode === 'LEAVE' ? ' is-active' : ''}`}
-                onClick={() => handleModeChange('LEAVE')}
-                aria-pressed={mode === 'LEAVE'}
-                disabled={isEditing && mode !== 'LEAVE'}
-              >
-                <span className="director-availability-mode__icon director-availability-mode__icon--leave">
-                  <Icon name="sun" size={21} />
-                </span>
-                <span>
-                  <strong>Congé</strong>
-                  <small>Enregistré sans décompte de solde</small>
-                </span>
-                <i><Icon name="check" size={13} /></i>
-              </button>
-
-              <button
-                type="button"
-                className={`director-availability-mode${mode === 'ABSENCE' ? ' is-active' : ''}`}
-                onClick={() => handleModeChange('ABSENCE')}
-                aria-pressed={mode === 'ABSENCE'}
-                disabled={isEditing && mode !== 'ABSENCE'}
-              >
-                <span className="director-availability-mode__icon director-availability-mode__icon--absence">
-                  <Icon name="calendar" size={21} />
-                </span>
-                <span>
-                  <strong>Absence</strong>
-                  <small>Maladie ou autre absence autorisée</small>
-                </span>
-                <i><Icon name="check" size={13} /></i>
-              </button>
-            </div>
-
-            <div className="director-availability-field">
-              <span>{mode === 'LEAVE' ? 'Type de congé' : 'Type d’absence'}</span>
-              {mode === 'LEAVE' ? (
-                <div className="director-availability-fixed-value" aria-label="Type de congé fixe">
-                  Congé
-                </div>
-              ) : (
-                <select value={selectedTypeId ?? ''} onChange={handleTypeChange} disabled={availableTypes.length === 0}>
-                  {availableTypes.length === 0 && <option value="">Aucun type disponible</option>}
-                  {availableTypes.map((type) => (
-                    <option value={type.id} key={type.id}>{type.name}</option>
-                  ))}
-                </select>
-              )}
+            <div className="director-availability-single-mode" aria-label="Nature de l'enregistrement">
+              <span className="director-availability-mode__icon director-availability-mode__icon--absence">
+                <Icon name="calendar" size={21} />
+              </span>
+              <span>
+                <strong>Indisponibilité</strong>
+                <small>Enregistrement direct de votre période d’indisponibilité</small>
+              </span>
+              <i><Icon name="check" size={13} /></i>
             </div>
           </section>
 
@@ -532,7 +476,7 @@ export function DirectorAvailabilityPage() {
               </div>
             ) : (
               <div className="director-availability-recap-grid">
-                <span><small>Type</small><strong>{selectedType?.name ?? '—'}</strong></span>
+                <span><small>Type</small><strong>Indisponibilité</strong></span>
                 <span><small>Début</small><strong>{formatDateFR(selection.startDate)} · {periodLabel(selection.startPeriod)}</strong></span>
                 <span><small>Fin</small><strong>{formatDateFR(selection.endDate)} · {periodLabel(selection.endPeriod)}</strong></span>
                 <span><small>Durée</small><strong>{duration ? `${formatDays(duration.value)} ${duration.unit}` : '—'}</strong></span>
@@ -562,7 +506,7 @@ export function DirectorAvailabilityPage() {
             <div className="director-availability-calendar-heading">
               <span>
                 <strong>Sélectionnez votre période</strong>
-                <small>Cliquez sur le premier puis le dernier jour.</small>
+                <small>Un clic sélectionne une journée ; cliquez sur une autre date pour étendre la période.</small>
               </span>
               <button type="button" onClick={() => setMonth(currentMonth())}>Aujourd’hui</button>
             </div>

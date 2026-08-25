@@ -191,16 +191,13 @@ export function NewRequest() {
 
   const handlePick = (iso) => {
     setSelection((prev) => {
-      if (prev.startDate && iso === prev.startDate) {
-        return { ...prev, startDate: null, endDate: null }
+      if (!prev.startDate) return { ...prev, startDate: iso, endDate: iso }
+      if (prev.startDate === prev.endDate) {
+        if (iso === prev.startDate) return { ...prev, startDate: null, endDate: null }
+        if (iso < prev.startDate) return { ...prev, startDate: iso, endDate: prev.startDate }
+        return { ...prev, endDate: iso }
       }
-      if (!prev.startDate || (prev.startDate && prev.endDate)) {
-        return { ...prev, startDate: iso, endDate: null }
-      }
-      if (iso < prev.startDate) {
-        return { ...prev, startDate: iso, endDate: prev.startDate }
-      }
-      return { ...prev, endDate: iso }
+      return { ...prev, startDate: iso, endDate: iso }
     })
   }
 

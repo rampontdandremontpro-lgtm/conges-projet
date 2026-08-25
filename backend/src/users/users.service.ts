@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -44,7 +45,21 @@ export class UsersService {
     private readonly dataSource: DataSource,
   ) {}
 
-  async create(createUserDto: CreateUserDto): Promise<User> {
+  async create(
+    createUserDto: CreateUserDto,
+    actorRole: UserRole = UserRole.ADMIN,
+  ): Promise<User> {
+    if (
+      actorRole === UserRole.RH &&
+      ![UserRole.COLLABORATEUR, UserRole.RESPONSABLE_SERVICE].includes(
+        createUserDto.role,
+      )
+    ) {
+      throw new ForbiddenException(
+        'La RH peut créer uniquement des collaborateurs ou des responsables de service.',
+      );
+    }
+
     const email = createUserDto.email.trim().toLowerCase();
     const existingUser = await this.userRepository.findOneBy({ email });
 
@@ -458,7 +473,7 @@ export class UsersService {
       pendingRequests: pendingLeaves.map((leave) => ({
         id: leave.id,
         employeeId: leave.employeeId,
-        employeeName: `${leave.employee?.prenom ?? ''} ${leave.employee?.nom ?? ''}`.trim(),
+        employeeName: `${leave.employee?.nom ?? ''} ${leave.employee?.prenom ?? ''}`.trim(),
         leaveTypeName: leave.leaveType?.name ?? 'Congé',
         startDate: leave.startDate,
         endDate: leave.endDate,

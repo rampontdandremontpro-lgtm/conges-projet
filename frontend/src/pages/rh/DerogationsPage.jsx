@@ -470,13 +470,12 @@ export function RhDerogationsPage() {
       <section className="rh-derogations-card">
         <div className="rh-derogations-toolbar">
           <div>
-            <h2>{isDirector ? 'Dérogations à valider' : 'Gestion des dérogations'}</h2>
-            {isDirector && <p>Dérogations déjà validées par la RH et en attente de votre décision finale.</p>}
+            <h2>{isDirector ? 'Dérogations' : 'Gestion des dérogations'}</h2>
           </div>
         </div>
 
         <div className="rh-derogations-tabs" role="tablist" aria-label="Filtrer les dérogations">
-          {(isDirector ? FILTERS.filter((tab) => ['all', 'pending'].includes(tab.id)) : FILTERS).map((tab) => (
+          {FILTERS.map((tab) => (
             <button
               key={tab.id}
               type="button"

@@ -54,7 +54,7 @@ function formatDateTime(value) {
 }
 
 function initials(employee) {
-  return `${employee?.prenom?.[0] ?? ''}${employee?.nom?.[0] ?? ''}`.toUpperCase() || '—'
+  return `${employee?.nom?.[0] ?? ''}${employee?.prenom?.[0] ?? ''}`.toUpperCase() || '—'
 }
 
 function statusMeta(status) {
@@ -219,12 +219,28 @@ export function DirectorAllRequestsPage() {
     typeFilter !== 'all',
   ].filter(Boolean).length
 
-  const filteredRequests = useMemo(() => state.requests.filter((request) => {
-    if (!statusMatchesFilter(request.status, statusFilter)) return false
-    if (serviceFilter !== 'all' && String(request.service?.id) !== serviceFilter) return false
-    if (typeFilter !== 'all' && String(request.leaveType?.id) !== typeFilter) return false
-    return requestMatchesSearch(request, search)
-  }), [search, serviceFilter, state.requests, statusFilter, typeFilter])
+  const filteredRequests = useMemo(() => {
+    const result = state.requests.filter((request) => {
+      if (!statusMatchesFilter(request.status, statusFilter)) return false
+      if (serviceFilter !== 'all' && String(request.service?.id) !== serviceFilter) return false
+      if (typeFilter !== 'all' && String(request.leaveType?.id) !== typeFilter) return false
+      return requestMatchesSearch(request, search)
+    })
+
+    return result.sort((left, right) => {
+      const leftPending = statusMatchesFilter(left.status, 'pending')
+      const rightPending = statusMatchesFilter(right.status, 'pending')
+      if (leftPending !== rightPending) return leftPending ? -1 : 1
+
+      if (leftPending && rightPending) {
+        const byStart = String(left.startDate ?? '').localeCompare(String(right.startDate ?? ''))
+        if (byStart !== 0) return byStart
+        return new Date(left.submittedAt ?? left.createdAt ?? 0).getTime() - new Date(right.submittedAt ?? right.createdAt ?? 0).getTime()
+      }
+
+      return new Date(right.decisionAt ?? right.submittedAt ?? right.createdAt ?? 0).getTime() - new Date(left.decisionAt ?? left.submittedAt ?? left.createdAt ?? 0).getTime()
+    })
+  }, [search, serviceFilter, state.requests, statusFilter, typeFilter])
 
   useEffect(() => {
     setPage(1)
@@ -316,6 +332,7 @@ export function DirectorAllRequestsPage() {
               <span>Durée</span>
               <span>Statut</span>
               <span>Soumis le</span>
+              <span>Refusé le</span>
               <span aria-hidden="true" />
             </div>
 
@@ -349,7 +366,7 @@ export function DirectorAllRequestsPage() {
                     <span className="director-all-requests-person">
                       <span className="director-all-requests-avatar">{initials(request.employee)}</span>
                       <span>
-                        <strong>{request.employee?.prenom} {request.employee?.nom}</strong>
+                        <strong>{request.employee?.nom} {request.employee?.prenom}</strong>
                         <small>{request.service?.name ?? 'Service non renseigné'}</small>
                       </span>
                     </span>
@@ -359,6 +376,7 @@ export function DirectorAllRequestsPage() {
                     <span className="director-all-requests-duration">{formatDays(Number(request.deductedDays) || 0)} j</span>
                     <span><span className={`director-request-status director-request-status--${meta.tone}`}>{meta.label}</span></span>
                     <span>{formatDateTime(request.submittedAt)}</span>
+                    <span>{request.status === 'REFUSEE' ? formatDateTime(request.decisionAt) : '—'}</span>
                     <span className="director-all-requests-open"><Icon name="eye" size={17} /></span>
                   </button>
                 )

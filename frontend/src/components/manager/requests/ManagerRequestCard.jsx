@@ -2,7 +2,7 @@ import { Icon } from '@/components/ui/Icon'
 import { formatDays, formatRangeNumericFR } from '@/utils/format'
 
 function initials(employee) {
-  return `${employee?.prenom?.[0] ?? ''}${employee?.nom?.[0] ?? ''}`.toUpperCase() || '—'
+  return `${employee?.nom?.[0] ?? ''}${employee?.prenom?.[0] ?? ''}`.toUpperCase() || '—'
 }
 
 function formatSubmittedAt(value) {
@@ -34,7 +34,7 @@ export function ManagerRequestCard({ request, availability, onOpen }) {
 
       <span className="manager-requests-card__content">
         <span className="manager-requests-card__topline">
-          <strong>{request.employee?.prenom} {request.employee?.nom}</strong>
+          <strong>{request.employee?.nom} {request.employee?.prenom}</strong>
           {request.isUrgent ? (
             <span className="manager-requests-badge manager-requests-badge--urgent">
               <Icon name="alert" size={12} />

@@ -2,7 +2,7 @@ import { Icon } from '@/components/ui/Icon'
 import { formatDays, formatRangeNumericFR } from '@/utils/format'
 
 function initials(person) {
-  return `${person?.prenom?.[0] ?? ''}${person?.nom?.[0] ?? ''}`.toUpperCase() || '—'
+  return `${person?.nom?.[0] ?? ''}${person?.prenom?.[0] ?? ''}`.toUpperCase() || '—'
 }
 
 function overlapSourceLabel(source) {
@@ -40,13 +40,13 @@ export function ManagerOverlapAlertCard({ request, availability, onOpen }) {
       tabIndex={0}
       onClick={() => onOpen(request.id)}
       onKeyDown={(event) => handleCardKeyDown(event, () => onOpen(request.id))}
-      aria-label={`Voir la demande de ${request.employee?.prenom ?? ''} ${request.employee?.nom ?? ''}`}
+      aria-label={`Voir la demande de ${request.employee?.nom ?? ''} ${request.employee?.prenom ?? ''}`}
     >
       <div className="manager-overlap-card__request">
         <span className="manager-overlap-card__avatar">{initials(request.employee)}</span>
         <div className="manager-overlap-card__request-content">
           <div className="manager-overlap-card__topline">
-            <strong>{request.employee?.prenom} {request.employee?.nom}</strong>
+            <strong>{request.employee?.nom} {request.employee?.prenom}</strong>
             <span className="manager-overlap-badge manager-overlap-badge--warning">
               <Icon name="alert" size={12} />
               {overlaps.length} chevauchement{overlaps.length > 1 ? 's' : ''}
@@ -84,7 +84,7 @@ export function ManagerOverlapAlertCard({ request, availability, onOpen }) {
             <div className="manager-overlap-person" key={`${item.source}-${item.sourceId}`}>
               <span className="manager-overlap-person__avatar">{initials(item)}</span>
               <span className="manager-overlap-person__identity">
-                <strong>{item.prenom} {item.nom}</strong>
+                <strong>{item.nom} {item.prenom}</strong>
                 <small>{overlapSourceLabel(item.source)} · {overlapStatusLabel(item.status)}</small>
               </span>
               <span className="manager-overlap-person__period">

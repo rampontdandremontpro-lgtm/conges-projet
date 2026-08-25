@@ -189,7 +189,7 @@ function buildPriorityItems({
     kind: 'leave',
     sourceId: request.id,
     label: request.leaveType?.name ?? 'Demande de congé',
-    title: `${request.employee?.prenom ?? ''} ${request.employee?.nom ?? ''}`.trim() || 'Collaborateur',
+    title: `${request.employee?.nom ?? ''} ${request.employee?.prenom ?? ''}`.trim() || 'Collaborateur',
     subtitle: request.service?.name ?? 'Service non renseigné',
     meta: request.startDate && request.endDate
       ? `${request.startDate} → ${request.endDate}`
@@ -206,7 +206,7 @@ function buildPriorityItems({
     kind: 'absence',
     sourceId: absence.id,
     label: absence.leaveType?.name ?? 'Déclaration d’absence',
-    title: `${absence.employee?.prenom ?? ''} ${absence.employee?.nom ?? ''}`.trim() || 'Collaborateur',
+    title: `${absence.employee?.nom ?? ''} ${absence.employee?.prenom ?? ''}`.trim() || 'Collaborateur',
     subtitle: absence.service?.name ?? 'Service non renseigné',
     meta: absence.startDate && absence.endDate
       ? `${absence.startDate} → ${absence.endDate}`
@@ -242,7 +242,7 @@ function buildPriorityItems({
     kind: 'derogation',
     sourceId: derogation.id,
     label: 'Dérogation à traiter',
-    title: `${derogation.employee?.prenom ?? ''} ${derogation.employee?.nom ?? ''}`.trim() || 'Collaborateur',
+    title: `${derogation.employee?.nom ?? ''} ${derogation.employee?.prenom ?? ''}`.trim() || 'Collaborateur',
     subtitle: derogation.leaveType?.name ?? 'Demande de dérogation',
     meta: derogation.requestedStartDate && derogation.requestedEndDate
       ? `${derogation.requestedStartDate} → ${derogation.requestedEndDate}`

@@ -8,7 +8,7 @@ const STATUS_LABELS = {
 }
 
 function initials(member) {
-  return `${member.prenom?.[0] ?? ''}${member.nom?.[0] ?? ''}`.toUpperCase() || '—'
+  return `${member.nom?.[0] ?? ''}${member.prenom?.[0] ?? ''}`.toUpperCase() || '—'
 }
 
 function statusClass(status) {
@@ -36,7 +36,7 @@ export function ManagerPresenceMemberCard({ member, currentPeriod }) {
       <div className="manager-presence-member-card__identity">
         <span className="manager-presence-member-card__avatar">{initials(member)}</span>
         <span className="manager-presence-member-card__name">
-          <strong>{member.prenom} {member.nom}</strong>
+          <strong>{member.nom} {member.prenom}</strong>
           <small>{roleLabel}</small>
         </span>
       </div>

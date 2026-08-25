@@ -210,12 +210,12 @@
 }
 
 .director-all-requests-table {
-  min-width: 1120px;
+  min-width: 1240px;
 }
 
 .director-all-requests-row {
   display: grid;
-  grid-template-columns: minmax(230px, 1.5fr) minmax(165px, 1fr) 100px 100px 78px minmax(140px, .9fr) 112px 42px;
+  grid-template-columns: minmax(220px, 1.45fr) minmax(150px, 1fr) 92px 92px 70px minmax(140px, .95fr) 102px 102px 36px;
   align-items: center;
   column-gap: 12px;
   width: 100%;

@@ -285,7 +285,7 @@ export class BalanceReminderService {
           ? 'aucun jour réservé'
           : `${row.reservedDays} ${this.plural(row.reservedDays, 'jour')} déjà réservé${row.reservedDays === 1 ? '' : 's'}`;
       return (
-        `• ${row.prenom} ${row.nom} (${row.service}) — employé n°${row.employeeId} : ` +
+        `• ${row.nom} ${row.prenom} (${row.service}) — employé n°${row.employeeId} : ` +
         `solde ${row.availableDays} ${this.plural(row.availableDays, 'jour')} (${reserved}, ` +
         `${row.potentialDays} encore utilisable${row.potentialDays === 1 ? '' : 's'})`
       );

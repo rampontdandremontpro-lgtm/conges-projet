@@ -42,7 +42,7 @@ function matchesSearch(request, availability, query) {
     `${formatDays(Number(request.deductedDays) || 0)} j`,
     request.isUrgent ? 'urgente' : 'en attente',
     availability?.minimumPresenceBreached ? 'presence minimale alerte' : '',
-    ...(availability?.overlaps ?? []).flatMap((item) => [item.prenom, item.nom]),
+    ...(availability?.overlaps ?? []).flatMap((item) => [item.nom, item.prenom]),
   ]
     .map(normalizeSearchValue)
     .join(' ')
