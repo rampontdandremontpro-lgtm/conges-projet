@@ -284,7 +284,11 @@ function BalanceDetailDrawer({ row, onClose, onChanged }) {
 
                   <label className="rh-balances-notify">
                     <input type="checkbox" checked={notifyEmployee} onChange={(event) => setNotifyEmployee(event.target.checked)} />
-                    <span>Notifier le collaborateur</span>
+                    <span className="rh-balances-notify__switch" aria-hidden="true"><i /></span>
+                    <span className="rh-balances-notify__copy">
+                      <strong>Notifier le collaborateur</strong>
+                      <small>{notifyEmployee ? 'Le collaborateur recevra une notification.' : 'Aucune notification ne sera envoyée.'}</small>
+                    </span>
                   </label>
 
                   {feedback && <div className="rh-balances-correction__error">{feedback}</div>}
@@ -465,7 +469,7 @@ export function RhBalancesPage() {
               >
                 <option value="all">Tous les services</option>
                 {services.map((service) => <option value={service.id} key={service.id}>{service.name}</option>)}
-                {externalServiceIds.size > 0 && <option value="external">Services externes</option>}
+                {externalServiceIds.size > 0 && <option value="external">Mis à disposition</option>}
               </select>
             </label>
             <label>
@@ -483,6 +487,18 @@ export function RhBalancesPage() {
                 {adjacentPeriods().map((period) => <option key={period.value} value={period.value}>{period.label}</option>)}
               </select>
             </label>
+            <button
+              type="button"
+              className="rh-balances-reset"
+              onClick={() => {
+                setServiceFilter('all')
+                setEmployeeFilter('all')
+                setPeriodFilter(currentReferencePeriod())
+                setPage(1)
+              }}
+            >
+              <Icon name="refresh" size={15} /> Réinitialiser
+            </button>
           </div>
         </div>
 

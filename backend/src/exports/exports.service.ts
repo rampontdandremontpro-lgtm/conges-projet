@@ -74,7 +74,7 @@ export class ExportsService {
           FROM users u
           LEFT JOIN services s ON s.id = u.service_id
           WHERE u.is_active = 1
-            AND u.role != 'ADMIN'
+            AND u.role NOT IN ('ADMIN','DIRECTEUR')
           ORDER BY u.nom ASC, u.prenom ASC
         `,
       ),
@@ -99,6 +99,7 @@ export class ExportsService {
           FROM leave_requests lr
           INNER JOIN users u ON u.id = lr.employee_id
           WHERE lr.status = 'VALIDEE'
+            AND u.role <> 'DIRECTEUR'
             AND (? IS NULL OR lr.start_date <= ?)
             AND (? IS NULL OR lr.end_date >= ?)
             AND (? IS NULL OR u.service_id = ?)
@@ -122,6 +123,7 @@ export class ExportsService {
           FROM absence_declarations ad
           INNER JOIN users u ON u.id = ad.employee_id
           WHERE ad.status != 'BROUILLON'
+            AND u.role <> 'DIRECTEUR'
             AND (? IS NULL OR ad.start_date <= ?)
             AND (? IS NULL OR ad.end_date >= ?)
             AND (? IS NULL OR u.service_id = ?)
@@ -144,7 +146,7 @@ export class ExportsService {
           SELECT COUNT(*) AS total
           FROM users u
           WHERE u.is_active = 1
-            AND u.role != 'ADMIN'
+            AND u.role NOT IN ('ADMIN','DIRECTEUR')
             AND (? IS NULL OR u.service_id = ?)
             AND (? IS NULL OR EXISTS (SELECT 1 FROM services sx WHERE sx.id = u.service_id AND sx.service_type = ?))
             AND (? IS NULL OR u.id = ?)
@@ -163,6 +165,7 @@ export class ExportsService {
           INNER JOIN leave_balances lbf ON lbf.id = bm.leave_balance_id
           WHERE (? IS NULL OR DATE(bm.created_at) >= ?)
             AND (? IS NULL OR DATE(bm.created_at) <= ?)
+            AND u.role <> 'DIRECTEUR'
             AND (? IS NULL OR u.service_id = ?)
             AND (? IS NULL OR EXISTS (SELECT 1 FROM services sx WHERE sx.id = u.service_id AND sx.service_type = ?))
             AND (? IS NULL OR u.id = ?)
@@ -177,6 +180,7 @@ export class ExportsService {
           INNER JOIN users u ON u.id = d.employee_id
           WHERE (? IS NULL OR d.requested_start_date <= ?)
             AND (? IS NULL OR d.requested_end_date >= ?)
+            AND u.role <> 'DIRECTEUR'
             AND (? IS NULL OR u.service_id = ?)
             AND (? IS NULL OR EXISTS (SELECT 1 FROM services sx WHERE sx.id = u.service_id AND sx.service_type = ?))
             AND (? IS NULL OR u.id = ?)
@@ -233,7 +237,6 @@ export class ExportsService {
     const rows = await this.dataSource.query<ExportRow[]>(
       `
         SELECT
-          lr.id AS Identifiant,
           CONCAT(u.nom, ' ', u.prenom) AS Collaborateur,
           u.email AS Email,
           s.name AS Service,
@@ -255,6 +258,7 @@ export class ExportsService {
         INNER JOIN services s ON s.id = lr.service_id
         INNER JOIN leave_types lt ON lt.id = lr.leave_type_id
         WHERE lr.status = 'VALIDEE'
+          AND u.role <> 'DIRECTEUR'
           AND (? IS NULL OR lr.start_date <= ?)
           AND (? IS NULL OR lr.end_date >= ?)
           AND (? IS NULL OR u.service_id = ?)
@@ -293,7 +297,6 @@ export class ExportsService {
     const rows = await this.dataSource.query<ExportRow[]>(
       `
         SELECT
-          ad.id AS Identifiant,
           CONCAT(u.nom, ' ', u.prenom) AS Collaborateur,
           u.email AS Email,
           s.name AS Service,
@@ -314,6 +317,7 @@ export class ExportsService {
         INNER JOIN services s ON s.id = ad.service_id
         INNER JOIN leave_types lt ON lt.id = ad.leave_type_id
         WHERE ad.status != 'BROUILLON'
+          AND u.role <> 'DIRECTEUR'
           AND (? IS NULL OR ad.start_date <= ?)
           AND (? IS NULL OR ad.end_date >= ?)
           AND (? IS NULL OR u.service_id = ?)
@@ -357,14 +361,13 @@ export class ExportsService {
     const rows = await this.dataSource.query<ExportRow[]>(
       `
         SELECT
-          u.id AS Identifiant,
           CONCAT(u.nom, ' ', u.prenom) AS Collaborateur,
           u.email AS Email,
           COALESCE(s.name, '') AS Service,
           COALESCE(latest.reference_period, '') AS Periode_reference,
           COALESCE(nm1.available_days, 0) AS Conges_a_utiliser,
           COALESCE(n.acquired_days, 0) AS En_cours_acquisition,
-          COALESCE(nm1.reserved_days, 0) AS Jours_reserves,
+          COALESCE(nm1.reserved_days, 0) AS En_attente_de_validation,
           COALESCE(nm1.available_days, 0) - COALESCE(nm1.reserved_days, 0) AS Disponible_apres_validation,
           GREATEST(
             COALESCE(nm1.updated_at, '1970-01-01 00:00:00'),
@@ -387,7 +390,7 @@ export class ExportsService {
          AND n.reference_period = latest.reference_period
          AND n.counter_type = 'N'
         WHERE u.is_active = 1
-          AND u.role != 'ADMIN'
+          AND u.role NOT IN ('ADMIN','DIRECTEUR')
           AND (? IS NULL OR u.service_id = ?)
             AND (? IS NULL OR EXISTS (SELECT 1 FROM services sx WHERE sx.id = u.service_id AND sx.service_type = ?))
           AND (? IS NULL OR u.id = ?)
@@ -428,11 +431,11 @@ export class ExportsService {
           lb.reference_period AS Periode_reference,
           lb.counter_type AS Compteur,
           bm.movement_type AS Mouvement,
-          bm.days AS Jours,
+          bm.days AS Variation_en_jours,
           bm.balance_before AS Solde_avant,
           bm.balance_after AS Solde_apres,
           bm.reason AS Motif,
-          bm.leave_request_id AS Demande_conge_liee,
+          bm.leave_request_id AS 'N°_Demande_conge',
           CASE
             WHEN actor.id IS NULL THEN ''
             ELSE CONCAT(actor.nom, ' ', actor.prenom)
@@ -445,6 +448,7 @@ export class ExportsService {
         LEFT JOIN users actor ON actor.id = bm.actor_id
         WHERE (? IS NULL OR DATE(bm.created_at) >= ?)
           AND (? IS NULL OR DATE(bm.created_at) <= ?)
+          AND u.role <> 'DIRECTEUR'
           AND (? IS NULL OR u.service_id = ?)
             AND (? IS NULL OR EXISTS (SELECT 1 FROM services sx WHERE sx.id = u.service_id AND sx.service_type = ?))
           AND (? IS NULL OR u.id = ?)
@@ -483,7 +487,6 @@ export class ExportsService {
     const rows = await this.dataSource.query<ExportRow[]>(
       `
         SELECT
-          d.id AS Identifiant,
           CONCAT(u.nom, ' ', u.prenom) AS Collaborateur,
           u.email AS Email,
           COALESCE(s.name, '') AS Service,
@@ -508,7 +511,7 @@ export class ExportsService {
           d.decision_comment AS Commentaire_decision,
           d.decided_at AS Decidee_le,
           d.used_at AS Appliquee_le,
-          d.leave_request_id AS Demande_conge
+          d.leave_request_id AS 'N°_Demande_conge'
         FROM derogations d
         INNER JOIN users u ON u.id = d.employee_id
         LEFT JOIN services s ON s.id = u.service_id
@@ -516,6 +519,7 @@ export class ExportsService {
         LEFT JOIN users rh ON rh.id = d.decided_by_rh_id
         WHERE (? IS NULL OR d.requested_start_date <= ?)
           AND (? IS NULL OR d.requested_end_date >= ?)
+          AND u.role <> 'DIRECTEUR'
           AND (? IS NULL OR u.service_id = ?)
             AND (? IS NULL OR EXISTS (SELECT 1 FROM services sx WHERE sx.id = u.service_id AND sx.service_type = ?))
           AND (? IS NULL OR u.id = ?)

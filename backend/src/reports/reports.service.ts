@@ -45,7 +45,7 @@ interface ServiceAggregateRow {
 interface UserCapacityRow {
   id: string | number;
   serviceId: string | number | null;
-  hireDate: string | null;
+  hireDate: string | Date | null;
 }
 
 interface LeaveDayRow {
@@ -589,8 +589,10 @@ export class ReportsService {
     holidayDates: Set<string>,
   ): Map<string, number> {
     const values = new Map<string, number>();
-    const start = this.utcDate(row.startDate);
-    const end = this.utcDate(row.endDate);
+    const startDate = this.sqlDate(row.startDate);
+    const endDate = this.sqlDate(row.endDate);
+    const start = this.utcDate(startDate);
+    const end = this.utcDate(endDate);
     const startPeriod = row.startPeriod ?? 'MATIN';
     const endPeriod = row.endPeriod ?? 'APRES_MIDI';
     const current = new Date(start);
@@ -600,14 +602,13 @@ export class ReportsService {
       const isSunday = current.getUTCDay() === 0;
       if (!isSunday && !holidayDates.has(date)) {
         let value = 1;
-        if (date === row.startDate && startPeriod === 'APRES_MIDI') value -= 0.5;
-        if (date === row.endDate && endPeriod === 'MATIN') value -= 0.5;
+        if (date === startDate && startPeriod === 'APRES_MIDI') value -= 0.5;
+        if (date === endDate && endPeriod === 'MATIN') value -= 0.5;
         if (value > 0) values.set(date, value);
       }
       current.setUTCDate(current.getUTCDate() + 1);
     }
 
-    // Règle GMES : une fin le vendredi après-midi décompte aussi le samedi.
     if (end.getUTCDay() === 5 && endPeriod === 'APRES_MIDI') {
       const saturday = new Date(end);
       saturday.setUTCDate(saturday.getUTCDate() + 1);
@@ -623,8 +624,10 @@ export class ReportsService {
     holidayDates: Set<string>,
   ): Map<string, number> {
     const values = new Map<string, number>();
-    const start = this.utcDate(row.startDate);
-    const end = this.utcDate(row.endDate);
+    const startDate = this.sqlDate(row.startDate);
+    const endDate = this.sqlDate(row.endDate);
+    const start = this.utcDate(startDate);
+    const end = this.utcDate(endDate);
     const startPeriod = row.startPeriod ?? 'MATIN';
     const endPeriod = row.endPeriod ?? 'APRES_MIDI';
     const current = new Date(start);
@@ -634,8 +637,8 @@ export class ReportsService {
       const weekday = current.getUTCDay();
       if (weekday !== 0 && weekday !== 6 && !holidayDates.has(date)) {
         let value = 1;
-        if (date === row.startDate && startPeriod === 'APRES_MIDI') value -= 0.5;
-        if (date === row.endDate && endPeriod === 'MATIN') value -= 0.5;
+        if (date === startDate && startPeriod === 'APRES_MIDI') value -= 0.5;
+        if (date === endDate && endPeriod === 'MATIN') value -= 0.5;
         if (value > 0) values.set(date, value);
       }
       current.setUTCDate(current.getUTCDate() + 1);
@@ -648,8 +651,11 @@ export class ReportsService {
     row: AbsenceDayRow,
     holidayDates: Set<string>,
   ): Map<string, number> {
-    if (row.durationHours !== null && row.startDate === row.endDate) {
-      const date = this.utcDate(row.startDate);
+    const startDate = this.sqlDate(row.startDate);
+    const endDate = this.sqlDate(row.endDate);
+
+    if (row.durationHours !== null && startDate === endDate) {
+      const date = this.utcDate(startDate);
       const weekday = date.getUTCDay();
       const key = this.dateKey(date);
       if (weekday === 0 || weekday === 6 || holidayDates.has(key)) return new Map();
@@ -657,7 +663,15 @@ export class ReportsService {
       return hours > 0 ? new Map([[key, this.round(hours / 7)]]) : new Map();
     }
 
-    return this.workingDailyValues(row, holidayDates);
+    return this.workingDailyValues(
+      {
+        startDate,
+        endDate,
+        startPeriod: row.startPeriod,
+        endPeriod: row.endPeriod,
+      },
+      holidayDates,
+    );
   }
 
   private addWorkingEmployeeDay(
@@ -750,10 +764,11 @@ export class ReportsService {
   private businessDaysForUser(
     startDate: string,
     endDate: string,
-    hireDate: string | null,
+    hireDate: string | Date | null,
     holidayDates: Set<string>,
   ): number {
-    const effectiveStart = hireDate && hireDate > startDate ? hireDate : startDate;
+    const normalizedHireDate = hireDate ? this.sqlDate(hireDate) : null;
+    const effectiveStart = normalizedHireDate && normalizedHireDate > startDate ? normalizedHireDate : startDate;
     if (effectiveStart > endDate) return 0;
 
     const current = this.utcDate(effectiveStart);
@@ -791,6 +806,13 @@ export class ReportsService {
     if (capacity <= 0) return 0;
     const rate = ((capacity - unavailableDays) / capacity) * 100;
     return Math.round(Math.max(0, Math.min(100, rate)) * 10) / 10;
+  }
+
+  private sqlDate(value: string | Date): string {
+    if (value instanceof Date) {
+      return value.toISOString().slice(0, 10);
+    }
+    return String(value).slice(0, 10);
   }
 
   private utcDate(value: string): Date {

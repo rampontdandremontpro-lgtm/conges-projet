@@ -335,13 +335,15 @@ function DisableDialog({ type, busy, onCancel, onConfirm }) {
 }
 
 export function RhLeaveTypesPage() {
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [state, setState] = useState({ loading: true, error: false, items: [] })
   const [selectedType, setSelectedType] = useState(null)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [deleteBusy, setDeleteBusy] = useState(false)
   const [feedback, setFeedback] = useState('')
+  const [categoryFilter, setCategoryFilter] = useState('all')
+  const [statusFilter, setStatusFilter] = useState('all')
   const [page, setPage] = useState(1)
 
   const load = useCallback(async ({ silent = false } = {}) => {
@@ -373,15 +375,16 @@ export function RhLeaveTypesPage() {
   }, [feedback])
 
   const query = normalize(searchParams.get('q'))
-  const filtered = useMemo(() => {
-    if (!query) return state.items
-    return state.items.filter((item) => {
-      const category = CATEGORY_META[item.category]?.label ?? item.category
-      return normalize(`${item.name} ${category} ${creationLabel(item)} ${unitsLabel(item)} ${item.isActive ? 'actif' : 'inactif'}`).includes(query)
-    })
-  }, [query, state.items])
+  const filtered = useMemo(() => state.items.filter((item) => {
+    if (categoryFilter !== 'all' && item.category !== categoryFilter) return false
+    if (statusFilter === 'active' && item.isActive === false) return false
+    if (statusFilter === 'inactive' && item.isActive !== false) return false
+    if (!query) return true
+    const category = CATEGORY_META[item.category]?.label ?? item.category
+    return normalize(`${item.name} ${category} ${creationLabel(item)} ${unitsLabel(item)} ${item.isActive ? 'actif' : 'inactif'}`).includes(query)
+  }), [categoryFilter, query, state.items, statusFilter])
 
-  useEffect(() => setPage(1), [query])
+  useEffect(() => setPage(1), [categoryFilter, query, statusFilter])
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   useEffect(() => {
@@ -428,7 +431,30 @@ export function RhLeaveTypesPage() {
 
       <section className="rh-leave-types-card">
         <div className="rh-leave-types-toolbar">
-          <div>
+          <div className="rh-leave-types-filters">
+            <label>
+              <span>Catégorie</span>
+              <select value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)}>
+                <option value="all">Toutes</option>
+                <option value="DEMANDE_CONGE">Congés</option>
+                <option value="DECLARATION_ABSENCE">Absences</option>
+              </select>
+            </label>
+            <label>
+              <span>Statut</span>
+              <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+                <option value="all">Tous</option>
+                <option value="active">Actifs</option>
+                <option value="inactive">Inactifs</option>
+              </select>
+            </label>
+            <button
+              type="button"
+              className="rh-leave-types-reset"
+              onClick={() => { setCategoryFilter('all'); setStatusFilter('all'); setSearchParams({}) }}
+            >
+              <Icon name="refresh" size={15} /> Réinitialiser
+            </button>
           </div>
           <button type="button" className="rh-leave-types-new" onClick={openCreate}>
             <Icon name="plus" size={17} /> Nouveau type

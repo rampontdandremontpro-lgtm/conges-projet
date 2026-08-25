@@ -89,15 +89,112 @@ function resourceLabel(log) {
   return RESOURCE_LABELS[key] ?? key.replaceAll('_', ' ').toLocaleLowerCase('fr-FR').replace(/^./, (c) => c.toUpperCase())
 }
 
+const VALUE_LABELS = {
+  status: 'Statut',
+  days: 'Nombre de jours',
+  amount: 'Valeur',
+  reason: 'Motif',
+  comment: 'Commentaire',
+  decisionComment: 'Commentaire',
+  refusalComment: 'Motif du refus',
+  justification: 'Justification',
+  notifyEmployee: 'Notifier le collaborateur',
+  startDate: 'Date de début',
+  endDate: 'Date de fin',
+  requestedStartDate: 'Date de début',
+  requestedEndDate: 'Date de fin',
+  referencePeriod: 'Période',
+  counterType: 'Compteur',
+  isChomed: 'Jour chômé',
+  minimumPresence: 'Présence minimale',
+  hasMinimumPresenceRule: 'Règle de présence minimale',
+  settingValue: 'Valeur',
+  availableDays: 'Disponible',
+  reservedDays: 'En attente de validation',
+  acquiredDays: 'En cours d’acquisition',
+  balanceBefore: 'Solde avant',
+  balanceAfter: 'Solde après',
+  movementType: 'Type de mouvement',
+  leaveRequestId: 'N° demande de congé',
+  name: 'Libellé',
+  isActive: 'Actif',
+  employeeId: 'Collaborateur',
+  serviceId: 'Service',
+  validatorId: 'Valideur',
+  replacementUserId: 'Remplaçant',
+}
+
+const VALUE_STATUS_LABELS = {
+  BROUILLON: 'Brouillon',
+  EN_ATTENTE_VALIDATION: 'En attente',
+  EN_COURS_TRAITEMENT: 'En cours de traitement',
+  VALIDEE: 'Validée',
+  REFUSEE: 'Refusée',
+  ANNULEE: 'Annulée',
+  ANNULEE_APRES_VALIDATION: 'Annulée après validation',
+  ENREGISTREE: 'Enregistrée',
+  JUSTIFICATIF_ATTENDU: 'Justificatif attendu',
+  JUSTIFICATIF_EN_ATTENTE: 'Justificatif attendu',
+  JUSTIFICATIF_REJETE: 'Justificatif attendu',
+  A_VERIFIER_PAR_RH: 'À vérifier par la RH',
+  DECLAREE: 'Déclarée',
+  EN_ATTENTE_RH: 'En attente RH',
+  ACCORDEE: 'Validée',
+  UTILISEE: 'Appliquée',
+  EXPIREE: 'Délai dépassé',
+}
+
+function humanValue(value) {
+  if (value === null || value === undefined || value === '') return '—'
+  if (typeof value === 'boolean') return value ? 'Oui' : 'Non'
+  if (typeof value === 'string') {
+    if (VALUE_STATUS_LABELS[value]) return VALUE_STATUS_LABELS[value]
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+      const [year, month, day] = value.split('-')
+      return `${day}/${month}/${year}`
+    }
+    if (/^\d{4}-\d{4}$/.test(value)) return value.replace('-', '/')
+    return value.replaceAll('_', ' ')
+  }
+  if (typeof value === 'number') return new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 2 }).format(value)
+  if (Array.isArray(value)) return value.length ? value.map(humanValue).join(', ') : 'Aucun'
+  return '—'
+}
+
+function valueLabel(key) {
+  return VALUE_LABELS[key]
+    ?? key.replaceAll('_', ' ').replace(/([a-z])([A-Z])/g, '$1 $2').toLocaleLowerCase('fr-FR').replace(/^./, (c) => c.toUpperCase())
+}
+
+function readableEntries(source, prefix = '', depth = 0) {
+  if (!source || typeof source !== 'object' || Array.isArray(source) || depth > 2) return []
+  const ignored = new Set(['signatureData', 'password', 'method', 'route', 'statusCode', 'durationMs', 'metadata'])
+  const result = []
+
+  for (const [key, item] of Object.entries(source)) {
+    if (ignored.has(key) || item === undefined) continue
+    const label = prefix ? `${prefix} · ${valueLabel(key)}` : valueLabel(key)
+
+    if (item && typeof item === 'object' && !Array.isArray(item)) {
+      const nested = readableEntries(item, label, depth + 1)
+      if (nested.length) result.push(...nested)
+      continue
+    }
+
+    result.push(`${label} : ${humanValue(item)}`)
+  }
+
+  return result
+}
+
 function valueSummary(value) {
-  if (!value) return '—'
-  const source = value?.body ?? value
-  if (source?.status) return `Statut : ${String(source.status).replaceAll('_', ' ')}`
-  if (source?.amount !== undefined) return `Valeur : ${source.amount}`
-  if (source?.settingValue !== undefined) return `Valeur : ${source.settingValue}`
-  const keys = Object.keys(source ?? {}).filter((key) => !['signatureData', 'password'].includes(key))
-  if (!keys.length) return '—'
-  return keys.slice(0, 3).map((key) => `${key}: ${typeof source[key] === 'object' ? '…' : source[key]}`).join(' · ')
+  if (!value || typeof value !== 'object') return '—'
+  const source = value?.body && typeof value.body === 'object' ? value.body : value
+  const entries = readableEntries(source)
+  if (!entries.length) return '—'
+  const visible = entries.slice(0, 6)
+  if (entries.length > visible.length) visible.push(`+ ${entries.length - visible.length} autre${entries.length - visible.length > 1 ? 's' : ''} modification${entries.length - visible.length > 1 ? 's' : ''}`)
+  return visible.join('\n')
 }
 
 function commentSummary(log) {
@@ -164,7 +261,7 @@ export function RhHistoryPage() {
             <tbody>
               {loading ? <tr><td colSpan="8" className="rh-history-empty">Chargement…</td></tr> : visible.length === 0 ? <tr><td colSpan="8" className="rh-history-empty">Aucune action RH ne correspond aux filtres.</td></tr> : visible.map((log) => {
                 const employee = log.collaborator ?? usersById.get(collaboratorId(log))
-                return <tr key={log.id}><td>{formatDateTime(log.createdAt)}</td><td><strong>{fullName(log.actor)}</strong></td><td>{employee ? fullName(employee) : '—'}</td><td><span className="rh-history-action">{actionLabel(log)}</span></td><td>{resourceLabel(log)}</td><td>{valueSummary(log.oldValue)}</td><td>{valueSummary(log.newValue)}</td><td>{commentSummary(log)}</td></tr>
+                return <tr key={log.id}><td>{formatDateTime(log.createdAt)}</td><td><strong>{fullName(log.actor)}</strong></td><td>{employee ? fullName(employee) : '—'}</td><td><span className="rh-history-action">{actionLabel(log)}</span></td><td>{resourceLabel(log)}</td><td><span className="rh-history-value">{valueSummary(log.oldValue)}</span></td><td><span className="rh-history-value">{valueSummary(log.newValue)}</span></td><td>{commentSummary(log)}</td></tr>
               })}
             </tbody>
           </table>

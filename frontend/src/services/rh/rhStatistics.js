@@ -12,5 +12,5 @@ export async function getRhStatisticsServices() {
 
 export async function getRhStatisticsLeaveTypes() {
   const response = await apiClient.get('/leave-types/management')
-  return (Array.isArray(response.data) ? response.data : []).filter((type) => type?.isActive !== false && type?.category === 'DEMANDE_CONGE')
+  return (Array.isArray(response.data) ? response.data : []).filter((type) => type?.isActive !== false && ['DEMANDE_CONGE', 'DECLARATION_ABSENCE'].includes(type?.category))
 }

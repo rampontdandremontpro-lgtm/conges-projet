@@ -17,7 +17,7 @@ import { Holiday, HolidayType } from './holiday.entity';
 
 const OFFICIAL_API_BASE_URL =
   'https://calendrier.api.gouv.fr/jours-feries';
-const OFFICIAL_API_SOURCE = 'calendrier.api.gouv.fr';
+const OFFICIAL_API_SOURCE = 'https://calendrier.api.gouv.fr/jours-feries/martinique.json';
 const LEGAL_FALLBACK_SOURCE = 'code-travail-fallback';
 
 export interface HolidaySyncResult {

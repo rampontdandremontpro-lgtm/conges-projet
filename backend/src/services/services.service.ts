@@ -3,9 +3,10 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  OnModuleInit,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 
 import {
   PresenceStatus,
@@ -22,7 +23,7 @@ import {
 } from './service.entity';
 
 @Injectable()
-export class ServicesService {
+export class ServicesService implements OnModuleInit {
   constructor(
     @InjectRepository(Service)
     private readonly serviceRepository: Repository<Service>,
@@ -31,7 +32,102 @@ export class ServicesService {
     private readonly userRepository: Repository<User>,
 
     private readonly presenceService: PresenceService,
+
+    private readonly dataSource: DataSource,
   ) {}
+
+  async onModuleInit(): Promise<void> {
+    await this.consolidateRhServices();
+  }
+
+  private async consolidateRhServices(): Promise<void> {
+    const normalizeName = (value: string): string =>
+      value
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .trim()
+        .toLocaleLowerCase('fr-FR');
+
+    const services = await this.serviceRepository.find();
+    const canonicalCandidates = services.filter(
+      (service) => normalizeName(service.name) === 'equipe rh',
+    );
+    const legacyServices = services.filter((service) =>
+      ['ressource humaines', 'ressources humaines'].includes(
+        normalizeName(service.name),
+      ),
+    );
+
+    if (canonicalCandidates.length === 0 && legacyServices.length === 0) {
+      return;
+    }
+
+    let canonical = canonicalCandidates[0] ?? legacyServices.shift()!;
+    let canonicalChanged = false;
+    if (canonical.name !== 'Equipe RH') {
+      canonical.name = 'Equipe RH';
+      canonicalChanged = true;
+    }
+    if (!canonical.isActive) {
+      canonical.isActive = true;
+      canonicalChanged = true;
+    }
+    if (canonicalChanged) {
+      canonical = await this.serviceRepository.save(canonical);
+    }
+
+    const duplicates = [
+      ...canonicalCandidates.filter((service) => service.id !== canonical.id),
+      ...legacyServices.filter((service) => service.id !== canonical.id),
+    ];
+
+    if (duplicates.length === 0) {
+      return;
+    }
+
+    await this.dataSource.transaction(async (manager) => {
+      for (const duplicate of duplicates) {
+        const duplicateId = Number(duplicate.id);
+        const canonicalId = Number(canonical.id);
+
+        await manager.query(
+          'UPDATE users SET service_id = ? WHERE service_id = ?',
+          [canonicalId, duplicateId],
+        );
+        await manager.query(
+          'UPDATE leave_requests SET service_id = ? WHERE service_id = ?',
+          [canonicalId, duplicateId],
+        );
+        await manager.query(
+          'UPDATE absence_declarations SET service_id = ? WHERE service_id = ?',
+          [canonicalId, duplicateId],
+        );
+
+        await manager.query(
+          `INSERT IGNORE INTO service_backup_validators
+            (service_id, validator_id, is_active, created_at, updated_at)
+           SELECT ?, validator_id, is_active, created_at, updated_at
+           FROM service_backup_validators
+           WHERE service_id = ?`,
+          [canonicalId, duplicateId],
+        );
+        await manager.query(
+          'DELETE FROM service_backup_validators WHERE service_id = ?',
+          [duplicateId],
+        );
+
+        if (!canonical.primaryManagerId && duplicate.primaryManagerId) {
+          await manager.query(
+            'UPDATE services SET primary_manager_id = ? WHERE id = ?',
+            [duplicate.primaryManagerId, canonicalId],
+          );
+          canonical.primaryManagerId = duplicate.primaryManagerId;
+        }
+
+        await manager.query('DELETE FROM services WHERE id = ?', [duplicateId]);
+      }
+    });
+  }
 
   async create(
     createServiceDto: CreateServiceDto,

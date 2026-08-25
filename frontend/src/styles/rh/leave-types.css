@@ -684,3 +684,12 @@
   background: #f6f8fb;
   color: #7087a5;
 }
+
+.rh-leave-types-filters { display: flex; align-items: end; gap: 11px; flex-wrap: wrap; }
+.rh-leave-types-filters label { display: grid; min-width: 180px; gap: 6px; }
+.rh-leave-types-filters label > span { color: #7892b0; font-size: 9.8px; font-weight: 850; letter-spacing: .055em; text-transform: uppercase; }
+.rh-leave-types-filters select { min-height: 42px; padding: 0 36px 0 12px; border: 1px solid #d8e4f1; border-radius: 11px; background: #fff; color: #25476e; font: inherit; font-size: 12.5px; font-weight: 700; outline: none; }
+.rh-leave-types-filters select:focus { border-color: #86b5f7; box-shadow: 0 0 0 3px rgba(36,117,239,.08); }
+.rh-leave-types-reset { display: inline-flex; min-height: 42px; align-items: center; gap: 7px; padding: 0 13px; border: 1px solid #d8e4f1; border-radius: 11px; background: #f6f9fd; color: #58789d; font: inherit; font-size: 12px; font-weight: 800; cursor: pointer; }
+.rh-leave-types-reset:hover { background: #edf5ff; color: #1d6bdd; }
+@media (max-width: 760px) { .rh-leave-types-filters { width: 100%; } .rh-leave-types-filters label, .rh-leave-types-filters select, .rh-leave-types-reset { width: 100%; } }

@@ -11,6 +11,7 @@ import {
 import '@/styles/rh/holidays.css'
 
 const MARTINIQUE_TIME_ZONE = 'America/Martinique'
+const MARTINIQUE_HOLIDAYS_SOURCE = 'https://calendrier.api.gouv.fr/jours-feries/martinique.json'
 const MONTH_NAMES = [
   'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
   'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre',
@@ -426,17 +427,31 @@ export function RhHolidaysPage() {
                   <div><small>Date</small><strong>{formatDate(drawer.holiday.date)}</strong></div>
                   <div><small>Type</small><HolidayBadge holiday={drawer.holiday} /></div>
                   <div><small>État</small><span className="rh-holidays-status is-protected">{officialChomed ? 'Chômé' : 'Travaillé'}</span></div>
-                  <div><small>Source</small><strong>{drawer.holiday.source || 'Calendrier Martinique'}</strong></div>
+                  <div><small>Source</small><strong className="rh-holidays-source-value">{drawer.holiday.holidayType === 'FERMETURE_GMES' ? (drawer.holiday.source || 'GMES') : MARTINIQUE_HOLIDAYS_SOURCE}</strong></div>
                 </section>
                 <section className="rh-holidays-form-card">
-                  <label>
+                  <div className="rh-holidays-work-status-field">
                     <span>Jour chômé dans l’organisation</span>
-                    <select value={officialChomed ? 'yes' : 'no'} onChange={(event) => setOfficialChomed(event.target.value === 'yes')}>
-                      <option value="yes">Oui</option>
-                      <option value="no">Non</option>
-                    </select>
+                    <div className="rh-holidays-work-status-choice" role="group" aria-label="Jour chômé dans l’organisation">
+                      <button
+                        type="button"
+                        className={officialChomed ? 'is-active' : ''}
+                        aria-pressed={officialChomed}
+                        onClick={() => setOfficialChomed(true)}
+                      >
+                        <Icon name="check" size={15} /> Oui
+                      </button>
+                      <button
+                        type="button"
+                        className={!officialChomed ? 'is-active is-worked' : ''}
+                        aria-pressed={!officialChomed}
+                        onClick={() => setOfficialChomed(false)}
+                      >
+                        Non
+                      </button>
+                    </div>
                     <small>Oui : journée non travaillée dans les calculs. Non : journée considérée comme travaillée.</small>
-                  </label>
+                  </div>
                 </section>
                 <div className="rh-holidays-form-actions">
                   <button type="button" className="rh-holidays-secondary" onClick={closeDrawer}>Annuler</button>

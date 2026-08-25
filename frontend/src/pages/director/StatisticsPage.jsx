@@ -294,6 +294,7 @@ export function DirectorStatisticsPage({
     ...(serviceFilter === 'external' ? { serviceScope: 'EXTERNE' } : serviceFilter !== 'all' ? { serviceId: Number(serviceFilter) } : {}),
     ...(roleFilter !== 'all' ? { role: roleFilter } : {}),
     ...(typeFilter.startsWith('leave:') ? { leaveTypeId: Number(typeFilter.slice(6)), dataType: 'LEAVE' } : {}),
+    ...(typeFilter.startsWith('absence:') ? { leaveTypeId: Number(typeFilter.slice(8)), dataType: 'ABSENCE' } : {}),
     ...(typeFilter === 'ABSENCE' ? { dataType: 'ABSENCE' } : typeFilter === 'ALL' ? { dataType: 'ALL' } : {}),
   }), [period.endDate, period.startDate, roleFilter, serviceFilter, typeFilter])
 
@@ -349,7 +350,7 @@ export function DirectorStatisticsPage({
     )
   }, [serviceFilter, services])
 
-  const dataType = typeFilter === 'ABSENCE' ? 'ABSENCE' : typeFilter.startsWith('leave:') ? 'LEAVE' : 'ALL'
+  const dataType = typeFilter === 'ABSENCE' || typeFilter.startsWith('absence:') ? 'ABSENCE' : typeFilter.startsWith('leave:') ? 'LEAVE' : 'ALL'
   const totals = state.data?.totals ?? {}
   const byService = state.data?.byService ?? []
   const byLeaveType = state.data?.byLeaveType ?? []
@@ -426,9 +427,16 @@ export function DirectorStatisticsPage({
           <span>Type</span>
           <select value={typeFilter} onChange={(event) => setTypeFilter(event.target.value)}>
             <option value="ALL">Tous les types</option>
-            <option value="ABSENCE">Absences</option>
-            {leaveTypes.slice().sort((a, b) => String(a.name).localeCompare(String(b.name), 'fr')).map((type) => (
-              <option key={type.id} value={`leave:${type.id}`}>{type.name}</option>
+            {leaveTypes.slice().sort((a, b) => {
+              const categoryCompare = String(a.category).localeCompare(String(b.category), 'fr')
+              return categoryCompare || String(a.name).localeCompare(String(b.name), 'fr')
+            }).map((type) => (
+              <option
+                key={type.id}
+                value={`${type.category === 'DECLARATION_ABSENCE' ? 'absence' : 'leave'}:${type.id}`}
+              >
+                {type.name}
+              </option>
             ))}
           </select>
         </label>
