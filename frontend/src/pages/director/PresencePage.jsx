@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 
+import { useAuth } from '@/auth/AuthContext'
 import { ManagerPresenceCalendar } from '@/components/manager/calendar/ManagerPresenceCalendar'
 import { Icon } from '@/components/ui/Icon'
 import {
@@ -12,7 +13,7 @@ import { getCurrentMonthKey, shiftMonthKey } from '@/utils/managerCalendar'
 import '@/styles/manager/presence/index.css'
 import '@/styles/director/presence.css'
 
-const ROLE_OPTIONS = [
+const DIRECTOR_ROLE_OPTIONS = [
   { value: 'all', label: 'Tous les rôles' },
   { value: 'COLLABORATEUR', label: 'Collaborateur' },
   { value: 'RESPONSABLE_SERVICE', label: 'Responsable de service' },
@@ -80,6 +81,11 @@ function filteredCalendarData(data, { query, serviceId, role }) {
 }
 
 export function DirectorPresencePage() {
+  const { user: authenticatedUser } = useAuth()
+  const isRhView = authenticatedUser?.role === 'RH'
+  const roleOptions = isRhView
+    ? DIRECTOR_ROLE_OPTIONS.filter((option) => ['all', 'COLLABORATEUR', 'RESPONSABLE_SERVICE'].includes(option.value))
+    : DIRECTOR_ROLE_OPTIONS
   const [searchParams, setSearchParams] = useSearchParams()
   const [calendarMonth, setCalendarMonth] = useState(getCurrentMonthKey())
   const [serviceFilter, setServiceFilter] = useState('all')
@@ -137,15 +143,17 @@ export function DirectorPresencePage() {
   const query = searchParams.get('q') ?? ''
 
   const services = useMemo(() => {
-    const source = servicesState.data.length > 0
-      ? servicesState.data
-      : uniqueCalendarServices(state.data)
+    const source = isRhView
+      ? uniqueCalendarServices(state.data)
+      : servicesState.data.length > 0
+        ? servicesState.data
+        : uniqueCalendarServices(state.data)
 
     return source
       .map((service) => ({ id: String(service.id), name: service.name }))
       .filter((service) => service.id && service.name)
       .sort((left, right) => left.name.localeCompare(right.name, 'fr'))
-  }, [servicesState.data, state.data])
+  }, [isRhView, servicesState.data, state.data])
 
   const calendarData = useMemo(() => filteredCalendarData(state.data, {
     query,
@@ -203,7 +211,7 @@ export function DirectorPresencePage() {
             <label>
               <span>Rôle</span>
               <select value={roleFilter} onChange={(event) => setRoleFilter(event.target.value)}>
-                {ROLE_OPTIONS.map((role) => (
+                {roleOptions.map((role) => (
                   <option key={role.value} value={role.value}>{role.label}</option>
                 ))}
               </select>

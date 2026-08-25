@@ -71,16 +71,22 @@ export class UsersController {
 
   @Get('management/global-presence')
   @Roles(UserRole.RH, UserRole.DIRECTEUR)
-  getGlobalPresence() {
-    return this.usersService.getGlobalPresence();
+  getGlobalPresence(
+    @Req() request: AuthenticatedRequest,
+  ) {
+    return this.usersService.getGlobalPresence(request.user.role);
   }
 
   @Get('management/global-presence/calendar')
   @Roles(UserRole.RH, UserRole.DIRECTEUR)
   getGlobalPresenceCalendar(
+    @Req() request: AuthenticatedRequest,
     @Query('month') month?: string,
   ) {
-    return this.usersService.getGlobalPresenceCalendar(month);
+    return this.usersService.getGlobalPresenceCalendar(
+      month,
+      request.user.role,
+    );
   }
 
   @Get('me/signature')
@@ -144,8 +150,10 @@ export class UsersController {
     UserRole.ADMIN,
     UserRole.RH,
   )
-  findAll() {
-    return this.usersService.findAll();
+  findAll(
+    @Req() request: AuthenticatedRequest,
+  ) {
+    return this.usersService.findAll(request.user.role);
   }
 
   @Get(':id')
@@ -154,36 +162,41 @@ export class UsersController {
     UserRole.RH,
   )
   findOne(
+    @Req() request: AuthenticatedRequest,
     @Param('id', ParseIntPipe) id: number,
   ) {
-    return this.usersService.findOne(id);
+    return this.usersService.findOne(id, request.user.role);
   }
 
   @Patch(':id')
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.RH)
   update(
+    @Req() request: AuthenticatedRequest,
     @Param('id', ParseIntPipe) id: number,
     @Body() updateUserDto: UpdateUserDto,
   ) {
     return this.usersService.update(
       id,
       updateUserDto,
+      request.user.role,
     );
   }
 
   @Patch(':id/disable')
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.RH)
   disable(
+    @Req() request: AuthenticatedRequest,
     @Param('id', ParseIntPipe) id: number,
   ) {
-    return this.usersService.disable(id);
+    return this.usersService.disable(id, request.user.role);
   }
 
   @Patch(':id/enable')
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.RH)
   enable(
+    @Req() request: AuthenticatedRequest,
     @Param('id', ParseIntPipe) id: number,
   ) {
-    return this.usersService.enable(id);
+    return this.usersService.enable(id, request.user.role);
   }
 }

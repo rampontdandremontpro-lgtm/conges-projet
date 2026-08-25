@@ -559,3 +559,43 @@
     width: 100%;
   }
 }
+
+/* Grand écran : le tableau utilise toute la largeur disponible sans scroll horizontal. */
+@media (min-width: 1200px) {
+  .page-container.director-all-requests-page {
+    width: 100%;
+    max-width: none;
+  }
+
+  .director-all-requests-table-wrap {
+    overflow-x: visible;
+  }
+
+  .director-all-requests-table {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .director-all-requests-row {
+    grid-template-columns:
+      minmax(190px, 1.55fr)
+      minmax(125px, .95fr)
+      minmax(72px, .58fr)
+      minmax(72px, .58fr)
+      minmax(58px, .45fr)
+      minmax(128px, 1fr)
+      minmax(92px, .72fr)
+      minmax(92px, .72fr)
+      30px;
+    column-gap: 8px;
+  }
+
+  .director-all-requests-row--header {
+    padding-inline: 16px;
+    font-size: 10.2px;
+  }
+
+  .director-all-requests-row--data {
+    padding-inline: 16px;
+  }
+}

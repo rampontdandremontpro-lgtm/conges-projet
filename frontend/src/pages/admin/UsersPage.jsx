@@ -17,6 +17,7 @@ import {
 import '@/styles/admin/users.css'
 
 const PAGE_SIZE = 8
+const RH_MANAGEABLE_ROLES = new Set(['COLLABORATEUR', 'RESPONSABLE_SERVICE'])
 
 const ROLE_LABELS = {
   COLLABORATEUR: 'Collaborateur',
@@ -231,7 +232,7 @@ function UserDrawer({ mode, user, services, onClose, onSaved, onEdit, rhMode = f
 
             <div className="admin-users-drawer__actions">
               <button type="button" className="admin-users-secondary" onClick={onClose}>Fermer</button>
-              {!rhMode && <button type="button" className="admin-users-primary" onClick={() => onEdit(user)}><Icon name="edit" size={16} /> Modifier</button>}
+              <button type="button" className="admin-users-primary" onClick={() => onEdit(user)}><Icon name="edit" size={16} /> Modifier</button>
             </div>
           </div>
         ) : (
@@ -356,6 +357,7 @@ export function AdminUsersPage({ rhMode = false }) {
 
   const query = normalize(searchParams.get('q'))
   const filtered = useMemo(() => state.users.filter((item) => {
+    if (rhMode && !RH_MANAGEABLE_ROLES.has(item.role)) return false
     if (filters.role !== 'ALL' && item.role !== filters.role) return false
     if (filters.serviceId !== 'ALL' && String(item.serviceId ?? '') !== filters.serviceId) return false
     if (filters.type !== 'ALL' && item.employmentType !== filters.type) return false
@@ -364,7 +366,7 @@ export function AdminUsersPage({ rhMode = false }) {
     if (!query) return true
     const searchable = `${item.nom} ${item.prenom} ${item.email} ${ROLE_LABELS[item.role] ?? item.role} ${item.service?.name ?? ''} ${item.employmentType === 'EXTERNE' ? 'externe' : 'interne'} ${item.isActive ? 'actif' : 'inactif'}`
     return normalize(searchable).includes(query)
-  }), [filters, query, state.users])
+  }), [filters, query, rhMode, state.users])
 
   useEffect(() => setPage(1), [filters, query])
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
@@ -409,12 +411,12 @@ export function AdminUsersPage({ rhMode = false }) {
       {feedback && <div className={`admin-users-feedback admin-users-feedback--${feedback.kind}`} role="status"><Icon name={feedback.kind === 'success' ? 'check' : 'alert'} size={16} /> {feedback.message}</div>}
 
       <div className="admin-users-heading">
-        <div className="admin-users-count"><p>{state.users.length} compte{state.users.length > 1 ? 's' : ''} enregistré{state.users.length > 1 ? 's' : ''}</p></div>
+        <div className="admin-users-count"><p>{filtered.length} compte{filtered.length > 1 ? 's' : ''} affiché{filtered.length > 1 ? 's' : ''}</p></div>
         <button type="button" className="admin-users-new" onClick={() => setDrawer({ mode: 'create', user: null })}><Icon name="plus" size={17} /> Nouvel utilisateur</button>
       </div>
 
       <section className="admin-users-filters" aria-label="Filtres utilisateurs">
-        <label><span>RÔLE</span><select value={filters.role} onChange={(event) => setFilters((current) => ({ ...current, role: event.target.value }))}><option value="ALL">Tous les rôles</option>{Object.entries(ROLE_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+        <label><span>RÔLE</span><select value={filters.role} onChange={(event) => setFilters((current) => ({ ...current, role: event.target.value }))}><option value="ALL">Tous les rôles</option>{Object.entries(ROLE_LABELS).filter(([value]) => !rhMode || RH_MANAGEABLE_ROLES.has(value)).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
         <label><span>SERVICE</span><select value={filters.serviceId} onChange={(event) => setFilters((current) => ({ ...current, serviceId: event.target.value }))}><option value="ALL">Tous les services</option>{state.services.map((service) => <option key={service.id} value={service.id}>{service.name}{service.isActive ? '' : ' (inactif)'}</option>)}</select></label>
         <label><span>TYPE</span><select value={filters.type} onChange={(event) => setFilters((current) => ({ ...current, type: event.target.value }))}><option value="ALL">Tous les types</option><option value="INTERNE">Interne</option><option value="EXTERNE">Externe</option></select></label>
         <label><span>STATUT</span><select value={filters.status} onChange={(event) => setFilters((current) => ({ ...current, status: event.target.value }))}><option value="ALL">Tous les statuts</option><option value="ACTIVE">Actifs</option><option value="INACTIVE">Inactifs</option></select></label>
@@ -444,14 +446,8 @@ export function AdminUsersPage({ rhMode = false }) {
                       <span className={`admin-users-type ${item.employmentType === 'EXTERNE' ? 'is-external' : 'is-internal'}`}>{item.employmentType === 'EXTERNE' ? 'Externe' : 'Interne'}</span>
                       <span className={`admin-users-status ${item.isActive ? 'is-active' : 'is-inactive'}`}>{item.isActive ? 'Actif' : 'Inactif'}</span>
                       <div className="admin-users-actions">
-                        {rhMode ? (
-                          <button type="button" title="Consulter" aria-label={`Consulter ${fullName(item)}`} onClick={(event) => { event.stopPropagation(); setDrawer({ mode: 'view', user: item }) }}><Icon name="eye" size={16} /></button>
-                        ) : (
-                          <>
-                            <button type="button" title="Modifier" aria-label={`Modifier ${fullName(item)}`} onClick={(event) => { event.stopPropagation(); setDrawer({ mode: 'edit', user: item }) }}><Icon name="edit" size={16} /></button>
-                            <button type="button" className={item.isActive ? 'is-disable' : 'is-enable'} disabled={isSelf} title={isSelf ? 'Votre propre compte ne peut pas être désactivé ici' : item.isActive ? 'Désactiver' : 'Réactiver'} aria-label={item.isActive ? `Désactiver ${fullName(item)}` : `Réactiver ${fullName(item)}`} onClick={(event) => { event.stopPropagation(); if (!isSelf) setStatusTarget(item) }}><Icon name={item.isActive ? 'ban' : 'refresh'} size={16} /></button>
-                          </>
-                        )}
+                        <button type="button" title="Modifier" aria-label={`Modifier ${fullName(item)}`} onClick={(event) => { event.stopPropagation(); setDrawer({ mode: 'edit', user: item }) }}><Icon name="edit" size={16} /></button>
+                        <button type="button" className={item.isActive ? 'is-disable' : 'is-enable'} disabled={isSelf} title={isSelf ? 'Votre propre compte ne peut pas être désactivé ici' : item.isActive ? 'Désactiver' : 'Réactiver'} aria-label={item.isActive ? `Désactiver ${fullName(item)}` : `Réactiver ${fullName(item)}`} onClick={(event) => { event.stopPropagation(); if (!isSelf) setStatusTarget(item) }}><Icon name={item.isActive ? 'ban' : 'refresh'} size={16} /></button>
                       </div>
                     </div>
                   )
@@ -463,8 +459,8 @@ export function AdminUsersPage({ rhMode = false }) {
         )}
       </section>
 
-      {drawer && <UserDrawer mode={drawer.mode} user={drawer.user} services={state.services} rhMode={rhMode} onClose={() => setDrawer(null)} onEdit={(selected) => !rhMode && setDrawer({ mode: 'edit', user: selected })} onSaved={handleSaved} />}
-      {!rhMode && statusTarget && <StatusConfirm user={statusTarget} busy={statusBusy} onCancel={() => setStatusTarget(null)} onConfirm={confirmStatus} />}
+      {drawer && <UserDrawer mode={drawer.mode} user={drawer.user} services={state.services} rhMode={rhMode} onClose={() => setDrawer(null)} onEdit={(selected) => setDrawer({ mode: 'edit', user: selected })} onSaved={handleSaved} />}
+      {statusTarget && <StatusConfirm user={statusTarget} busy={statusBusy} onCancel={() => setStatusTarget(null)} onConfirm={confirmStatus} />}
     </PageContainer>
   )
 }

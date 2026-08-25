@@ -93,20 +93,29 @@ export class UsersService {
     return this.findOne(savedUser.id);
   }
 
-  async findAll(): Promise<User[]> {
-    return this.userRepository.find({
+  async findAll(actorRole: UserRole = UserRole.ADMIN): Promise<User[]> {
+    const users = await this.userRepository.find({
       relations: { service: true },
       order: { nom: 'ASC', prenom: 'ASC' },
     });
+
+    if (actorRole !== UserRole.RH) {
+      return users;
+    }
+
+    return users.filter((user) => this.isRhManageableRole(user.role));
   }
 
-  async findOne(id: number): Promise<User> {
+  async findOne(
+    id: number,
+    actorRole: UserRole = UserRole.ADMIN,
+  ): Promise<User> {
     const user = await this.userRepository.findOne({
       where: { id },
       relations: { service: true },
     });
 
-    if (!user) {
+    if (!user || (actorRole === UserRole.RH && !this.isRhManageableRole(user.role))) {
       throw new NotFoundException(
         `L’utilisateur ${id} est introuvable.`,
       );
@@ -144,15 +153,17 @@ export class UsersService {
       .getOne();
   }
 
-  async getGlobalPresence() {
+  async getGlobalPresence(
+    actorRole: UserRole = UserRole.DIRECTEUR,
+  ) {
     const users = await this.userRepository.find({
       where: { isActive: true },
       relations: { service: true },
       order: { nom: 'ASC', prenom: 'ASC' },
     });
 
-    const members = users.filter(
-      (user) => user.role !== UserRole.ADMIN,
+    const members = users.filter((user) =>
+      this.isVisibleInGlobalPresence(user.role, actorRole),
     );
     const currentPeriod = await this.presenceService.getCurrentSlot();
 
@@ -297,7 +308,10 @@ export class UsersService {
     };
   }
 
-  async getGlobalPresenceCalendar(monthValue?: string) {
+  async getGlobalPresenceCalendar(
+    monthValue?: string,
+    actorRole: UserRole = UserRole.DIRECTEUR,
+  ) {
     const month = this.normalizeCalendarMonth(monthValue);
     const [year, monthNumber] = month.split('-').map(Number);
     const monthStart = `${month}-01`;
@@ -308,7 +322,9 @@ export class UsersService {
       where: { isActive: true },
       relations: { service: true },
       order: { nom: 'ASC', prenom: 'ASC' },
-    })).filter((user) => user.role !== UserRole.ADMIN);
+    })).filter((user) =>
+      this.isVisibleInGlobalPresence(user.role, actorRole),
+    );
 
     members.sort((left, right) => {
       const leftService = left.service?.name ?? 'Direction';
@@ -855,8 +871,20 @@ export class UsersService {
   async update(
     id: number,
     updateUserDto: UpdateUserDto,
+    actorRole: UserRole = UserRole.ADMIN,
   ): Promise<User> {
     const user = await this.findOne(id);
+    this.assertRhCanManageUser(actorRole, user);
+
+    if (
+      actorRole === UserRole.RH &&
+      updateUserDto.role !== undefined &&
+      !this.isRhManageableRole(updateUserDto.role)
+    ) {
+      throw new ForbiddenException(
+        'La RH peut attribuer uniquement les rôles Collaborateur ou Responsable de service.',
+      );
+    }
     const email =
       updateUserDto.email?.trim().toLowerCase() ?? user.email;
 
@@ -929,18 +957,53 @@ export class UsersService {
     return this.findOne(id);
   }
 
-  async disable(id: number): Promise<User> {
+  async disable(
+    id: number,
+    actorRole: UserRole = UserRole.ADMIN,
+  ): Promise<User> {
     const user = await this.findOne(id);
+    this.assertRhCanManageUser(actorRole, user);
     user.isActive = false;
     await this.userRepository.save(user);
     return this.findOne(id);
   }
 
-  async enable(id: number): Promise<User> {
+  async enable(
+    id: number,
+    actorRole: UserRole = UserRole.ADMIN,
+  ): Promise<User> {
     const user = await this.findOne(id);
+    this.assertRhCanManageUser(actorRole, user);
     user.isActive = true;
     await this.userRepository.save(user);
     return this.findOne(id);
+  }
+
+
+  private isRhManageableRole(role: UserRole): boolean {
+    return [
+      UserRole.COLLABORATEUR,
+      UserRole.RESPONSABLE_SERVICE,
+    ].includes(role);
+  }
+
+  private assertRhCanManageUser(actorRole: UserRole, user: User): void {
+    if (actorRole === UserRole.RH && !this.isRhManageableRole(user.role)) {
+      throw new ForbiddenException(
+        'La RH peut gérer uniquement les collaborateurs et les responsables de service.',
+      );
+    }
+  }
+
+  private isVisibleInGlobalPresence(
+    role: UserRole,
+    actorRole: UserRole,
+  ): boolean {
+    if (actorRole === UserRole.RH) {
+      return this.isRhManageableRole(role);
+    }
+
+    return role !== UserRole.ADMIN;
   }
 
   private validateAndNormalizeSignature(
