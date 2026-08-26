@@ -1,8 +1,11 @@
 import { IsIn, IsOptional, IsString, MaxLength } from 'class-validator';
 
-export const CALENDAR_EMOJIS = [
-  '🏖️', '🌴', '☀️', '✈️', '🧳', '😎', '🌊', '⛱️',
-  '📍', '🚫', '⏰', '🏠', '🩺', '📌', '🌙', '⚠️',
+export const START_SELECTION_EMOJIS = [
+  '😊', '😃', '😀', '😁', '🥳', '😎', '🤩', '🙂',
+];
+
+export const END_SELECTION_EMOJIS = [
+  '😔', '🙁', '☹️', '😢', '🥺', '😞', '😩', '😭',
 ];
 
 export class UpdateOwnPreferencesDto {
@@ -13,11 +16,11 @@ export class UpdateOwnPreferencesDto {
 
   @IsOptional()
   @IsString()
-  @IsIn(CALENDAR_EMOJIS)
-  leaveEmoji?: string;
+  @IsIn(START_SELECTION_EMOJIS)
+  startEmoji?: string;
 
   @IsOptional()
   @IsString()
-  @IsIn(CALENDAR_EMOJIS)
-  unavailabilityEmoji?: string;
+  @IsIn(END_SELECTION_EMOJIS)
+  endEmoji?: string;
 }

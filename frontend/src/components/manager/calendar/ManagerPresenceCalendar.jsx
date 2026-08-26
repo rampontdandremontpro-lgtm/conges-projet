@@ -152,13 +152,6 @@ export function ManagerPresenceCalendar({ data, month, filter, onMonthChange, cu
                     ? ` · ${pendingRequestIds.length} demande${pendingRequestIds.length > 1 ? 's' : ''} en attente de validation`
                     : ''
                   const isOwnPendingRequest = pendingRequestIds.length > 0 && Number(member.id) === Number(currentUserId)
-                  const hasAbsence = memberDay.morningStatus === 'ABSENT' || memberDay.afternoonStatus === 'ABSENT'
-                  const hasLeave = memberDay.morningStatus === 'EN_VACANCES' || memberDay.afternoonStatus === 'EN_VACANCES'
-                  const calendarEmoji = hasAbsence
-                    ? (member.unavailabilityEmoji ?? '📍')
-                    : hasLeave
-                      ? (member.leaveEmoji ?? '🏖️')
-                      : null
 
                   return (
                     <div
@@ -168,7 +161,6 @@ export function ManagerPresenceCalendar({ data, month, filter, onMonthChange, cu
                     >
                       <DaySlot status={memberDay.morningStatus} baseClass={baseClass} />
                       <DaySlot status={memberDay.afternoonStatus} baseClass={baseClass} />
-                      {calendarEmoji && <span className="manager-month-planning__status-emoji" aria-hidden="true">{calendarEmoji}</span>}
                       {pendingRequestIds.length > 0 && (
                         isOwnPendingRequest ? (
                           <span

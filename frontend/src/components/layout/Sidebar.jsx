@@ -15,10 +15,9 @@ export function Sidebar({ collapsed, onCloseMobile }) {
     <aside id="gmes-main-sidebar" className="sidebar" aria-label="Navigation principale">
       <div className="sidebar__mobile-head">
         <NavLink to="/" className="sidebar__brand" onClick={onCloseMobile}>
-          <img src={gmesLogo} alt="GMES" className="sidebar__logo-img" />
+          <img src={gmesLogo} alt="G Congés & Absences" className="sidebar__logo-img" />
           <span className="sidebar__brand-text">
             <strong>G Congés &amp; Absences</strong>
-            <small>GMES</small>
           </span>
         </NavLink>
         <button

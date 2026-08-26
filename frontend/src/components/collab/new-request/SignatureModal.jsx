@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 
 import '@/styles/components/signature-modal.css'
 
@@ -159,7 +160,7 @@ export function SignatureModal({
     onConfirm('DRAWN', canvas.toDataURL('image/png'))
   }
 
-  return (
+  return createPortal(
     <div className="nr-modal-backdrop" role="presentation" onMouseDown={onClose}>
       <div
         className="nr-modal"
@@ -309,6 +310,7 @@ export function SignatureModal({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }

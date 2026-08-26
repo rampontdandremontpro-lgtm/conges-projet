@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 
+import { getMyPreferences } from '@/services/profile'
+
 const WEEKDAY_LABELS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
 
 const pad = (value) => String(value).padStart(2, '0')
@@ -39,38 +41,6 @@ function buildMonthGrid(year, month) {
       inMonth: date.getUTCFullYear() === year && date.getUTCMonth() === month,
     }
   })
-}
-
-function FaceHappy({ size = 15 }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 22 22" fill="none" aria-hidden="true">
-      <circle cx="11" cy="11" r="10" fill="#FEF3C7" stroke="#FCD34D" strokeWidth="1.5" />
-      <path d="M7.5 8.5L8.5 7.5L9.5 8.5L8.5 9.5Z" fill="#92400E" />
-      <path d="M12.5 8.5L13.5 7.5L14.5 8.5L13.5 9.5Z" fill="#92400E" />
-      <path
-        d="M7 13C7.5 15.5 9 16 11 16C13 16 14.5 15.5 15 13"
-        stroke="#92400E"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        fill="none"
-      />
-      <circle cx="7.5" cy="12" r="1.5" fill="#FCA5A5" opacity="0.6" />
-      <circle cx="14.5" cy="12" r="1.5" fill="#FCA5A5" opacity="0.6" />
-    </svg>
-  )
-}
-
-function FaceSad({ size = 15 }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 22 22" fill="none" aria-hidden="true">
-      <circle cx="11" cy="11" r="10" fill="#FEF3C7" stroke="#FCD34D" strokeWidth="1.5" />
-      <path d="M7.4 8.7L8.5 7.8L9.6 8.7" stroke="#92400E" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M12.4 8.7L13.5 7.8L14.6 8.7" stroke="#92400E" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M7.5 15Q11 11.7 14.5 15" stroke="#92400E" strokeWidth="1.5" strokeLinecap="round" fill="none" />
-      <circle cx="7.4" cy="12" r="1.4" fill="#FCA5A5" opacity="0.55" />
-      <circle cx="14.6" cy="12" r="1.4" fill="#FCA5A5" opacity="0.55" />
-    </svg>
-  )
 }
 
 function SunPic({ size = 12 }) {
@@ -131,9 +101,32 @@ export function LeaveCalendar({
   onNext,
 }) {
   const { startDate, endDate, startPeriod, endPeriod } = selection ?? {}
+  const [selectionEmojis, setSelectionEmojis] = useState({ startEmoji: '😊', endEmoji: '😔' })
   const [phase, setPhase] = useState(startDate && !endDate ? 'selecting' : 'idle')
   const [hovering, setHovering] = useState(null)
   const [hoverInfo, setHoverInfo] = useState(null)
+
+  useEffect(() => {
+    let active = true
+
+    const applyPreferences = (data) => {
+      if (!active) return
+      setSelectionEmojis({
+        startEmoji: data?.startEmoji ?? '😊',
+        endEmoji: data?.endEmoji ?? '😔',
+      })
+    }
+
+    getMyPreferences().then(applyPreferences).catch(() => {})
+
+    const handlePreferenceUpdate = (event) => applyPreferences(event.detail)
+    window.addEventListener('gmes:profile-preferences-updated', handlePreferenceUpdate)
+
+    return () => {
+      active = false
+      window.removeEventListener('gmes:profile-preferences-updated', handlePreferenceUpdate)
+    }
+  }, [])
 
   const holidayMap = useMemo(() => {
     const map = new Map()
@@ -313,12 +306,12 @@ export function LeaveCalendar({
                         <span className="nr-cal__day-circle">
                           {showFace && isStart ? (
                             <>
-                              <FaceHappy size={15} />
+                              <span className="nr-cal__selection-emoji" aria-hidden="true">{selectionEmojis.startEmoji}</span>
                               <span className="nr-cal__face-day">{cell.day}</span>
                             </>
                           ) : showFace && isEnd ? (
                             <>
-                              <FaceSad size={15} />
+                              <span className="nr-cal__selection-emoji" aria-hidden="true">{selectionEmojis.endEmoji}</span>
                               <span className="nr-cal__face-day">{cell.day}</span>
                             </>
                           ) : (

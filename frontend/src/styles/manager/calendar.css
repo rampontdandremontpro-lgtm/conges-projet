@@ -635,17 +635,6 @@ button.manager-month-planning__cell:hover {
   .manager-calendar-action-feedback { right: 14px; bottom: 14px; left: 14px; }
 }
 
-.manager-month-planning__status-emoji {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  z-index: 3;
-  transform: translate(-50%, -50%);
-  font-size: 14px;
-  line-height: 1;
-  filter: drop-shadow(0 1px 1px rgba(255,255,255,.9));
-  pointer-events: none;
-}
 .manager-calendar-decision-backdrop {
   background: rgba(15, 35, 62, .50);
   backdrop-filter: blur(5px);

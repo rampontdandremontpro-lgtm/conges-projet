@@ -31,7 +31,7 @@ import type { AuthenticatedUser } from '../auth/jwt-payload.interface';
 import { ValidatorResolutionService } from '../validators/validator-resolution.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { CALENDAR_EMOJIS, UpdateOwnPreferencesDto } from './dto/update-own-preferences.dto';
+import { END_SELECTION_EMOJIS, START_SELECTION_EMOJIS, UpdateOwnPreferencesDto } from './dto/update-own-preferences.dto';
 import {
   EmploymentType,
   PresenceStatus,
@@ -500,8 +500,6 @@ export class UsersService {
       });
     }
 
-    const calendarPreferences = await this.getCalendarPreferencesForUsers(memberIds);
-
     return {
       month,
       totalMembers: members.length,
@@ -512,8 +510,6 @@ export class UsersService {
         role: member.role,
         serviceId: member.serviceId,
         serviceName: member.service?.name ?? 'Direction',
-        leaveEmoji: calendarPreferences.get(member.id)?.leaveEmoji ?? '🏖️',
-        unavailabilityEmoji: calendarPreferences.get(member.id)?.unavailabilityEmoji ?? '📍',
       })),
       holidays: holidays.map((holiday) => ({
         id: holiday.id,
@@ -768,8 +764,6 @@ export class UsersService {
       });
     }
 
-    const calendarPreferences = await this.getCalendarPreferencesForUsers(memberIds);
-
     return {
       month,
       service: {
@@ -784,8 +778,6 @@ export class UsersService {
         nom: member.nom,
         prenom: member.prenom,
         role: member.role,
-        leaveEmoji: calendarPreferences.get(member.id)?.leaveEmoji ?? '🏖️',
-        unavailabilityEmoji: calendarPreferences.get(member.id)?.unavailabilityEmoji ?? '📍',
       })),
       holidays: holidays.map((holiday) => ({
         id: holiday.id,
@@ -869,14 +861,14 @@ export class UsersService {
       }
     }
 
-    const leaveEmoji = dto.leaveEmoji ?? current.leaveEmoji;
-    const unavailabilityEmoji = dto.unavailabilityEmoji ?? current.unavailabilityEmoji;
-    if (!CALENDAR_EMOJIS.includes(leaveEmoji) ||
-        !CALENDAR_EMOJIS.includes(unavailabilityEmoji)) {
-      throw new BadRequestException('Emoji de calendrier non autorisé.');
+    const startEmoji = dto.startEmoji ?? current.startEmoji;
+    const endEmoji = dto.endEmoji ?? current.endEmoji;
+    if (!START_SELECTION_EMOJIS.includes(startEmoji) ||
+        !END_SELECTION_EMOJIS.includes(endEmoji)) {
+      throw new BadRequestException('Emoji de sélection du calendrier non autorisé.');
     }
 
-    const preferences = { profileImageData, leaveEmoji, unavailabilityEmoji };
+    const preferences = { profileImageData, startEmoji, endEmoji };
     await this.settingsService.upsertInternal(
       this.profilePreferencesKey(id),
       JSON.stringify(preferences),
@@ -893,38 +885,35 @@ export class UsersService {
 
   private async readOwnPreferences(id: number): Promise<{
     profileImageData: string | null;
-    leaveEmoji: string;
-    unavailabilityEmoji: string;
+    startEmoji: string;
+    endEmoji: string;
   }> {
     const raw = await this.settingsService.getValue(this.profilePreferencesKey(id));
     const fallback = {
       profileImageData: null as string | null,
-      leaveEmoji: '🏖️',
-      unavailabilityEmoji: '📍',
+      startEmoji: '😊',
+      endEmoji: '😔',
     };
 
     if (!raw) return fallback;
     try {
-      const parsed = JSON.parse(raw) as Partial<typeof fallback>;
+      const parsed = JSON.parse(raw) as {
+        profileImageData?: unknown;
+        startEmoji?: unknown;
+        endEmoji?: unknown;
+      };
       return {
         profileImageData: typeof parsed.profileImageData === 'string' ? parsed.profileImageData : null,
-        leaveEmoji: typeof parsed.leaveEmoji === 'string' && CALENDAR_EMOJIS.includes(parsed.leaveEmoji)
-          ? parsed.leaveEmoji
-          : fallback.leaveEmoji,
-        unavailabilityEmoji: typeof parsed.unavailabilityEmoji === 'string' && CALENDAR_EMOJIS.includes(parsed.unavailabilityEmoji)
-          ? parsed.unavailabilityEmoji
-          : fallback.unavailabilityEmoji,
+        startEmoji: typeof parsed.startEmoji === 'string' && START_SELECTION_EMOJIS.includes(parsed.startEmoji)
+          ? parsed.startEmoji
+          : fallback.startEmoji,
+        endEmoji: typeof parsed.endEmoji === 'string' && END_SELECTION_EMOJIS.includes(parsed.endEmoji)
+          ? parsed.endEmoji
+          : fallback.endEmoji,
       };
     } catch {
       return fallback;
     }
-  }
-
-  private async getCalendarPreferencesForUsers(ids: number[]) {
-    const entries = await Promise.all(
-      ids.map(async (id) => [id, await this.readOwnPreferences(id)] as const),
-    );
-    return new Map(entries);
   }
 
   async getOwnSignature(id: number) {

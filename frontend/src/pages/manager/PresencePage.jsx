@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useSearchParams } from 'react-router-dom'
 
 import { useAuth } from '@/auth/AuthContext'
@@ -455,7 +456,7 @@ export function ManagerPresencePage() {
         </>
       )}
 
-      {calendarDecision && !signatureOpen && (
+      {calendarDecision && !signatureOpen && createPortal(
         <div
           className="manager-calendar-decision-backdrop"
           role="presentation"
@@ -531,7 +532,8 @@ export function ManagerPresencePage() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
 
       <SignatureModal

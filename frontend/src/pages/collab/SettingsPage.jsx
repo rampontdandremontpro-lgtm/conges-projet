@@ -21,8 +21,8 @@ function errorMessage(error, fallback) {
   return message ?? fallback
 }
 
-const LEAVE_EMOJIS = ['🏖️', '🌴', '☀️', '✈️', '🧳', '😎', '🌊', '⛱️']
-const UNAVAILABILITY_EMOJIS = ['📍', '🚫', '⏰', '🏠', '🩺', '📌', '🌙', '⚠️']
+const START_SELECTION_EMOJIS = ['😊', '😃', '😀', '😁', '🥳', '😎', '🤩', '🙂']
+const END_SELECTION_EMOJIS = ['😔', '🙁', '☹️', '😢', '🥺', '😞', '😩', '😭']
 
 function resizeProfileImage(file) {
   return new Promise((resolve, reject) => {
@@ -74,8 +74,8 @@ export function SettingsPage() {
     loading: true,
     saving: false,
     profileImageData: null,
-    leaveEmoji: '🏖️',
-    unavailabilityEmoji: '📍',
+    startEmoji: '😊',
+    endEmoji: '😔',
   })
 
   useAutoDismiss(feedback, setFeedback)
@@ -88,8 +88,8 @@ export function SettingsPage() {
         loading: false,
         saving: false,
         profileImageData: data?.profileImageData ?? null,
-        leaveEmoji: data?.leaveEmoji ?? '🏖️',
-        unavailabilityEmoji: data?.unavailabilityEmoji ?? '📍',
+        startEmoji: data?.startEmoji ?? '😊',
+        endEmoji: data?.endEmoji ?? '😔',
       })
     } catch (error) {
       setPreferences((current) => ({ ...current, loading: false }))
@@ -245,30 +245,30 @@ export function SettingsPage() {
         <div className="settings-card__heading">
           <span className="settings-card__icon"><Icon name="calendar" size={19} /></span>
           <div>
-            <h2>Emojis du calendrier</h2>
-            <p>Personnalisez les repères affichés sur vos jours de congé et d’indisponibilité.</p>
+            <h2>Emojis de sélection du calendrier</h2>
+            <p>Personnalisez les deux visages affichés au début et à la fin de la période quand vous sélectionnez des jours de congé ou d’indisponibilité.</p>
           </div>
         </div>
         <div className="settings-emoji-grid">
           <div className="settings-emoji-group">
-            <strong>Congé</strong>
-            <div className="settings-emoji-list" role="radiogroup" aria-label="Emoji de congé">
-              {LEAVE_EMOJIS.map((emoji) => (
-                <button key={emoji} type="button" role="radio" aria-checked={preferences.leaveEmoji === emoji} className={preferences.leaveEmoji === emoji ? 'is-selected' : ''} onClick={() => setPreferences((current) => ({ ...current, leaveEmoji: emoji }))}>{emoji}</button>
+            <strong>Début de la période</strong>
+            <div className="settings-emoji-list" role="radiogroup" aria-label="Emoji du début de la période">
+              {START_SELECTION_EMOJIS.map((emoji) => (
+                <button key={emoji} type="button" role="radio" aria-checked={preferences.startEmoji === emoji} className={preferences.startEmoji === emoji ? 'is-selected' : ''} onClick={() => setPreferences((current) => ({ ...current, startEmoji: emoji }))}>{emoji}</button>
               ))}
             </div>
           </div>
           <div className="settings-emoji-group">
-            <strong>Indisponibilité / absence</strong>
-            <div className="settings-emoji-list" role="radiogroup" aria-label="Emoji d’indisponibilité">
-              {UNAVAILABILITY_EMOJIS.map((emoji) => (
-                <button key={emoji} type="button" role="radio" aria-checked={preferences.unavailabilityEmoji === emoji} className={preferences.unavailabilityEmoji === emoji ? 'is-selected' : ''} onClick={() => setPreferences((current) => ({ ...current, unavailabilityEmoji: emoji }))}>{emoji}</button>
+            <strong>Fin de la période</strong>
+            <div className="settings-emoji-list" role="radiogroup" aria-label="Emoji de fin de la période">
+              {END_SELECTION_EMOJIS.map((emoji) => (
+                <button key={emoji} type="button" role="radio" aria-checked={preferences.endEmoji === emoji} className={preferences.endEmoji === emoji ? 'is-selected' : ''} onClick={() => setPreferences((current) => ({ ...current, endEmoji: emoji }))}>{emoji}</button>
               ))}
             </div>
           </div>
         </div>
         <div className="settings-actions settings-actions--end">
-          <button type="button" className="settings-btn settings-btn--primary" disabled={preferences.loading || preferences.saving} onClick={() => savePreferences({ leaveEmoji: preferences.leaveEmoji, unavailabilityEmoji: preferences.unavailabilityEmoji }, 'Vos emojis de calendrier ont été enregistrés.')}>
+          <button type="button" className="settings-btn settings-btn--primary" disabled={preferences.loading || preferences.saving} onClick={() => savePreferences({ startEmoji: preferences.startEmoji, endEmoji: preferences.endEmoji }, 'Vos emojis de sélection ont été enregistrés.')}>
             {preferences.saving ? 'Enregistrement…' : 'Enregistrer les emojis'}
           </button>
         </div>

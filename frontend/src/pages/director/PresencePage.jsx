@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useSearchParams } from 'react-router-dom'
 
 import { useAuth } from '@/auth/AuthContext'
@@ -344,7 +345,7 @@ export function DirectorPresencePage() {
         </>
       )}
 
-      {calendarDecision && !signatureOpen && (
+      {calendarDecision && !signatureOpen && createPortal(
         <div className="manager-calendar-decision-backdrop" role="presentation" onMouseDown={() => !decisionSubmitting && setCalendarDecision(null)}>
           <div className="manager-calendar-decision" role="dialog" aria-modal="true" aria-label="Validation depuis la présence globale" onMouseDown={(event) => event.stopPropagation()}>
             <div className="manager-calendar-decision__head">
@@ -388,7 +389,8 @@ export function DirectorPresencePage() {
               >{decisionCopy?.confirm}</button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
 
       <SignatureModal
