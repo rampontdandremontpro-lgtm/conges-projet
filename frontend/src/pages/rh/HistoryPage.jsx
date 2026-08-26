@@ -183,21 +183,40 @@ function valueLabel(key) {
     ?? key.replaceAll('_', ' ').replace(/([a-z])([A-Z])/g, '$1 $2').toLocaleLowerCase('fr-FR').replace(/^./, (c) => c.toUpperCase())
 }
 
+const ESSENTIAL_HISTORY_KEYS = new Set([
+  'status', 'name', 'nom', 'prenom', 'email', 'role', 'isActive',
+  'startDate', 'endDate', 'startPeriod', 'endPeriod', 'date',
+  'days', 'deductedDays', 'requestedDays', 'amount', 'balance',
+  'balanceBefore', 'balanceAfter', 'availableDays', 'reservedDays', 'acquiredDays',
+  'reason', 'motif', 'comment', 'decisionComment', 'refusalComment', 'justification',
+  'leaveType', 'leaveTypeName', 'absenceType', 'absenceTypeName', 'movementType',
+  'referencePeriod', 'counterType', 'minimumPresence', 'hasMinimumPresenceRule',
+  'service', 'serviceName', 'externalCompanyName', 'employmentType',
+  'settingValue', 'value', 'holidayType', 'format', 'rowCount', 'dataType',
+])
+
+const TECHNICAL_HISTORY_KEYS = new Set([
+  'signatureData', 'password', 'passwordHash', 'method', 'route', 'statusCode', 'durationMs',
+  'metadata', 'token', 'accessToken', 'refreshToken', 'ip', 'userAgent',
+  'employeeId', 'serviceId', 'validatorId', 'replacementUserId', 'updatedById',
+  'createdAt', 'updatedAt', 'deletedAt', 'id',
+])
+
 function readableEntries(source, prefix = '', depth = 0) {
   if (!source || typeof source !== 'object' || Array.isArray(source) || depth > 2) return []
-  const ignored = new Set(['signatureData', 'password', 'method', 'route', 'statusCode', 'durationMs', 'metadata'])
   const result = []
 
   for (const [key, item] of Object.entries(source)) {
-    if (ignored.has(key) || item === undefined) continue
-    const label = prefix ? `${prefix} · ${valueLabel(key)}` : valueLabel(key)
+    if (TECHNICAL_HISTORY_KEYS.has(key) || item === undefined) continue
+    const isContainer = item && typeof item === 'object' && !Array.isArray(item)
+    if (!ESSENTIAL_HISTORY_KEYS.has(key) && !isContainer) continue
 
-    if (item && typeof item === 'object' && !Array.isArray(item)) {
-      const nested = readableEntries(item, label, depth + 1)
+    const label = prefix ? `${prefix} · ${valueLabel(key)}` : valueLabel(key)
+    if (isContainer) {
+      const nested = readableEntries(item, ESSENTIAL_HISTORY_KEYS.has(key) ? label : prefix, depth + 1)
       if (nested.length) result.push(...nested)
       continue
     }
-
     result.push(`${label} : ${humanValue(item)}`)
   }
 
@@ -209,9 +228,7 @@ function valueSummary(value) {
   const source = value?.body && typeof value.body === 'object' ? value.body : value
   const entries = readableEntries(source)
   if (!entries.length) return '—'
-  const visible = entries.slice(0, 6)
-  if (entries.length > visible.length) visible.push(`+ ${entries.length - visible.length} autre${entries.length - visible.length > 1 ? 's' : ''} modification${entries.length - visible.length > 1 ? 's' : ''}`)
-  return visible.join('\n')
+  return entries.slice(0, 4).join('\n')
 }
 
 function commentSummary(log) {

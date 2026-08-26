@@ -787,3 +787,6 @@
     transform: translateY(0);
   }
 }
+
+.notifications-page-card.is-clickable { cursor: pointer; }
+.notifications-page-card.is-clickable:hover { border-color: #b9d5f7; box-shadow: 0 8px 24px rgba(31, 91, 156, .08); }

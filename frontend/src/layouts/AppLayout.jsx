@@ -268,6 +268,7 @@ export function AppLayout() {
     'app-shell',
     collapsed ? 'app-shell--collapsed' : '',
     mobileOpen ? 'app-shell--mobile-open' : '',
+    effectiveRole ? `app-shell--role-${String(effectiveRole).toLowerCase().replaceAll('_', '-')}` : '',
   ]
     .filter(Boolean)
     .join(' ')

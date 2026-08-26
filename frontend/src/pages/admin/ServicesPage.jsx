@@ -178,7 +178,7 @@ function ServiceDrawer({ mode, service, users, counts, onClose, onSaved, onEdit 
             <div>
               <small>{isCreate ? 'NOUVEAU SERVICE' : isView ? 'FICHE SERVICE' : 'MODIFICATION'}</small>
               <h2 id="admin-services-drawer-title">{isCreate ? 'Nouveau service' : service?.name}</h2>
-              <p>{isCreate ? 'Créez un nouveau périmètre dans GMES.' : service?.externalCompanyName || TYPE_LABELS[service?.serviceType]}</p>
+              <p>{isCreate ? 'Créez un nouveau périmètre dans G Congés & Absences.' : service?.externalCompanyName || TYPE_LABELS[service?.serviceType]}</p>
             </div>
           </div>
           <button type="button" className="admin-services-close" onClick={onClose} aria-label="Fermer">×</button>
@@ -201,7 +201,7 @@ function ServiceDrawer({ mode, service, users, counts, onClose, onSaved, onEdit 
             <section className="admin-services-section">
               <div className="admin-services-section-title"><span>2</span><div><h3>Responsable</h3><p>Responsable principal actuellement configuré.</p></div></div>
               {service.serviceType === 'EXTERNE' ? (
-                <div className="admin-services-info-box"><Icon name="info" size={17} /><span>Les services externes ne possèdent pas de Responsable principal dans GMES.</span></div>
+                <div className="admin-services-info-box"><Icon name="info" size={17} /><span>Les services externes ne possèdent pas de Responsable principal dans G Congés & Absences.</span></div>
               ) : service.primaryManager ? (
                 <div className="admin-services-manager-card"><span>{personName(service.primaryManager).split(' ').map((part) => part.charAt(0)).join('').slice(0, 2).toUpperCase()}</span><div><strong>{personName(service.primaryManager)}</strong><small>{service.primaryManager.email}</small></div></div>
               ) : (
@@ -300,7 +300,7 @@ function StatusConfirm({ service, busy, onCancel, onConfirm }) {
       <div className="admin-services-confirm" role="dialog" aria-modal="true" onMouseDown={(event) => event.stopPropagation()}>
         <span className={`admin-services-confirm__icon ${enable ? 'is-enable' : 'is-disable'}`}><Icon name={enable ? 'refresh' : 'ban'} size={22} /></span>
         <h3>{enable ? 'Réactiver ce service ?' : 'Désactiver ce service ?'}</h3>
-        <p>{enable ? `Le service « ${service.name} » redeviendra disponible dans GMES.` : `Le service « ${service.name} » ne pourra plus être utilisé pour de nouveaux rattachements tant qu’il n’est pas réactivé.`}</p>
+        <p>{enable ? `Le service « ${service.name} » redeviendra disponible dans G Congés & Absences.` : `Le service « ${service.name} » ne pourra plus être utilisé pour de nouveaux rattachements tant qu’il n’est pas réactivé.`}</p>
         <div><button type="button" onClick={onCancel}>Annuler</button><button type="button" className={enable ? 'is-enable' : 'is-disable'} disabled={busy} onClick={onConfirm}>{busy ? 'Traitement…' : enable ? 'Réactiver' : 'Désactiver'}</button></div>
       </div>
     </div>

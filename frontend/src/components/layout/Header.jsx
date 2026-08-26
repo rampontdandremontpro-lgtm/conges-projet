@@ -21,7 +21,7 @@ function headerTitle(pathname) {
   if (pathname === '/app/history' || pathname === '/app/rh-history') return 'Historique'
 
   const section = pathname.startsWith('/app/') ? pathname.slice('/app/'.length) : ''
-  return (section ? getSectionLabel(section) : null) ?? 'GMES'
+  return (section ? getSectionLabel(section) : null) ?? 'G Congés & Absences'
 }
 
 function SearchIcon() {

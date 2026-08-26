@@ -464,7 +464,7 @@ export function AdminTechnicalLogsPage() {
       <div className="admin-logs-heading">
         <div>
           <p>{filteredLogs.length} événement{filteredLogs.length > 1 ? 's' : ''} affiché{filteredLogs.length > 1 ? 's' : ''}</p>
-          <span>Historique des actions administratives et techniques de GMES.</span>
+          <span>Historique des actions administratives et techniques de G Congés & Absences.</span>
         </div>
         <button
           type="button"

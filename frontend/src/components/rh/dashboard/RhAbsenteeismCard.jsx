@@ -18,7 +18,7 @@ const PERIOD_OPTIONS = [
   { value: 'year', label: 'Cette année' },
 ]
 
-export function RhAbsenteeismCard({ absenteeism, period = 'year', onPeriodChange }) {
+export function RhAbsenteeismCard({ absenteeism, period = 'month', onPeriodChange }) {
   const rows = buildRows(absenteeism?.byType)
   const totalDays = rows.reduce((sum, item) => sum + Number(item.days ?? 0), 0)
   const globalRate = Number(absenteeism?.globalRate ?? 0)

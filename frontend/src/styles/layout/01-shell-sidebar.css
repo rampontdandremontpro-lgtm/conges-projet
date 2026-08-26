@@ -276,3 +276,22 @@
   display: none;
 }
 
+
+.sidebar__brand-text strong { font-size: 13px; line-height: 1.08; letter-spacing: 0; white-space: nowrap; }
+@media (min-width: 1200px) and (min-height: 800px) {
+  .app-shell--role-rh:not(.app-shell--collapsed) .sidebar__nav {
+    overflow-y: hidden;
+    padding-top: 4px;
+    padding-bottom: 6px;
+  }
+  .app-shell--role-rh:not(.app-shell--collapsed) .sidebar__section-title {
+    margin-top: 8px;
+    margin-bottom: 3px;
+    font-size: 10px;
+  }
+  .app-shell--role-rh:not(.app-shell--collapsed) .sidebar__nav-item {
+    min-height: 35px;
+    padding-top: 6px;
+    padding-bottom: 6px;
+  }
+}

@@ -43,6 +43,7 @@ const EMPTY_FORM = {
   employmentType: 'INTERNE',
   serviceId: '',
   hireDate: '',
+  password: '',
 }
 
 function normalize(value) {
@@ -86,6 +87,7 @@ function formFromUser(user) {
     employmentType: user.employmentType ?? 'INTERNE',
     serviceId: user.serviceId ? String(user.serviceId) : '',
     hireDate: user.hireDate ? String(user.hireDate).slice(0, 10) : '',
+    password: '',
   }
 }
 
@@ -98,6 +100,7 @@ function UserDrawer({ mode, user, services, onClose, onSaved, onEdit, rhMode = f
   const [form, setForm] = useState(() => formFromUser(user))
   const [busy, setBusy] = useState(false)
   const [feedback, setFeedback] = useState('')
+  const [passwordVisible, setPasswordVisible] = useState(false)
 
   useAutoDismiss(feedback, setFeedback, { clearValue: '' })
 
@@ -142,6 +145,10 @@ function UserDrawer({ mode, user, services, onClose, onSaved, onEdit, rhMode = f
       setFeedback('L’adresse e-mail est obligatoire.')
       return
     }
+    if (!rhMode && form.password && form.password.length < 12) {
+      setFeedback('Le mot de passe doit contenir au moins 12 caractères, ou rester vide.')
+      return
+    }
     if (form.role !== 'ADMIN' && !form.serviceId) {
       setFeedback('Un service est obligatoire pour ce rôle.')
       return
@@ -154,6 +161,7 @@ function UserDrawer({ mode, user, services, onClose, onSaved, onEdit, rhMode = f
       role: form.role,
       employmentType: form.role === 'ADMIN' ? 'INTERNE' : form.employmentType,
       ...(form.hireDate ? { hireDate: form.hireDate } : {}),
+      ...(!rhMode && form.password.trim() ? { password: form.password } : {}),
     }
 
     if (form.role === 'ADMIN') {
@@ -195,7 +203,7 @@ function UserDrawer({ mode, user, services, onClose, onSaved, onEdit, rhMode = f
             <div>
               <small>{isCreate ? 'NOUVEAU COMPTE' : isView ? 'FICHE UTILISATEUR' : 'MODIFICATION'}</small>
               <h2 id="admin-users-drawer-title">{isCreate ? 'Nouvel utilisateur' : fullName(user)}</h2>
-              <p>{isCreate ? 'Créez un nouvel accès à GMES.' : user?.email}</p>
+              <p>{isCreate ? 'Créez un nouvel accès à G Congés & Absences.' : user?.email}</p>
             </div>
           </div>
           <button type="button" className="admin-users-close" onClick={onClose} aria-label="Fermer">×</button>
@@ -223,10 +231,10 @@ function UserDrawer({ mode, user, services, onClose, onSaved, onEdit, rhMode = f
             </section>
 
             <section className="admin-users-view__section">
-              <div className="admin-users-section-title"><span>3</span><div><h3>État du compte</h3><p>Disponibilité de l’accès à GMES.</p></div></div>
+              <div className="admin-users-section-title"><span>3</span><div><h3>État du compte</h3><p>Disponibilité de l’accès à G Congés & Absences.</p></div></div>
               <div className={`admin-users-account-state ${user.isActive ? 'is-active' : 'is-inactive'}`}>
                 <span className="admin-users-account-state__dot" />
-                <div><strong>{user.isActive ? 'Compte actif' : 'Compte inactif'}</strong><small>{user.isActive ? 'L’utilisateur peut se connecter à GMES.' : 'L’accès à GMES est actuellement désactivé.'}</small></div>
+                <div><strong>{user.isActive ? 'Compte actif' : 'Compte inactif'}</strong><small>{user.isActive ? 'L’utilisateur peut se connecter à G Congés & Absences.' : 'L’accès à G Congés & Absences est actuellement désactivé.'}</small></div>
               </div>
             </section>
 
@@ -263,6 +271,26 @@ function UserDrawer({ mode, user, services, onClose, onSaved, onEdit, rhMode = f
 
             <section className="admin-users-form__section admin-users-form__section--account">
               <div className="admin-users-section-title"><span>3</span><div><h3>Compte</h3><p>{isCreate ? 'Le compte sera créé actif et prêt à recevoir son accès.' : 'Le statut actif/inactif se gère depuis la liste des utilisateurs.'}</p></div></div>
+              {!rhMode && (
+                <label className="admin-users-password-field">
+                  <span>{isCreate ? 'Mot de passe initial' : 'Nouveau mot de passe'} <small>(facultatif)</small></span>
+                  <div className="admin-users-password-input">
+                    <input
+                      type={passwordVisible ? 'text' : 'password'}
+                      value={form.password}
+                      onChange={(event) => setValue('password', event.target.value)}
+                      minLength={form.password ? 12 : undefined}
+                      maxLength="64"
+                      autoComplete="new-password"
+                      placeholder={isCreate ? 'Laisser vide pour ne pas en créer' : 'Laisser vide pour conserver le mot de passe'}
+                    />
+                    <button type="button" onClick={() => setPasswordVisible((value) => !value)} aria-label={passwordVisible ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}>
+                      <Icon name={passwordVisible ? 'eyeOff' : 'eye'} size={17} />
+                    </button>
+                  </div>
+                  <small>12 caractères minimum. Laissez vide si vous ne souhaitez pas créer ou modifier le mot de passe.</small>
+                </label>
+              )}
               <div className="admin-users-account-state is-active"><span className="admin-users-account-state__dot" /><div><strong>{isCreate ? 'Compte actif à la création' : user?.isActive ? 'Compte actuellement actif' : 'Compte actuellement inactif'}</strong><small>La désactivation reste une action séparée pour éviter les changements accidentels.</small></div></div>
             </section>
 
@@ -286,7 +314,7 @@ function StatusConfirm({ user, busy, onCancel, onConfirm }) {
       <div className="admin-users-confirm" role="dialog" aria-modal="true" onMouseDown={(event) => event.stopPropagation()}>
         <span className={`admin-users-confirm__icon ${nextActive ? 'is-enable' : 'is-disable'}`}><Icon name={nextActive ? 'refresh' : 'ban'} size={22} /></span>
         <h3>{nextActive ? 'Réactiver ce compte ?' : 'Désactiver ce compte ?'}</h3>
-        <p>{nextActive ? `${fullName(user)} pourra de nouveau accéder à GMES.` : `${fullName(user)} ne pourra plus se connecter tant que son compte n’est pas réactivé.`}</p>
+        <p>{nextActive ? `${fullName(user)} pourra de nouveau accéder à G Congés & Absences.` : `${fullName(user)} ne pourra plus se connecter tant que son compte n’est pas réactivé.`}</p>
         <div><button type="button" onClick={onCancel}>Annuler</button><button type="button" className={nextActive ? 'is-enable' : 'is-disable'} onClick={onConfirm} disabled={busy}>{busy ? 'Traitement…' : nextActive ? 'Réactiver' : 'Désactiver'}</button></div>
       </div>
     </div>

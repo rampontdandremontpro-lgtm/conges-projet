@@ -24,3 +24,13 @@ export async function changeMyPassword(payload) {
   const { data } = await apiClient.patch('/auth/change-password', payload)
   return data
 }
+
+export async function getMyPreferences() {
+  const { data } = await apiClient.get('/users/me/preferences')
+  return data
+}
+
+export async function saveMyPreferences(payload) {
+  const { data } = await apiClient.put('/users/me/preferences', payload)
+  return data
+}

@@ -85,6 +85,9 @@ export class SettingsService {
       .where('setting.settingKey NOT LIKE :notificationPreferences', {
         notificationPreferences: 'USER_NOTIFICATION_PREFERENCES_%',
       })
+      .andWhere('setting.settingKey NOT LIKE :profilePreferences', {
+        profilePreferences: 'USER_PROFILE_PREFERENCES_%',
+      })
       .orderBy('setting.settingKey', 'ASC')
       .getMany();
   }

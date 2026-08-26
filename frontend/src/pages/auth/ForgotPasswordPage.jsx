@@ -74,7 +74,7 @@ export function ForgotPasswordPage() {
       ) : (
         <form className="login-form login-form--recovery" onSubmit={handleSubmit} noValidate>
           <div className="recovery-help">
-            Indiquez l’adresse e-mail associée à votre compte GMES. Pour des raisons de sécurité,
+            Indiquez l’adresse e-mail associée à votre compte G Congés & Absences. Pour des raisons de sécurité,
             nous afficherons le même message qu’un compte existe ou non.
           </div>
 

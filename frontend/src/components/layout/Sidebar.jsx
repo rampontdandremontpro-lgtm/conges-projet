@@ -17,8 +17,8 @@ export function Sidebar({ collapsed, onCloseMobile }) {
         <NavLink to="/" className="sidebar__brand" onClick={onCloseMobile}>
           <img src={gmesLogo} alt="GMES" className="sidebar__logo-img" />
           <span className="sidebar__brand-text">
-            <strong>GMES</strong>
-            <small>Congés &amp; absences</small>
+            <strong>G Congés &amp; Absences</strong>
+            <small>GMES</small>
           </span>
         </NavLink>
         <button

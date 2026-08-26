@@ -186,7 +186,7 @@ function AdminUsersOverview({ metrics, onNavigate }) {
       <header className="dash-card__header">
         <div className="dash-card__heading">
           <h2 className="dash-card__title">Gestion des utilisateurs</h2>
-          <span className="dash-card__period">Comptes et accès GMES</span>
+          <span className="dash-card__period">Comptes et accès G Congés & Absences</span>
         </div>
         <span className={`admin-dashboard-status ${stable ? 'is-ok' : 'is-warning'}`}>
           {stable ? 'Comptes actifs' : 'À surveiller'}
@@ -310,7 +310,6 @@ function AdminQuickActions({ onNavigate }) {
   const actions = [
     { icon: 'users', tone: 'blue', title: '+ Utilisateur', detail: 'Créer un nouveau compte', path: '/app/admin-users?action=create' },
     { icon: 'building', tone: 'cyan', title: '+ Service', detail: 'Ajouter un nouveau service', path: '/app/admin-services?action=create' },
-    { icon: 'users', tone: 'violet', title: 'Configurer un Responsable', detail: 'Services sans Responsable principal', path: '/app/admin-services?manager=WITHOUT' },
     { icon: 'chart', tone: 'orange', title: 'Présence minimale', detail: 'Configurer les seuils par service', path: '/app/admin-minimum-presence' },
   ]
 
@@ -483,12 +482,14 @@ export function AdminDashboardPage() {
       <div className="admin-dashboard-grid">
         <div className="admin-dashboard-column admin-dashboard-column--main">
           <AdminUsersOverview metrics={metrics} onNavigate={navigate} />
-          <AdminActivityCard items={recentActivity} onNavigate={navigate} />
+          <div className="admin-dashboard-under-users">
+            <AdminActivityCard items={recentActivity} onNavigate={navigate} />
+            <AdminQuickActions onNavigate={navigate} />
+          </div>
         </div>
 
         <div className="admin-dashboard-column admin-dashboard-column--side">
           <AdminServicesOverview metrics={metrics} onNavigate={navigate} />
-          <AdminQuickActions onNavigate={navigate} />
           <AdminAttentionCard metrics={metrics} onNavigate={navigate} />
         </div>
       </div>

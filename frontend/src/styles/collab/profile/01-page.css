@@ -289,3 +289,11 @@
 .profile-skeleton--details { height: 330px; }
 
 @keyframes profile-shimmer { to { transform: translateX(100%); } }
+
+.profile-hero__avatar img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  border-radius: inherit;
+}

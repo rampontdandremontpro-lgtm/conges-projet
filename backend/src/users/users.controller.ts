@@ -19,6 +19,7 @@ import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateOwnSignatureDto } from './dto/update-own-signature.dto';
+import { UpdateOwnPreferencesDto } from './dto/update-own-preferences.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UserRole } from './user.entity';
 import type { AuthenticatedUser } from '../auth/jwt-payload.interface';
@@ -85,8 +86,35 @@ export class UsersController {
   ) {
     return this.usersService.getGlobalPresenceCalendar(
       month,
-      request.user.role,
+      request.user,
     );
+  }
+
+  @Get('me/preferences')
+  @Roles(
+    UserRole.COLLABORATEUR,
+    UserRole.RESPONSABLE_SERVICE,
+    UserRole.RH,
+    UserRole.DIRECTEUR,
+    UserRole.ADMIN,
+  )
+  getOwnPreferences(@Req() request: AuthenticatedRequest) {
+    return this.usersService.getOwnPreferences(request.user.id);
+  }
+
+  @Put('me/preferences')
+  @Roles(
+    UserRole.COLLABORATEUR,
+    UserRole.RESPONSABLE_SERVICE,
+    UserRole.RH,
+    UserRole.DIRECTEUR,
+    UserRole.ADMIN,
+  )
+  updateOwnPreferences(
+    @Req() request: AuthenticatedRequest,
+    @Body() dto: UpdateOwnPreferencesDto,
+  ) {
+    return this.usersService.updateOwnPreferences(request.user.id, dto);
   }
 
   @Get('me/signature')

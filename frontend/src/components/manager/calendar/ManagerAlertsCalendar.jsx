@@ -209,6 +209,13 @@ export function ManagerAlertsCalendar({
                   const morningStatus = resolveHalfStatus(personEvents, date, 'MATIN')
                   const afternoonStatus = resolveHalfStatus(personEvents, date, 'APRES_MIDI')
                   const hasEvent = morningStatus !== 'PRESENT' || afternoonStatus !== 'PRESENT'
+                  const hasAbsence = morningStatus === 'ABSENT' || afternoonStatus === 'ABSENT'
+                  const hasLeave = morningStatus === 'EN_VACANCES' || afternoonStatus === 'EN_VACANCES'
+                  const calendarEmoji = hasAbsence
+                    ? (person.unavailabilityEmoji ?? '📍')
+                    : hasLeave
+                      ? (person.leaveEmoji ?? '🏖️')
+                      : null
                   const overlap = hasEvent && stats?.overlap
                   const baseClass = isHoliday ? 'is-holiday' : isToday ? 'is-today' : meta.isWeekend ? 'is-weekend' : ''
                   const primary = personEvents.find((event) => event.isPrimary && dateInRange(date, event.startDate, event.endDate))
@@ -217,6 +224,7 @@ export function ManagerAlertsCalendar({
                     <>
                       <Half status={morningStatus} baseClass={baseClass} />
                       <Half status={afternoonStatus} baseClass={baseClass} />
+                      {calendarEmoji && <span className="manager-month-planning__status-emoji" aria-hidden="true">{calendarEmoji}</span>}
                       {overlap && <span className="manager-month-planning__overlap-mark">!</span>}
                     </>
                   )

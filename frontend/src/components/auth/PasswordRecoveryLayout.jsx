@@ -82,7 +82,7 @@ export function PasswordRecoveryLayout({ title, subtitle, children, securityText
             des congés et des absences
           </h1>
           <p>
-            GMES vous accompagne au quotidien pour gérer
+            G Congés & Absences vous accompagne au quotidien pour gérer
             <br className="login-hero__desktop-break" />
             vos demandes, validations et soldes en toute simplicité.
           </p>
@@ -147,7 +147,7 @@ export function PasswordRecoveryLayout({ title, subtitle, children, securityText
           <span>
             <ShieldIcon />
           </span>
-          {securityText ?? 'Accès sécurisé à votre espace GMES'}
+          {securityText ?? 'Accès sécurisé à votre espace G Congés & Absences'}
         </div>
       </section>
     </main>

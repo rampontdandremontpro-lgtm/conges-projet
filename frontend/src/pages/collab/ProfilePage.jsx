@@ -131,7 +131,7 @@ export function ProfilePage() {
     <div className="profile-page">
       <section className="profile-card profile-hero">
         <div className="profile-hero__avatar" aria-hidden="true">
-          {profileInitials(profile)}
+          {profile.profileImageData ? <img src={profile.profileImageData} alt="" /> : profileInitials(profile)}
           <span className={`profile-hero__presence profile-hero__presence--${profile.presenceStatus?.toLowerCase()}`} />
         </div>
         <div className="profile-hero__identity">
@@ -156,7 +156,7 @@ export function ProfilePage() {
         <div className="profile-section-heading">
           <div>
             <span className="profile-section-heading__eyebrow">Informations personnelles</span>
-            <h3>Mon compte GMES</h3>
+            <h3>Mon compte G Congés & Absences</h3>
           </div>
           <span className="profile-section-heading__readonly">
             <Icon name="shield" size={14} /> Lecture seule

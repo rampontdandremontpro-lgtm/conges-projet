@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Not, Repository } from 'typeorm';
+import * as bcrypt from 'bcrypt';
 
 import {
   Service,
@@ -25,8 +26,12 @@ import {
   AbsenceDeclarationStatus,
 } from '../absence-declarations/absence-declaration.entity';
 import { HolidaysService } from '../holidays/holidays.service';
+import { SettingsService } from '../settings/settings.service';
+import type { AuthenticatedUser } from '../auth/jwt-payload.interface';
+import { ValidatorResolutionService } from '../validators/validator-resolution.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { CALENDAR_EMOJIS, UpdateOwnPreferencesDto } from './dto/update-own-preferences.dto';
 import {
   EmploymentType,
   PresenceStatus,
@@ -42,6 +47,8 @@ export class UsersService {
     private readonly servicesService: ServicesService,
     private readonly presenceService: PresenceService,
     private readonly holidaysService: HolidaysService,
+    private readonly settingsService: SettingsService,
+    private readonly validatorResolutionService: ValidatorResolutionService,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -60,6 +67,12 @@ export class UsersService {
       );
     }
 
+    if (actorRole === UserRole.RH && createUserDto.password?.trim()) {
+      throw new ForbiddenException(
+        'Seul un administrateur peut définir le mot de passe d’un utilisateur.',
+      );
+    }
+
     const email = createUserDto.email.trim().toLowerCase();
     const existingUser = await this.userRepository.findOneBy({ email });
 
@@ -75,7 +88,9 @@ export class UsersService {
       nom: createUserDto.nom.trim(),
       prenom: createUserDto.prenom.trim(),
       email,
-      passwordHash: null,
+      passwordHash: createUserDto.password?.trim()
+        ? await bcrypt.hash(createUserDto.password, 12)
+        : null,
       microsoftId: createUserDto.microsoftId?.trim() || null,
       role: createUserDto.role,
       employmentType: createUserDto.employmentType,
@@ -309,9 +324,10 @@ export class UsersService {
   }
 
   async getGlobalPresenceCalendar(
-    monthValue?: string,
-    actorRole: UserRole = UserRole.DIRECTEUR,
+    monthValue: string | undefined,
+    actor: Pick<AuthenticatedUser, 'id' | 'role'>,
   ) {
+    const actorRole = actor.role;
     const month = this.normalizeCalendarMonth(monthValue);
     const [year, monthNumber] = month.split('-').map(Number);
     const monthStart = `${month}-01`;
@@ -350,6 +366,7 @@ export class UsersService {
           .andWhere('request.endDate >= :monthStart', { monthStart })
           .leftJoinAndSelect('request.employee', 'requestEmployee')
           .leftJoinAndSelect('request.leaveType', 'requestLeaveType')
+          .leftJoinAndSelect('request.service', 'requestService')
           .andWhere('request.status IN (:...statuses)', {
             statuses: [
               LeaveRequestStatus.VALIDEE,
@@ -381,10 +398,24 @@ export class UsersService {
       (leave) =>
         leave.status !== LeaveRequestStatus.EN_ATTENTE_VALIDATION,
     );
-    const pendingLeaves = leaves.filter(
-      (leave) =>
-        leave.status === LeaveRequestStatus.EN_ATTENTE_VALIDATION &&
-        leave.finalDeciderId === null,
+    const pendingCandidates = leaves.filter(
+      (leave) => leave.status === LeaveRequestStatus.EN_ATTENTE_VALIDATION,
+    );
+    const pendingRecipientChecks = await Promise.all(
+      pendingCandidates.map(async (leave) => {
+        try {
+          const recipientIds = await this.validatorResolutionService.getDecisionRecipientIds(
+            leave,
+            { manager },
+          );
+          return recipientIds.includes(actor.id) ? leave : null;
+        } catch {
+          return null;
+        }
+      }),
+    );
+    const pendingLeaves = pendingRecipientChecks.filter(
+      (leave): leave is LeaveRequest => leave !== null,
     );
 
     const days: Array<{
@@ -469,6 +500,8 @@ export class UsersService {
       });
     }
 
+    const calendarPreferences = await this.getCalendarPreferencesForUsers(memberIds);
+
     return {
       month,
       totalMembers: members.length,
@@ -479,6 +512,8 @@ export class UsersService {
         role: member.role,
         serviceId: member.serviceId,
         serviceName: member.service?.name ?? 'Direction',
+        leaveEmoji: calendarPreferences.get(member.id)?.leaveEmoji ?? '🏖️',
+        unavailabilityEmoji: calendarPreferences.get(member.id)?.unavailabilityEmoji ?? '📍',
       })),
       holidays: holidays.map((holiday) => ({
         id: holiday.id,
@@ -733,6 +768,8 @@ export class UsersService {
       });
     }
 
+    const calendarPreferences = await this.getCalendarPreferencesForUsers(memberIds);
+
     return {
       month,
       service: {
@@ -747,6 +784,8 @@ export class UsersService {
         nom: member.nom,
         prenom: member.prenom,
         role: member.role,
+        leaveEmoji: calendarPreferences.get(member.id)?.leaveEmoji ?? '🏖️',
+        unavailabilityEmoji: calendarPreferences.get(member.id)?.unavailabilityEmoji ?? '📍',
       })),
       holidays: holidays.map((holiday) => ({
         id: holiday.id,
@@ -778,6 +817,7 @@ export class UsersService {
 
   async getOwnProfile(id: number) {
     const user = await this.findOne(id);
+    const preferences = await this.readOwnPreferences(id);
 
     return {
       id: user.id,
@@ -789,6 +829,7 @@ export class UsersService {
       hireDate: user.hireDate,
       presenceStatus: user.presenceStatus,
       serviceId: user.serviceId,
+      profileImageData: preferences.profileImageData,
       service: user.service
         ? {
             id: user.service.id,
@@ -803,6 +844,87 @@ export class UsersService {
         updatedAt: user.signatureUpdatedAt,
       },
     };
+  }
+
+  async getOwnPreferences(id: number) {
+    await this.findOne(id);
+    return this.readOwnPreferences(id);
+  }
+
+  async updateOwnPreferences(id: number, dto: UpdateOwnPreferencesDto) {
+    await this.findOne(id);
+    const current = await this.readOwnPreferences(id);
+    const profileImageData = dto.profileImageData === null
+      ? null
+      : dto.profileImageData ?? current.profileImageData;
+
+    if (profileImageData) {
+      if (
+        profileImageData.length > 58000 ||
+        !/^data:image\/(png|jpe?g|webp);base64,[A-Za-z0-9+/=]+$/i.test(profileImageData)
+      ) {
+        throw new BadRequestException(
+          'La photo de profil doit être une image PNG, JPEG ou WebP valide et suffisamment légère.',
+        );
+      }
+    }
+
+    const leaveEmoji = dto.leaveEmoji ?? current.leaveEmoji;
+    const unavailabilityEmoji = dto.unavailabilityEmoji ?? current.unavailabilityEmoji;
+    if (!CALENDAR_EMOJIS.includes(leaveEmoji) ||
+        !CALENDAR_EMOJIS.includes(unavailabilityEmoji)) {
+      throw new BadRequestException('Emoji de calendrier non autorisé.');
+    }
+
+    const preferences = { profileImageData, leaveEmoji, unavailabilityEmoji };
+    await this.settingsService.upsertInternal(
+      this.profilePreferencesKey(id),
+      JSON.stringify(preferences),
+      'Préférences personnelles de profil et de calendrier.',
+      id,
+    );
+
+    return preferences;
+  }
+
+  private profilePreferencesKey(id: number): string {
+    return `USER_PROFILE_PREFERENCES_${id}`;
+  }
+
+  private async readOwnPreferences(id: number): Promise<{
+    profileImageData: string | null;
+    leaveEmoji: string;
+    unavailabilityEmoji: string;
+  }> {
+    const raw = await this.settingsService.getValue(this.profilePreferencesKey(id));
+    const fallback = {
+      profileImageData: null as string | null,
+      leaveEmoji: '🏖️',
+      unavailabilityEmoji: '📍',
+    };
+
+    if (!raw) return fallback;
+    try {
+      const parsed = JSON.parse(raw) as Partial<typeof fallback>;
+      return {
+        profileImageData: typeof parsed.profileImageData === 'string' ? parsed.profileImageData : null,
+        leaveEmoji: typeof parsed.leaveEmoji === 'string' && CALENDAR_EMOJIS.includes(parsed.leaveEmoji)
+          ? parsed.leaveEmoji
+          : fallback.leaveEmoji,
+        unavailabilityEmoji: typeof parsed.unavailabilityEmoji === 'string' && CALENDAR_EMOJIS.includes(parsed.unavailabilityEmoji)
+          ? parsed.unavailabilityEmoji
+          : fallback.unavailabilityEmoji,
+      };
+    } catch {
+      return fallback;
+    }
+  }
+
+  private async getCalendarPreferencesForUsers(ids: number[]) {
+    const entries = await Promise.all(
+      ids.map(async (id) => [id, await this.readOwnPreferences(id)] as const),
+    );
+    return new Map(entries);
   }
 
   async getOwnSignature(id: number) {
@@ -885,6 +1007,13 @@ export class UsersService {
         'La RH peut attribuer uniquement les rôles Collaborateur ou Responsable de service.',
       );
     }
+
+    if (actorRole === UserRole.RH && updateUserDto.password?.trim()) {
+      throw new ForbiddenException(
+        'Seul un administrateur peut modifier le mot de passe d’un utilisateur.',
+      );
+    }
+
     const email =
       updateUserDto.email?.trim().toLowerCase() ?? user.email;
 
@@ -954,6 +1083,11 @@ export class UsersService {
     }
 
     await this.userRepository.save(user);
+
+    if (updateUserDto.password?.trim()) {
+      await this.setPassword(id, await bcrypt.hash(updateUserDto.password, 12));
+    }
+
     return this.findOne(id);
   }
 

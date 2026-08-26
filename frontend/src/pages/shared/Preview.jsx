@@ -11,8 +11,8 @@ export function Preview() {
   return (
     <PageContainer>
       <header className="page-heading">
-        <h1>{label ?? 'Bienvenue sur GMES'}</h1>
-        <p>Gestion des congés et des absences — GMES</p>
+        <h1>{label ?? 'Bienvenue sur G Congés & Absences'}</h1>
+        <p>G Congés & Absences — GMES</p>
       </header>
       <div className="card preview-placeholder">
         <span className="preview-placeholder__icon">

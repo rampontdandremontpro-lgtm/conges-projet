@@ -366,3 +366,29 @@
 }
 
 @keyframes settings-shimmer { to { transform: translateX(100%); } }
+
+.settings-preferences-card { gap: 20px; }
+.settings-profile-photo { display: flex; align-items: center; gap: 20px; }
+.settings-profile-photo__preview {
+  width: 88px; height: 88px; flex: 0 0 88px; border-radius: 50%; overflow: hidden;
+  display: grid; place-items: center; background: #e8f2ff; border: 3px solid #fff;
+  box-shadow: 0 0 0 1px #d7e5f6, 0 8px 24px rgba(21, 73, 128, .1);
+  color: #1767cf; font-size: 24px; font-weight: 800;
+}
+.settings-profile-photo__preview img { width: 100%; height: 100%; object-fit: cover; }
+.settings-profile-photo__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.settings-profile-photo__actions small { flex-basis: 100%; color: var(--settings-muted); }
+.settings-emoji-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.settings-emoji-group { padding: 15px; border: 1px solid #dce7f5; border-radius: 14px; background: #f8fbff; }
+.settings-emoji-group > strong { display: block; margin-bottom: 11px; color: var(--settings-navy); font-size: 13px; }
+.settings-emoji-list { display: flex; flex-wrap: wrap; gap: 8px; }
+.settings-emoji-list button {
+  width: 42px; height: 42px; border: 1px solid #dbe5f1; border-radius: 11px; background: #fff;
+  font-size: 21px; cursor: pointer; transition: transform .15s ease, border-color .15s ease, box-shadow .15s ease;
+}
+.settings-emoji-list button:hover { transform: translateY(-1px); border-color: #8bb8f6; }
+.settings-emoji-list button.is-selected { border-color: #1b6ef3; box-shadow: 0 0 0 3px rgba(27,110,243,.13); background: #eef5ff; }
+@media (max-width: 680px) {
+  .settings-profile-photo { align-items: flex-start; }
+  .settings-emoji-grid { grid-template-columns: 1fr; }
+}

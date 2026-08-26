@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
+import { useAuth } from '@/auth/AuthContext'
 import { Icon } from '@/components/ui/Icon'
 import { useClickOutside } from '@/hooks/useClickOutside'
 import {
@@ -9,6 +10,7 @@ import {
   markAllNotificationsRead,
   markNotificationRead,
 } from '@/services/notifications'
+import { getNotificationTarget } from '@/utils/notificationTarget'
 
 function formatNotificationTime(value) {
   if (!value) {
@@ -52,6 +54,7 @@ function formatNotificationTime(value) {
 
 export function NotificationsDropdown() {
   const navigate = useNavigate()
+  const { user, effectiveRole } = useAuth()
   const [open, setOpen] = useState(false)
   const [items, setItems] = useState([])
   const [unreadCount, setUnreadCount] = useState(0)
@@ -225,13 +228,12 @@ export function NotificationsDropdown() {
                       className="notification-item__button"
                       onClick={async () => {
                         await handleMarkRead(item)
-                        if (item.type === 'LEAVE_REQUEST_PREPARED_BY_RH' && item.leaveRequestId) {
-                          setOpen(false)
-                          navigate(`/app/new-request/${item.leaveRequestId}`)
-                        }
+                        const target = getNotificationTarget(item, effectiveRole, user?.role)
+                        setOpen(false)
+                        navigate(target ?? '/app/notifications')
                       }}
                       aria-label={
-                        unread ? `Marquer comme lue : ${item.title}` : `${item.title}, déjà lue`
+                        `Ouvrir : ${item.title}`
                       }
                     >
                       <div className="notification-item__body">

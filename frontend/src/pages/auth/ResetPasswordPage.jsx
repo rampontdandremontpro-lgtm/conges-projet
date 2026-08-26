@@ -207,7 +207,7 @@ export function ResetPasswordPage() {
   return (
     <PasswordRecoveryLayout
       title="Réinitialiser le mot de passe"
-      subtitle="Choisissez un nouveau mot de passe pour votre compte GMES."
+      subtitle="Choisissez un nouveau mot de passe pour votre compte G Congés & Absences."
       securityText="Lien à usage unique — valable pendant 1 heure"
     >
       {content}

@@ -24,7 +24,7 @@ const INITIAL_STATE = {
 export function DashboardRh() {
   const navigate = useNavigate()
   const [state, setState] = useState(INITIAL_STATE)
-  const [absenteeismPeriod, setAbsenteeismPeriod] = useState('year')
+  const [absenteeismPeriod, setAbsenteeismPeriod] = useState('month')
 
   const load = useCallback(async () => {
     try {

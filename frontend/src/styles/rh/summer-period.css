@@ -1156,3 +1156,10 @@
 .rh-summer-period-kpis--editable article label > div { display: flex; align-items: center; gap: 7px; }
 .rh-summer-period-kpis--editable input { width: 76px; min-height: 38px; border: 1px solid #d8e3f1; border-radius: 10px; padding: 6px 9px; color: #0f2c55; font: inherit; font-weight: 850; background: #fff; }
 .rh-summer-period-kpis--editable b { color: #5d7392; }
+
+.rh-summer-period-range-labels { grid-template-columns: 1fr 1fr; }
+.rh-summer-period-range-labels span:nth-child(2) {
+  color: #8ea3bc;
+  font-size: inherit;
+  text-align: right;
+}

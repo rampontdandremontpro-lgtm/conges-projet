@@ -362,3 +362,22 @@
   .admin-users-confirm,
   .admin-users-spinner { animation: none !important; }
 }
+
+.admin-users-password-field {
+  display: grid;
+  gap: 7px;
+  margin-bottom: 14px;
+  color: #24476f;
+  font-size: 12px;
+  font-weight: 700;
+}
+.admin-users-password-field > span small,
+.admin-users-password-field > small { color: #8295ad; font-weight: 500; }
+.admin-users-password-input { position: relative; }
+.admin-users-password-input input { width: 100%; padding-right: 44px; }
+.admin-users-password-input button {
+  position: absolute; right: 7px; top: 50%; transform: translateY(-50%);
+  width: 32px; height: 32px; display: grid; place-items: center; border: 0;
+  border-radius: 8px; background: transparent; color: #7187a7; cursor: pointer;
+}
+.admin-users-password-input button:hover { background: #edf4fd; color: #1b6ef3; }

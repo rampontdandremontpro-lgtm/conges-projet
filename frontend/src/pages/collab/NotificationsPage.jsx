@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 
+import { useAuth } from '@/auth/AuthContext'
 import { Icon } from '@/components/ui/Icon'
 import { useAutoDismiss } from '@/hooks/useAutoDismiss'
 import {
@@ -11,6 +12,7 @@ import {
   resetNotificationPreferences,
   updateNotificationPreferences,
 } from '@/services/notifications'
+import { getNotificationTarget } from '@/utils/notificationTarget'
 
 import '@/styles/collab/notifications/index.css'
 
@@ -138,12 +140,15 @@ function EmptyState({ filtered }) {
   )
 }
 
-function NotificationCard({ item, onRead, onOpenDraft, busy }) {
+function NotificationCard({ item, onRead, onOpen, target, busy }) {
   const unread = !item.readAt
   const visual = notificationVisual(item.type)
 
   return (
-    <article className={`notifications-page-card${unread ? ' is-unread' : ''}`}>
+    <article
+      className={`notifications-page-card${unread ? ' is-unread' : ''}${target ? ' is-clickable' : ''}`}
+      onClick={target ? () => onOpen(item, target) : undefined}
+    >
       <span className={`notifications-page-card__icon notifications-page-card__icon--${visual.tone}`} aria-hidden="true">
         <Icon name={visual.icon} size={21} />
       </span>
@@ -153,9 +158,7 @@ function NotificationCard({ item, onRead, onOpenDraft, busy }) {
           <h3>{item.title}</h3>
           {unread && <span className="notifications-page-card__badge">Non lue</span>}
         </div>
-
         <p className="notifications-page-card__message">{item.message}</p>
-
         <div className="notifications-page-card__meta">
           <span>{formatNotificationDate(item.createdAt)}</span>
           <span>{formatNotificationTime(item.createdAt)}</span>
@@ -163,21 +166,18 @@ function NotificationCard({ item, onRead, onOpenDraft, busy }) {
       </div>
 
       <div className="notifications-page-card__action">
-        {item.type === 'LEAVE_REQUEST_PREPARED_BY_RH' && item.leaveRequestId ? (
-          <button type="button" disabled={busy} onClick={() => onOpenDraft(item)}>
+        {target ? (
+          <button type="button" disabled={busy} onClick={(event) => { event.stopPropagation(); onOpen(item, target) }}>
             <Icon name="chevronRight" size={15} />
-            Ouvrir le brouillon
+            {busy ? 'Ouverture…' : 'Ouvrir'}
           </button>
         ) : unread ? (
-          <button type="button" disabled={busy} onClick={() => onRead(item)}>
+          <button type="button" disabled={busy} onClick={(event) => { event.stopPropagation(); onRead(item) }}>
             <Icon name="check" size={15} />
             {busy ? 'Traitement…' : 'Marquer comme lue'}
           </button>
         ) : (
-          <span className="notifications-page-card__read">
-            <Icon name="check" size={14} />
-            Lue
-          </span>
+          <span className="notifications-page-card__read"><Icon name="check" size={14} />Lue</span>
         )}
       </div>
     </article>
@@ -421,6 +421,7 @@ function NotificationPreferences({ onBack }) {
 
 export function NotificationsPage() {
   const navigate = useNavigate()
+  const { user, effectiveRole } = useAuth()
   const [searchParams] = useSearchParams()
   const [filter, setFilter] = useState('all')
   const [items, setItems] = useState([])
@@ -513,13 +514,13 @@ export function NotificationsPage() {
     }
   }
 
-  const handleOpenDraft = async (item) => {
-    if (!item.leaveRequestId || busyId) return
+  const handleOpen = async (item, target) => {
+    if (!target || busyId) return
     setBusyId(item.id)
     try {
       if (!item.readAt) await markNotificationRead(item.id)
       notifyHeader()
-      navigate(`/app/new-request/${item.leaveRequestId}`)
+      navigate(target)
     } catch {
       await load()
     } finally {
@@ -629,7 +630,8 @@ export function NotificationsPage() {
                     key={item.id}
                     item={item}
                     onRead={handleRead}
-                    onOpenDraft={handleOpenDraft}
+                    onOpen={handleOpen}
+                    target={getNotificationTarget(item, effectiveRole, user?.role)}
                     busy={busyId === item.id}
                   />
                 ))}
@@ -646,7 +648,8 @@ export function NotificationsPage() {
                     key={item.id}
                     item={item}
                     onRead={handleRead}
-                    onOpenDraft={handleOpenDraft}
+                    onOpen={handleOpen}
+                    target={getNotificationTarget(item, effectiveRole, user?.role)}
                     busy={busyId === item.id}
                   />
                 ))}
@@ -663,7 +666,8 @@ export function NotificationsPage() {
                     key={item.id}
                     item={item}
                     onRead={handleRead}
-                    onOpenDraft={handleOpenDraft}
+                    onOpen={handleOpen}
+                    target={getNotificationTarget(item, effectiveRole, user?.role)}
                     busy={busyId === item.id}
                   />
                 ))}

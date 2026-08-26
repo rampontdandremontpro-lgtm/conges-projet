@@ -3,6 +3,8 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { HolidaysModule } from '../holidays/holidays.module';
 import { ServicesModule } from '../services/services.module';
+import { SettingsModule } from '../settings/settings.module';
+import { ValidatorsModule } from '../validators/validators.module';
 import { User } from './user.entity';
 import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
@@ -12,6 +14,8 @@ import { UsersService } from './users.service';
     TypeOrmModule.forFeature([User]),
     ServicesModule,
     HolidaysModule,
+    SettingsModule,
+    ValidatorsModule,
   ],
   controllers: [UsersController],
   providers: [UsersService],

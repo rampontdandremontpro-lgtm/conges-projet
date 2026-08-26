@@ -1,16 +1,39 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 
 import { useAuth } from '@/auth/AuthContext'
 import { Icon } from '@/components/ui/Icon'
 import { ROLE_LABELS } from '@/config/navigation'
 import { useClickOutside } from '@/hooks/useClickOutside'
+import { getMyPreferences } from '@/services/profile'
 
 export function UserMenu() {
   const { user, effectiveRole, profileMode, availableProfiles, switchProfile, logout } = useAuth()
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
+  const [profileImage, setProfileImage] = useState(null)
+  const userId = user?.id
   const ref = useClickOutside(() => setOpen(false), open)
+
+  useEffect(() => {
+    if (!userId) return undefined
+    let active = true
+    const load = async () => {
+      try {
+        const data = await getMyPreferences()
+        if (active) setProfileImage(data?.profileImageData ?? null)
+      } catch {
+        if (active) setProfileImage(null)
+      }
+    }
+    load()
+    const handleUpdate = (event) => setProfileImage(event.detail?.profileImageData ?? null)
+    window.addEventListener('gmes:profile-preferences-updated', handleUpdate)
+    return () => {
+      active = false
+      window.removeEventListener('gmes:profile-preferences-updated', handleUpdate)
+    }
+  }, [userId])
 
   if (!user) {
     return null
@@ -41,7 +64,7 @@ export function UserMenu() {
         aria-expanded={open}
       >
         <span className="user-menu__avatar" aria-hidden="true">
-          {initials}
+          {profileImage ? <img src={profileImage} alt="" /> : initials}
         </span>
         <span className="user-menu__info">
           <span className="user-menu__name">

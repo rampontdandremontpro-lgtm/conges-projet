@@ -347,7 +347,6 @@ export function RhSummerPeriodPage() {
               />
               <div className="rh-summer-period-range-labels">
                 <span>{sliderMin} j</span>
-                <span>{form.specialDeadlineDays} j</span>
                 <span>{SLIDER_MAX} j</span>
               </div>
             </div>

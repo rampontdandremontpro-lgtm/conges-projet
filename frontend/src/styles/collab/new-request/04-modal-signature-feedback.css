@@ -390,3 +390,10 @@
   font-weight: var(--font-weight-black);
   letter-spacing: .08em;
 }
+
+.nr-modal-backdrop {
+  z-index: 1100;
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+}
+.nr-modal { max-width: 590px; }
