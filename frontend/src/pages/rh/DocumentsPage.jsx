@@ -1,3 +1,4 @@
+import { ProfileAvatar } from '@/components/ui/ProfileAvatar'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 
@@ -46,10 +47,6 @@ const STATUS_META = {
   REJETE: { label: 'Justificatif attendu', tone: 'pending' },
 }
 
-function initials(employee) {
-  if (!employee) return '—'
-  return `${employee.nom?.[0] ?? ''}${employee.prenom?.[0] ?? ''}`.toUpperCase()
-}
 
 function employeeName(employee) {
   if (!employee) return 'Collaborateur indisponible'
@@ -450,7 +447,7 @@ export function RhDocumentsPage() {
                     </div>
 
                     <div className="rh-documents-person">
-                      <span className="rh-documents-avatar">{initials(document.employee)}</span>
+                      <ProfileAvatar user={document.employee} className="rh-documents-avatar" />
                       <div>
                         <strong>{employeeName(document.employee)}</strong>
                         <small>{document.service?.name ?? 'Service non renseigné'}</small>

@@ -1,3 +1,4 @@
+import { ProfileAvatar } from '@/components/ui/ProfileAvatar'
 import { useMemo } from 'react'
 
 import { Icon } from '@/components/ui/Icon'
@@ -11,9 +12,6 @@ import {
   getPersonColor,
 } from '@/utils/managerCalendar'
 
-function initials(person) {
-  return `${person?.nom?.[0] ?? ''}${person?.prenom?.[0] ?? ''}`.toUpperCase()
-}
 
 function buildEvents(alerts) {
   const byKey = new Map()
@@ -193,7 +191,7 @@ export function ManagerAlertsCalendar({
             return (
               <div className="manager-month-planning__row" key={person.id}>
                 <div className="manager-month-planning__person">
-                  <span className="manager-month-planning__avatar" style={{ background: personColor.soft, color: personColor.solid }}>{initials(person)}</span>
+                  <ProfileAvatar user={person} className="manager-month-planning__avatar" style={{ background: personColor.soft, color: personColor.solid }} />
                   <span className="manager-month-planning__person-copy">
                     <strong>{person.nom} {person.prenom}</strong>
                     <small>{person.role === 'RESPONSABLE_SERVICE' ? 'Responsable de service' : 'Collaborateur'}</small>

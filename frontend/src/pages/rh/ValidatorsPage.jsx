@@ -1,3 +1,4 @@
+import { ProfileAvatar } from '@/components/ui/ProfileAvatar'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 
@@ -60,9 +61,6 @@ function fullName(user) {
   return `${user.nom ?? ''} ${user.prenom ?? ''}`.trim() || '—'
 }
 
-function initials(user) {
-  return `${user?.nom?.[0] ?? ''}${user?.prenom?.[0] ?? ''}`.toUpperCase() || '—'
-}
 
 function roleLabel(role) {
   return ROLE_LABELS[role] ?? String(role ?? '—').replaceAll('_', ' ')
@@ -150,11 +148,7 @@ function userTone(user) {
 }
 
 function UserAvatar({ user, size = 'normal' }) {
-  return (
-    <span className={`rh-validator-avatar rh-validator-avatar--${userTone(user)} rh-validator-avatar--${size}`}>
-      {initials(user)}
-    </span>
-  )
+  return <ProfileAvatar user={user} className={`rh-validator-avatar rh-validator-avatar--${userTone(user)} rh-validator-avatar--${size}`} />
 }
 
 function ServiceStatusBadge({ active }) {

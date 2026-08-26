@@ -1,3 +1,4 @@
+import { ProfileAvatar } from '@/components/ui/ProfileAvatar'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 
@@ -185,9 +186,7 @@ export function ManagerRequestDecisionPage() {
       )}
 
       <section className="manager-request-detail-hero">
-        <span className="manager-request-detail-hero__avatar">
-          {`${request.employee?.nom?.[0] ?? ''}${request.employee?.prenom?.[0] ?? ''}`.toUpperCase()}
-        </span>
+        <ProfileAvatar user={request.employee} className="manager-request-detail-hero__avatar" />
         <div>
           <span className="manager-request-detail-hero__eyebrow">DEMANDE DE CONGÉ N°{request.displayNumber ?? request.id}</span>
           <div className="manager-request-detail-hero__titleline">

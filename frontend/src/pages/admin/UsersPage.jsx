@@ -1,3 +1,4 @@
+import { ProfileAvatar } from '@/components/ui/ProfileAvatar'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 
@@ -64,11 +65,6 @@ function fullName(user) {
   return `${user?.nom ?? ''} ${user?.prenom ?? ''}`.trim() || 'Utilisateur'
 }
 
-function initials(user) {
-  const last = String(user?.nom ?? '').trim().charAt(0)
-  const first = String(user?.prenom ?? '').trim().charAt(0)
-  return `${last}${first}`.toUpperCase() || 'U'
-}
 
 function formatDate(value) {
   if (!value) return 'Non renseignée'
@@ -197,9 +193,11 @@ function UserDrawer({ mode, user, services, onClose, onSaved, onEdit, rhMode = f
       >
         <div className="admin-users-drawer__head">
           <div className="admin-users-drawer__identity">
-            <span className={`admin-users-avatar admin-users-avatar--${ROLE_TONES[user?.role] ?? 'blue'}`}>
-              {isCreate ? <Icon name="plus" size={20} /> : initials(user)}
-            </span>
+            {isCreate ? (
+              <span className={`admin-users-avatar admin-users-avatar--${ROLE_TONES[user?.role] ?? 'blue'}`}><Icon name="plus" size={20} /></span>
+            ) : (
+              <ProfileAvatar user={user} className={`admin-users-avatar admin-users-avatar--${ROLE_TONES[user?.role] ?? 'blue'}`} />
+            )}
             <div>
               <small>{isCreate ? 'NOUVEAU COMPTE' : isView ? 'FICHE UTILISATEUR' : 'MODIFICATION'}</small>
               <h2 id="admin-users-drawer-title">{isCreate ? 'Nouvel utilisateur' : fullName(user)}</h2>
@@ -467,7 +465,7 @@ export function AdminUsersPage({ rhMode = false }) {
                   const isSelf = String(item.id) === String(authenticatedUser?.id)
                   return (
                     <div key={item.id} className={`admin-users-row admin-users-row--body${item.isActive ? '' : ' is-inactive'}`} role="button" tabIndex="0" onClick={() => setDrawer({ mode: 'view', user: item })} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setDrawer({ mode: 'view', user: item }) } }}>
-                      <div className="admin-users-name"><span className={`admin-users-avatar admin-users-avatar--${ROLE_TONES[item.role] ?? 'neutral'}`}>{initials(item)}</span><div><strong>{fullName(item)}</strong><small>{item.hireDate ? `Depuis le ${formatDate(item.hireDate)}` : 'Date d’entrée non renseignée'}</small></div></div>
+                      <div className="admin-users-name"><ProfileAvatar user={item} className={`admin-users-avatar admin-users-avatar--${ROLE_TONES[item.role] ?? 'neutral'}`} /><div><strong>{fullName(item)}</strong><small>{item.hireDate ? `Depuis le ${formatDate(item.hireDate)}` : 'Date d’entrée non renseignée'}</small></div></div>
                       <span className="admin-users-email" title={item.email}>{item.email}</span>
                       <span className={`admin-users-role admin-users-role--${ROLE_TONES[item.role] ?? 'neutral'}`}>{ROLE_LABELS[item.role] ?? item.role}</span>
                       <span className="admin-users-service" title={item.service?.name ?? ''}>{item.service?.name ?? '—'}</span>

@@ -1,3 +1,4 @@
+import { ProfileAvatar } from '@/components/ui/ProfileAvatar'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 
@@ -41,9 +42,6 @@ function fullName(employee) {
   return `${employee?.nom ?? ''} ${employee?.prenom ?? ''}`.trim() || '—'
 }
 
-function initials(employee) {
-  return `${employee?.nom?.[0] ?? ''}${employee?.prenom?.[0] ?? ''}`.toUpperCase() || '—'
-}
 
 function formatDateTime(value) {
   if (!value) return '—'
@@ -195,7 +193,7 @@ function BalanceDetailDrawer({ row, onClose, onChanged }) {
       >
         <div className="rh-balances-drawer__head">
           <div className="rh-balances-drawer__identity">
-            <span className="rh-balances-avatar">{initials(row.employee)}</span>
+            <ProfileAvatar user={row.employee} className="rh-balances-avatar" />
             <div>
               <small>SOLDE COLLABORATEUR</small>
               <h2>{fullName(row.employee)}</h2>
@@ -535,7 +533,7 @@ export function RhBalancesPage() {
                   onClick={() => setSelected(row)}
                 >
                   <span className="rh-balances-person">
-                    <span className="rh-balances-avatar">{initials(row.employee)}</span>
+                    <ProfileAvatar user={row.employee} className="rh-balances-avatar" />
                     <span><strong>{fullName(row.employee)}</strong><small>{row.employee.service?.name ?? String(row.employee.role ?? '').replaceAll('_', ' ')}</small></span>
                   </span>
                   <strong>{formatBalanceDays(row.usableDays)} j</strong>

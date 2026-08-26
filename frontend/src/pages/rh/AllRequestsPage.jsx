@@ -1,3 +1,4 @@
+import { ProfileAvatar } from '@/components/ui/ProfileAvatar'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 
@@ -51,9 +52,6 @@ function formatDateTime(value) {
   }).format(date)
 }
 
-function initials(employee) {
-  return `${employee?.nom?.[0] ?? ''}${employee?.prenom?.[0] ?? ''}`.toUpperCase() || '—'
-}
 
 function effectiveStatus(request) {
   if (request?.status === 'EN_ATTENTE_VALIDATION' && request?.finalDeciderId) {
@@ -394,7 +392,7 @@ export function RhAllRequestsPage() {
                     onClick={() => navigate(`/app/rh-all-requests/${request.id}`)}
                   >
                     <span className="rh-all-requests-person">
-                      <span className="rh-all-requests-avatar">{initials(request.employee)}</span>
+                      <ProfileAvatar user={request.employee} className="rh-all-requests-avatar" />
                       <span>
                         <strong>{request.employee?.nom} {request.employee?.prenom}</strong>
                         <small>{request.service?.name ?? 'Service non renseigné'}</small>

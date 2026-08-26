@@ -1,3 +1,4 @@
+import { ProfileAvatar } from '@/components/ui/ProfileAvatar'
 import { Icon } from '@/components/ui/Icon'
 
 const STATUS_LABELS = {
@@ -6,9 +7,6 @@ const STATUS_LABELS = {
   ABSENT: 'Absent',
 }
 
-function initials(member) {
-  return `${member.nom?.[0] ?? ''}${member.prenom?.[0] ?? ''}`.toUpperCase() || '—'
-}
 
 export function ManagerTeamCard({ presence, loading, error, onRetry, onOpenPresence }) {
   const members = presence?.members ?? []
@@ -49,7 +47,7 @@ export function ManagerTeamCard({ presence, loading, error, onRetry, onOpenPrese
         <div className="manager-team-list">
           {members.slice(0, 6).map((member) => (
             <div className="manager-team-row" key={member.id}>
-              <span className="manager-team-avatar">{initials(member)}</span>
+              <ProfileAvatar user={member} className="manager-team-avatar" />
               <span className="manager-team-identity">
                 <strong>{member.nom} {member.prenom}</strong>
                 <small>{member.role === 'RESPONSABLE_SERVICE' ? 'Responsable de service' : 'Collaborateur'}</small>

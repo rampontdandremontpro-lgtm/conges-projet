@@ -102,6 +102,18 @@ export class UsersController {
     return this.usersService.getOwnPreferences(request.user.id);
   }
 
+  @Get('profile-images')
+  @Roles(
+    UserRole.COLLABORATEUR,
+    UserRole.RESPONSABLE_SERVICE,
+    UserRole.RH,
+    UserRole.DIRECTEUR,
+    UserRole.ADMIN,
+  )
+  getProfileImages() {
+    return this.usersService.getProfileImages();
+  }
+
   @Put('me/preferences')
   @Roles(
     UserRole.COLLABORATEUR,

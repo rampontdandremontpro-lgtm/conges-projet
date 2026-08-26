@@ -1,9 +1,7 @@
+import { ProfileAvatar } from '@/components/ui/ProfileAvatar'
 import { Icon } from '@/components/ui/Icon'
 import { formatDays, formatRangeNumericFR } from '@/utils/format'
 
-function initials(person) {
-  return `${person?.nom?.[0] ?? ''}${person?.prenom?.[0] ?? ''}`.toUpperCase() || '—'
-}
 
 function overlapSourceLabel(source) {
   return source === 'DECLARATION_ABSENCE' ? 'Absence' : 'Demande de congé'
@@ -43,7 +41,7 @@ export function ManagerOverlapAlertCard({ request, availability, onOpen }) {
       aria-label={`Voir la demande de ${request.employee?.nom ?? ''} ${request.employee?.prenom ?? ''}`}
     >
       <div className="manager-overlap-card__request">
-        <span className="manager-overlap-card__avatar">{initials(request.employee)}</span>
+        <ProfileAvatar user={request.employee} className="manager-overlap-card__avatar" />
         <div className="manager-overlap-card__request-content">
           <div className="manager-overlap-card__topline">
             <strong>{request.employee?.nom} {request.employee?.prenom}</strong>
@@ -82,7 +80,7 @@ export function ManagerOverlapAlertCard({ request, availability, onOpen }) {
         <div className="manager-overlap-card__people">
           {overlaps.map((item) => (
             <div className="manager-overlap-person" key={`${item.source}-${item.sourceId}`}>
-              <span className="manager-overlap-person__avatar">{initials(item)}</span>
+              <ProfileAvatar user={item} userId={item.employeeId} className="manager-overlap-person__avatar" />
               <span className="manager-overlap-person__identity">
                 <strong>{item.nom} {item.prenom}</strong>
                 <small>{overlapSourceLabel(item.source)} · {overlapStatusLabel(item.status)}</small>

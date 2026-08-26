@@ -1,3 +1,4 @@
+import { ProfileAvatar } from '@/components/ui/ProfileAvatar'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 
@@ -53,9 +54,6 @@ function formatDateTime(value) {
   }).format(date)
 }
 
-function initials(employee) {
-  return `${employee?.nom?.[0] ?? ''}${employee?.prenom?.[0] ?? ''}`.toUpperCase() || '—'
-}
 
 function statusMeta(status) {
   return STATUS_META[status] ?? { label: status || '—', tone: 'neutral' }
@@ -364,7 +362,7 @@ export function DirectorAllRequestsPage() {
                     onClick={() => navigate(`/app/director-all-requests/${request.id}`)}
                   >
                     <span className="director-all-requests-person">
-                      <span className="director-all-requests-avatar">{initials(request.employee)}</span>
+                      <ProfileAvatar user={request.employee} className="director-all-requests-avatar" />
                       <span>
                         <strong>{request.employee?.nom} {request.employee?.prenom}</strong>
                         <small>{request.service?.name ?? 'Service non renseigné'}</small>

@@ -843,6 +843,27 @@ export class UsersService {
     return this.readOwnPreferences(id);
   }
 
+  async getProfileImages(): Promise<Record<string, string>> {
+    const settings = await this.settingsService.getValuesByPrefix('USER_PROFILE_PREFERENCES_');
+    const profileImages: Record<string, string> = {};
+
+    for (const setting of settings) {
+      const match = setting.settingKey.match(/^USER_PROFILE_PREFERENCES_(\d+)$/);
+      if (!match) continue;
+
+      try {
+        const parsed = JSON.parse(setting.settingValue) as { profileImageData?: unknown };
+        if (typeof parsed.profileImageData === 'string' && parsed.profileImageData.startsWith('data:image/')) {
+          profileImages[match[1]] = parsed.profileImageData;
+        }
+      } catch {
+        // Une préférence invalide ne doit pas empêcher l'affichage des autres profils.
+      }
+    }
+
+    return profileImages;
+  }
+
   async updateOwnPreferences(id: number, dto: UpdateOwnPreferencesDto) {
     await this.findOne(id);
     const current = await this.readOwnPreferences(id);

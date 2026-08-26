@@ -1,9 +1,7 @@
+import { ProfileAvatar } from '@/components/ui/ProfileAvatar'
 import { Icon } from '@/components/ui/Icon'
 import { formatDays, formatRangeNumericFR } from '@/utils/format'
 
-function initials(employee) {
-  return `${employee?.nom?.[0] ?? ''}${employee?.prenom?.[0] ?? ''}`.toUpperCase() || '—'
-}
 
 export function ManagerRecentRequestsCard({ requests, loading, error, onRetry, onViewAll, onOpenRequest }) {
   return (
@@ -43,7 +41,7 @@ export function ManagerRecentRequestsCard({ requests, loading, error, onRetry, o
         <div className="manager-request-list">
           {requests.slice(0, 4).map((request) => (
             <button className="manager-request-row" type="button" key={request.id} onClick={() => onOpenRequest?.(request.id)}>
-              <span className="manager-request-avatar">{initials(request.employee)}</span>
+              <ProfileAvatar user={request.employee} className="manager-request-avatar" />
               <span className="manager-request-main">
                 <span className="manager-request-topline">
                   <strong>{request.employee?.nom} {request.employee?.prenom}</strong>

@@ -1,3 +1,4 @@
+import { ProfileAvatar } from '@/components/ui/ProfileAvatar'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 
@@ -49,9 +50,6 @@ function fullName(user) {
   return `${user.nom ?? ''} ${user.prenom ?? ''}`.trim() || '—'
 }
 
-function initials(user) {
-  return `${user?.nom?.[0] ?? ''}${user?.prenom?.[0] ?? ''}`.toUpperCase() || '—'
-}
 
 function statusMeta(status) {
   return STATUS_META[status] ?? { label: status || '—', tone: 'neutral' }
@@ -528,7 +526,7 @@ export function RhDerogationsPage() {
                   onClick={() => setSelectedId(item.id)}
                 >
                   <span className="rh-derogations-person">
-                    <span className="rh-derogations-avatar">{initials(item.employee)}</span>
+                    <ProfileAvatar user={item.employee} className="rh-derogations-avatar" />
                     <span>
                       <strong>{fullName(item.employee)}</strong>
                       <small>{item.employee?.email ?? `Dérogation n°${item.id}`}</small>

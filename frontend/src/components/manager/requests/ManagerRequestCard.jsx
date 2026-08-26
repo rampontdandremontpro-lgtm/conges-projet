@@ -1,9 +1,7 @@
+import { ProfileAvatar } from '@/components/ui/ProfileAvatar'
 import { Icon } from '@/components/ui/Icon'
 import { formatDays, formatRangeNumericFR } from '@/utils/format'
 
-function initials(employee) {
-  return `${employee?.nom?.[0] ?? ''}${employee?.prenom?.[0] ?? ''}`.toUpperCase() || '—'
-}
 
 function formatSubmittedAt(value) {
   if (!value) return '—'
@@ -30,7 +28,7 @@ export function ManagerRequestCard({ request, availability, onOpen }) {
       className="manager-requests-card"
       onClick={() => onOpen(request.id)}
     >
-      <span className="manager-requests-card__avatar">{initials(request.employee)}</span>
+      <ProfileAvatar user={request.employee} className="manager-requests-card__avatar" />
 
       <span className="manager-requests-card__content">
         <span className="manager-requests-card__topline">

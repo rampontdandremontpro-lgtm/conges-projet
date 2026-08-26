@@ -1,3 +1,4 @@
+import { ProfileAvatar } from '@/components/ui/ProfileAvatar'
 import { Icon } from '@/components/ui/Icon'
 import { ROLE_LABELS } from '@/config/navigation'
 
@@ -7,9 +8,6 @@ const STATUS_LABELS = {
   ABSENT: 'Absent',
 }
 
-function initials(member) {
-  return `${member.nom?.[0] ?? ''}${member.prenom?.[0] ?? ''}`.toUpperCase() || '—'
-}
 
 function statusClass(status) {
   return String(status ?? 'PRESENT').toLocaleLowerCase('fr-FR')
@@ -34,7 +32,7 @@ export function ManagerPresenceMemberCard({ member, currentPeriod }) {
   return (
     <article className="manager-presence-member-card">
       <div className="manager-presence-member-card__identity">
-        <span className="manager-presence-member-card__avatar">{initials(member)}</span>
+        <ProfileAvatar user={member} className="manager-presence-member-card__avatar" />
         <span className="manager-presence-member-card__name">
           <strong>{member.nom} {member.prenom}</strong>
           <small>{roleLabel}</small>

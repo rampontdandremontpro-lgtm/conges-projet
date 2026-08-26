@@ -1,3 +1,4 @@
+import { ProfileAvatar } from '@/components/ui/ProfileAvatar'
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
@@ -40,9 +41,6 @@ function formatPeriod(request) {
   return `${request.startDate} → ${request.endDate}`
 }
 
-function initials(user) {
-  return `${user?.nom?.[0] ?? ''}${user?.prenom?.[0] ?? ''}`.toUpperCase() || '?'
-}
 
 function DecisionsCard({ decisions, onNavigate }) {
   const total = decisions?.total ?? 0
@@ -164,7 +162,7 @@ function PrioritiesCard({ requests, onNavigate }) {
               key={request.id}
               onClick={() => onNavigate(`/app/director-all-requests/${request.id}`)}
             >
-              <span className="director-priority-avatar">{initials(request.employee)}</span>
+              <ProfileAvatar user={request.employee} className="director-priority-avatar" />
               <span className="director-priority-main">
                 <span className="director-priority-top">
                   <strong>{`${request.employee?.nom ?? ''} ${request.employee?.prenom ?? ''}`.trim() || 'Collaborateur'}</strong>

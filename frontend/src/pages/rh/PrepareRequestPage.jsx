@@ -1,3 +1,4 @@
+import { ProfileAvatar } from '@/components/ui/ProfileAvatar'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
@@ -187,7 +188,7 @@ export function RhPrepareRequestPage() {
 
             {selectedEmployee && (
               <div className="rh-prepare-selected-employee">
-                <span className="rh-prepare-selected-employee__avatar">{`${selectedEmployee.nom?.[0] ?? ''}${selectedEmployee.prenom?.[0] ?? ''}`.toUpperCase()}</span>
+                <ProfileAvatar user={selectedEmployee} className="rh-prepare-selected-employee__avatar" />
                 <div>
                   <strong>{employeeName}</strong>
                   <span>{selectedEmployee.service?.name ?? 'Service non renseigné'} · {selectedEmployee.email}</span>

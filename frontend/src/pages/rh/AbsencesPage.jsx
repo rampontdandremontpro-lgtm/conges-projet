@@ -1,3 +1,4 @@
+import { ProfileAvatar } from '@/components/ui/ProfileAvatar'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 
@@ -64,9 +65,6 @@ function fullName(user) {
   return `${user.nom ?? ''} ${user.prenom ?? ''}`.trim() || '—'
 }
 
-function initials(user) {
-  return `${user?.nom?.[0] ?? ''}${user?.prenom?.[0] ?? ''}`.toUpperCase() || '—'
-}
 
 function statusMeta(status) {
   return STATUS_META[status] ?? { label: status || '—', tone: 'neutral' }
@@ -972,7 +970,7 @@ export function RhAbsencesPage() {
               return (
                 <button key={declaration.id} type="button" className="rh-absences-row rh-absences-row--data" onClick={() => setSelected(declaration)}>
                   <span className="rh-absences-person">
-                    <span className="rh-absences-avatar">{initials(declaration.employee)}</span>
+                    <ProfileAvatar user={declaration.employee} className="rh-absences-avatar" />
                     <span><strong>{fullName(declaration.employee)}</strong><small>{declaration.service?.name ?? 'Service non renseigné'}</small></span>
                   </span>
                   <span className="rh-absences-type">{declaration.leaveType?.name ?? '—'}</span>

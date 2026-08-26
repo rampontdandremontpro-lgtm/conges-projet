@@ -282,6 +282,17 @@
 .settings-btn--ghost { border: 1px solid #dbe4f1; background: #ffffff; color: var(--settings-muted); }
 .settings-btn--danger { border: 1px solid #ffd2d9; background: #fff3f5; color: #c73b54; }
 .settings-btn--danger:hover:not(:disabled) { background: #ffecef; }
+.settings-btn--profile-delete {
+  border-color: #dc3545;
+  background: #dc3545;
+  color: #ffffff;
+  box-shadow: 0 7px 18px rgba(220, 53, 69, .18);
+}
+.settings-btn--profile-delete:hover:not(:disabled) {
+  border-color: #bd2636;
+  background: #bd2636;
+  color: #ffffff;
+}
 
 .settings-password-form {
   display: flex;

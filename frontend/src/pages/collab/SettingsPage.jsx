@@ -103,7 +103,7 @@ export function SettingsPage() {
     try {
       const data = await saveMyPreferences(nextValues)
       setPreferences({ loading: false, saving: false, ...data })
-      window.dispatchEvent(new CustomEvent('gmes:profile-preferences-updated', { detail: data }))
+      window.dispatchEvent(new CustomEvent('gmes:profile-preferences-updated', { detail: { ...data, userId: user?.id } }))
       window.dispatchEvent(new Event('gmes:data-changed'))
       setFeedback({ kind: 'success', message: successMessage })
     } catch (error) {
@@ -232,7 +232,7 @@ export function SettingsPage() {
               Choisir une image
             </button>
             {preferences.profileImageData && (
-              <button type="button" className="settings-btn" disabled={preferences.saving} onClick={() => savePreferences({ profileImageData: null }, 'Votre photo de profil a été supprimée.')}>
+              <button type="button" className="settings-btn settings-btn--danger settings-btn--profile-delete" disabled={preferences.saving} onClick={() => savePreferences({ profileImageData: null }, 'Votre photo de profil a été supprimée.')}>
                 <Icon name="trash" size={15} /> Supprimer
               </button>
             )}

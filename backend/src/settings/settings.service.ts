@@ -128,6 +128,20 @@ export class SettingsService {
     return setting?.settingValue ?? null;
   }
 
+  async getValuesByPrefix(prefix: string): Promise<Array<{ settingKey: string; settingValue: string }>> {
+    const normalizedPrefix = prefix.trim().toUpperCase();
+    if (!normalizedPrefix) {
+      return [];
+    }
+
+    return this.settingRepository
+      .createQueryBuilder('setting')
+      .select('setting.settingKey', 'settingKey')
+      .addSelect('setting.settingValue', 'settingValue')
+      .where('setting.settingKey LIKE :prefix', { prefix: `${normalizedPrefix}%` })
+      .getRawMany<{ settingKey: string; settingValue: string }>();
+  }
+
   async getString(key: string, fallback: string): Promise<string> {
     const value = await this.getValue(key);
     const normalized = value?.trim();

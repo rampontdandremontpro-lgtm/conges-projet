@@ -1,3 +1,4 @@
+import { ProfileAvatar } from '@/components/ui/ProfileAvatar'
 import { useMemo } from 'react'
 
 import { Icon } from '@/components/ui/Icon'
@@ -28,9 +29,6 @@ function memberSubtitle(member) {
   return member?.serviceName ? `${role} · ${member.serviceName}` : role
 }
 
-function initials(person) {
-  return `${person?.nom?.[0] ?? ''}${person?.prenom?.[0] ?? ''}`.toUpperCase()
-}
 
 function getMemberDay(day, memberId) {
   return day?.members?.find((member) => Number(member.id) === Number(memberId)) ?? null
@@ -125,7 +123,7 @@ export function ManagerPresenceCalendar({ data, month, filter, onMonthChange, cu
             return (
               <div className="manager-month-planning__row" key={member.id}>
                 <div className="manager-month-planning__person">
-                  <span className="manager-month-planning__avatar" style={{ background: personColor.soft, color: personColor.solid }}>{initials(member)}</span>
+                  <ProfileAvatar user={member} className="manager-month-planning__avatar" style={{ background: personColor.soft, color: personColor.solid }} />
                   <span className="manager-month-planning__person-copy">
                     <strong>{member.nom} {member.prenom}</strong>
                     <small>{memberSubtitle(member)}</small>

@@ -1,8 +1,6 @@
+import { ProfileAvatar } from '@/components/ui/ProfileAvatar'
 import { Icon } from '@/components/ui/Icon'
 
-function initials(user) {
-  return `${user?.nom?.[0] ?? ''}${user?.prenom?.[0] ?? ''}`.toUpperCase() || '—'
-}
 
 function statusLabel(status) {
   if (status === 'EN_VACANCES') return 'En vacances'
@@ -37,7 +35,7 @@ export function RhAbsentsCard({ presence, onNavigate }) {
         <div className="rh-absents-list">
           {members.map((member) => (
             <div key={member.id} className="rh-absent-row">
-              <span className="rh-absent-avatar">{initials(member)}</span>
+              <ProfileAvatar user={member} className="rh-absent-avatar" />
               <span className="rh-absent-identity">
                 <strong>{member.nom} {member.prenom}</strong>
                 <small>{member.service?.name ?? 'Service non renseigné'}</small>

@@ -30,6 +30,11 @@ export async function getMyPreferences() {
   return data
 }
 
+export async function getProfileImages() {
+  const { data } = await apiClient.get('/users/profile-images')
+  return data
+}
+
 export async function saveMyPreferences(payload) {
   const { data } = await apiClient.put('/users/me/preferences', payload)
   return data
