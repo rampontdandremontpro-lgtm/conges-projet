@@ -3,25 +3,28 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Icon } from '@/components/ui/Icon'
 import { PageContainer } from '@/components/ui/PageContainer'
 import { downloadRhExport, getRhExportsOverview } from '@/services/rh/rhExports'
+import { resolveExportPeriodRange } from '@/utils/exportPeriodRange'
 import { adjacentReferencePeriodOptions, currentReferencePeriod } from '@/utils/referencePeriods'
 
 import '@/styles/rh/exports.css'
 
-function dateInputValue(year, month, day) {
-  return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
-}
-
+const PERIOD_OPTIONS = [
+  { value: 'month', label: 'Ce mois' },
+  { value: '3months', label: '3 derniers mois' },
+  { value: '6months', label: '6 derniers mois' },
+  { value: 'custom', label: 'Période personnalisée' },
+]
 
 function referencePeriodOptions() {
   return adjacentReferencePeriodOptions()
 }
 
 function defaultFilters() {
-  const now = new Date()
-  const year = now.getFullYear()
+  const range = resolveExportPeriodRange('month')
   return {
-    startDate: dateInputValue(year, 1, 1),
-    endDate: dateInputValue(year, 12, 31),
+    periodPreset: 'month',
+    startDate: range.startDate,
+    endDate: range.endDate,
     serviceId: '',
     employeeId: '',
     leaveTypeId: '',
@@ -146,6 +149,13 @@ export function RhExportsPage() {
           next.employeeId = ''
         }
       }
+      if (name === 'periodPreset' && value !== 'custom') {
+        const range = resolveExportPeriodRange(value)
+        if (range) {
+          next.startDate = range.startDate
+          next.endDate = range.endDate
+        }
+      }
       return next
     })
   }
@@ -204,22 +214,12 @@ export function RhExportsPage() {
 
         <div className="rh-export-filters-grid">
           <label>
-            <span>Date de début</span>
-            <input
-              type="date"
-              value={filters.startDate}
-              max={filters.endDate || undefined}
-              onChange={(event) => changeFilter('startDate', event.target.value)}
-            />
-          </label>
-          <label>
-            <span>Date de fin</span>
-            <input
-              type="date"
-              value={filters.endDate}
-              min={filters.startDate || undefined}
-              onChange={(event) => changeFilter('endDate', event.target.value)}
-            />
+            <span>Période</span>
+            <select value={filters.periodPreset} onChange={(event) => changeFilter('periodPreset', event.target.value)}>
+              {PERIOD_OPTIONS.map((period) => (
+                <option key={period.value} value={period.value}>{period.label}</option>
+              ))}
+            </select>
           </label>
           <label>
             <span>Service</span>
@@ -252,13 +252,36 @@ export function RhExportsPage() {
             </select>
           </label>
           <label>
-            <span>Période</span>
+            <span>Période de référence</span>
             <select value={filters.referencePeriod} onChange={(event) => changeFilter('referencePeriod', event.target.value)}>
               {referencePeriodOptions().map((period) => (
                 <option key={period.value} value={period.value}>{period.label}</option>
               ))}
             </select>
           </label>
+
+          {filters.periodPreset === 'custom' && (
+            <>
+              <label>
+                <span>Date de début</span>
+                <input
+                  type="date"
+                  value={filters.startDate}
+                  max={filters.endDate || undefined}
+                  onChange={(event) => changeFilter('startDate', event.target.value)}
+                />
+              </label>
+              <label>
+                <span>Date de fin</span>
+                <input
+                  type="date"
+                  value={filters.endDate}
+                  min={filters.startDate || undefined}
+                  onChange={(event) => changeFilter('endDate', event.target.value)}
+                />
+              </label>
+            </>
+          )}
         </div>
 
         {invalidPeriod && <div className="rh-export-period-error">La date de début doit être antérieure à la date de fin.</div>}

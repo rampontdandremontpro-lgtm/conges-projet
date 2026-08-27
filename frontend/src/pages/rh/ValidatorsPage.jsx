@@ -1,3 +1,4 @@
+import { StatisticInfoButton } from '@/components/shared/StatisticInfoButton'
 import { ProfileAvatar } from '@/components/ui/ProfileAvatar'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
@@ -693,12 +694,24 @@ export function RhValidatorsPage() {
 
       <div className="rh-validators-toolbar">
         <div className="rh-validators-tabs" role="tablist" aria-label="Gestion des valideurs">
-          <button type="button" role="tab" aria-selected={tab === 'validators'} className={tab === 'validators' ? 'is-active' : ''} onClick={() => setTab('validators')}>
-            <Icon name="shield" size={17} /> Valideurs de secours
-          </button>
-          <button type="button" role="tab" aria-selected={tab === 'replacements'} className={tab === 'replacements' ? 'is-active' : ''} onClick={() => setTab('replacements')}>
-            <Icon name="refresh" size={17} /> Valideurs temporaires
-          </button>
+          <div className="rh-validators-tab-choice" role="presentation">
+            <button type="button" role="tab" aria-selected={tab === 'validators'} className={tab === 'validators' ? 'is-active' : ''} onClick={() => setTab('validators')}>
+              <Icon name="shield" size={17} /> Valideurs de secours
+            </button>
+            <StatisticInfoButton title="Valideur de secours" ariaLabel="Comprendre le rôle d’un valideur de secours">
+              <p>Le valideur de secours est rattaché à un <strong>service</strong>. Il sert de relais lorsque le Responsable principal ne peut pas valider et que le circuit de secours doit prendre le relais.</p>
+              <p>Plusieurs valideurs de secours peuvent être configurés. Seuls les <strong>Responsables de service, RH et Directeur actifs</strong> peuvent être désignés.</p>
+            </StatisticInfoButton>
+          </div>
+          <div className="rh-validators-tab-choice" role="presentation">
+            <button type="button" role="tab" aria-selected={tab === 'replacements'} className={tab === 'replacements' ? 'is-active' : ''} onClick={() => setTab('replacements')}>
+              <Icon name="refresh" size={17} /> Valideurs temporaires
+            </button>
+            <StatisticInfoButton title="Valideur temporaire" ariaLabel="Comprendre le rôle d’un valideur temporaire">
+              <p>Le valideur temporaire est rattaché à <strong>un collaborateur interne précis</strong> pour une période définie. Pendant cette période, il remplace le valideur normalement prévu pour ce collaborateur, y compris pour ses demandes déjà en attente.</p>
+              <p>Deux remplacements ne peuvent pas se chevaucher pour le même collaborateur. Si le valideur devient inactif ou inéligible, le remplacement cesse de s’appliquer et le <strong>circuit normal reprend automatiquement</strong>.</p>
+            </StatisticInfoButton>
+          </div>
         </div>
 
         {tab === 'replacements' && (

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
+import { StatisticInfoButton } from '@/components/shared/StatisticInfoButton'
 import { Icon } from '@/components/ui/Icon'
 import {
   createRhClosure,
@@ -416,7 +417,6 @@ export function RhHolidaysPage() {
               <div>
                 <small>{drawer.mode === 'official' ? 'JOUR FÉRIÉ' : drawer.mode === 'edit' ? 'FERMETURE GMES' : 'NOUVELLE FERMETURE'}</small>
                 <h2>{drawer.mode === 'create' ? 'Ajouter une fermeture' : drawer.holiday?.name}</h2>
-                <p>{drawer.mode === 'official' ? 'Le jour reste férié ; seul son caractère chômé dans l’organisation est paramétrable.' : 'Les fermetures GMES sont exclues automatiquement du décompte des congés.'}</p>
               </div>
               <button type="button" className="rh-holidays-close" onClick={closeDrawer} aria-label="Fermer">×</button>
             </div>
@@ -431,7 +431,13 @@ export function RhHolidaysPage() {
                 </section>
                 <section className="rh-holidays-form-card">
                   <div className="rh-holidays-work-status-field">
-                    <span>Jour chômé dans l’organisation</span>
+                    <div className="rh-holidays-work-status-heading">
+                      <span>Jour chômé dans l’organisation</span>
+                      <StatisticInfoButton title="Jour chômé dans l’organisation" ariaLabel="Comprendre le paramétrage du jour chômé">
+                        <p><strong>Oui :</strong> la journée est considérée comme non travaillée et n’est pas décomptée comme jour travaillé dans les calculs de congés.</p>
+                        <p><strong>Non :</strong> le jour reste férié au calendrier, mais la journée est considérée comme travaillée dans les calculs de congés.</p>
+                      </StatisticInfoButton>
+                    </div>
                     <div className="rh-holidays-work-status-choice" role="group" aria-label="Jour chômé dans l’organisation">
                       <button
                         type="button"
@@ -450,7 +456,6 @@ export function RhHolidaysPage() {
                         Non
                       </button>
                     </div>
-                    <small>Oui : journée non travaillée dans les calculs. Non : journée considérée comme travaillée.</small>
                   </div>
                 </section>
                 <div className="rh-holidays-form-actions">

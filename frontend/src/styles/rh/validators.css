@@ -38,7 +38,13 @@
   background: #eaf0f8;
 }
 
-.rh-validators-tabs button {
+.rh-validators-tab-choice {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.rh-validators-tabs .rh-validators-tab-choice > button[role='tab'] {
   display: inline-flex;
   min-height: 42px;
   align-items: center;
@@ -56,11 +62,11 @@
   transition: .16s ease;
 }
 
-.rh-validators-tabs button:hover {
+.rh-validators-tabs .rh-validators-tab-choice > button[role='tab']:hover {
   color: #1c5fa7;
 }
 
-.rh-validators-tabs button.is-active {
+.rh-validators-tabs .rh-validators-tab-choice > button[role='tab'].is-active {
   background: #fff;
   color: #0e467d;
   box-shadow: 0 4px 12px rgba(27, 67, 111, .10);
@@ -1087,7 +1093,12 @@
     width: 100%;
   }
 
-  .rh-validators-tabs button {
+  .rh-validators-tab-choice {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .rh-validators-tabs .rh-validators-tab-choice > button[role='tab'] {
     flex: 1;
     min-width: 0;
     padding-inline: 9px;
@@ -1163,3 +1174,5 @@
     width: 100%;
   }
 }
+
+.rh-validators-tab-choice .statistic-info-button__popover { z-index: 140; }

@@ -190,7 +190,6 @@ function LeaveTypeDrawer({ type, onClose, onSaved }) {
           <div>
             <small>{isEdit ? 'PARAMÉTRAGE DU TYPE' : 'NOUVEAU TYPE'}</small>
             <h2 id="rh-leave-type-drawer-title">{isEdit ? type.name : 'Créer un type'}</h2>
-            <p>Définissez les règles utilisées par les demandes de congés et les déclarations d’absence.</p>
           </div>
           <button type="button" className="rh-leave-types-close" onClick={onClose} aria-label="Fermer">×</button>
         </div>

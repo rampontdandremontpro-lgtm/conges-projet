@@ -409,7 +409,7 @@ export function RhBalancesPage() {
 
   const employees = useMemo(() => (
     filterState.users
-      .filter((user) => user?.role !== 'ADMIN' && user?.isActive !== false)
+      .filter((user) => user?.role !== 'ADMIN' && user?.role !== 'DIRECTEUR' && user?.isActive !== false)
       .filter((user) => {
         const serviceId = String(user?.service?.id ?? user?.serviceId ?? '')
         if (serviceFilter === 'external') return externalServiceIds.has(serviceId)

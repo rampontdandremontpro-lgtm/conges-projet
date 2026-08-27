@@ -17,6 +17,7 @@ import type { AuthenticatedUser } from '../auth/jwt-payload.interface';
 import { NotificationsService } from '../notifications/notifications.service';
 import { User, UserRole } from '../users/user.entity';
 import { UsersService } from '../users/users.service';
+import { isManagedBalanceEmployee } from './management-eligibility.util';
 import {
   BalanceMovement,
   BalanceMovementType,
@@ -304,7 +305,7 @@ export class LeaveBalancesService {
 
   async getManagementOverview(query: LeaveBalanceQueryDto = {}) {
     const employees = (await this.usersService.findAll())
-      .filter((employee) => employee.role !== UserRole.ADMIN && employee.isActive)
+      .filter((employee) => isManagedBalanceEmployee(employee))
       .sort((first, second) => {
         const lastName = first.nom.localeCompare(second.nom, 'fr', { sensitivity: 'base' });
         return lastName !== 0
