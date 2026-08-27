@@ -1,5 +1,6 @@
 import { Icon } from '@/components/ui/Icon'
-import { formatDays, formatPeriod } from '@/utils/format'
+import { formatDays } from '@/utils/format'
+import { formatCounterReferencePeriod } from '@/utils/referencePeriods'
 import { CardSkeleton, CardError } from '@/components/collab/dashboard/DashboardStates'
 
 export function LeaveBalanceCard({
@@ -95,7 +96,7 @@ export function LeaveBalanceCard({
         <div className="dash-card__heading">
           <h2 className="dash-card__title">Congés à utiliser</h2>
           {summary && !loading && !error && (
-            <span className="dash-card__period">Période {formatPeriod(summary.referencePeriod)}</span>
+            <span className="dash-card__period">Période {formatCounterReferencePeriod(summary.referencePeriod, summary.usableBalance?.counterType ?? 'N-1')}</span>
           )}
         </div>
         {summary && !loading && !error && <span className="dash-card__status-ok">Solde OK</span>}

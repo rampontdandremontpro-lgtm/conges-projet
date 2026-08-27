@@ -144,6 +144,15 @@ export function nextReferencePeriod(referencePeriod: string): string {
   return `${endYear}-${endYear + 1}`;
 }
 
+export function counterReferencePeriod(
+  referencePeriod: string,
+  counterType: 'N-1' | 'N' | 'N+1',
+): string {
+  const { startYear, endYear } = parseReferencePeriod(referencePeriod);
+  const offset = counterType === 'N-1' ? -1 : counterType === 'N+1' ? 1 : 0;
+  return `${startYear + offset}-${endYear + offset}`;
+}
+
 export function reminderDeadlines(
   referencePeriod: string,
   startMonthDay: string,

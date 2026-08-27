@@ -13,6 +13,7 @@ import {
 import {
   balanceRecapType,
   balanceReminderType,
+  counterReferencePeriod,
   currentReferencePeriod,
   formatFrenchDate,
   referencePeriodEndDate,
@@ -279,6 +280,7 @@ export class BalanceReminderService {
     usageDeadline: string,
   ): string {
     const date = formatFrenchDate(usageDeadline);
+    const displayPeriod = counterReferencePeriod(period, 'N-1').replace('-', '/');
     const lines = rows.map((row) => {
       const reserved =
         row.reservedDays === 0
@@ -291,7 +293,7 @@ export class BalanceReminderService {
       );
     });
     return [
-      `Rappel ${reminderDeadlineLabel(deadline.key)} — période ${period} (compteur N-1), congés à utiliser avant le ${date}.`,
+      `Rappel ${reminderDeadlineLabel(deadline.key)} — période ${displayPeriod} (compteur N-1), congés à utiliser avant le ${date}.`,
       ...lines,
       `${rows.length} ${this.plural(rows.length, 'collaborateur')} concerné${rows.length === 1 ? '' : 's'}.`,
     ].join('\n');

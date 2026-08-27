@@ -1,4 +1,5 @@
 import { ProfileAvatar } from '@/components/ui/ProfileAvatar'
+import { StatisticInfoButton } from '@/components/shared/StatisticInfoButton'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 
@@ -14,6 +15,11 @@ import {
   getRhEmployeeBalances,
 } from '@/services/rh/rhBalances'
 import { formatDays } from '@/utils/format'
+import {
+  adjacentReferencePeriodOptions,
+  currentReferencePeriod,
+  formatCounterReferencePeriod,
+} from '@/utils/referencePeriods'
 
 import '@/styles/rh/balances.css'
 
@@ -65,22 +71,8 @@ function formatBalanceDays(value) {
   return new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(Number(value ?? 0))
 }
 
-function currentReferencePeriod() {
-  const parts = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Martinique', year: 'numeric', month: '2-digit' }).formatToParts(new Date())
-  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]))
-  const year = Number(values.year)
-  const start = Number(values.month) >= 6 ? year : year - 1
-  return `${start}-${start + 1}`
-}
-
 function adjacentPeriods() {
-  const current = currentReferencePeriod()
-  const start = Number(current.slice(0, 4))
-  return [
-    { value: `${start - 1}-${start}`, label: `N-1 · ${start - 1}/${start}` },
-    { value: current, label: `N · ${start}/${start + 1}` },
-    { value: `${start + 1}-${start + 2}`, label: `N+1 · ${start + 1}/${start + 2}` },
-  ]
+  return adjacentReferencePeriodOptions()
 }
 
 function errorMessage(error) {
@@ -230,8 +222,8 @@ function BalanceDetailDrawer({ row, onClose, onChanged }) {
               </div>
 
               <div className="rh-balances-kpis">
-                <div><small>Congés à utiliser</small><strong>{formatDays(usableDays)} j</strong><span>N-1</span></div>
-                <div><small>En cours d’acquisition</small><strong>{formatBalanceDays(Number(acquisition?.acquiredDays ?? 0))} j</strong><span>N</span></div>
+                <div><small>Congés à utiliser</small><strong>{formatDays(usableDays)} j</strong><span>N-1 · {formatCounterReferencePeriod(usable?.referencePeriod, usable?.counterType)}</span></div>
+                <div><small>En cours d’acquisition</small><strong>{formatBalanceDays(Number(acquisition?.acquiredDays ?? 0))} j</strong><span>N · {formatCounterReferencePeriod(acquisition?.referencePeriod, acquisition?.counterType)}</span></div>
                 <div><small>En attente</small><strong>{formatBalanceDays(reserved)} j</strong><span>Demandes en attente</span></div>
                 <div className="rh-balances-kpis__available"><small>Disponible</small><strong>{formatBalanceDays(availableAfter)} j</strong><span>Après validation</span></div>
               </div>
@@ -244,8 +236,15 @@ function BalanceDetailDrawer({ row, onClose, onChanged }) {
                 <form className="rh-balances-correction" onSubmit={submitCorrection}>
                   <div className="rh-balances-correction__head">
                     <div>
-                      <h4>Nouvelle correction</h4>
-                      <p>Chaque correction crée automatiquement un mouvement traçable.</p>
+                      <div className="rh-balances-correction__title-row">
+                        <h4>Nouvelle correction</h4>
+                        <StatisticInfoButton title="Correction de solde">
+                          <p><strong>Crédit :</strong> ajoute des jours au compteur sélectionné.</p>
+                          <p><strong>Débit :</strong> retire des jours du compteur sélectionné.</p>
+                          <p>Choisissez le compteur N-1 ou N concerné, puis indiquez le nombre de jours. Le motif de la correction est obligatoire.</p>
+                          <p>Chaque correction crée un mouvement traçable dans l’historique. Activez <strong>Notifier le collaborateur</strong> si vous souhaitez qu’il reçoive une notification.</p>
+                        </StatisticInfoButton>
+                      </div>
                     </div>
                     <button type="button" onClick={() => setShowCorrection(false)} aria-label="Fermer la correction">×</button>
                   </div>
@@ -255,7 +254,7 @@ function BalanceDetailDrawer({ row, onClose, onChanged }) {
                     <select value={counterId} onChange={(event) => setCounterId(event.target.value)}>
                       {correctionCounters.map((balance) => (
                         <option key={balance.id} value={balance.id}>
-                          {balance.counterType === 'N-1' ? 'Congés à utiliser (N-1)' : 'En cours d’acquisition (N)'} — {formatReferencePeriod(balance.referencePeriod)}
+                          {balance.counterType === 'N-1' ? 'Congés à utiliser (N-1)' : 'En cours d’acquisition (N)'} - {formatCounterReferencePeriod(balance.referencePeriod, balance.counterType)}
                         </option>
                       ))}
                     </select>
@@ -321,7 +320,7 @@ function BalanceDetailDrawer({ row, onClose, onChanged }) {
                       <div className="rh-balances-history rh-balances-history--row" key={movement.id}>
                         <span>{formatDateTime(movement.createdAt)}</span>
                         <span className={`rh-balances-movement rh-balances-movement--${meta.tone}`}>{meta.label}</span>
-                        <span>{movement.leaveBalance?.counterType ?? '—'}<small>{formatReferencePeriod(movement.leaveBalance?.referencePeriod)}</small></span>
+                        <span>{movement.leaveBalance?.counterType ?? '—'}<small>{formatCounterReferencePeriod(movement.leaveBalance?.referencePeriod, movement.leaveBalance?.counterType)}</small></span>
                         <strong className={change > 0 ? 'is-positive' : change < 0 ? 'is-negative' : ''}>{change > 0 ? '+' : ''}{formatBalanceDays(change)} j</strong>
                         <span title={movement.reason ?? ''}>{movement.reason || '—'}</span>
                         <span>{movement.actor ? fullName(movement.actor) : 'Système'}</span>

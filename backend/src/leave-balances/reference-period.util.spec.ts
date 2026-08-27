@@ -2,6 +2,7 @@ import {
   addDays,
   balanceRecapType,
   balanceReminderType,
+  counterReferencePeriod,
   currentReferencePeriod,
   formatFrenchDate,
   nextReferencePeriod,
@@ -101,6 +102,14 @@ describe('reference-period.util — période de référence et échéances E4', 
       expect(deadlines.find((deadline) => deadline.key === '3M')?.date).toBe(
         '2028-02-29',
       );
+    });
+  });
+
+  describe('libellés métier N-1 / N / N+1', () => {
+    it('associe 2026-2027 à 2025-2026 pour N-1, 2026-2027 pour N et 2027-2028 pour N+1', () => {
+      expect(counterReferencePeriod('2026-2027', 'N-1')).toBe('2025-2026');
+      expect(counterReferencePeriod('2026-2027', 'N')).toBe('2026-2027');
+      expect(counterReferencePeriod('2026-2027', 'N+1')).toBe('2027-2028');
     });
   });
 

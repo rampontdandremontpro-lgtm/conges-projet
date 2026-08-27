@@ -106,16 +106,17 @@
 .director-stat-kpis {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 14px;
+  gap: 12px;
+  width: 100%;
 }
 
 .director-stat-kpi {
   display: flex;
   min-width: 0;
-  min-height: 132px;
+  min-height: 112px;
   align-items: flex-start;
   gap: 14px;
-  padding: 18px 18px 17px;
+  padding: 16px 16px 15px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
   background: var(--color-surface);
@@ -154,7 +155,7 @@
   flex-direction: column;
 }
 
-.director-stat-kpi strong {
+.director-stat-kpi__content > strong {
   margin-bottom: 5px;
   color: var(--color-brand-800);
   font-size: 29px;
@@ -164,18 +165,18 @@
   font-variant-numeric: tabular-nums;
 }
 
-.director-stat-kpi__content > span {
+.director-stat-kpi__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
   color: var(--color-text);
   font-size: 12.5px;
   font-weight: var(--font-weight-bold);
 }
 
-.director-stat-kpi small {
-  margin-top: 5px;
-  color: var(--color-text-secondary);
-  font-size: 10.5px;
-  font-weight: var(--font-weight-medium);
-  line-height: 1.35;
+.director-stat-kpi:has(.statistic-info-button__trigger[aria-expanded='true']),
+.director-stat-card:has(.statistic-info-button__trigger[aria-expanded='true']) {
+  z-index: 35;
 }
 
 .director-stat-kpi--green .director-stat-kpi__icon {
@@ -245,7 +246,13 @@
   font-weight: var(--font-weight-black);
 }
 
-.director-stat-card__header p {
+.director-stat-card__title-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.director-stat-card__header > div > p {
   margin: 4px 0 0;
   color: var(--color-text-secondary);
   font-size: 10.7px;

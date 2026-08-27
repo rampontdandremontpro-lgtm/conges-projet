@@ -401,7 +401,7 @@ describe('BalanceReminderService — E4 rappels de fin de période', () => {
         'Récapitulatif des congés à utiliser avant le 31 mai 2027',
       );
       expect(recap.message).toContain(
-        'Rappel 15 jours — période 2026-2027 (compteur N-1), congés à utiliser avant le 31 mai 2027.',
+        'Rappel 15 jours — période 2025/2026 (compteur N-1), congés à utiliser avant le 31 mai 2027.',
       );
       expect(recap.message).not.toContain('16 mai 2027');
     });

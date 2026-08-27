@@ -3,6 +3,7 @@ import { DataSource } from 'typeorm';
 
 import { AuditService } from '../audit/audit.service';
 import type { AuthenticatedUser } from '../auth/jwt-payload.interface';
+import { counterReferencePeriod } from '../leave-balances/reference-period.util';
 import { ExportFormat, ExportQueryDto } from './dto/export-query.dto';
 import { buildXlsx } from './xlsx-builder';
 
@@ -463,15 +464,30 @@ export class ExportsService {
       ],
     );
 
+    const displayRows = rows.map((row) => {
+      const referencePeriod = String(row.Periode_reference ?? '');
+      const counterType = String(row.Compteur ?? '');
+      if (!referencePeriod || !['N-1', 'N', 'N+1'].includes(counterType)) {
+        return row;
+      }
+      return {
+        ...row,
+        Periode_reference: counterReferencePeriod(
+          referencePeriod,
+          counterType as 'N-1' | 'N' | 'N+1',
+        ),
+      };
+    });
+
     await this.auditExport(
       actor,
       'RH_BALANCE_MOVEMENTS_EXPORTED',
       query,
-      rows.length,
+      displayRows.length,
     );
 
     return this.buildFile(
-      rows,
+      displayRows,
       'mouvements_soldes',
       'Mouvements de soldes',
       query.format,

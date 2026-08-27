@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Icon } from '@/components/ui/Icon'
 import { PageContainer } from '@/components/ui/PageContainer'
 import { downloadRhExport, getRhExportsOverview } from '@/services/rh/rhExports'
+import { adjacentReferencePeriodOptions, currentReferencePeriod } from '@/utils/referencePeriods'
 
 import '@/styles/rh/exports.css'
 
@@ -11,26 +12,8 @@ function dateInputValue(year, month, day) {
 }
 
 
-function currentReferencePeriod() {
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'America/Martinique',
-    year: 'numeric',
-    month: '2-digit',
-  }).formatToParts(new Date())
-  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]))
-  const year = Number(values.year)
-  const start = Number(values.month) >= 6 ? year : year - 1
-  return `${start}-${start + 1}`
-}
-
 function referencePeriodOptions() {
-  const current = currentReferencePeriod()
-  const start = Number(current.slice(0, 4))
-  return [
-    { value: `${start - 1}-${start}`, label: `N-1 · ${start - 1}/${start}` },
-    { value: current, label: `N · ${start}/${start + 1}` },
-    { value: `${start + 1}-${start + 2}`, label: `N+1 · ${start + 1}/${start + 2}` },
-  ]
+  return adjacentReferencePeriodOptions()
 }
 
 function defaultFilters() {

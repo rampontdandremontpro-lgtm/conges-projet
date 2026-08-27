@@ -68,9 +68,10 @@
 .rh-balances-info { display: flex; align-items: center; gap: 8px; margin-top: 14px; padding: 11px 12px; border-radius: 10px; background: #f0f6ff; color: #54769e; font-size: 11.5px; }
 .rh-balances-correction { margin-top: 18px; padding: 17px; border: 1px solid #dce8f6; border-radius: 15px; background: #f8fbff; }
 .rh-balances-correction__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 15px; }
+.rh-balances-correction__title-row { display: inline-flex; align-items: center; gap: 7px; }
 .rh-balances-correction__head h4 { margin: 0; color: #0c315d; font-size: 14.5px; }
 .rh-balances-correction__head p { margin: 4px 0 0; color: #8398b4; font-size: 10.8px; }
-.rh-balances-correction__head button { border: 0; background: none; color: #8ba1bc; font-size: 20px; cursor: pointer; }
+.rh-balances-correction__head > button { border: 0; background: none; color: #8ba1bc; font-size: 20px; cursor: pointer; }
 .rh-balances-correction label { display: grid; gap: 6px; color: #496887; font-size: 11.5px; font-weight: 750; }
 .rh-balances-correction label > span, .rh-balances-field-label { color: #7f96b2; font-size: 9.5px; font-weight: 850; letter-spacing: .04em; text-transform: uppercase; }
 .rh-balances-correction label b { color: #e15c65; }

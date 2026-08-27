@@ -671,3 +671,42 @@
   font: inherit;
   padding: 0 28px 0 10px;
 }
+
+.rh-absenteeism-title-row,
+.rh-presence-title-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.rh-absenteeism-title-row {
+  white-space: nowrap;
+}
+
+.rh-absenteeism-card .dash-card__header {
+  gap: 8px;
+}
+
+.rh-absenteeism-card .dash-card__heading {
+  flex: 0 0 auto;
+}
+
+.rh-absenteeism-card .dash-card__title {
+  font-size: 11px;
+  letter-spacing: .06em;
+  white-space: nowrap;
+}
+
+.rh-absenteeism-card .rh-absenteeism-period-filter {
+  gap: 5px;
+}
+
+.rh-absenteeism-card .rh-absenteeism-period-filter select {
+  min-width: 110px;
+}
+
+.rh-absenteeism-card:has(.statistic-info-button__trigger[aria-expanded='true']),
+.rh-global-presence-card:has(.statistic-info-button__trigger[aria-expanded='true']) {
+  position: relative;
+  z-index: 35;
+}

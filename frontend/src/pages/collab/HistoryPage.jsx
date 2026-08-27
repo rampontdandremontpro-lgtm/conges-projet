@@ -7,6 +7,7 @@ import { ROLES } from '@/config/navigation'
 import { Icon } from '@/components/ui/Icon'
 import { getMyBalanceHistory } from '@/services/collab/balances'
 import { formatDays } from '@/utils/format'
+import { formatCounterReferencePeriod } from '@/utils/referencePeriods'
 
 import '@/styles/collab/history/index.css'
 
@@ -176,7 +177,7 @@ function HistoryRow({ movement, onOpenRequest }) {
         </div>
         <div className="history-row__meta">
           <span>{formatDate(movement.createdAt)} à {formatTime(movement.createdAt)}</span>
-          {referencePeriod && <span>Période {referencePeriod}</span>}
+          {referencePeriod && <span>Période {formatCounterReferencePeriod(referencePeriod, counter)}</span>}
           {canOpenRequest && <span>Demande n°{requestId}</span>}
         </div>
       </div>

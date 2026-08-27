@@ -4,6 +4,7 @@ import { Icon } from '@/components/ui/Icon'
 import { PageContainer } from '@/components/ui/PageContainer'
 import { PaginationBar } from '@/components/ui/PaginationBar'
 import { getRhHistoryLogs, getRhHistoryUsers } from '@/services/rh/rhHistory'
+import { formatCounterReferencePeriod } from '@/utils/referencePeriods'
 import '@/styles/rh/history.css'
 
 const MARTINIQUE_TIME_ZONE = 'America/Martinique'
@@ -217,7 +218,10 @@ function readableEntries(source, prefix = '', depth = 0) {
       if (nested.length) result.push(...nested)
       continue
     }
-    result.push(`${label} : ${humanValue(item)}`)
+    const displayValue = key === 'referencePeriod' && typeof source?.counterType === 'string'
+      ? formatCounterReferencePeriod(item, source.counterType)
+      : humanValue(item)
+    result.push(`${label} : ${displayValue}`)
   }
 
   return result

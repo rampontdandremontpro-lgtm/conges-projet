@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
+import { StatisticInfoButton } from '@/components/shared/StatisticInfoButton'
 import { Icon } from '@/components/ui/Icon'
 import {
   getDirectorStatistics,
@@ -92,14 +93,16 @@ function monthLabel(monthKey) {
   return new Intl.DateTimeFormat('fr-FR', { month: 'short' }).format(new Date(year, month - 1, 1)).replace('.', '')
 }
 
-function StatCard({ icon, value, label, detail, tone, delay = 0 }) {
+function StatCard({ icon, value, label, tone, delay = 0, info }) {
   return (
     <section className={`director-stat-kpi director-stat-kpi--${tone}`} style={{ '--stat-delay': `${delay}ms` }}>
       <div className="director-stat-kpi__icon"><Icon name={icon} size={19} /></div>
       <div className="director-stat-kpi__content">
         <strong>{value}</strong>
-        <span>{label}</span>
-        <small>{detail}</small>
+        <div className="director-stat-kpi__label">
+          {label}
+          {info}
+        </div>
       </div>
     </section>
   )
@@ -281,8 +284,8 @@ export function DirectorStatisticsPage({
   getStatisticsServices = getDirectorStatisticsServices,
   getStatisticsLeaveTypes = getDirectorStatisticsLeaveTypes,
 } = {}) {
-  const defaultPeriod = resolvePresetPeriod('year')
-  const [periodPreset, setPeriodPreset] = useState('year')
+  const defaultPeriod = resolvePresetPeriod('month')
+  const [periodPreset, setPeriodPreset] = useState('month')
   const [customStartDate, setCustomStartDate] = useState(defaultPeriod.startDate)
   const [customEndDate, setCustomEndDate] = useState(defaultPeriod.endDate)
   const [serviceFilter, setServiceFilter] = useState('all')
@@ -474,13 +477,26 @@ export function DirectorStatisticsPage({
       ) : (
         <div className="director-stat-results" key={resultsKey}>
           <div className="director-stat-kpis">
-            <StatCard icon="users" tone="green" delay={0} value={`${formatNumber(totals.presenceRate)} %`} label="Taux de présence" detail="" />
-            <StatCard icon="calendar" tone="blue" delay={70} value={`${formatNumber(totals.leaveDays)} j`} label="Jours de congés pris" detail={`${totals.validatedRequests ?? 0} demande${Number(totals.validatedRequests ?? 0) > 1 ? 's' : ''} validée${Number(totals.validatedRequests ?? 0) > 1 ? 's' : ''}`} />
-            <StatCard icon="alert" tone="red" delay={140} value={`${formatNumber(totals.absenceDays)} j`} label="Jours d’absence" detail={`${totals.recordedAbsences ?? 0} absence${Number(totals.recordedAbsences ?? 0) > 1 ? 's' : ''} enregistrée${Number(totals.recordedAbsences ?? 0) > 1 ? 's' : ''}`} />
+            <StatCard
+              icon="users"
+              tone="green"
+              delay={0}
+              value={`${formatNumber(totals.presenceRate)} %`}
+              label="Taux de présence"
+              info={(
+                <StatisticInfoButton title="Taux de présence">
+                  <p><strong>Calcul :</strong> (jours ouvrés disponibles − jours d’indisponibilité) ÷ jours ouvrés disponibles × 100.</p>
+                  <p>Les jours ouvrés disponibles tiennent compte des collaborateurs actifs concernés, de leur date d’entrée, des week-ends et des jours fériés/fermetures non décomptables. Les rôles Admin, RH et Directeur sont exclus.</p>
+                  <p>Les congés validés et les absences enregistrées sont comptés sur la période, sans doubler une même journée pour un même collaborateur. Les filtres sélectionnés sont appliqués.</p>
+                </StatisticInfoButton>
+              )}
+            />
+            <StatCard icon="calendar" tone="blue" delay={70} value={`${formatNumber(totals.leaveDays)} j`} label="Jours de congés pris" />
+            <StatCard icon="alert" tone="red" delay={140} value={`${formatNumber(totals.absenceDays)} j`} label="Jours d’absence" />
             {dataType === 'ABSENCE' ? (
-              <StatCard icon="check" tone="orange" delay={210} value={formatNumber(totals.recordedAbsences, 0)} label="Absences enregistrées" detail={`${totals.absenceDeclarations ?? 0} déclaration${Number(totals.absenceDeclarations ?? 0) > 1 ? 's' : ''}`} />
+              <StatCard icon="check" tone="orange" delay={210} value={formatNumber(totals.recordedAbsences, 0)} label="Absences enregistrées" />
             ) : (
-              <StatCard icon="check" tone="orange" delay={210} value={formatNumber(totals.processedRequests, 0)} label="Demandes traitées" detail={`${totals.pendingRequests ?? 0} en attente`} />
+              <StatCard icon="check" tone="orange" delay={210} value={formatNumber(totals.processedRequests, 0)} label="Demandes traitées" />
             )}
           </div>
 
@@ -488,7 +504,13 @@ export function DirectorStatisticsPage({
             <section className="director-stat-card director-stat-card--services">
               <header className="director-stat-card__header">
                 <div>
-                  <h2>Présence par service</h2>
+                  <div className="director-stat-card__title-row">
+                    <h2>Présence par service</h2>
+                    <StatisticInfoButton title="Présence par service">
+                      <p><strong>Calcul :</strong> le taux de présence est calculé service par service avec la même formule que le taux global.</p>
+                      <p>Il compare les jours ouvrés disponibles des collaborateurs actifs du service aux jours de congé validé et d’absence enregistrée compris dans la période, en tenant compte des jours non travaillés.</p>
+                    </StatisticInfoButton>
+                  </div>
                   <p>Taux de présence sur la période sélectionnée</p>
                 </div>
                 {serviceFilter === 'all' && <div className="director-stat-service-toggle" role="group" aria-label="Type de services">
@@ -516,7 +538,13 @@ export function DirectorStatisticsPage({
             <section className="director-stat-card director-stat-card--donut">
               <header className="director-stat-card__header">
                 <div>
-                  <h2>Répartition par type</h2>
+                  <div className="director-stat-card__title-row">
+                    <h2>Répartition par type</h2>
+                    <StatisticInfoButton title="Répartition par type">
+                      <p>Le graphique additionne les jours de congés validés et les jours d’absences enregistrées, puis les regroupe par type.</p>
+                      <p>Seule la partie réellement comprise dans la période sélectionnée est comptabilisée. Les filtres de service, rôle et type sont appliqués.</p>
+                    </StatisticInfoButton>
+                  </div>
                   <p>Nombre de jours par type</p>
                 </div>
               </header>
@@ -527,7 +555,13 @@ export function DirectorStatisticsPage({
           <section className="director-stat-card director-stat-card--evolution">
             <header className="director-stat-card__header">
               <div>
-                <h2>Évolution des congés et absences</h2>
+                <div className="director-stat-card__title-row">
+                  <h2>Évolution des congés et absences</h2>
+                  <StatisticInfoButton title="Évolution des congés et absences">
+                    <p>Chaque point représente le nombre de jours de congés validés ou d’absences enregistrées rattachés au mois concerné.</p>
+                    <p>Une période qui chevauche plusieurs mois est ventilée entre les mois concernés au lieu d’être entièrement attribuée au mois de départ.</p>
+                  </StatisticInfoButton>
+                </div>
                 <p>Évolution mensuelle sur la période sélectionnée</p>
               </div>
               <div className="director-stat-legend">

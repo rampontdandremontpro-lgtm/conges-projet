@@ -1,3 +1,4 @@
+import { StatisticInfoButton } from '@/components/shared/StatisticInfoButton'
 import { todayISO } from '@/utils/format'
 
 function presenceStatus(percentage) {
@@ -17,7 +18,13 @@ export function RhPresenceCard({ presence, onNavigate }) {
     <section className="dash-card rh-global-presence-card">
       <header className="dash-card__header">
         <div className="dash-card__heading">
-          <h2 className="dash-card__title">Présence aujourd&apos;hui</h2>
+          <div className="rh-presence-title-row">
+            <h2 className="dash-card__title">Présence aujourd&apos;hui</h2>
+            <StatisticInfoButton title="Présence aujourd’hui">
+              <p><strong>Calcul :</strong> nombre de collaborateurs présents au moment de la consultation ÷ nombre total de collaborateurs actifs pris en compte × 100.</p>
+              <p>Le statut correspond à la demi-journée en cours en Martinique. Les collaborateurs en congé validé ou enregistrés absents ne sont pas comptés comme présents. Les comptes Admin sont exclus de cette vue.</p>
+            </StatisticInfoButton>
+          </div>
           <span className="dash-card__period">Vue globale de l&apos;organisation</span>
         </div>
         <span className={`rh-workload-status ${status.tone}`}>
