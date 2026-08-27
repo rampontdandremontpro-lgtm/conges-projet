@@ -29,7 +29,6 @@ export async function updateRhSummerPeriodConfiguration({
   specialDeadlineDays,
   normalDeadlineDays,
   longLeaveThreshold,
-  derogationLastAllowedDay,
 }) {
   await Promise.all([
     apiClient.patch('/settings/seasonal-period', {
@@ -39,7 +38,6 @@ export async function updateRhSummerPeriodConfiguration({
     apiClient.patch('/settings/SPECIAL_REQUEST_DEADLINE_DAYS', { settingValue: String(specialDeadlineDays) }),
     apiClient.patch('/settings/NORMAL_REQUEST_DEADLINE_DAYS', { settingValue: String(normalDeadlineDays) }),
     apiClient.patch('/settings/SPECIAL_DURATION_THRESHOLD_DAYS', { settingValue: String(longLeaveThreshold) }),
-    apiClient.patch('/settings/DEROGATION_LAST_ALLOWED_DAY', { settingValue: String(derogationLastAllowedDay) }),
   ])
 
   return getRhSummerPeriodConfiguration()

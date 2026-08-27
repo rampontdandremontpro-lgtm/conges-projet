@@ -54,13 +54,14 @@ export function HalfDaySelector({ startPeriod, endPeriod, onStartChange, onEndCh
   return (
     <section className="nr-halfdays">
       <p className="nr-halfdays__heading">Demi-journées</p>
+      <p className="nr-halfdays__help">Indiquez la tranche de départ et la dernière tranche couverte par votre congé.</p>
       <div className="nr-halfdays__groups">
         <div className="nr-halfdays__group">
-          <span className="nr-halfdays__label">Début de la période</span>
+          <span className="nr-halfdays__label">Départ en congé</span>
           <PeriodButtons value={startPeriod} onChange={onStartChange} />
         </div>
         <div className="nr-halfdays__group">
-          <span className="nr-halfdays__label">Fin de la période</span>
+          <span className="nr-halfdays__label">Retour</span>
           <PeriodButtons value={endPeriod} onChange={onEndChange} />
         </div>
       </div>

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
-import { getEmployeeLeaveBalances, getMyLeaveBalances, getPublicSettings } from '@/services/collab/dashboard'
+import { getEmployeeLeavePeriodSummaries, getMyLeavePeriodSummaries, getPublicSettings } from '@/services/collab/dashboard'
 import {
   getHolidays,
   getLeaveTypes,
@@ -14,7 +14,7 @@ const INITIAL_RESOURCES = {
   loading: true,
   error: false,
   leaveTypes: [],
-  balances: [],
+  periodSummaries: [],
   holidays: [],
   settings: null,
   seasonal: null,
@@ -50,19 +50,19 @@ export function useNewRequestResources(months, setSelection, options = {}) {
   }, [])
 
   const fetchAll = useCallback(async () => {
-    const balancePromise = balanceEmployeeId === null
+    const summaryPromise = balanceEmployeeId === null
       ? Promise.resolve([])
       : balanceEmployeeId !== undefined
-        ? getEmployeeLeaveBalances(balanceEmployeeId)
-        : getMyLeaveBalances()
+        ? getEmployeeLeavePeriodSummaries(balanceEmployeeId)
+        : getMyLeavePeriodSummaries()
     const derogationsPromise = includeDerogations ? getMyDerogations() : Promise.resolve([])
 
-    const [leaveTypes, settings, seasonal, derogations, balances] = await Promise.all([
+    const [leaveTypes, settings, seasonal, derogations, periodSummaries] = await Promise.all([
       getLeaveTypes(),
       getPublicSettings(),
       getSeasonalPeriod(),
       derogationsPromise,
-      balancePromise,
+      summaryPromise,
     ])
     const filtered = leaveTypes.filter((type) => {
       const normalizedName = String(type.name ?? '')
@@ -81,7 +81,7 @@ export function useNewRequestResources(months, setSelection, options = {}) {
     })
     return {
       leaveTypes: filtered,
-      balances,
+      periodSummaries,
       settings: settingsMap(settings),
       seasonal,
       derogations,
@@ -94,7 +94,7 @@ export function useNewRequestResources(months, setSelection, options = {}) {
       ...previous,
       loading: true,
       error: false,
-      balances: balanceEmployeeId !== undefined ? [] : previous.balances,
+      periodSummaries: balanceEmployeeId !== undefined ? [] : previous.periodSummaries,
       derogations: includeDerogations ? previous.derogations : [],
     }))
     fetchAll()

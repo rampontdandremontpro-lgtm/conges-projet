@@ -155,15 +155,15 @@ describe('BalanceReminderService — E4 rappels de fin de période', () => {
     });
   });
 
-  describe('K — available=8 reserved=3 → potential=5', () => {
-    it('message principal avec réservation — la date affichée est la fin de période (31/05), pas le déclenchement (28/02)', async () => {
+  describe('K — les demandes en attente ne réduisent plus le solde officiel', () => {
+    it('un ancien reservedDays n’est plus exposé au collaborateur et le solde reste 8', async () => {
       balanceRepository.find.mockResolvedValue([
         balance(1, { availableDays: 8, reservedDays: 3 }),
       ]);
       await run('2027-02-28');
       const args = createdArgs('BALANCE_REMINDER_3M_2026-2027');
       expect(args.message).toBe(
-        'Il vous reste 5 jours encore utilisables sur un solde de 8 jours, dont 3 jours déjà réservés, à utiliser avant le 31 mai 2027.',
+        'Il vous reste 8 jours de congés sur cette période, à utiliser avant le 31 mai 2027.',
       );
       expect(args.title).toBe('Congés à utiliser avant le 31 mai 2027');
     });
@@ -175,7 +175,7 @@ describe('BalanceReminderService — E4 rappels de fin de période', () => {
       await run('2027-02-28');
       const args = createdArgs('BALANCE_REMINDER_3M_2026-2027');
       expect(args.message).toBe(
-        'Il vous reste 8 jours de congés à utiliser avant le 31 mai 2027.',
+        'Il vous reste 8 jours de congés sur cette période, à utiliser avant le 31 mai 2027.',
       );
     });
 
@@ -186,21 +186,24 @@ describe('BalanceReminderService — E4 rappels de fin de période', () => {
       await run('2027-02-28');
       const args = createdArgs('BALANCE_REMINDER_3M_2026-2027');
       expect(args.message).toBe(
-        'Il vous reste 1 jour de congés à utiliser avant le 31 mai 2027.',
+        'Il vous reste 1 jour de congés sur cette période, à utiliser avant le 31 mai 2027.',
       );
     });
   });
 
-  describe('L — potential=0 → pas de rappel', () => {
-    it('available=3 reserved=3 : aucun rappel, aucun récap, solde intact', async () => {
+  describe('L — un ancien reservedDays ne bloque plus le rappel', () => {
+    it('available=3 reserved=3 : le solde officiel reste 3 et le rappel est envoyé', async () => {
       balanceRepository.find.mockResolvedValue([
         balance(1, { availableDays: 3, reservedDays: 3 }),
       ]);
       const result = await run('2027-02-28');
-      expect(result.remindersCreated).toBe(0);
-      expect(result.recapNotificationsCreated).toBe(0);
-      expect(result.eligibleEmployees).toEqual([]);
-      expect(notificationsService.create).not.toHaveBeenCalled();
+      expect(result.remindersCreated).toBe(1);
+      expect(result.eligibleEmployees).toEqual([{ employeeId: 1, potentialDays: 3 }]);
+      const args = createdArgs('BALANCE_REMINDER_3M_2026-2027');
+      expect(args.message).toBe(
+        'Il vous reste 3 jours de congés sur cette période, à utiliser avant le 31 mai 2027.',
+      );
+      expect(args.message).not.toContain('réserv');
     });
   });
 
@@ -458,9 +461,8 @@ describe('BalanceReminderService — E4 rappels de fin de période', () => {
         'congés à utiliser avant le 31 mai 2027.',
       );
       expect(recap.message).not.toContain('28 février 2027');
-      expect(recap.message).toContain('8');
-      expect(recap.message).toContain('3');
-      expect(recap.message).toContain('5');
+      expect(recap.message).toContain('solde 8 jours');
+      expect(recap.message).not.toContain('réserv');
     });
 
     it('les rappels et récapitulatif utilisent le canal LES_DEUX', async () => {

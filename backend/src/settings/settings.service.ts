@@ -17,7 +17,6 @@ export interface SubmissionRules {
   normalDeadlineDays: number;
   specialDeadlineDays: number;
   specialDurationThresholdDays: number;
-  derogationLastAllowedDay: number;
   summerPeriodStart: string;
   summerPeriodEnd: string;
 }
@@ -29,7 +28,6 @@ const PUBLIC_SETTING_KEYS = [
   'SPECIAL_REQUEST_DEADLINE_DAYS',
   'SPECIAL_DURATION_THRESHOLD_DAYS',
   'MODIFICATION_DEADLINE_DAYS',
-  'DEROGATION_LAST_ALLOWED_DAY',
   'SUMMER_PERIOD_START',
   'SUMMER_PERIOD_END',
   'MONTHLY_ACCRUAL_RATE',
@@ -169,14 +167,12 @@ export class SettingsService {
       normalDeadlineDays,
       specialDeadlineDays,
       specialDurationThresholdDays,
-      derogationLastAllowedDay,
       summerPeriodStart,
       summerPeriodEnd,
     ] = await Promise.all([
       this.getInteger('NORMAL_REQUEST_DEADLINE_DAYS', 30),
       this.getInteger('SPECIAL_REQUEST_DEADLINE_DAYS', 60),
       this.getInteger('SPECIAL_DURATION_THRESHOLD_DAYS', 21),
-      this.getInteger('DEROGATION_LAST_ALLOWED_DAY', 3),
       this.getString('SUMMER_PERIOD_START', '05-01'),
       this.getString('SUMMER_PERIOD_END', '10-31'),
     ]);
@@ -184,8 +180,7 @@ export class SettingsService {
     if (
       normalDeadlineDays < 0 || normalDeadlineDays > 90 ||
       specialDeadlineDays < 0 || specialDeadlineDays > 90 ||
-      specialDurationThresholdDays < 1 || specialDurationThresholdDays > 90 ||
-      derogationLastAllowedDay < 1 || derogationLastAllowedDay > 90
+      specialDurationThresholdDays < 1 || specialDurationThresholdDays > 90
     ) {
       throw new BadRequestException(
         'Les paramètres de délai de dépôt sont incohérents.',
@@ -199,7 +194,6 @@ export class SettingsService {
       normalDeadlineDays,
       specialDeadlineDays,
       specialDurationThresholdDays,
-      derogationLastAllowedDay,
       summerPeriodStart,
       summerPeriodEnd,
     };
@@ -329,12 +323,11 @@ export class SettingsService {
       'SPECIAL_REQUEST_DEADLINE_DAYS',
       'SPECIAL_DURATION_THRESHOLD_DAYS',
       'MODIFICATION_DEADLINE_DAYS',
-      'DEROGATION_LAST_ALLOWED_DAY',
     ]);
 
     if (integerKeys.has(key)) {
       const parsed = Number(value);
-      const min = key === 'SPECIAL_DURATION_THRESHOLD_DAYS' || key === 'DEROGATION_LAST_ALLOWED_DAY' ? 1 : 0;
+      const min = key === 'SPECIAL_DURATION_THRESHOLD_DAYS' ? 1 : 0;
       const max = 90;
       if (!Number.isInteger(parsed) || parsed < min || parsed > max) {
         throw new BadRequestException(

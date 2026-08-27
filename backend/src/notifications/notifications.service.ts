@@ -481,7 +481,7 @@ export class NotificationsService {
             title: urgent
               ? 'Rappel urgent — dérogation à traiter'
               : 'Rappel — dérogation à traiter',
-            message: `La dérogation n°${derogation.id} de ${derogation.employee.nom} ${derogation.employee.prenom} doit être traitée avant J-3 à 16 h (heure de Martinique).`,
+            message: `La dérogation n°${derogation.id} de ${derogation.employee.nom} ${derogation.employee.prenom} doit être traitée avant le début du congé.`,
             leaveRequestId: derogation.leaveRequestId,
             derogationId: derogation.id,
           });

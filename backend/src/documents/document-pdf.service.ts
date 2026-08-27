@@ -611,15 +611,14 @@ export class DocumentPdfService {
             `${this.formatDateOnly(leaveRequest.endDate)} — ${this.formatDayPeriod(leaveRequest.endPeriod)}`,
             875,
           ],
-          [this.formatDays(leaveRequest.deductedDays), 919],
-          [this.formatDateTime(leaveRequest.submittedAt), 963],
+          [this.formatDateTime(leaveRequest.submittedAt), 919],
           [
             leaveRequest.modificationDeadline
               ? this.formatDateOnly(
                   String(leaveRequest.modificationDeadline).slice(0, 10),
                 )
               : 'Non renseignée',
-            1007,
+            963,
           ],
         ];
 
@@ -633,31 +632,6 @@ export class DocumentPdfService {
             color: '#173B70',
           });
         });
-
-        this.drawExactPdfText(
-          document,
-          this.formatOptionalDays(leaveRequest.realBalanceBefore),
-          {
-            xPx: 420,
-            yPx: 1164,
-            widthPx: 500,
-            fontSizePx: 15,
-            font: 'Helvetica',
-            color: '#173B70',
-          },
-        );
-        this.drawExactPdfText(
-          document,
-          this.formatOptionalDays(leaveRequest.potentialBalanceBefore),
-          {
-            xPx: 420,
-            yPx: 1209,
-            widthPx: 500,
-            fontSizePx: 15,
-            font: 'Helvetica',
-            color: '#173B70',
-          },
-        );
 
         this.drawExactPendingFooter(document, {
           referenceNumber,
@@ -1096,34 +1070,15 @@ export class DocumentPdfService {
       xPx: 49,
       yPx: 694,
       widthPx: 957,
-      heightPx: 350,
+      heightPx: 305,
       title: 'DEMANDE',
       icon: 'calendar',
       labels: [
         ['Type de congé', 787],
         ['Date de début', 831],
         ['Date de fin', 875],
-        ['Jours ouvrables décomptés', 919],
-        ['Soumise le', 963],
-        ['Modification possible jusqu’au', 1007],
-      ],
-      labelXPx: 94,
-      valueXPx: 420,
-      lineStartXPx: 94,
-      lineEndXPx: 953,
-      pendingCard: true,
-    });
-
-    this.drawExactSectionCard(document, {
-      xPx: 49,
-      yPx: 1075,
-      widthPx: 957,
-      heightPx: 170,
-      title: 'SOLDE AU MOMENT DE LA SOUMISSION',
-      icon: 'balance',
-      labels: [
-        ['Solde réel', 1164],
-        ['Solde potentiel avant réservation', 1209],
+        ['Soumise le', 919],
+        ['Modification possible jusqu’au', 963],
       ],
       labelXPx: 94,
       valueXPx: 420,
@@ -1594,6 +1549,18 @@ export class DocumentPdfService {
         fontSizePx: 14,
         font: 'Helvetica',
         color: '#3A5577',
+      },
+    );
+    this.drawExactPdfText(
+      document,
+      'Sous réserve du solde inscrit sur votre bulletin de paie.',
+      {
+        xPx: 168,
+        yPx: 386,
+        widthPx: 705,
+        fontSizePx: 13,
+        font: 'Helvetica-Bold',
+        color: '#B91C1C',
       },
     );
 
@@ -2530,6 +2497,21 @@ export class DocumentPdfService {
       align: 'center',
       opticalOffsetYPx: 0.5,
     });
+
+
+    this.drawExactPdfText(
+      document,
+      'Sous réserve du solde inscrit sur votre bulletin de paie.',
+      {
+        xPx: 160,
+        yPx: 1422,
+        widthPx: 735,
+        fontSizePx: 13,
+        font: 'Helvetica-Bold',
+        color: '#B91C1C',
+        align: 'center',
+      },
+    );
   }
 
   private drawExactPendingFooterDocumentIcon(

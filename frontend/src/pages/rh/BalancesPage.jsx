@@ -13,11 +13,15 @@ import {
   getRhBalancesOverview,
   getRhEmployeeBalanceHistory,
   getRhEmployeeBalances,
+  getRhEmployeePeriodSummaries,
+  previewRhBalanceImport,
+  confirmRhBalanceImport,
 } from '@/services/rh/rhBalances'
 import {
   adjacentReferencePeriodOptions,
   currentReferencePeriod,
   formatCounterReferencePeriod,
+  counterReferencePeriod,
 } from '@/utils/referencePeriods'
 
 import '@/styles/rh/balances.css'
@@ -80,16 +84,6 @@ function errorMessage(error) {
   return message || error?.message || 'Une erreur est survenue.'
 }
 
-function latestPeriod(balances) {
-  return [...new Set((balances ?? []).map((item) => item.referencePeriod).filter(Boolean))]
-    .sort((a, b) => b.localeCompare(a))[0] ?? null
-}
-
-function scopedCurrentBalances(balances) {
-  const period = latestPeriod(balances)
-  return period ? balances.filter((item) => item.referencePeriod === period) : []
-}
-
 function movementChange(movement) {
   const before = Number(movement?.balanceBefore ?? 0)
   const after = Number(movement?.balanceAfter ?? 0)
@@ -97,7 +91,7 @@ function movementChange(movement) {
 }
 
 function BalanceDetailDrawer({ row, onClose, onChanged }) {
-  const [state, setState] = useState({ loading: true, error: false, balances: [], history: [] })
+  const [state, setState] = useState({ loading: true, error: false, balances: [], summaries: [], history: [] })
   const [showCorrection, setShowCorrection] = useState(false)
   const [counterId, setCounterId] = useState('')
   const [direction, setDirection] = useState('credit')
@@ -106,17 +100,17 @@ function BalanceDetailDrawer({ row, onClose, onChanged }) {
   const [notifyEmployee, setNotifyEmployee] = useState(false)
   const [busy, setBusy] = useState(false)
   const [feedback, setFeedback] = useState('')
-
   useAutoDismiss(feedback, setFeedback, { clearValue: '' })
 
   const load = useCallback(async ({ silent = false } = {}) => {
     if (!silent) setState((current) => ({ ...current, loading: true, error: false }))
     try {
-      const [balances, history] = await Promise.all([
+      const [balances, summaries, history] = await Promise.all([
         getRhEmployeeBalances(row.employee.id),
+        getRhEmployeePeriodSummaries(row.employee.id),
         getRhEmployeeBalanceHistory(row.employee.id),
       ])
-      setState({ loading: false, error: false, balances, history })
+      setState({ loading: false, error: false, balances, summaries, history })
     } catch {
       if (!silent) setState((current) => ({ ...current, loading: false, error: true }))
     }
@@ -127,16 +121,13 @@ function BalanceDetailDrawer({ row, onClose, onChanged }) {
     return () => window.clearTimeout(timer)
   }, [load])
 
-  const currentBalances = useMemo(() => scopedCurrentBalances(state.balances), [state.balances])
+  const periodSummary = state.summaries.find((item) => item.referencePeriod === row.referencePeriod) ?? row
   const correctionCounters = useMemo(
-    () => currentBalances.filter((item) => item.counterType === 'N-1' || item.counterType === 'N'),
-    [currentBalances],
+    () => state.balances
+      .filter((item) => counterReferencePeriod(item.referencePeriod, item.counterType) === row.referencePeriod)
+      .sort((a, b) => b.referencePeriod.localeCompare(a.referencePeriod)),
+    [row.referencePeriod, state.balances],
   )
-  const usable = currentBalances.find((item) => item.counterType === 'N-1') ?? null
-  const acquisition = currentBalances.find((item) => item.counterType === 'N') ?? null
-  const reserved = Number(usable?.reservedDays ?? 0)
-  const usableDays = Number(usable?.availableDays ?? 0)
-  const availableAfter = Number(usable?.potentialDays ?? usableDays - reserved)
 
   useEffect(() => {
     if (!counterId && correctionCounters[0]) setCounterId(String(correctionCounters[0].id))
@@ -208,7 +199,7 @@ function BalanceDetailDrawer({ row, onClose, onChanged }) {
               <div className="rh-balances-summary-card__title">
                 <div>
                   <h3>Situation actuelle</h3>
-                  <p>Période {formatReferencePeriod(latestPeriod(state.balances))}</p>
+                  <p>Période {formatReferencePeriod(row.referencePeriod)}</p>
                 </div>
                 <button
                   type="button"
@@ -220,11 +211,12 @@ function BalanceDetailDrawer({ row, onClose, onChanged }) {
                 </button>
               </div>
 
-              <div className="rh-balances-kpis">
-                <div><small>Congés à utiliser</small><strong>{formatBalanceDays(usableDays)} j</strong><span>N-1 · {formatCounterReferencePeriod(usable?.referencePeriod, usable?.counterType)}</span></div>
-                <div><small>En cours d’acquisition</small><strong>{formatBalanceDays(Number(acquisition?.acquiredDays ?? 0))} j</strong><span>N · {formatCounterReferencePeriod(acquisition?.referencePeriod, acquisition?.counterType)}</span></div>
-                <div><small>En attente</small><strong>{formatBalanceDays(reserved)} j</strong><span>Demandes en attente</span></div>
-                <div className="rh-balances-kpis__available"><small>Disponible</small><strong>{formatBalanceDays(availableAfter)} j</strong><span>Après validation</span></div>
+              <div className="rh-balances-kpis rh-balances-kpis--five">
+                <div><small>Acquis</small><strong>{formatBalanceDays(periodSummary.acquiredDays)} j</strong><span>Droits acquis</span></div>
+                <div><small>Pris</small><strong>{formatBalanceDays(periodSummary.takenDays)} j</strong><span>Congés consommés</span></div>
+                <div className={Number(periodSummary.balanceDays) < 0 ? 'rh-balances-kpis__negative' : 'rh-balances-kpis__available'}><small>Solde</small><strong>{formatBalanceDays(periodSummary.balanceDays)} j</strong><span>Acquis − Pris</span></div>
+                <div><small>Validées</small><strong>{formatBalanceDays(periodSummary.validatedDays)} j</strong><span>Congés accordés</span></div>
+                <div><small>En attente</small><strong>{formatBalanceDays(periodSummary.pendingDays)} j</strong><span>Décision en cours</span></div>
               </div>
 
               {correctionCounters.length === 0 && (
@@ -240,7 +232,7 @@ function BalanceDetailDrawer({ row, onClose, onChanged }) {
                         <StatisticInfoButton title="Correction de solde">
                           <p><strong>Crédit :</strong> ajoute des jours au compteur sélectionné.</p>
                           <p><strong>Débit :</strong> retire des jours du compteur sélectionné.</p>
-                          <p>Choisissez le compteur N-1 ou N concerné, puis indiquez le nombre de jours. Le motif de la correction est obligatoire.</p>
+                          <p>Choisissez le compteur correspondant à la période affichée, puis indiquez le nombre de jours. Un débit peut rendre le solde négatif. Le motif est obligatoire.</p>
                           <p>Chaque correction crée un mouvement traçable dans l’historique. Activez <strong>Notifier le collaborateur</strong> si vous souhaitez qu’il reçoive une notification.</p>
                         </StatisticInfoButton>
                       </div>
@@ -253,7 +245,7 @@ function BalanceDetailDrawer({ row, onClose, onChanged }) {
                     <select value={counterId} onChange={(event) => setCounterId(event.target.value)}>
                       {correctionCounters.map((balance) => (
                         <option key={balance.id} value={balance.id}>
-                          {balance.counterType === 'N-1' ? 'Congés à utiliser (N-1)' : 'En cours d’acquisition (N)'} - {formatCounterReferencePeriod(balance.referencePeriod, balance.counterType)}
+                          Période {formatCounterReferencePeriod(balance.referencePeriod, balance.counterType)} · compteur {balance.counterType}
                         </option>
                       ))}
                     </select>
@@ -347,6 +339,8 @@ export function RhBalancesPage() {
   const [selected, setSelected] = useState(null)
   const [page, setPage] = useState(1)
   const [feedback, setFeedback] = useState('')
+  const [importOpen, setImportOpen] = useState(false)
+  const [importState, setImportState] = useState({ busy: false, rows: [], preview: null, error: '' })
 
   const load = useCallback(async ({ silent = false } = {}) => {
     if (!silent) setState((current) => ({ ...current, loading: true, error: false }))
@@ -447,6 +441,89 @@ export function RhBalancesPage() {
     await load({ silent: true })
   }
 
+  const downloadImportTemplate = () => {
+    const escape = (value) => `"${String(value ?? '').replaceAll('"', '""')}"`
+    const lines = [
+      ['Identifiant', 'NOM', 'Prénom', 'E-mail', 'Acquis', 'Pris', 'Solde'].join(';'),
+      ...state.rows.map((row) => [
+        row.employee.id,
+        escape(row.employee.nom),
+        escape(row.employee.prenom),
+        escape(row.employee.email),
+        String(row.acquiredDays ?? 0).replace('.', ','),
+        String(row.takenDays ?? 0).replace('.', ','),
+        String(row.balanceDays ?? 0).replace('.', ','),
+      ].join(';')),
+    ]
+    const blob = new Blob([`\uFEFF${lines.join('\n')}`], { type: 'text/csv;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const anchor = document.createElement('a')
+    anchor.href = url
+    anchor.download = `modele-soldes-${periodFilter}.csv`
+    anchor.click()
+    URL.revokeObjectURL(url)
+  }
+
+  const parseImportFile = async (file) => {
+    if (!file) return
+    setImportState({ busy: true, rows: [], preview: null, error: '' })
+    try {
+      const text = (await file.text()).replace(/^\uFEFF/, '')
+      const lines = text.split(/\r?\n/).filter((line) => line.trim())
+      if (lines.length < 2) throw new Error('Le fichier ne contient aucune donnée à importer.')
+      const splitLine = (line) => {
+        const cells = []
+        let current = ''
+        let quoted = false
+        for (let i = 0; i < line.length; i += 1) {
+          const char = line[i]
+          if (char === '"') {
+            if (quoted && line[i + 1] === '"') { current += '"'; i += 1 } else quoted = !quoted
+          } else if (char === ';' && !quoted) { cells.push(current); current = '' } else current += char
+        }
+        cells.push(current)
+        return cells.map((cell) => cell.trim())
+      }
+      const header = splitLine(lines[0]).map((value) => normalize(value))
+      const indexOf = (...labels) => header.findIndex((value) => labels.includes(value))
+      const idIndex = indexOf('identifiant', 'id')
+      const acquiredIndex = indexOf('acquis', 'jours acquis')
+      const takenIndex = indexOf('pris', 'jours pris')
+      const balanceIndex = indexOf('solde')
+      if ([idIndex, acquiredIndex, takenIndex, balanceIndex].some((index) => index < 0)) {
+        throw new Error('Format invalide : les colonnes Identifiant, Acquis, Pris et Solde sont obligatoires.')
+      }
+      const numeric = (value) => Number(String(value ?? '').replace(/\s/g, '').replace(',', '.'))
+      const rows = lines.slice(1).map((line) => {
+        const cells = splitLine(line)
+        return {
+          employeeId: numeric(cells[idIndex]),
+          acquiredDays: numeric(cells[acquiredIndex]),
+          takenDays: numeric(cells[takenIndex]),
+          balanceDays: numeric(cells[balanceIndex]),
+        }
+      })
+      const preview = await previewRhBalanceImport(periodFilter, rows)
+      setImportState({ busy: false, rows, preview, error: '' })
+    } catch (error) {
+      setImportState({ busy: false, rows: [], preview: null, error: errorMessage(error) })
+    }
+  }
+
+  const confirmImport = async () => {
+    if (!importState.preview?.canImport || importState.busy) return
+    setImportState((current) => ({ ...current, busy: true, error: '' }))
+    try {
+      await confirmRhBalanceImport(periodFilter, importState.rows)
+      setImportOpen(false)
+      setImportState({ busy: false, rows: [], preview: null, error: '' })
+      setFeedback(`Import terminé pour la période ${formatReferencePeriod(periodFilter)}.`)
+      await load({ silent: true })
+    } catch (error) {
+      setImportState((current) => ({ ...current, busy: false, error: errorMessage(error) }))
+    }
+  }
+
   return (
     <PageContainer className="rh-balances-page">
       {feedback && <div className="rh-balances-flash"><Icon name="check" size={17} /> {feedback}</div>}
@@ -496,6 +573,10 @@ export function RhBalancesPage() {
               <Icon name="refresh" size={15} /> Réinitialiser
             </button>
           </div>
+          <div className="rh-balances-import-actions">
+            <button type="button" onClick={downloadImportTemplate}><Icon name="download" size={15} /> Télécharger le modèle</button>
+            <button type="button" className="is-primary" onClick={() => { setImportOpen(true); setImportState({ busy: false, rows: [], preview: null, error: '' }) }}><Icon name="upload" size={15} /> Importer</button>
+          </div>
         </div>
 
         {state.loading ? (
@@ -517,10 +598,11 @@ export function RhBalancesPage() {
             <div className="rh-balances-table-wrap">
               <div className="rh-balances-row rh-balances-row--head">
                 <span>Collaborateur</span>
-                <span>Congés à utiliser</span>
+                <span>Acquis</span>
+                <span>Pris</span>
+                <span>Solde</span>
+                <span>Validées</span>
                 <span>En attente</span>
-                <span>Disponible</span>
-                <span>Période</span>
                 <span aria-hidden="true" />
               </div>
               {pageRows.map((row) => (
@@ -534,10 +616,11 @@ export function RhBalancesPage() {
                     <ProfileAvatar user={row.employee} className="rh-balances-avatar" />
                     <span><strong>{fullName(row.employee)}</strong><small>{row.employee.service?.name ?? String(row.employee.role ?? '').replaceAll('_', ' ')}</small></span>
                   </span>
-                  <strong>{formatBalanceDays(row.usableDays)} j</strong>
-                  <span className={Number(row.reservedDays) > 0 ? 'rh-balances-reserved' : ''}>{formatBalanceDays(row.reservedDays)} j</span>
-                  <strong className="rh-balances-available">{formatBalanceDays(row.availableAfterReservations)} j</strong>
-                  <span>{row.referencePeriod ? formatReferencePeriod(row.referencePeriod) : 'Non initialisé'}</span>
+                  <strong>{formatBalanceDays(row.acquiredDays)} j</strong>
+                  <span>{formatBalanceDays(row.takenDays)} j</span>
+                  <strong className={Number(row.balanceDays) < 0 ? 'rh-balances-negative' : 'rh-balances-available'}>{formatBalanceDays(row.balanceDays)} j</strong>
+                  <span>{formatBalanceDays(row.validatedDays)} j</span>
+                  <span>{formatBalanceDays(row.pendingDays)} j</span>
                   <span className="rh-balances-eye"><Icon name="eye" size={17} /></span>
                 </button>
               ))}
@@ -556,6 +639,39 @@ export function RhBalancesPage() {
         )}
       </section>
 
+      {importOpen && (
+        <div className="rh-balances-import-backdrop" role="presentation" onMouseDown={() => !importState.busy && setImportOpen(false)}>
+          <section className="rh-balances-import-modal" role="dialog" aria-modal="true" onMouseDown={(event) => event.stopPropagation()}>
+            <header><div><h2>Importer les soldes</h2><p>Période sélectionnée : <strong>{formatReferencePeriod(periodFilter)}</strong></p></div><button type="button" onClick={() => setImportOpen(false)} disabled={importState.busy}>×</button></header>
+            <div className="rh-balances-import-body">
+              <p>Utilisez le modèle CSV. Le solde doit respecter <strong>Acquis − Pris</strong> et peut être négatif.</p>
+              <label className="rh-balances-import-file">
+                <Icon name="upload" size={20} />
+                <span>Choisir le fichier CSV</span>
+                <input type="file" accept=".csv,text/csv" onChange={(event) => parseImportFile(event.target.files?.[0])} disabled={importState.busy} />
+              </label>
+              {importState.busy && <div className="rh-balances-import-status">Contrôle du fichier…</div>}
+              {importState.error && <div className="rh-balances-import-error"><Icon name="alert" size={16} /> {importState.error}</div>}
+              {importState.preview && (
+                <>
+                  <div className="rh-balances-import-summary"><strong>{importState.preview.validCount} ligne(s) valide(s)</strong><span>{importState.preview.errorCount} erreur(s)</span></div>
+                  <div className="rh-balances-import-preview">
+                    <div className="is-head"><span>Collaborateur</span><span>Acquis</span><span>Pris</span><span>Solde</span><span>Contrôle</span></div>
+                    {importState.preview.rows.map((item) => (
+                      <div key={`${item.line}-${item.employeeId}`} className={!item.valid ? 'is-error' : ''}>
+                        <span>{item.employee ? `${item.employee.nom} ${item.employee.prenom}` : `Ligne ${item.line}`}</span>
+                        <span>{formatBalanceDays(item.acquiredDays)}</span><span>{formatBalanceDays(item.takenDays)}</span><span>{formatBalanceDays(item.balanceDays)}</span>
+                        <span>{item.valid ? 'OK' : item.error}</span>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+            <footer><button type="button" onClick={() => setImportOpen(false)} disabled={importState.busy}>Annuler</button><button type="button" className="is-primary" onClick={confirmImport} disabled={!importState.preview?.canImport || importState.busy}>{importState.busy ? 'Import…' : 'Confirmer l’import'}</button></footer>
+          </section>
+        </div>
+      )}
       {selected && <BalanceDetailDrawer row={selected} onClose={() => setSelected(null)} onChanged={handleChanged} />}
     </PageContainer>
   )

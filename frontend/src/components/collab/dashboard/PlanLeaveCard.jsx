@@ -9,7 +9,7 @@ export function PlanLeaveCard({ availableDays, onNewRequest }) {
       </span>
       <h2 className="plan-card__title">Planifier un congé</h2>
       {availableDays !== null && (
-        <p className="plan-card__balance">{formatDays(availableDays)} jours disponibles</p>
+        <p className="plan-card__balance">Solde de la période : {formatDays(availableDays)} j</p>
       )}
       <p className="plan-card__text">
         Préparez votre prochaine période de congés en quelques clics.

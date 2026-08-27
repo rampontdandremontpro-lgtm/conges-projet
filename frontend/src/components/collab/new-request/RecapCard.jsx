@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { Icon } from '@/components/ui/Icon'
 import { useAutoDismiss } from '@/hooks/useAutoDismiss'
 import { formatDays, formatRangeCompactFR } from '@/utils/format'
-import { buildNoticeRules, evaluateNotice } from '@/utils/leaveNotice'
+import { evaluateNotice } from '@/utils/leaveNotice'
 import { calculateDeductedDaysPreview } from '@/utils/leaveDuration'
 
 const DEROGATION_LABELS = {
@@ -25,26 +25,19 @@ function departureTimingLabel(daysBeforeStart) {
   return `Le départ est prévu dans ${daysBeforeStart} jours`
 }
 
-function lateSubmissionMessage(daysBeforeStart, derogationLastAllowedDay) {
+function lateSubmissionMessage(daysBeforeStart) {
   if (daysBeforeStart < 0) {
     return 'La date de départ est déjà passée. Cette demande ne peut plus être soumise.'
   }
-  return `${departureTimingLabel(daysBeforeStart)}. Une dérogation n’est possible que jusqu’à J-${derogationLastAllowedDay}, à 16 h.`
+  return `${departureTimingLabel(daysBeforeStart)}. Une dérogation peut être demandée jusqu’au début du congé.`
 }
 
-function SoldeRow({ label, value, tone }) {
-  return (
-    <div className={`nr-solde__row${tone ? ` nr-solde__row--${tone}` : ''}`}>
-      <span className="nr-solde__label">{label}</span>
-      <span className="nr-solde__value">{value}</span>
-    </div>
-  )
-}
 
 export function RecapCard({
   selection,
   leaveType,
-  balance,
+  periodSummary,
+  requestReferencePeriod,
   settings,
   seasonal,
   holidays,
@@ -74,8 +67,6 @@ export function RecapCard({
     periodComplete && settings && seasonal
       ? evaluateNotice({ startIso: startDate, endIso: endDate, settings, seasonal })
       : null
-  const noticeRules = settings ? buildNoticeRules(settings, seasonal) : null
-  const derogationLastAllowedDay = noticeRules?.derogationLastAllowedDay ?? 3
 
   const draftClean = Boolean(draft) && !dirty
   const previewDeductedDays = periodComplete
@@ -118,7 +109,7 @@ export function RecapCard({
         : notice.daysBeforeStart < 0
           ? 'La date de départ est dépassée : la soumission est impossible.'
           : !notice.isDerogationWindow
-            ? lateSubmissionMessage(notice.daysBeforeStart, derogationLastAllowedDay)
+            ? lateSubmissionMessage(notice.daysBeforeStart)
             : derogationWorkflowStatus === 'EN_ATTENTE_RH'
               ? 'Votre demande de dérogation est en attente de décision RH.'
               : derogationWorkflowStatus === 'EN_ATTENTE_DIRECTEUR'
@@ -218,7 +209,7 @@ export function RecapCard({
                   <span>
                     Dérogation nécessaire
                     <em>
-                      Entre J-29 et J-3, jusqu’à 16 h le dernier jour — délai exigé {notice.requiredNoticeDays} jours
+                      Délai exigé {notice.requiredNoticeDays} jours — dérogation possible jusqu’au début du congé
                       {notice.isLongLeave || notice.overlapsSummerPeriod
                         ? ' (période spéciale)'
                         : ''}
@@ -231,10 +222,7 @@ export function RecapCard({
                   <span>
                     Soumission impossible
                     <em>
-                      {lateSubmissionMessage(
-                        notice.daysBeforeStart,
-                        derogationLastAllowedDay,
-                      )}
+                      {lateSubmissionMessage(notice.daysBeforeStart)}
                     </em>
                   </span>
                 </p>
@@ -250,49 +238,15 @@ export function RecapCard({
             </section>
           )}
 
-          {leaveType?.deductsPaidLeaveBalance ? (
-            balance ? (
-              <section className="nr-recap__block">
-                <h4 className="nr-recap__subtitle">Solde congés payés</h4>
-                <div className="nr-solde">
-                  <SoldeRow label="Disponible aujourd’hui" value={`${formatDays(balance.availableDays)} j`} />
-                  {Number(balance.reservedDays ?? 0) > 0 && (
-                    <SoldeRow
-                      label="Déjà réservés"
-                      value={`−${formatDays(balance.reservedDays)} j`}
-                      tone="reserved"
-                    />
-                  )}
-                  <SoldeRow
-                    label="Cette demande"
-                    value={deductedDays != null ? `−${formatDays(deductedDays)} j` : '—'}
-                    tone="danger"
-                  />
-                  <div className="nr-solde__divider" />
-                  <SoldeRow
-                    label="Disponible après cette demande"
-                    value={`${formatDays(
-                      deductedDays != null
-                        ? balance.potentialDays - deductedDays
-                        : balance.potentialDays,
-                    )} j`}
-                    tone="success"
-                  />
-                </div>
-              </section>
-            ) : (
-              <section className="nr-recap__block">
-                <h4 className="nr-recap__subtitle">Solde congés payés</h4>
-                <p className="nr-recap__note">Solde indisponible pour le moment.</p>
-              </section>
-            )
-          ) : (
+          {leaveType?.deductsPaidLeaveBalance && (
             <section className="nr-recap__block">
-              <h4 className="nr-recap__subtitle">Solde congés payés</h4>
-              <p className="nr-notice nr-notice--neutral">
-                <Icon name="info" size={15} />
-                <span>Cette demande n’est pas déduite du solde de congés payés.</span>
-              </p>
+              <h4 className="nr-recap__subtitle">Situation sur la période</h4>
+              <div className="nr-solde">
+                <div className="nr-solde__row"><span className="nr-solde__label">Période de référence</span><span className="nr-solde__value">{requestReferencePeriod ? requestReferencePeriod.replace('-', '/') : '—'}</span></div>
+                <div className="nr-solde__row"><span className="nr-solde__label">Congés pris</span><span className="nr-solde__value">{formatDays(periodSummary?.takenDays ?? 0)} j</span></div>
+                <div className="nr-solde__row"><span className="nr-solde__label">Congés validés</span><span className="nr-solde__value">{formatDays(periodSummary?.validatedDays ?? 0)} j</span></div>
+                <div className="nr-solde__row"><span className="nr-solde__label">En attente</span><span className="nr-solde__value">{formatDays(periodSummary?.pendingDays ?? 0)} j</span></div>
+              </div>
             </section>
           )}
 

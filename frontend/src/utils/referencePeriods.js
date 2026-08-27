@@ -56,3 +56,12 @@ export function adjacentReferencePeriodOptions(referencePeriod = currentReferenc
     },
   ]
 }
+
+export function referencePeriodForIsoDate(isoDate) {
+  const match = String(isoDate ?? '').match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  if (!match) return null
+  const year = Number(match[1])
+  const monthDay = `${match[2]}-${match[3]}`
+  const start = monthDay >= '06-01' ? year : year - 1
+  return `${start}-${start + 1}`
+}

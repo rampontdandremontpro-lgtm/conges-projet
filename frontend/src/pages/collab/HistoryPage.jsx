@@ -103,9 +103,9 @@ function monthLabel(value) {
 }
 
 function counterLabel(counterType) {
-  if (counterType === 'N-1') return 'Congés à utiliser'
-  if (counterType === 'N') return 'En cours d’acquisition'
-  if (counterType === 'N+1') return 'Prévisionnel'
+  if (counterType === 'N-1') return 'Période antérieure'
+  if (counterType === 'N') return 'Période en cours'
+  if (counterType === 'N+1') return 'Période future'
   return 'Solde de congés'
 }
 
@@ -311,7 +311,7 @@ export function HistoryPage() {
       <div className="history-page__notice">
         <span className="history-page__notice-icon" aria-hidden="true"><Icon name="info" size={17} /></span>
         <p>
-          Cet historique affiche uniquement les mouvements qui modifient réellement vos compteurs. Une demande en attente réserve des jours, mais n’apparaît pas comme un débit avant sa validation.
+          Cet historique affiche uniquement les mouvements qui modifient réellement vos compteurs. Les demandes en attente et les congés futurs validés apparaissent dans vos demandes, mais ne deviennent des jours pris qu’au moment de leur imputation effective.
         </p>
       </div>
 

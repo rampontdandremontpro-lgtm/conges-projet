@@ -128,3 +128,58 @@
   color: #1e40af;
 }
 
+
+
+/* Informations pratiques */
+.practical-info-card {
+  display: flex;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid var(--dash-border, #dbe4ef);
+  border-radius: 18px;
+  background: #fff;
+}
+
+.practical-info-card__icon {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background: #eef5ff;
+  color: #154fa6;
+}
+
+.practical-info-card__content {
+  min-width: 0;
+}
+
+.practical-info-card__content h2 {
+  margin: 0 0 6px;
+  color: #102b5c;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.practical-info-card__content p {
+  margin: 0 0 10px;
+  color: #60708a;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.practical-info-card__content a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #154fa6;
+  font-size: 12px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.practical-info-card__content a:hover {
+  text-decoration: underline;
+}

@@ -388,6 +388,8 @@ export class ReferencePeriodService {
 
         for (const source of [sourceNMinus1, sourceN, sourceNPlus1]) {
           if (!source || source.availableDays <= 0) {
+            // Un solde négatif représente une anticipation non résorbée : il
+            // reste visible sur la période clôturée et doit être traité par la RH.
             continue;
           }
           const before = this.round(source.availableDays);
@@ -414,6 +416,18 @@ export class ReferencePeriodService {
           },
           manager,
         );
+
+        if ((sourceN?.availableDays ?? 0) < 0) {
+          await this.notificationsService.createForActiveRoles(
+            [UserRole.RH],
+            {
+              type: 'REFERENCE_PERIOD_NEGATIVE_BALANCE',
+              title: 'Solde négatif à contrôler après clôture',
+              message: `Le collaborateur n°${employeeId} termine la période ${referencePeriod} avec un solde N de ${this.round(sourceN?.availableDays ?? 0)} jour(s). Ce solde n’a pas été remis à zéro.`,
+            },
+            manager,
+          );
+        }
 
         processed.push({
           employeeId,

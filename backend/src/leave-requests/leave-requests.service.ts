@@ -30,7 +30,6 @@ import type { Holiday } from '../holidays/holiday.entity';
 import { HolidaysService } from '../holidays/holidays.service';
 import {
   LeaveBalancesService,
-  type PaidLeaveReservationSummary,
 } from '../leave-balances/leave-balances.service';
 import {
   LeaveType,
@@ -67,9 +66,11 @@ import {
   getMartiniqueDateString,
 } from './leave-request-period.util';
 import { AuditAction } from '../audit/audit-log.entity';
+import { currentReferencePeriod } from '../leave-balances/reference-period.util';
 import { AuditService } from '../audit/audit.service';
 import { ServiceAvailabilityService } from './service-availability.service';
 import {
+  BalanceProcessingStatus,
   DayPeriod,
   LeaveRequest,
   LeaveRequestStatus,
@@ -165,6 +166,7 @@ export class LeaveRequestsService {
       calendarDuration: dates.calendarDuration,
       deductedDays: dates.deductedDays,
       status: LeaveRequestStatus.BROUILLON,
+      balanceProcessingStatus: BalanceProcessingStatus.DEMANDE_ACTUELLE,
       comment: createLeaveRequestDto.comment?.trim() || null,
       submittedAt: null,
       modificationDeadline: await this.calculateModificationDeadline(
@@ -329,6 +331,7 @@ export class LeaveRequestsService {
             calendarDuration: dates.calendarDuration,
             deductedDays: dates.deductedDays,
             status: LeaveRequestStatus.VALIDEE,
+            balanceProcessingStatus: BalanceProcessingStatus.DEFINITIF,
             comment: createLeaveRequestDto.comment?.trim() || null,
             submittedAt: new Date(),
             modificationDeadline: null,
@@ -1135,22 +1138,20 @@ export class LeaveRequestsService {
         derogationId = derogation.id;
       }
 
-      let reservation: PaidLeaveReservationSummary | null = null;
-
-      if (leaveType.deductsPaidLeaveBalance) {
-        reservation =
-          await this.leaveBalancesService.reservePaidLeaveForRequest(
+      // Depuis l'évolution des compteurs, une demande en attente ne réserve
+      // plus de jours. Le solde officiel ne change qu'au début effectif du
+      // congé, après validation finale.
+      const legacyReservationRelease = leaveType.deductsPaidLeaveBalance
+        ? await this.leaveBalancesService.releasePaidLeaveReservationForRequest(
             manager,
             {
               employeeId: leaveRequest.employeeId,
               leaveRequestId: leaveRequest.id,
-              days: leaveRequest.deductedDays,
               actorId: authenticatedUser.id,
-              reason:
-                'Réservation lors de la soumission de la demande de congés.',
+              reason: 'Nettoyage d’une éventuelle réservation héritée avant soumission.',
             },
-          );
-      }
+          )
+        : { releasedDays: 0, releases: [] };
 
       const submittedAt = new Date();
       const oldStatus = leaveRequest.status;
@@ -1161,11 +1162,11 @@ export class LeaveRequestsService {
         submitLeaveRequestDto.signatureType;
       leaveRequest.employeeSignatureData = signatureData;
       leaveRequest.employeeSignedAt = submittedAt;
-      leaveRequest.realBalanceBefore =
-        reservation?.realBalanceBefore ?? null;
-      leaveRequest.potentialBalanceBefore =
-        reservation?.potentialBalanceBefore ?? null;
+      leaveRequest.realBalanceBefore = null;
+      leaveRequest.potentialBalanceBefore = null;
       leaveRequest.realBalanceAfter = null;
+      leaveRequest.balanceProcessingStatus =
+        BalanceProcessingStatus.DEMANDE_ACTUELLE;
       leaveRequest.finalDeciderId = null;
       leaveRequest.finalDeciderRole = null;
       leaveRequest.decisionAt = null;
@@ -1196,9 +1197,8 @@ export class LeaveRequestsService {
             overlapsSummerPeriod: notice.overlapsSummerPeriod,
             derogationId,
             deductedDays: leaveRequest.deductedDays,
-            potentialBalanceAfter:
-              reservation?.potentialBalanceAfter ?? null,
-            reservations: reservation?.reservations ?? [],
+            reservationReleasedDays: legacyReservationRelease.releasedDays,
+            reservations: [],
           },
         },
         manager,
@@ -1764,21 +1764,54 @@ export class LeaveRequestsService {
       }
 
       let realBalanceAfter: number | null = null;
+      const today = getMartiniqueDateString(new Date());
 
       if (leaveRequest.leaveType.deductsPaidLeaveBalance) {
-        const balanceResult =
-          await this.leaveBalancesService.finalizePaidLeaveReservation(
-            manager,
-            {
-              employeeId: leaveRequest.employeeId,
-              leaveRequestId: leaveRequest.id,
-              actorId: authenticatedUser.id,
-              expectedDays: leaveRequest.deductedDays,
-              decision: 'VALIDATE',
-            },
-          );
+        // Compatibilité avec les demandes soumises avant cette évolution :
+        // toute ancienne réservation est libérée avant d'utiliser le nouveau
+        // modèle Validées -> Pris au début effectif du congé.
+        await this.leaveBalancesService.releasePaidLeaveReservationForRequest(
+          manager,
+          {
+            employeeId: leaveRequest.employeeId,
+            leaveRequestId: leaveRequest.id,
+            actorId: authenticatedUser.id,
+            reason: 'Libération d’une réservation héritée lors de la validation finale.',
+          },
+        );
 
-        realBalanceAfter = balanceResult.realBalanceAfter;
+        if (leaveRequest.startDate <= today) {
+          const referencePeriod = await this.getReferencePeriodForDate(
+            leaveRequest.startDate,
+          );
+          const balanceResult =
+            await this.leaveBalancesService.applyPaidLeaveForRequest(
+              manager,
+              {
+                employeeId: leaveRequest.employeeId,
+                leaveRequestId: leaveRequest.id,
+                actorId: authenticatedUser.id,
+                expectedDays: leaveRequest.deductedDays,
+                referencePeriod,
+              },
+            );
+          realBalanceAfter = balanceResult.realBalanceAfter;
+          leaveRequest.balanceProcessingStatus =
+            BalanceProcessingStatus.DEFINITIF;
+        } else {
+          const [requestReferencePeriod, activeReferencePeriod] =
+            await Promise.all([
+              this.getReferencePeriodForDate(leaveRequest.startDate),
+              this.getReferencePeriodForDate(today),
+            ]);
+          leaveRequest.balanceProcessingStatus =
+            requestReferencePeriod === activeReferencePeriod
+              ? BalanceProcessingStatus.DEMANDE_ACTUELLE
+              : BalanceProcessingStatus.CONGE_PREVISIONNEL;
+        }
+      } else {
+        leaveRequest.balanceProcessingStatus =
+          BalanceProcessingStatus.DEFINITIF;
       }
 
       leaveRequest.status = LeaveRequestStatus.VALIDEE;
@@ -1898,20 +1931,18 @@ export class LeaveRequestsService {
       let realBalanceAfter: number | null = null;
 
       if (leaveRequest.leaveType.deductsPaidLeaveBalance) {
-        const balanceResult =
-          await this.leaveBalancesService.finalizePaidLeaveReservation(
-            manager,
-            {
-              employeeId: leaveRequest.employeeId,
-              leaveRequestId: leaveRequest.id,
-              actorId: authenticatedUser.id,
-              expectedDays: leaveRequest.deductedDays,
-              decision: 'REFUSE',
-            },
-          );
-
-        realBalanceAfter = balanceResult.realBalanceAfter;
+        await this.leaveBalancesService.releasePaidLeaveReservationForRequest(
+          manager,
+          {
+            employeeId: leaveRequest.employeeId,
+            leaveRequestId: leaveRequest.id,
+            actorId: authenticatedUser.id,
+            reason: 'Libération d’une éventuelle réservation héritée après refus.',
+          },
+        );
       }
+      leaveRequest.balanceProcessingStatus =
+        BalanceProcessingStatus.DEMANDE_ACTUELLE;
 
       const decisionAt = new Date();
       const oldStatus = leaveRequest.status;
@@ -2210,7 +2241,11 @@ export class LeaveRequestsService {
       let realBalanceAfter = leaveRequest.realBalanceAfter;
       let recreditedDays = 0;
 
-      if (leaveRequest.leaveType.deductsPaidLeaveBalance) {
+      if (
+        leaveRequest.leaveType.deductsPaidLeaveBalance &&
+        leaveRequest.balanceProcessingStatus ===
+          BalanceProcessingStatus.DEFINITIF
+      ) {
         const recredit =
           await this.leaveBalancesService.recreditPaidLeaveForCancelledRequest(
             manager,
@@ -2562,6 +2597,14 @@ export class LeaveRequestsService {
     return leaveRequest;
   }
 
+  private async getReferencePeriodForDate(date: string): Promise<string> {
+    const startMonthDay = await this.settingsService.getString(
+      'REFERENCE_PERIOD_START',
+      '06-01',
+    );
+    return currentReferencePeriod(date, startMonthDay);
+  }
+
   private validateLeaveType(leaveType: LeaveType): void {
     if (!leaveType.isActive) {
       throw new BadRequestException(
@@ -2674,18 +2717,12 @@ export class LeaveRequestsService {
       );
     }
 
-    if (notice.daysBeforeStart < 3) {
-      throw new BadRequestException(
-        'La demande ne peut plus être soumise à partir de J-2. Le départ doit être prévu au moins trois jours calendaires à l’avance.',
-      );
-    }
-
     if (
       !notice.isNoticeCompliant &&
       !notice.isDerogationWindow
     ) {
       throw new BadRequestException(
-        `Cette demande exige un délai de ${notice.requiredNoticeDays} jours calendaires. Les dérogations RH sont autorisées uniquement entre J-29 et J-3. Le délai actuel est de ${notice.daysBeforeStart} jours.`,
+        `Cette demande exige un délai de ${notice.requiredNoticeDays} jours calendaires. Une dérogation doit être accordée avant le début du congé. Le délai actuel est de ${notice.daysBeforeStart} jours.`,
       );
     }
   }
@@ -2780,10 +2817,12 @@ export class LeaveRequestsService {
       );
     }
 
+    const extendedEndDate = new Date(endDate);
+    extendedEndDate.setUTCDate(extendedEndDate.getUTCDate() + 2);
     const nonDeductibleDays =
       await this.holidaysService.findNonDeductibleBetween(
         startDateValue,
-        endDateValue,
+        extendedEndDate.toISOString().slice(0, 10),
       );
 
     const nonDeductibleDaysByDate = new Map(

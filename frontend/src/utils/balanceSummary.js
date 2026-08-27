@@ -37,18 +37,11 @@ export function buildBalanceSummary(balances) {
   if (!usable) return null
 
   const availableDays = numberValue(usable.availableDays)
-  const reservedDays = numberValue(usable.reservedDays)
-  const potentialDays = Number.isFinite(Number(usable.potentialDays))
-    ? Number(usable.potentialDays)
-    : Math.max(0, availableDays - reservedDays)
-
   return {
     referencePeriod: usable.referencePeriod ?? referencePeriod,
     usableBalance: usable,
     acquisitionBalance: acquisition,
     availableDays,
-    reservedDays,
-    potentialDays,
     currentAccrualDays: numberValue(acquisition?.acquiredDays ?? acquisition?.availableDays),
   }
 }

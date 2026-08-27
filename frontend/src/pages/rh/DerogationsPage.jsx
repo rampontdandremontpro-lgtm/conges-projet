@@ -87,18 +87,6 @@ function formatDateTime(value) {
   }).format(date)
 }
 
-function formatDeadline(value) {
-  if (!value) return '—'
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return '—'
-  const day = new Intl.DateTimeFormat('fr-FR', {
-    timeZone: 'America/Martinique',
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  }).format(date)
-  return `${day} à 16 h`
-}
 
 function formatPeriod(item) {
   if (!item?.requestedStartDate) return '—'
@@ -308,14 +296,10 @@ function DerogationDetailDrawer({ itemId, onClose, onChanged }) {
                   </div>
                 </div>
 
-                {item.expiresAt && (
-                  <div className="rh-derogation-deadline">
-                    <Icon name="clock" size={16} />
-                    <span>
-                      Délai de traitement : <strong>jusqu’au {formatDeadline(item.expiresAt)}</strong> (heure de Martinique).
-                    </span>
-                  </div>
-                )}
+                <div className="rh-derogation-deadline">
+                  <Icon name="clock" size={16} />
+                  <span>Délai de traitement : <strong>avant le début du congé</strong>.</span>
+                </div>
 
                 <label className="rh-derogation-comment">
                   <span>Commentaire de décision <em>obligatoire en cas de refus</em></span>

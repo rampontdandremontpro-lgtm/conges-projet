@@ -251,3 +251,41 @@ describe('calculateDeductedLeaveDays — règle du vendredi', () => {
     ).toBe(1);
   });
 });
+
+describe('calculateDeductedLeaveDays — vendredi férié suivi du samedi', () => {
+  it('ajoute le samedi après un jeudi après-midi accolé à un vendredi férié', () => {
+    expect(
+      calculateDeductedLeaveDays(
+        new Date('2026-12-24T00:00:00.000Z'),
+        new Date('2026-12-24T00:00:00.000Z'),
+        DayPeriod.APRES_MIDI,
+        DayPeriod.APRES_MIDI,
+        new Set(['2026-12-25']),
+      ),
+    ).toBe(1.5);
+  });
+
+  it('n’ajoute pas le samedi si le collaborateur reprend le jeudi après-midi', () => {
+    expect(
+      calculateDeductedLeaveDays(
+        new Date('2026-12-24T00:00:00.000Z'),
+        new Date('2026-12-24T00:00:00.000Z'),
+        DayPeriod.MATIN,
+        DayPeriod.MATIN,
+        new Set(['2026-12-25']),
+      ),
+    ).toBe(0.5);
+  });
+
+  it('n’ajoute pas le samedi si ce samedi est lui-même non décomptable', () => {
+    expect(
+      calculateDeductedLeaveDays(
+        new Date('2026-12-24T00:00:00.000Z'),
+        new Date('2026-12-24T00:00:00.000Z'),
+        DayPeriod.APRES_MIDI,
+        DayPeriod.APRES_MIDI,
+        new Set(['2026-12-25', '2026-12-26']),
+      ),
+    ).toBe(0.5);
+  });
+});

@@ -5,15 +5,16 @@ import { AlertsCard } from '@/components/collab/dashboard/AlertsCard'
 import { LeaveBalanceCard } from '@/components/collab/dashboard/LeaveBalanceCard'
 import { NextLeaveCard } from '@/components/collab/dashboard/NextLeaveCard'
 import { PlanLeaveCard } from '@/components/collab/dashboard/PlanLeaveCard'
+import { PracticalInfoCard } from '@/components/collab/dashboard/PracticalInfoCard'
 import { RecentRequestsCard } from '@/components/collab/dashboard/RecentRequestsCard'
 import { PageContainer } from '@/components/ui/PageContainer'
 import {
-  getMyLeaveBalances,
+  getMyLeavePeriodSummaries,
   getMyLeaveRequests,
   getPublicSettings,
 } from '@/services/collab/dashboard'
-import { buildBalanceSummary } from '@/utils/balanceSummary'
 import { todayISO } from '@/utils/format'
+import { adjacentReferencePeriodOptions, currentReferencePeriod } from '@/utils/referencePeriods'
 
 import '@/styles/collab/dashboard/index.css'
 import '@/styles/manager/my-balance/index.css'
@@ -34,10 +35,11 @@ export function ManagerMyBalancePage() {
   const [balances, setBalances] = useState({ loading: true, error: false, data: [] })
   const [requests, setRequests] = useState({ loading: true, error: false, data: [] })
   const [settings, setSettings] = useState({ loading: true, error: false, data: null })
+  const [selectedPeriod, setSelectedPeriod] = useState(() => currentReferencePeriod())
 
   const loadBalances = useCallback(async () => {
     try {
-      const data = await getMyLeaveBalances()
+      const data = await getMyLeavePeriodSummaries()
       setBalances({ loading: false, error: false, data: Array.isArray(data) ? data : [] })
     } catch {
       setBalances({ loading: false, error: true, data: [] })
@@ -103,10 +105,15 @@ export function ManagerMyBalancePage() {
     }
   }, [])
 
-  const balanceSummary = useMemo(() => buildBalanceSummary(balances.data), [balances.data])
+  const periodOptions = useMemo(() => adjacentReferencePeriodOptions(), [])
+  const balanceSummary = useMemo(() => (
+    balances.data.find((item) => item.referencePeriod === selectedPeriod) ?? {
+      referencePeriod: selectedPeriod, acquiredDays: 0, takenDays: 0, balanceDays: 0, validatedDays: 0, pendingDays: 0,
+    }
+  ), [balances.data, selectedPeriod])
   const nextLeave = useMemo(() => computeNextLeave(requests.data), [requests.data])
   const recentRequests = useMemo(() => requests.data.slice(0, 4), [requests.data])
-  const availableDays = balanceSummary?.potentialDays ?? null
+  const availableDays = balanceSummary?.balanceDays ?? null
 
   return (
     <PageContainer className="dash-page manager-my-balance">
@@ -117,6 +124,9 @@ export function ManagerMyBalancePage() {
             loading={balances.loading}
             error={balances.error}
             onRetry={retryBalances}
+            periodOptions={periodOptions}
+            selectedPeriod={selectedPeriod}
+            onPeriodChange={setSelectedPeriod}
             actionLabel="Voir mon historique"
             actionIcon="clock"
             onAction={() => navigate('/app/history')}
@@ -159,6 +169,7 @@ export function ManagerMyBalancePage() {
             onRetryBalances={retryBalances}
             onRetryRequests={retryRequests}
           />
+          <PracticalInfoCard />
         </div>
       </div>
     </PageContainer>

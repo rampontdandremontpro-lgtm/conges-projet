@@ -256,3 +256,25 @@
   outline-offset: 2px;
 }
 
+
+.balance-period-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 16px 0 12px; }
+.balance-period-kpi { padding: 14px; border: 1px solid var(--border-color, #e5e7eb); border-radius: 14px; background: #fff; }
+.balance-period-kpi span { display: block; font-size: 12px; color: #64748b; margin-bottom: 6px; }
+.balance-period-kpi strong { font-size: 22px; color: #1e293b; }
+.balance-period-kpi--negative strong { color: #b42318; }
+.balance-period-kpi--positive strong { color: #157347; }
+.balance-negative-note { display: flex; align-items: center; gap: 7px; margin: 8px 0 0; font-size: 12px; color: #b42318; }
+@media (max-width: 560px) { .balance-period-grid { grid-template-columns: 1fr; } }
+
+
+.dash-card__period-select select {
+  max-width: 180px;
+  min-height: 34px;
+  padding: 6px 30px 6px 10px;
+  border: 1px solid #d7e1ee;
+  border-radius: 10px;
+  background: #fff;
+  color: #173b70;
+  font-size: 12px;
+  font-weight: 800;
+}

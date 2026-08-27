@@ -141,7 +141,8 @@ export class BalanceReminderService {
         }
         const availableDays = this.round(balance.availableDays);
         const reservedDays = this.round(balance.reservedDays);
-        const potentialDays = this.round(availableDays - reservedDays);
+        // Les demandes en attente ne diminuent plus le solde officiel affiché.
+        const potentialDays = availableDays;
         if (potentialDays <= 0) {
           continue;
         }
@@ -262,15 +263,7 @@ export class BalanceReminderService {
 
   private reminderMessage(payload: BalanceReminderPayload): string {
     const date = formatFrenchDate(payload.usageDeadline);
-    if (payload.reservedDays <= 0) {
-      return `Il vous reste ${payload.availableDays} ${this.plural(payload.availableDays, 'jour')} de congés à utiliser avant le ${date}.`;
-    }
-    return (
-      `Il vous reste ${payload.potentialDays} ${this.plural(payload.potentialDays, 'jour')} encore utilisable${payload.potentialDays === 1 ? '' : 's'} ` +
-      `sur un solde de ${payload.availableDays} ${this.plural(payload.availableDays, 'jour')}, ` +
-      `dont ${payload.reservedDays} ${this.plural(payload.reservedDays, 'jour')} déjà réservé${payload.reservedDays === 1 ? '' : 's'}, ` +
-      `à utiliser avant le ${date}.`
-    );
+    return `Il vous reste ${payload.availableDays} ${this.plural(payload.availableDays, 'jour')} de congés sur cette période, à utiliser avant le ${date}.`;
   }
 
   private recapMessage(
@@ -281,17 +274,10 @@ export class BalanceReminderService {
   ): string {
     const date = formatFrenchDate(usageDeadline);
     const displayPeriod = counterReferencePeriod(period, 'N-1').replace('-', '/');
-    const lines = rows.map((row) => {
-      const reserved =
-        row.reservedDays === 0
-          ? 'aucun jour réservé'
-          : `${row.reservedDays} ${this.plural(row.reservedDays, 'jour')} déjà réservé${row.reservedDays === 1 ? '' : 's'}`;
-      return (
-        `• ${row.nom} ${row.prenom} (${row.service}) — employé n°${row.employeeId} : ` +
-        `solde ${row.availableDays} ${this.plural(row.availableDays, 'jour')} (${reserved}, ` +
-        `${row.potentialDays} encore utilisable${row.potentialDays === 1 ? '' : 's'})`
-      );
-    });
+    const lines = rows.map((row) =>
+      `• ${row.nom} ${row.prenom} (${row.service}) — employé n°${row.employeeId} : ` +
+      `solde ${row.availableDays} ${this.plural(row.availableDays, 'jour')}`
+    );
     return [
       `Rappel ${reminderDeadlineLabel(deadline.key)} — période ${displayPeriod} (compteur N-1), congés à utiliser avant le ${date}.`,
       ...lines,

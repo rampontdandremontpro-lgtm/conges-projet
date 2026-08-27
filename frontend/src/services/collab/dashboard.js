@@ -1,12 +1,12 @@
 import { apiClient } from '@/services/apiClient'
 
-export async function getMyLeaveBalances() {
-  const { data } = await apiClient.get('/leave-balances/my')
+export async function getMyLeavePeriodSummaries() {
+  const { data } = await apiClient.get('/leave-balances/my/summary')
   return data
 }
 
-export async function getEmployeeLeaveBalances(employeeId) {
-  const { data } = await apiClient.get(`/leave-balances/employee/${employeeId}`)
+export async function getEmployeeLeavePeriodSummaries(employeeId) {
+  const { data } = await apiClient.get(`/leave-balances/employee/${employeeId}/summary`)
   return data
 }
 

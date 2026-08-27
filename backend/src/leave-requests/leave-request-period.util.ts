@@ -189,5 +189,24 @@ export function calculateDeductedLeaveDays(
     }
   }
 
+  // Règle complémentaire : si l'absence se termine le jeudi sans reprise
+  // l'après-midi et que le vendredi est férié/non décomptable, le samedi
+  // suivant reste un jour ouvrable à décompter. Une fin le jeudi matin
+  // signifie au contraire une reprise le jeudi après-midi : aucun samedi
+  // supplémentaire n'est alors ajouté.
+  if (endDate.getUTCDay() === 4 && endPeriod === DayPeriod.APRES_MIDI) {
+    const friday = new Date(endDate);
+    friday.setUTCDate(friday.getUTCDate() + 1);
+    const fridayValue = friday.toISOString().slice(0, 10);
+    if (nonDeductibleDates.has(fridayValue)) {
+      const saturday = new Date(friday);
+      saturday.setUTCDate(saturday.getUTCDate() + 1);
+      const saturdayValue = saturday.toISOString().slice(0, 10);
+      if (!nonDeductibleDates.has(saturdayValue)) {
+        total += 1;
+      }
+    }
+  }
+
   return Math.max(total, 0);
 }

@@ -19,6 +19,8 @@ import { UserRole } from '../users/user.entity';
 import { AddBalanceAccrualDto } from './dto/add-balance-accrual.dto';
 import { CorrectLeaveBalanceDto } from './dto/correct-leave-balance.dto';
 import { InitializeLeaveBalanceDto } from './dto/initialize-leave-balance.dto';
+import { ImportLeaveBalancesDto } from './dto/import-leave-balances.dto';
+import { LeaveBalanceProjectionQueryDto } from './dto/leave-balance-projection-query.dto';
 import { LeaveBalanceQueryDto } from './dto/leave-balance-query.dto';
 import { RunMonthlyAccrualDto } from './dto/run-monthly-accrual.dto';
 import { CloseReferencePeriodDto } from './dto/close-reference-period.dto';
@@ -46,9 +48,20 @@ export class LeaveBalancesController {
     return this.leaveBalancesService.getManagementOverview(query);
   }
 
-  @Get('my/history')
+
+  @Get('my/summary')
   @Roles(
     UserRole.COLLABORATEUR,
+    UserRole.RESPONSABLE_SERVICE,
+    UserRole.RH,
+    UserRole.DIRECTEUR,
+  )
+  getMyPeriodSummaries(@Req() request: AuthenticatedRequest) {
+    return this.leaveBalancesService.getEmployeePeriodSummaries(request.user.id);
+  }
+
+  @Get('my/history')
+  @Roles(
     UserRole.RESPONSABLE_SERVICE,
     UserRole.RH,
     UserRole.DIRECTEUR,
@@ -65,7 +78,6 @@ export class LeaveBalancesController {
 
   @Get('my')
   @Roles(
-    UserRole.COLLABORATEUR,
     UserRole.RESPONSABLE_SERVICE,
     UserRole.RH,
     UserRole.DIRECTEUR,
@@ -78,6 +90,24 @@ export class LeaveBalancesController {
       request.user.id,
       query,
     );
+  }
+
+
+  @Get('employee/:employeeId/projection')
+  @Roles(UserRole.RH, UserRole.DIRECTEUR)
+  getEmployeeBalanceProjection(
+    @Param('employeeId', ParseIntPipe) employeeId: number,
+    @Query() query: LeaveBalanceProjectionQueryDto,
+  ) {
+    return this.leaveBalancesService.getEmployeeBalanceProjection(employeeId, query);
+  }
+
+  @Get('employee/:employeeId/summary')
+  @Roles(UserRole.RH, UserRole.DIRECTEUR)
+  getEmployeePeriodSummaries(
+    @Param('employeeId', ParseIntPipe) employeeId: number,
+  ) {
+    return this.leaveBalancesService.getEmployeePeriodSummaries(employeeId);
   }
 
   @Get('employee/:employeeId/history')
@@ -134,6 +164,21 @@ export class LeaveBalancesController {
       request.user,
       dto,
     );
+  }
+
+  @Post('import/preview')
+  @Roles(UserRole.RH)
+  previewBalanceImport(@Body() dto: ImportLeaveBalancesDto) {
+    return this.leaveBalancesService.previewBalanceImport(dto);
+  }
+
+  @Post('import/confirm')
+  @Roles(UserRole.RH)
+  importBalances(
+    @Req() request: AuthenticatedRequest,
+    @Body() dto: ImportLeaveBalancesDto,
+  ) {
+    return this.leaveBalancesService.importBalances(request.user, dto);
   }
 
   @Post('initialize')

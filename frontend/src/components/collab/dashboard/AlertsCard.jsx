@@ -6,6 +6,7 @@ import {
   todayISO,
   toISODate,
 } from '@/utils/format'
+import { currentReferencePeriod } from '@/utils/referencePeriods'
 
 function buildAlerts({ balance, requests, settings }) {
   const alerts = []
@@ -30,7 +31,7 @@ function buildAlerts({ balance, requests, settings }) {
       const [, endYear] = balance.referencePeriod.split('-').map(Number)
       const [month, day] = periodEndSetting.settingValue.split('-').map(Number)
       const periodEnd = toISODate(new Date(endYear, month - 1, day - 1))
-      if (today <= periodEnd && (balance.availableDays || 0) > 0) {
+      if (today <= periodEnd && (balance.balanceDays || 0) > 0) {
         alerts.push({
           tone: 'warning',
           text: `Posez vos congés avant le ${formatDateNumericFR(periodEnd)}`,
@@ -71,12 +72,8 @@ export function AlertsCard({ balances, requests, settings, onRetryBalances, onRe
       />
     )
   } else {
-    const latestPeriod = [...new Set((balances.data ?? []).map((item) => item.referencePeriod).filter(Boolean))]
-      .sort((left, right) => right.localeCompare(left))[0]
-    const scopedBalances = latestPeriod
-      ? balances.data.filter((item) => item.referencePeriod === latestPeriod)
-      : (balances.data ?? [])
-    const balance = scopedBalances.find((item) => item.counterType === 'N-1') ?? scopedBalances[0] ?? null
+    const activePeriod = currentReferencePeriod()
+    const balance = (balances.data ?? []).find((item) => item.referencePeriod === activePeriod) ?? null
     const alerts = buildAlerts({
       balance,
       requests: requests.error ? [] : (requests.data ?? []),

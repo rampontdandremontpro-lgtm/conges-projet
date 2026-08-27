@@ -28,6 +28,13 @@
   letter-spacing: 0.12em;
 }
 
+.nr-halfdays__help {
+  margin: -8px 0 14px;
+  color: var(--nr-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 .nr-halfdays__groups {
   display: flex;
   gap: 20px;

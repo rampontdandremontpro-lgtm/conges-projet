@@ -24,6 +24,13 @@ export enum LeaveRequestStatus {
   EXPIREE_NON_VALIDEE = 'EXPIREE_NON_VALIDEE',
 }
 
+export enum BalanceProcessingStatus {
+  DEMANDE_ACTUELLE = 'DEMANDE_ACTUELLE',
+  CONGE_PREVISIONNEL = 'CONGE_PREVISIONNEL',
+  A_CONSOLIDER = 'A_CONSOLIDER',
+  DEFINITIF = 'DEFINITIF',
+}
+
 export enum DayPeriod {
   MATIN = 'MATIN',
   APRES_MIDI = 'APRES_MIDI',
@@ -49,6 +56,7 @@ const nullableDecimalTransformer = {
 @Index('IDX_leave_requests_employee_dates', ['employeeId', 'startDate', 'endDate'])
 @Index('IDX_leave_requests_service_status', ['serviceId', 'status'])
 @Index('IDX_leave_requests_status_submitted', ['status', 'submittedAt'])
+@Index('IDX_leave_requests_balance_processing', ['status', 'balanceProcessingStatus', 'startDate'])
 export class LeaveRequest {
   @PrimaryGeneratedColumn({ type: 'bigint' })
   id!: number;
@@ -121,6 +129,14 @@ export class LeaveRequest {
     default: LeaveRequestStatus.BROUILLON,
   })
   status!: LeaveRequestStatus;
+
+  @Column({
+    name: 'balance_processing_status',
+    type: 'enum',
+    enum: BalanceProcessingStatus,
+    default: BalanceProcessingStatus.DEMANDE_ACTUELLE,
+  })
+  balanceProcessingStatus!: BalanceProcessingStatus;
 
   @Column({ type: 'text', nullable: true })
   comment!: string | null;

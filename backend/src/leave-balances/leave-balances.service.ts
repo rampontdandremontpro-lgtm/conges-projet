@@ -15,9 +15,18 @@ import {
 import { AuditService } from '../audit/audit.service';
 import type { AuthenticatedUser } from '../auth/jwt-payload.interface';
 import { NotificationsService } from '../notifications/notifications.service';
+import { LeaveRequest, LeaveRequestStatus } from '../leave-requests/leave-request.entity';
+import { SettingsService } from '../settings/settings.service';
 import { User, UserRole } from '../users/user.entity';
 import { UsersService } from '../users/users.service';
 import { isManagedBalanceEmployee } from './management-eligibility.util';
+import { allocatePaidLeave } from './leave-allocation.util';
+import { buildLeavePeriodSummaries, LeavePeriodSummary } from './leave-period-summary.util';
+import { counterReferencePeriod, currentReferencePeriod, parseReferencePeriod } from './reference-period.util';
+import { normalizeBalanceImportRow, NormalizedBalanceImportRow } from './leave-balance-import.util';
+import { ImportLeaveBalancesDto } from './dto/import-leave-balances.dto';
+import { LeaveBalanceProjectionQueryDto } from './dto/leave-balance-projection-query.dto';
+import { projectLeaveAtDate } from './leave-balance-projection.util';
 import {
   BalanceMovement,
   BalanceMovementType,
@@ -83,6 +92,7 @@ export class LeaveBalancesService {
     private readonly movementRepository: Repository<BalanceMovement>,
 
     private readonly usersService: UsersService,
+    private readonly settingsService: SettingsService,
     private readonly notificationsService: NotificationsService,
     private readonly auditService: AuditService,
     private readonly dataSource: DataSource,
@@ -222,25 +232,14 @@ export class LeaveBalancesService {
       const balanceBefore = this.round(balance.availableDays);
       const balanceAfter = this.round(balanceBefore + correction);
       balanceBeforeValue = balanceBefore;
-      const potentialAfter = this.round(
-        balanceAfter - balance.reservedDays,
-      );
       const acquiredAfter = this.round(
         balance.acquiredDays + correction,
       );
 
-      if (balanceAfter < 0 || potentialAfter < 0) {
-        throw new BadRequestException(
-          'Cette correction rendrait le solde réel ou le solde potentiel négatif.',
-        );
-      }
-
-      if (acquiredAfter < 0) {
-        throw new BadRequestException(
-          'Cette correction rendrait le nombre de jours acquis négatif.',
-        );
-      }
-
+      // Les soldes négatifs sont autorisés. Une correction de débit peut donc
+      // faire passer le solde sous zéro. On conserve également la correction
+      // sur acquiredDays afin que l'historique RH reste cohérent avec les
+      // corrections administratives déjà existantes.
       balance.acquiredDays = acquiredAfter;
       balance.availableDays = balanceAfter;
       employeeId = balance.employeeId;
@@ -313,40 +312,70 @@ export class LeaveBalancesService {
           : first.prenom.localeCompare(second.prenom, 'fr', { sensitivity: 'base' });
       });
 
-    const employeeIds = new Set(employees.map((employee) => employee.id));
-    const balances = (await this.leaveBalanceRepository.find())
-      .filter((balance) => employeeIds.has(balance.employeeId));
+    const periodStart = await this.settingsService.getString(
+      'REFERENCE_PERIOD_START',
+      '06-01',
+    );
+    const requestedPeriod = query.referencePeriod ?? currentReferencePeriod(
+      this.martiniqueDateString(new Date()),
+      periodStart,
+    );
+    this.validateReferencePeriod(requestedPeriod);
+
+    const employeeIds = employees.map((employee) => employee.id);
+    const balances = employeeIds.length > 0
+      ? await this.leaveBalanceRepository.find({ where: { employeeId: In(employeeIds) } })
+      : [];
+    const requests = employeeIds.length > 0
+      ? await this.dataSource.getRepository(LeaveRequest).find({
+          where: {
+            employeeId: In(employeeIds),
+            status: In([
+              LeaveRequestStatus.VALIDEE,
+              LeaveRequestStatus.EN_ATTENTE_VALIDATION,
+            ]),
+          },
+          relations: { leaveType: true },
+        })
+      : [];
 
     return employees.map((employee) => {
-      const employeeBalances = balances.filter(
-        (balance) => balance.employeeId === employee.id,
-      );
-      const referencePeriods = [
-        ...new Set(employeeBalances.map((balance) => balance.referencePeriod)),
-      ].sort((first, second) => second.localeCompare(first));
-      const referencePeriod = query.referencePeriod && referencePeriods.includes(query.referencePeriod)
-        ? query.referencePeriod
-        : query.referencePeriod
-          ? null
-          : referencePeriods[0] ?? null;
-      const scoped = referencePeriod
-        ? employeeBalances.filter(
-            (balance) => balance.referencePeriod === referencePeriod,
-          )
-        : [];
-      const usable = scoped.find(
-        (balance) => balance.counterType === LeaveBalanceCounterType.N_MINUS_1,
-      ) ?? null;
-      const acquisition = scoped.find(
-        (balance) => balance.counterType === LeaveBalanceCounterType.N,
-      ) ?? null;
-
-      const usableDays = this.round(usable?.availableDays ?? 0);
-      const acquisitionDays = this.round(acquisition?.acquiredDays ?? 0);
-      const reservedDays = this.round(usable?.reservedDays ?? 0);
-      const availableAfterReservations = this.round(
-        usableDays - reservedDays,
-      );
+      const employeeBalances = balances.filter((balance) => balance.employeeId === employee.id);
+      const employeeRequests = requests
+        .filter((request) => request.employeeId === employee.id && request.leaveType?.deductsPaidLeaveBalance)
+        .map((request) => ({
+          startDate: request.startDate,
+          deductedDays: request.deductedDays,
+          status: request.status,
+          balanceProcessingStatus: request.balanceProcessingStatus,
+        }));
+      const summaries = buildLeavePeriodSummaries({
+        balances: employeeBalances.map((balance) => ({
+          referencePeriod: balance.referencePeriod,
+          counterType: balance.counterType,
+          acquiredDays: balance.acquiredDays,
+          consumedDays: balance.consumedDays,
+        })),
+        requests: employeeRequests,
+        periodStartMonthDay: periodStart,
+      });
+      const summary = summaries.find((item) => item.referencePeriod === requestedPeriod) ?? {
+        referencePeriod: requestedPeriod,
+        acquiredDays: 0,
+        takenDays: 0,
+        balanceDays: 0,
+        validatedDays: 0,
+        pendingDays: 0,
+      };
+      const touchedBalances = employeeBalances.filter((balance) => {
+        if (balance.counterType === LeaveBalanceCounterType.N) return balance.referencePeriod === requestedPeriod;
+        if (balance.counterType === LeaveBalanceCounterType.N_MINUS_1) {
+          const start = Number(balance.referencePeriod.slice(0, 4)) - 1;
+          return `${start}-${start + 1}` === requestedPeriod;
+        }
+        const start = Number(balance.referencePeriod.slice(0, 4)) + 1;
+        return `${start}-${start + 1}` === requestedPeriod;
+      });
 
       return {
         employee: {
@@ -360,16 +389,271 @@ export class LeaveBalancesService {
             ? { id: employee.service.id, name: employee.service.name, serviceType: employee.service.serviceType, externalCompanyName: employee.service.externalCompanyName }
             : null,
         },
-        referencePeriod,
-        usableDays,
-        acquisitionDays,
-        reservedDays,
-        availableAfterReservations,
-        hasBalances: scoped.length > 0,
-        updatedAt: scoped
+        ...summary,
+        hasBalances: touchedBalances.length > 0 || summary.validatedDays > 0 || summary.pendingDays > 0,
+        updatedAt: touchedBalances
           .map((balance) => balance.updatedAt)
           .sort((first, second) => second.getTime() - first.getTime())[0] ?? null,
       };
+    });
+  }
+
+  async getEmployeePeriodSummaries(employeeId: number): Promise<LeavePeriodSummary[]> {
+    await this.findEligibleEmployee(employeeId, false);
+    const periodStart = await this.settingsService.getString(
+      'REFERENCE_PERIOD_START',
+      '06-01',
+    );
+    const [balances, requests] = await Promise.all([
+      this.leaveBalanceRepository.find({ where: { employeeId } }),
+      this.dataSource.getRepository(LeaveRequest).find({
+        where: {
+          employeeId,
+          status: In([
+            LeaveRequestStatus.VALIDEE,
+            LeaveRequestStatus.EN_ATTENTE_VALIDATION,
+          ]),
+        },
+        relations: { leaveType: true },
+      }),
+    ]);
+
+    return buildLeavePeriodSummaries({
+      balances: balances.map((balance) => ({
+        referencePeriod: balance.referencePeriod,
+        counterType: balance.counterType,
+        acquiredDays: balance.acquiredDays,
+        consumedDays: balance.consumedDays,
+      })),
+      requests: requests
+        .filter((request) => request.leaveType?.deductsPaidLeaveBalance)
+        .map((request) => ({
+          startDate: request.startDate,
+          deductedDays: request.deductedDays,
+          status: request.status,
+          balanceProcessingStatus: request.balanceProcessingStatus,
+        })),
+      periodStartMonthDay: periodStart,
+    });
+  }
+
+  async previewBalanceImport(dto: ImportLeaveBalancesDto) {
+    this.validateReferencePeriod(dto.referencePeriod);
+    const managedEmployees = (await this.usersService.findAll())
+      .filter((employee) => isManagedBalanceEmployee(employee));
+    const employeeById = new Map(managedEmployees.map((employee) => [employee.id, employee]));
+    const seen = new Set<number>();
+
+    const rows = dto.rows.map((raw, index) => {
+      try {
+        const normalized = normalizeBalanceImportRow(raw);
+        if (seen.has(normalized.employeeId)) {
+          throw new Error('Collaborateur présent plusieurs fois dans le fichier.');
+        }
+        seen.add(normalized.employeeId);
+        const employee = employeeById.get(normalized.employeeId);
+        if (!employee) {
+          throw new Error('Collaborateur introuvable ou non éligible à la gestion des soldes.');
+        }
+        return {
+          line: index + 2,
+          valid: true,
+          error: null,
+          employee: {
+            id: employee.id,
+            nom: employee.nom,
+            prenom: employee.prenom,
+            email: employee.email,
+          },
+          ...normalized,
+        };
+      } catch (error) {
+        return {
+          line: index + 2,
+          valid: false,
+          error: error instanceof Error ? error.message : 'Ligne invalide.',
+          employee: null,
+          employeeId: Number(raw.employeeId) || 0,
+          acquiredDays: Number(raw.acquiredDays) || 0,
+          takenDays: Number(raw.takenDays) || 0,
+          balanceDays: Number(raw.balanceDays) || 0,
+        };
+      }
+    });
+
+    return {
+      referencePeriod: dto.referencePeriod,
+      rows,
+      validCount: rows.filter((row) => row.valid).length,
+      errorCount: rows.filter((row) => !row.valid).length,
+      canImport: rows.length > 0 && rows.every((row) => row.valid),
+    };
+  }
+
+  async importBalances(authenticatedUser: AuthenticatedUser, dto: ImportLeaveBalancesDto) {
+    const preview = await this.previewBalanceImport(dto);
+    if (!preview.canImport) {
+      throw new BadRequestException({
+        message: 'Le fichier contient des lignes invalides. Corrigez-les avant de confirmer l’import.',
+        preview,
+      });
+    }
+
+    const rows = preview.rows.map((row) => ({
+      employeeId: row.employeeId,
+      acquiredDays: row.acquiredDays,
+      takenDays: row.takenDays,
+      balanceDays: row.balanceDays,
+    })) as NormalizedBalanceImportRow[];
+    const periodStart = await this.settingsService.getString('REFERENCE_PERIOD_START', '06-01');
+    const currentFrame = currentReferencePeriod(this.martiniqueDateString(new Date()), periodStart);
+    const { startYear: currentStartYear } = parseReferencePeriod(currentFrame);
+    const previousFrame = `${currentStartYear - 1}-${currentStartYear}`;
+
+    await this.dataSource.transaction(async (manager) => {
+      for (const row of rows) {
+        const repository = manager.getRepository(LeaveBalance);
+        const allBalances = await repository.find({ where: { employeeId: row.employeeId } });
+        const mapped = allBalances.filter(
+          (balance) => counterReferencePeriod(balance.referencePeriod, balance.counterType) === dto.referencePeriod,
+        );
+        const oldState = mapped.map((balance) => ({
+          id: balance.id,
+          referencePeriod: balance.referencePeriod,
+          counterType: balance.counterType,
+          acquiredDays: balance.acquiredDays,
+          consumedDays: balance.consumedDays,
+          availableDays: balance.availableDays,
+        }));
+
+        for (const balance of mapped) {
+          balance.acquiredDays = 0;
+          balance.consumedDays = 0;
+          balance.availableDays = 0;
+          balance.reservedDays = 0;
+          await repository.save(balance);
+        }
+
+        const canonical = await this.findOrCreateBalanceForUpdate(
+          manager,
+          row.employeeId,
+          dto.referencePeriod,
+          LeaveBalanceCounterType.N,
+        );
+        let operational = canonical;
+
+        if (dto.referencePeriod === previousFrame) {
+          operational = await this.findOrCreateBalanceForUpdate(
+            manager,
+            row.employeeId,
+            currentFrame,
+            LeaveBalanceCounterType.N_MINUS_1,
+          );
+          canonical.acquiredDays = row.acquiredDays;
+          canonical.consumedDays = 0;
+          canonical.availableDays = 0;
+          canonical.reservedDays = 0;
+          await repository.save(canonical);
+        }
+
+        const balanceBefore = this.round(operational.availableDays);
+        operational.acquiredDays = row.acquiredDays;
+        operational.consumedDays = row.takenDays;
+        operational.availableDays = row.balanceDays;
+        operational.reservedDays = 0;
+        await repository.save(operational);
+
+        const delta = this.round(row.balanceDays - balanceBefore);
+        await this.createMovement(manager, {
+          balance: operational,
+          movementType: delta < 0
+            ? BalanceMovementType.CORRECTION_NEGATIVE
+            : BalanceMovementType.CORRECTION_POSITIVE,
+          days: Math.abs(delta),
+          balanceBefore,
+          balanceAfter: row.balanceDays,
+          actorId: authenticatedUser.id,
+          leaveRequestId: null,
+          reason: `IMPORT_SOLDE|${dto.referencePeriod}|Acquis=${row.acquiredDays}|Pris=${row.takenDays}|Solde=${row.balanceDays}`,
+        });
+
+        await this.auditService.record({
+          actorId: authenticatedUser.id,
+          action: 'RH_BALANCE_IMPORTED',
+          resourceType: 'LEAVE_BALANCE',
+          resourceId: operational.id,
+          oldValue: { referencePeriod: dto.referencePeriod, balances: oldState },
+          newValue: {
+            employeeId: row.employeeId,
+            referencePeriod: dto.referencePeriod,
+            acquiredDays: row.acquiredDays,
+            takenDays: row.takenDays,
+            balanceDays: row.balanceDays,
+          },
+        }, manager);
+      }
+    });
+
+    return {
+      referencePeriod: dto.referencePeriod,
+      importedCount: rows.length,
+      rows: await Promise.all(rows.map(async (row) => ({
+        employeeId: row.employeeId,
+        summaries: await this.getEmployeePeriodSummaries(row.employeeId),
+      }))),
+    };
+  }
+
+  async getEmployeeBalanceProjection(employeeId: number, query: LeaveBalanceProjectionQueryDto) {
+    await this.findEligibleEmployee(employeeId, false);
+    const today = this.martiniqueDateString(new Date());
+    if (query.startDate < today) {
+      throw new BadRequestException('La projection ne peut pas cibler une date passée.');
+    }
+    const periodStart = await this.settingsService.getString('REFERENCE_PERIOD_START', '06-01');
+    const monthlyRate = await this.settingsService.getNumber('MONTHLY_ACCRUAL_RATE', 2.5);
+    const currentFrame = currentReferencePeriod(today, periodStart);
+    const balances = await this.leaveBalanceRepository.find({ where: { employeeId } });
+    const nMinus1 = balances.find(
+      (balance) => balance.referencePeriod === currentFrame && balance.counterType === LeaveBalanceCounterType.N_MINUS_1,
+    );
+    const n = balances.find(
+      (balance) => balance.referencePeriod === currentFrame && balance.counterType === LeaveBalanceCounterType.N,
+    );
+    const futureNByPeriod = Object.fromEntries(
+      balances
+        .filter((balance) => balance.counterType === LeaveBalanceCounterType.N && balance.referencePeriod > currentFrame)
+        .map((balance) => [balance.referencePeriod, Number(balance.availableDays || 0)]),
+    );
+
+    const requests = await this.dataSource.getRepository(LeaveRequest).find({
+      where: {
+        employeeId,
+        status: In([LeaveRequestStatus.VALIDEE, LeaveRequestStatus.EN_ATTENTE_VALIDATION]),
+      },
+      relations: { leaveType: true },
+    });
+    const commitments = requests
+      .filter((request) =>
+        request.leaveType?.deductsPaidLeaveBalance &&
+        request.balanceProcessingStatus !== 'DEFINITIF' &&
+        request.id !== query.excludeRequestId &&
+        request.startDate >= today &&
+        request.startDate < query.startDate,
+      )
+      .map((request) => ({ startDate: request.startDate, days: request.deductedDays }));
+
+    return projectLeaveAtDate({
+      today,
+      targetDate: query.startDate,
+      periodStartMonthDay: periodStart,
+      monthlyRate,
+      currentFrame,
+      nMinus1Days: Number(nMinus1?.availableDays ?? 0),
+      nDays: Number(n?.availableDays ?? 0),
+      commitments,
+      requestedDays: query.days,
+      futureNByPeriod,
     });
   }
 
@@ -1097,6 +1381,142 @@ export class LeaveBalancesService {
     };
   }
 
+  async applyPaidLeaveForRequest(
+    manager: EntityManager,
+    data: {
+      employeeId: number;
+      leaveRequestId: number;
+      actorId: number | null;
+      expectedDays: number;
+      referencePeriod: string;
+    },
+  ): Promise<{
+    processedDays: number;
+    realBalanceAfter: number;
+    allocations: Array<{
+      leaveBalanceId: number;
+      referencePeriod: string;
+      counterType: LeaveBalanceCounterType;
+      days: number;
+    }>;
+  }> {
+    this.validateReferencePeriod(data.referencePeriod);
+    const expectedDays = this.validatePositiveDays(data.expectedDays);
+
+    const existingMovements = await manager.getRepository(BalanceMovement).find({
+      where: {
+        leaveRequestId: data.leaveRequestId,
+        movementType: BalanceMovementType.DEDUCTION,
+      },
+    });
+
+    if (existingMovements.length > 0) {
+      const processedDays = this.round(
+        existingMovements.reduce((total, movement) => total + movement.days, 0),
+      );
+      const balances = await manager.getRepository(LeaveBalance).find({
+        where: { employeeId: data.employeeId, referencePeriod: data.referencePeriod },
+      });
+      return {
+        processedDays,
+        realBalanceAfter: this.round(
+          balances.reduce((total, balance) => total + balance.availableDays, 0),
+        ),
+        allocations: existingMovements.map((movement) => {
+          const balance = balances.find((item) => item.id === movement.leaveBalanceId);
+          return {
+            leaveBalanceId: movement.leaveBalanceId,
+            referencePeriod: balance?.referencePeriod ?? data.referencePeriod,
+            counterType: balance?.counterType ?? LeaveBalanceCounterType.N,
+            days: this.round(movement.days),
+          };
+        }),
+      };
+    }
+
+    const nMinus1 = await this.findOrCreateBalanceForUpdate(
+      manager,
+      data.employeeId,
+      data.referencePeriod,
+      LeaveBalanceCounterType.N_MINUS_1,
+    );
+    const n = await this.findOrCreateBalanceForUpdate(
+      manager,
+      data.employeeId,
+      data.referencePeriod,
+      LeaveBalanceCounterType.N,
+    );
+
+    const allocation = allocatePaidLeave(
+      expectedDays,
+      [
+        {
+          id: nMinus1.id,
+          referencePeriod: nMinus1.referencePeriod,
+          availableDays: nMinus1.availableDays,
+        },
+      ],
+      {
+        id: n.id,
+        referencePeriod: n.referencePeriod,
+        availableDays: n.availableDays,
+      },
+    );
+
+    const balancesById = new Map<number, LeaveBalance>([
+      [nMinus1.id, nMinus1],
+      [n.id, n],
+    ]);
+    const applied: Array<{
+      leaveBalanceId: number;
+      referencePeriod: string;
+      counterType: LeaveBalanceCounterType;
+      days: number;
+    }> = [];
+
+    for (const item of allocation.allocations) {
+      const balance = balancesById.get(item.leaveBalanceId);
+      if (!balance) {
+        throw new ConflictException('Le compteur prévu pour l’imputation est introuvable.');
+      }
+
+      const days = this.round(item.days);
+      const balanceBefore = this.round(balance.availableDays);
+      balance.consumedDays = this.round(balance.consumedDays + days);
+      balance.availableDays = this.round(balance.availableDays - days);
+      await manager.getRepository(LeaveBalance).save(balance);
+
+      await this.createMovement(manager, {
+        balance,
+        movementType: BalanceMovementType.DEDUCTION,
+        days,
+        balanceBefore,
+        balanceAfter: balance.availableDays,
+        actorId: data.actorId,
+        leaveRequestId: data.leaveRequestId,
+        reason:
+          balance.counterType === LeaveBalanceCounterType.N_MINUS_1
+            ? 'Imputation automatique sur N-1 au début effectif du congé.'
+            : balance.availableDays < 0
+              ? 'Imputation automatique sur N avec prise de congés par anticipation.'
+              : 'Imputation automatique sur N au début effectif du congé.',
+      });
+
+      applied.push({
+        leaveBalanceId: balance.id,
+        referencePeriod: balance.referencePeriod,
+        counterType: balance.counterType,
+        days,
+      });
+    }
+
+    return {
+      processedDays: expectedDays,
+      realBalanceAfter: this.round(nMinus1.availableDays + n.availableDays),
+      allocations: applied,
+    };
+  }
+
   async recreditPaidLeaveForCancelledRequest(
     manager: EntityManager,
     data: {
@@ -1165,6 +1585,8 @@ export class LeaveBalancesService {
       );
     }
 
+    let recreditedBalanceAfter = 0;
+
     for (const allocation of allocations) {
       const balance = await this.findBalanceForUpdate(
         manager,
@@ -1193,6 +1615,9 @@ export class LeaveBalancesService {
       );
 
       await manager.getRepository(LeaveBalance).save(balance);
+      recreditedBalanceAfter = this.round(
+        recreditedBalanceAfter + balance.availableDays,
+      );
 
       await this.createMovement(manager, {
         balance,
@@ -1207,21 +1632,10 @@ export class LeaveBalancesService {
       });
     }
 
-    const balances = await manager.getRepository(LeaveBalance).find({
-      where: {
-        employeeId: data.employeeId,
-        counterType: LeaveBalanceCounterType.N_MINUS_1,
-      },
-    });
-
     return {
       recreditedDays: totalToRecredit,
-      realBalanceAfter: this.round(
-        balances.reduce(
-          (total, balance) => total + balance.availableDays,
-          0,
-        ),
-      ),
+      // Le retour reflète les compteurs réellement recrédités, y compris N.
+      realBalanceAfter: this.round(recreditedBalanceAfter),
     };
   }
 
@@ -1304,6 +1718,43 @@ export class LeaveBalancesService {
     });
 
     return repository.save(movement);
+  }
+
+  private async findOrCreateBalanceForUpdate(
+    manager: EntityManager,
+    employeeId: number,
+    referencePeriod: string,
+    counterType: LeaveBalanceCounterType,
+  ): Promise<LeaveBalance> {
+    const repository = manager.getRepository(LeaveBalance);
+    let balance = await repository
+      .createQueryBuilder('balance')
+      .setLock('pessimistic_write')
+      .where('balance.employeeId = :employeeId', { employeeId })
+      .andWhere('balance.referencePeriod = :referencePeriod', { referencePeriod })
+      .andWhere('balance.counterType = :counterType', { counterType })
+      .getOne();
+
+    if (!balance) {
+      balance = await repository.save(
+        repository.create({
+          employeeId,
+          referencePeriod,
+          counterType,
+          acquiredDays: 0,
+          reservedDays: 0,
+          consumedDays: 0,
+          availableDays: 0,
+        }),
+      );
+      balance = await repository
+        .createQueryBuilder('balance')
+        .setLock('pessimistic_write')
+        .where('balance.id = :balanceId', { balanceId: balance.id })
+        .getOneOrFail();
+    }
+
+    return balance;
   }
 
   private async findBalanceForUpdate(
@@ -1462,6 +1913,15 @@ export class LeaveBalancesService {
       default:
         return 3;
     }
+  }
+
+  private martiniqueDateString(date: Date): string {
+    return new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Martinique',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(date);
   }
 
   private round(value: number): number {

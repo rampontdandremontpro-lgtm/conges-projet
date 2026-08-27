@@ -7,9 +7,10 @@ import { NextLeaveCard } from '@/components/collab/dashboard/NextLeaveCard'
 import { RecentRequestsCard } from '@/components/collab/dashboard/RecentRequestsCard'
 import { PlanLeaveCard } from '@/components/collab/dashboard/PlanLeaveCard'
 import { AlertsCard } from '@/components/collab/dashboard/AlertsCard'
-import { getMyLeaveBalances, getMyLeaveRequests, getPublicSettings } from '@/services/collab/dashboard'
+import { PracticalInfoCard } from '@/components/collab/dashboard/PracticalInfoCard'
+import { getMyLeavePeriodSummaries, getMyLeaveRequests, getPublicSettings } from '@/services/collab/dashboard'
 import { todayISO } from '@/utils/format'
-import { buildBalanceSummary } from '@/utils/balanceSummary'
+import { adjacentReferencePeriodOptions, currentReferencePeriod } from '@/utils/referencePeriods'
 
 import '@/styles/collab/dashboard/index.css'
 
@@ -27,10 +28,11 @@ export function DashboardCollaborateur() {
   const [balances, setBalances] = useState({ loading: true, error: false, data: [] })
   const [requests, setRequests] = useState({ loading: true, error: false, data: [] })
   const [settings, setSettings] = useState({ loading: true, error: false, data: null })
+  const [selectedPeriod, setSelectedPeriod] = useState(() => currentReferencePeriod())
 
   const loadBalances = useCallback(async () => {
     try {
-      const data = await getMyLeaveBalances()
+      const data = await getMyLeavePeriodSummaries()
       setBalances({ loading: false, error: false, data })
     } catch {
       setBalances({ loading: false, error: true, data: [] })
@@ -93,10 +95,13 @@ export function DashboardCollaborateur() {
     }
   }, [])
 
-  const balanceSummary = buildBalanceSummary(balances.data)
+  const periodOptions = adjacentReferencePeriodOptions()
+  const balanceSummary = balances.data.find((item) => item.referencePeriod === selectedPeriod) ?? {
+    referencePeriod: selectedPeriod, acquiredDays: 0, takenDays: 0, balanceDays: 0, validatedDays: 0, pendingDays: 0,
+  }
   const nextLeave = computeNextLeave(requests.data)
   const recent = requests.data.slice(0, 4)
-  const availableDays = balanceSummary?.potentialDays ?? null
+  const availableDays = balanceSummary?.balanceDays ?? null
 
   return (
     <PageContainer className="dash-page">
@@ -107,9 +112,12 @@ export function DashboardCollaborateur() {
             loading={balances.loading}
             error={balances.error}
             onRetry={retryBalances}
-            actionLabel="Voir mon historique"
+            periodOptions={periodOptions}
+            selectedPeriod={selectedPeriod}
+            onPeriodChange={setSelectedPeriod}
+            actionLabel="Voir mes demandes"
             actionIcon="clock"
-            onAction={() => navigate('/app/history')}
+            onAction={() => navigate('/app/my-requests')}
           />
           <RecentRequestsCard
             requests={recent}
@@ -145,6 +153,7 @@ export function DashboardCollaborateur() {
             onRetryBalances={retryBalances}
             onRetryRequests={retryRequests}
           />
+          <PracticalInfoCard />
         </div>
       </div>
     </PageContainer>

@@ -57,7 +57,7 @@ export function NextLeaveCard({ nextLeave, loading, error, onRetry }) {
             <span className="next-leave__stat-label">Durée</span>
             <span className="next-leave__stat-value">
               <strong className="next-leave__stat-figure">{formatDays(nextLeave.deductedDays)}</strong>
-              <span className="next-leave__stat-unit">jours ouvrés</span>
+              <span className="next-leave__stat-unit">jours ouvrables</span>
             </span>
           </div>
         </div>

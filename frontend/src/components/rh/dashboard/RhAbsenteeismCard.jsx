@@ -40,7 +40,7 @@ export function RhAbsenteeismCard({ absenteeism, period = 'month', onPeriodChang
           <div className="rh-absenteeism-title-row">
             <h2 className="dash-card__title">Taux d&apos;absentéisme</h2>
             <StatisticInfoButton title="Taux d’absentéisme">
-              <p><strong>Calcul :</strong> jours d’absence enregistrée ÷ jours ouvrés disponibles × 100.</p>
+              <p><strong>Calcul :</strong> jours d’absence enregistrée ÷ jours ouvrables disponibles × 100.</p>
               <p>Les congés payés sont exclus. Le calcul porte sur les collaborateurs actifs concernés (hors Admin, RH et Directeur), tient compte de leur date d’entrée et exclut les week-ends ainsi que les jours fériés ou fermetures non décomptables.</p>
             </StatisticInfoButton>
           </div>

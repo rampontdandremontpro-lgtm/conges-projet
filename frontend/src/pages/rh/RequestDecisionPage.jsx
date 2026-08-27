@@ -14,6 +14,7 @@ import {
   refuseRhRequest,
   validateRhRequest,
 } from '@/services/rh/rhRequests'
+import { getRhBalanceProjection } from '@/services/rh/rhBalances'
 import { formatDateNumericFR, formatDays, formatRangeNumericFR } from '@/utils/format'
 
 import '@/styles/manager/requests/index.css'
@@ -61,7 +62,7 @@ export function RhRequestDecisionPage() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { user } = useAuth()
-  const [state, setState] = useState({ loading: true, error: null, request: null, availability: null })
+  const [state, setState] = useState({ loading: true, error: null, request: null, availability: null, projection: null })
   const [showSignature, setShowSignature] = useState(false)
   const [showRefusal, setShowRefusal] = useState(false)
   const [submitting, setSubmitting] = useState(false)
@@ -76,20 +77,33 @@ export function RhRequestDecisionPage() {
     try {
       const request = await getRhRequest(id)
       let availability = null
+      let projection = null
       if (request?.status === 'EN_ATTENTE_VALIDATION') {
         try {
           availability = await getRhRequestAvailability(id)
         } catch {
           availability = null
         }
+        if (request?.leaveType?.deductsPaidLeaveBalance) {
+          try {
+            projection = await getRhBalanceProjection(request.employeeId ?? request.employee?.id, {
+              startDate: request.startDate,
+              days: Number(request.deductedDays) || 0,
+              excludeRequestId: Number(request.id),
+            })
+          } catch {
+            projection = null
+          }
+        }
       }
-      setState({ loading: false, error: null, request, availability })
+      setState({ loading: false, error: null, request, availability, projection })
     } catch (error) {
       setState({
         loading: false,
         error: error.response?.data?.message || error.message || 'Impossible de charger cette demande.',
         request: null,
         availability: null,
+        projection: null,
       })
     }
   }, [id])
@@ -190,6 +204,7 @@ export function RhRequestDecisionPage() {
 
   const request = state.request
   const availability = state.availability
+  const projection = state.projection
   const overlapCount = availability?.overlaps?.length ?? 0
   const status = requestStatusMeta(request)
   const isOwnRequest = String(request.employee?.id ?? '') === String(user?.id ?? '')
@@ -243,6 +258,25 @@ export function RhRequestDecisionPage() {
               <div><small>Dernier jour</small><strong>{periodLabel(request.endPeriod)}</strong></div>
             </div>
           </section>
+
+          {projection && request.leaveType?.deductsPaidLeaveBalance && (
+            <section className={`manager-request-detail-card rh-balance-projection${projection.anticipatedDays > 0 ? ' is-negative' : ''}`}>
+              <div className="manager-request-detail-card__heading">
+                <span className="manager-request-detail-card__icon"><Icon name="wallet" size={18} /></span>
+                <div><h3>Projection des droits</h3><p>Répartition automatique estimée à la date du congé.</p></div>
+              </div>
+              <div className="rh-balance-projection__grid">
+                <div><small>N-1 · {String(projection.nMinus1Period).replace('-', '/')}</small><strong>{formatDays(projection.nMinus1Used)} j utilisés</strong><span>Projection avant demande : {formatDays(projection.nMinus1Before)} j</span></div>
+                <div><small>N · {String(projection.nPeriod).replace('-', '/')}</small><strong>{formatDays(projection.nUsed)} j utilisés</strong><span>Projection avant demande : {formatDays(projection.nBefore)} j</span></div>
+                <div><small>Solde N après demande</small><strong>{formatDays(projection.nBalanceAfter)} j</strong><span>Répartition recalculée lors de la consolidation</span></div>
+              </div>
+              {projection.anticipatedDays > 0 ? (
+                <div className="rh-balance-projection__warning"><Icon name="alert" size={17} /><span>Cette validation entraînerait probablement une prise de congés par anticipation de <strong>{formatDays(projection.anticipatedDays)} jour(s)</strong>. La validation finale RH vaut autorisation de ce passage en négatif.</span></div>
+              ) : (
+                <div className="rh-balance-projection__ok"><Icon name="check" size={16} /> Couverture prévisionnelle suffisante à la date du congé.</div>
+              )}
+            </section>
+          )}
 
           <section className="manager-request-detail-card">
             <div className="manager-request-detail-card__heading">

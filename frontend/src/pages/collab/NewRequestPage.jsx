@@ -20,11 +20,11 @@ import {
   errorMessage,
   nextMonthOf,
   prevMonthOf,
-  selectPrimaryBalance,
 } from '@/utils/newRequest'
 import { useNewRequestResources } from '@/hooks/collab/useNewRequestResources'
 import { getLeaveRequest } from '@/services/collab/requestDetails'
 import { notifyAppDataChanged } from '@/utils/dataRefresh'
+import { referencePeriodForIsoDate } from '@/utils/referencePeriods'
 
 import '@/styles/collab/new-request/index.css'
 
@@ -140,7 +140,8 @@ export function NewRequest() {
     }
   }, [editId, isEditMode, navigate])
 
-  const balance = selectPrimaryBalance(resources.balances)
+  const requestReferencePeriod = referencePeriodForIsoDate(selection.startDate)
+  const periodSummary = resources.periodSummaries.find((item) => item.referencePeriod === requestReferencePeriod) ?? null
   const selectedType = resources.leaveTypes.find(
     (type) => type.id === selection.leaveTypeId,
   )
@@ -351,9 +352,7 @@ export function NewRequest() {
     }
   }
 
-  const hasCompleteRange = Boolean(
-    selection.startDate && selection.endDate && selection.startDate !== selection.endDate,
-  )
+  const hasCompleteRange = Boolean(selection.startDate && selection.endDate)
 
   const requestLabel =
     selection.startDate && selection.endDate && selectedType
@@ -433,10 +432,24 @@ export function NewRequest() {
                 startPeriod={selection.startPeriod}
                 endPeriod={selection.endPeriod}
                 onStartChange={(startPeriod) =>
-                  setSelection((prev) => ({ ...prev, startPeriod }))
+                  setSelection((prev) => ({
+                    ...prev,
+                    startPeriod,
+                    endPeriod:
+                      prev.startDate === prev.endDate && startPeriod === 'APRES_MIDI'
+                        ? 'APRES_MIDI'
+                        : prev.endPeriod,
+                  }))
                 }
                 onEndChange={(endPeriod) =>
-                  setSelection((prev) => ({ ...prev, endPeriod }))
+                  setSelection((prev) => ({
+                    ...prev,
+                    endPeriod,
+                    startPeriod:
+                      prev.startDate === prev.endDate && endPeriod === 'MATIN'
+                        ? 'MATIN'
+                        : prev.startPeriod,
+                  }))
                 }
               />
             )}
@@ -446,7 +459,8 @@ export function NewRequest() {
             <RecapCard
               selection={selection}
               leaveType={selectedType}
-              balance={balance}
+              periodSummary={periodSummary}
+              requestReferencePeriod={requestReferencePeriod}
               settings={resources.settings}
               seasonal={resources.seasonal}
               holidays={resources.holidays}

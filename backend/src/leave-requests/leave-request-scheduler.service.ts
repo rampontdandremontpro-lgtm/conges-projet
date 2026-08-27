@@ -4,11 +4,12 @@ import {
   OnApplicationBootstrap,
   OnApplicationShutdown,
 } from '@nestjs/common';
-import { DataSource } from 'typeorm';
+import { DataSource, In } from 'typeorm';
 
 import { AuditAction } from '../audit/audit-log.entity';
 import { AuditService } from '../audit/audit.service';
 import { BalanceReminderService, type BalanceReminderRunResult } from '../leave-balances/balance-reminder.service';
+import { currentReferencePeriod } from '../leave-balances/reference-period.util';
 import { LeaveBalancesService } from '../leave-balances/leave-balances.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PresenceService } from '../presence/presence.service';
@@ -19,6 +20,7 @@ import {
   getNextPeriodSwitch,
 } from './leave-request-period.util';
 import {
+  BalanceProcessingStatus,
   LeaveRequest,
   LeaveRequestStatus,
 } from './leave-request.entity';
@@ -27,6 +29,7 @@ export interface MaintenanceRunResult {
   runAt: string;
   remindersCreated: number;
   expiredRequests: number;
+  consolidatedRequests: number;
   notificationsReevaluated: number;
   presenceStatusesRefreshed: number;
   balanceReminders: BalanceReminderRunResult | null;
@@ -158,6 +161,7 @@ export class LeaveRequestSchedulerService
       runAt: new Date().toISOString(),
       remindersCreated: 0,
       expiredRequests: 0,
+      consolidatedRequests: 0,
       notificationsReevaluated: 0,
       presenceStatusesRefreshed: 0,
       balanceReminders: null,
@@ -219,6 +223,11 @@ export class LeaveRequestSchedulerService
 
       const today = getMartiniqueDateString(new Date());
 
+      result.consolidatedRequests = await this.consolidateValidatedLeaves(
+        today,
+        result,
+      );
+
       for (const request of requests) {
         try {
           const daysBeforeStart = this.daysBetween(
@@ -267,6 +276,124 @@ export class LeaveRequestSchedulerService
     await this.runBalanceReminders(result);
 
     return result;
+  }
+
+  private async consolidateValidatedLeaves(
+    today: string,
+    result: MaintenanceRunResult,
+  ): Promise<number> {
+    const requests = await this.dataSource.getRepository(LeaveRequest).find({
+      where: {
+        status: LeaveRequestStatus.VALIDEE,
+        balanceProcessingStatus: In([
+          BalanceProcessingStatus.CONGE_PREVISIONNEL,
+          BalanceProcessingStatus.A_CONSOLIDER,
+          BalanceProcessingStatus.DEMANDE_ACTUELLE,
+        ]),
+      },
+      relations: {
+        employee: true,
+        leaveType: true,
+        service: true,
+      },
+      order: { startDate: 'ASC' },
+    });
+
+    let consolidated = 0;
+    for (const request of requests) {
+      if (!request.startDate || request.startDate > today) {
+        continue;
+      }
+
+      try {
+        await this.dataSource.transaction(async (manager) => {
+          const repository = manager.getRepository(LeaveRequest);
+          const locked = await repository
+            .createQueryBuilder('request')
+            .setLock('pessimistic_write')
+            .leftJoinAndSelect('request.leaveType', 'leaveType')
+            .where('request.id = :requestId', { requestId: request.id })
+            .getOne();
+
+          if (
+            !locked ||
+            locked.status !== LeaveRequestStatus.VALIDEE ||
+            locked.balanceProcessingStatus === BalanceProcessingStatus.DEFINITIF
+          ) {
+            return;
+          }
+
+          let realBalanceAfter = locked.realBalanceAfter;
+          let allocations: unknown[] = [];
+
+          if (locked.leaveType.deductsPaidLeaveBalance) {
+            const startMonthDay = await this.settingsService.getString(
+              'REFERENCE_PERIOD_START',
+              '06-01',
+            );
+            const referencePeriod = currentReferencePeriod(
+              locked.startDate,
+              startMonthDay,
+            );
+            const applied = await this.leaveBalancesService.applyPaidLeaveForRequest(
+              manager,
+              {
+                employeeId: locked.employeeId,
+                leaveRequestId: locked.id,
+                actorId: locked.finalDeciderId,
+                expectedDays: locked.deductedDays,
+                referencePeriod,
+              },
+            );
+            realBalanceAfter = applied.realBalanceAfter;
+            allocations = applied.allocations;
+          }
+
+          locked.balanceProcessingStatus = BalanceProcessingStatus.DEFINITIF;
+          locked.realBalanceAfter = realBalanceAfter;
+          locked.version += 1;
+          await repository.save(locked);
+
+          await this.auditService.record(
+            {
+              actorId: null,
+              action: 'LEAVE_BALANCE_CONSOLIDATED',
+              resourceType: 'LEAVE_REQUESTS',
+              resourceId: locked.id,
+              newValue: {
+                consolidatedAt: new Date().toISOString(),
+                realBalanceAfter,
+                allocations,
+              },
+            },
+            manager,
+          );
+
+          await this.notificationsService.create(
+            {
+              userId: locked.employeeId,
+              type: 'LEAVE_BALANCE_CONSOLIDATED',
+              title: 'Congé imputé sur votre compteur',
+              message:
+                realBalanceAfter !== null && realBalanceAfter < 0
+                  ? `Votre congé en cours a été imputé. Le solde de la période est désormais négatif (${realBalanceAfter} jour(s)) et sera compensé par les acquisitions suivantes.`
+                  : 'Votre congé en cours a été imputé sur les compteurs correspondant à vos droits.',
+              leaveRequestId: locked.id,
+            },
+            manager,
+          );
+        });
+        consolidated += 1;
+      } catch (error) {
+        result.errors.push(
+          `Consolidation demande ${request.id} : ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+        );
+      }
+    }
+
+    return consolidated;
   }
 
   private async runBalanceReminders(

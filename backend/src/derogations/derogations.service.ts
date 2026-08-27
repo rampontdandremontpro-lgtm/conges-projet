@@ -21,10 +21,7 @@ import { AuditService } from '../audit/audit.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { SettingsService } from '../settings/settings.service';
 import { UserRole } from '../users/user.entity';
-import {
-  calculateDerogationExpiry,
-  evaluateSubmissionNotice,
-} from '../leave-requests/leave-request-notice.util';
+import { evaluateSubmissionNotice } from '../leave-requests/leave-request-notice.util';
 import {
   LeaveRequest,
   LeaveRequestStatus,
@@ -79,8 +76,8 @@ export class DerogationsService implements OnApplicationBootstrap, OnApplication
   private scheduleNextDeadlineSweep(): void {
     const now = new Date();
     const next = new Date(now);
-    // La Martinique reste en UTC-4 toute l’année : 16 h locale = 20 h UTC.
-    next.setUTCHours(20, 0, 0, 0);
+    // Nettoyage quotidien après minuit en Martinique (UTC-4 fixe).
+    next.setUTCHours(4, 5, 0, 0);
     if (next.getTime() <= now.getTime()) {
       next.setUTCDate(next.getUTCDate() + 1);
     }
@@ -92,7 +89,7 @@ export class DerogationsService implements OnApplicationBootstrap, OnApplication
       void this.expireOutdatedDerogations(new Date())
         .catch((error) => {
           this.logger.error(
-            'La clôture des dérogations à 16 h a échoué.',
+            'La clôture des dérogations dont le congé a déjà commencé a échoué.',
             error instanceof Error ? error.stack : undefined,
           );
         })
@@ -168,11 +165,7 @@ export class DerogationsService implements OnApplicationBootstrap, OnApplication
         }
 
         const requestedAt = new Date();
-        const expiresAt =
-          await this.calculateDerogationExpiryWithSettings(
-            leaveRequest.startDate,
-          );
-        this.ensureBeforeDecisionCutoff(requestedAt, expiresAt);
+        const expiresAt: Date | null = null;
 
         const derogation =
           existingDerogation ??
@@ -258,10 +251,7 @@ export class DerogationsService implements OnApplicationBootstrap, OnApplication
       derogation.requestedStartDate = leaveRequest.startDate;
       derogation.requestedEndDate = leaveRequest.endDate;
       derogation.reason = dto.reason?.trim() ?? '';
-      derogation.expiresAt = await this.calculateDerogationExpiryWithSettings(
-        leaveRequest.startDate,
-      );
-      this.ensureBeforeDecisionCutoff(new Date(), derogation.expiresAt);
+      derogation.expiresAt = null;
 
       await manager.getRepository(Derogation).save(derogation);
     });
@@ -311,10 +301,7 @@ export class DerogationsService implements OnApplicationBootstrap, OnApplication
       derogation.requestedEndDate = leaveRequest.endDate;
       derogation.status = DerogationStatus.EN_ATTENTE_RH;
       derogation.requestedAt = requestedAt;
-      derogation.expiresAt = await this.calculateDerogationExpiryWithSettings(
-        leaveRequest.startDate,
-      );
-      this.ensureBeforeDecisionCutoff(requestedAt, derogation.expiresAt);
+      derogation.expiresAt = null;
 
       await manager.getRepository(Derogation).save(derogation);
 
@@ -714,7 +701,7 @@ export class DerogationsService implements OnApplicationBootstrap, OnApplication
     if (expiredDuringDecision) {
       await this.expireOutdatedDerogations();
       throw new BadRequestException(
-        'Le délai de traitement de cette dérogation est dépassé. La limite était fixée à 16 h (heure de Martinique).',
+        'Cette dérogation ne peut plus être traitée car la date de début du congé est dépassée.',
       );
     }
 
@@ -901,10 +888,7 @@ export class DerogationsService implements OnApplicationBootstrap, OnApplication
     derogation.decidedByRhId = null;
     derogation.decisionComment = null;
     derogation.decidedAt = null;
-    derogation.expiresAt = await this.calculateDerogationExpiryWithSettings(
-      data.leaveRequest.startDate,
-    );
-    this.ensureBeforeDecisionCutoff(new Date(), derogation.expiresAt);
+    derogation.expiresAt = null;
 
     await repository.save(derogation);
 
@@ -978,27 +962,6 @@ export class DerogationsService implements OnApplicationBootstrap, OnApplication
     );
   }
 
-  private async calculateDerogationExpiryWithSettings(
-    startDate: string,
-  ): Promise<Date> {
-    const rules = await this.settingsService.getSubmissionRules();
-    return calculateDerogationExpiry(
-      startDate,
-      rules.derogationLastAllowedDay,
-    );
-  }
-
-  private ensureBeforeDecisionCutoff(
-    now: Date,
-    cutoff: Date | null,
-  ): void {
-    if (cutoff && now.getTime() >= cutoff.getTime()) {
-      throw new BadRequestException(
-        'Le délai de traitement de la dérogation est terminé. La limite est fixée à J-3 à 16 h (heure de Martinique).',
-      );
-    }
-  }
-
   private validateDerogationWindow(
     notice: ReturnType<typeof evaluateSubmissionNotice>,
   ): void {
@@ -1008,21 +971,9 @@ export class DerogationsService implements OnApplicationBootstrap, OnApplication
       );
     }
 
-    if (notice.daysBeforeStart < 3) {
-      throw new BadRequestException(
-        'Une dérogation ne peut plus être demandée après J-3 à 16 h (heure de Martinique).',
-      );
-    }
-
     if (notice.isNoticeCompliant) {
       throw new BadRequestException(
         'Le délai de prévenance est respecté. Aucune dérogation n’est nécessaire.',
-      );
-    }
-
-    if (!notice.isDerogationWindow) {
-      throw new BadRequestException(
-        `Les dérogations sont autorisées uniquement entre J-29 et J-3, avec une limite à 16 h le dernier jour. Cette demande exige normalement un délai de ${notice.requiredNoticeDays} jours.`,
       );
     }
   }
@@ -1113,10 +1064,16 @@ export class DerogationsService implements OnApplicationBootstrap, OnApplication
   }
 
   private isExpired(derogation: Derogation): boolean {
-    return Boolean(
-      derogation.expiresAt &&
-        derogation.expiresAt.getTime() <= Date.now(),
-    );
+    return derogation.requestedStartDate < this.martiniqueDateString(new Date());
+  }
+
+  private martiniqueDateString(value: Date): string {
+    return new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Martinique',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(value);
   }
 
   async expireOutdatedDerogations(now = new Date()): Promise<number> {
@@ -1128,9 +1085,10 @@ export class DerogationsService implements OnApplicationBootstrap, OnApplication
         statuses: EXPIRABLE_DEROGATION_STATUSES,
       })
       .andWhere('derogation.usedAt IS NULL')
-      .andWhere('derogation.expiresAt IS NOT NULL')
-      .andWhere('derogation.expiresAt <= :now', { now })
-      .orderBy('derogation.expiresAt', 'ASC')
+      .andWhere('derogation.requestedStartDate < :today', {
+        today: this.martiniqueDateString(now),
+      })
+      .orderBy('derogation.requestedStartDate', 'ASC')
       .getMany();
 
     let expired = 0;
@@ -1148,8 +1106,7 @@ export class DerogationsService implements OnApplicationBootstrap, OnApplication
           !derogation ||
           !EXPIRABLE_DEROGATION_STATUSES.includes(derogation.status) ||
           derogation.usedAt !== null ||
-          !derogation.expiresAt ||
-          derogation.expiresAt.getTime() > now.getTime()
+          derogation.requestedStartDate >= this.martiniqueDateString(now)
         ) {
           return false;
         }
@@ -1168,8 +1125,8 @@ export class DerogationsService implements OnApplicationBootstrap, OnApplication
           {
             userId: derogation.employeeId,
             type: 'DEROGATION_DEADLINE_EXPIRED',
-            title: 'Délai de traitement de la dérogation dépassé',
-            message: `Le délai de traitement de votre dérogation pour la période du ${period} s’est terminé à 16 h (heure de Martinique).`,
+            title: 'Dérogation expirée',
+            message: `Votre dérogation pour la période du ${period} a expiré car la date de début du congé est dépassée.`,
             leaveRequestId,
             derogationId: derogation.id,
           },
@@ -1180,8 +1137,8 @@ export class DerogationsService implements OnApplicationBootstrap, OnApplication
           [directorStage ? UserRole.DIRECTEUR : UserRole.RH],
           {
             type: 'DEROGATION_DEADLINE_EXPIRED_ACTION',
-            title: 'Délai de dérogation dépassé',
-            message: `La dérogation n°${derogation.id} de ${employeeName} n’a pas été traitée avant l’échéance de 16 h.`,
+            title: 'Dérogation expirée',
+            message: `La dérogation n°${derogation.id} de ${employeeName} n’a pas été traitée avant le début du congé.`,
             leaveRequestId,
             derogationId: derogation.id,
           },
@@ -1193,8 +1150,8 @@ export class DerogationsService implements OnApplicationBootstrap, OnApplication
             {
               userId: derogation.decidedByRhId,
               type: 'DEROGATION_DEADLINE_EXPIRED_INFO',
-              title: 'Dérogation clôturée à l’échéance',
-              message: `La dérogation n°${derogation.id} de ${employeeName}, transmise au Directeur, a atteint son échéance à 16 h sans décision finale.`,
+              title: 'Dérogation expirée',
+              message: `La dérogation n°${derogation.id} de ${employeeName}, transmise au Directeur, a expiré au début du congé sans décision finale.`,
               leaveRequestId,
               derogationId: derogation.id,
             },

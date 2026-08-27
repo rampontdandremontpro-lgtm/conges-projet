@@ -20,7 +20,7 @@ function formatDate(value) {
 
 function reminderLabel(item) {
   if (item.kind === 'derogation') {
-    return 'À traiter avant J-3 à 16 h'
+    return 'À traiter avant le début du congé'
   }
   if (item.validationLate) {
     return `Validation en retard depuis ${item.pendingDays} jour${item.pendingDays > 1 ? 's' : ''}`

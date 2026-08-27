@@ -11,8 +11,9 @@ import { Toast } from '@/components/ui/Toast'
 import { useNewRequestResources } from '@/hooks/collab/useNewRequestResources'
 import { createLeaveRequest } from '@/services/leaveRequests'
 import { getRhEligibleCollaborators } from '@/services/rh/rhPrepareRequest'
-import { currentMonth, errorMessage, nextMonthOf, prevMonthOf, selectPrimaryBalance } from '@/utils/newRequest'
+import { currentMonth, errorMessage, nextMonthOf, prevMonthOf } from '@/utils/newRequest'
 import { notifyAppDataChanged } from '@/utils/dataRefresh'
+import { referencePeriodForIsoDate } from '@/utils/referencePeriods'
 
 import '@/styles/collab/new-request/index.css'
 import '@/styles/rh/prepare-request.css'
@@ -68,7 +69,8 @@ export function RhPrepareRequestPage() {
     [collaborators, employeeId],
   )
   const selectedType = resources.leaveTypes.find((type) => type.id === selection.leaveTypeId)
-  const balance = selectPrimaryBalance(resources.balances)
+  const requestReferencePeriod = referencePeriodForIsoDate(selection.startDate)
+  const periodSummary = resources.periodSummaries.find((item) => item.referencePeriod === requestReferencePeriod) ?? null
   const displayLeaveTypes = useMemo(
     () => [...resources.leaveTypes].sort((a, b) =>
       a.deductsPaidLeaveBalance === b.deductsPaidLeaveBalance
@@ -252,7 +254,8 @@ export function RhPrepareRequestPage() {
             <RecapCard
               selection={selection}
               leaveType={selectedType}
-              balance={balance}
+              periodSummary={periodSummary}
+              requestReferencePeriod={requestReferencePeriod}
               settings={resources.settings}
               seasonal={resources.seasonal}
               holidays={resources.holidays}

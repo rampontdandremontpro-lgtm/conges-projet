@@ -485,8 +485,8 @@ export function DirectorStatisticsPage({
               label="Taux de présence"
               info={(
                 <StatisticInfoButton title="Taux de présence">
-                  <p><strong>Calcul :</strong> (jours ouvrés disponibles − jours d’indisponibilité) ÷ jours ouvrés disponibles × 100.</p>
-                  <p>Les jours ouvrés disponibles tiennent compte des collaborateurs actifs concernés, de leur date d’entrée, des week-ends et des jours fériés/fermetures non décomptables. Les rôles Admin, RH et Directeur sont exclus.</p>
+                  <p><strong>Calcul :</strong> (jours ouvrables disponibles − jours d’indisponibilité) ÷ jours ouvrables disponibles × 100.</p>
+                  <p>Les jours ouvrables disponibles tiennent compte des collaborateurs actifs concernés, de leur date d’entrée, des week-ends et des jours fériés/fermetures non décomptables. Les rôles Admin, RH et Directeur sont exclus.</p>
                   <p>Les congés validés et les absences enregistrées sont comptés sur la période, sans doubler une même journée pour un même collaborateur. Les filtres sélectionnés sont appliqués.</p>
                 </StatisticInfoButton>
               )}
@@ -508,7 +508,7 @@ export function DirectorStatisticsPage({
                     <h2>Présence par service</h2>
                     <StatisticInfoButton title="Présence par service">
                       <p><strong>Calcul :</strong> le taux de présence est calculé service par service avec la même formule que le taux global.</p>
-                      <p>Il compare les jours ouvrés disponibles des collaborateurs actifs du service aux jours de congé validé et d’absence enregistrée compris dans la période, en tenant compte des jours non travaillés.</p>
+                      <p>Il compare les jours ouvrables disponibles des collaborateurs actifs du service aux jours de congé validé et d’absence enregistrée compris dans la période, en tenant compte des jours non travaillés.</p>
                     </StatisticInfoButton>
                   </div>
                   <p>Taux de présence sur la période sélectionnée</p>

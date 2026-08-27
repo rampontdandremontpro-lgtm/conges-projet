@@ -15,7 +15,6 @@ const DEFAULT_RULES: SubmissionRules = {
   normalDeadlineDays: 30,
   specialDeadlineDays: 60,
   specialDurationThresholdDays: 21,
-  derogationLastAllowedDay: 3,
   summerPeriodStart: '05-01',
   summerPeriodEnd: '10-31',
 };
@@ -57,22 +56,9 @@ export function evaluateSubmissionNotice(
     overlapsSummerPeriod,
     isNoticeCompliant: daysBeforeStart >= requiredNoticeDays,
     isDerogationWindow:
-      daysBeforeStart >= rules.derogationLastAllowedDay &&
-      daysBeforeStart < rules.normalDeadlineDays,
+      daysBeforeStart >= 0 &&
+      daysBeforeStart < requiredNoticeDays,
   };
-}
-
-export function calculateDerogationExpiry(
-  startDateValue: string,
-  derogationLastAllowedDay = 3,
-): Date {
-  const startDate = parseDate(startDateValue);
-  // Dernier délai de traitement : J-3 à 16 h en Martinique (UTC-4 fixe).
-  startDate.setUTCDate(
-    startDate.getUTCDate() - derogationLastAllowedDay,
-  );
-  startDate.setUTCHours(20, 0, 0, 0);
-  return startDate;
 }
 
 function overlapsConfiguredPeriod(

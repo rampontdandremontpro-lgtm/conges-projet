@@ -453,3 +453,12 @@
   font-size: 12px;
   line-height: 1.55;
 }
+
+.rh-balance-projection__grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin-top:14px; }
+.rh-balance-projection__grid > div { padding:13px; border:1px solid #e2eaf3; border-radius:12px; background:#f8fbff; }
+.rh-balance-projection__grid small, .rh-balance-projection__grid span { display:block; color:#7187a3; font-size:11px; }
+.rh-balance-projection__grid strong { display:block; margin:5px 0; color:#24496f; font-size:17px; }
+.rh-balance-projection__warning, .rh-balance-projection__ok { display:flex; gap:8px; align-items:flex-start; margin-top:12px; padding:11px 12px; border-radius:10px; font-size:12.5px; line-height:1.45; }
+.rh-balance-projection__warning { background:#fff2f0; color:#a42d23; border:1px solid #ffd8d2; }
+.rh-balance-projection__ok { background:#effaf4; color:#197447; border:1px solid #caedd9; }
+@media(max-width:720px){ .rh-balance-projection__grid{grid-template-columns:1fr;} }

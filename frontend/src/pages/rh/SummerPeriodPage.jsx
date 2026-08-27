@@ -90,7 +90,6 @@ function loadStateToForm(payload, year) {
     specialDeadlineDays: numberSetting(settings, 'SPECIAL_REQUEST_DEADLINE_DAYS', 60),
     normalDeadlineDays: numberSetting(settings, 'NORMAL_REQUEST_DEADLINE_DAYS', 30),
     longLeaveThreshold: numberSetting(settings, 'SPECIAL_DURATION_THRESHOLD_DAYS', 21),
-    derogationLastAllowedDay: numberSetting(settings, 'DEROGATION_LAST_ALLOWED_DAY', 3),
   }
 }
 
@@ -103,7 +102,6 @@ export function RhSummerPeriodPage() {
     specialDeadlineDays: 60,
     normalDeadlineDays: 30,
     longLeaveThreshold: 21,
-    derogationLastAllowedDay: 3,
   })
   const [savedForm, setSavedForm] = useState(null)
   const [saving, setSaving] = useState(false)
@@ -140,7 +138,6 @@ export function RhSummerPeriodPage() {
   const settings = state.payload?.settings ?? {}
   const normalDeadlineDays = form.normalDeadlineDays
   const longLeaveThreshold = form.longLeaveThreshold
-  const derogationLastAllowedDay = form.derogationLastAllowedDay
   const sliderMin = SLIDER_MIN
 
   const status = useMemo(
@@ -160,8 +157,7 @@ export function RhSummerPeriodPage() {
       form.endDate !== savedForm.endDate ||
       form.specialDeadlineDays !== savedForm.specialDeadlineDays ||
       form.normalDeadlineDays !== savedForm.normalDeadlineDays ||
-      form.longLeaveThreshold !== savedForm.longLeaveThreshold ||
-      form.derogationLastAllowedDay !== savedForm.derogationLastAllowedDay
+      form.longLeaveThreshold !== savedForm.longLeaveThreshold
     )
   }, [form, savedForm])
 
@@ -190,7 +186,6 @@ export function RhSummerPeriodPage() {
         specialDeadlineDays: form.specialDeadlineDays,
         normalDeadlineDays: form.normalDeadlineDays,
         longLeaveThreshold: form.longLeaveThreshold,
-        derogationLastAllowedDay: form.derogationLastAllowedDay,
       })
       const nextForm = loadStateToForm(payload, year)
       setState({ loading: false, error: null, payload })
@@ -365,7 +360,7 @@ export function RhSummerPeriodPage() {
               <li>Toute demande qui chevauche la période du <b>{formatLongDate(form.startDate)}</b> au <b>{formatLongDate(form.endDate)}</b> doit respecter un délai de <b>{form.specialDeadlineDays} jours</b>.</li>
               <li>Le même délai étendu s’applique aux congés d’au moins <b>{longLeaveThreshold} jours calendaires</b>, même hors période estivale.</li>
               <li>Le délai standard reste fixé à <b>{normalDeadlineDays} jours</b> lorsque la demande n’entre dans aucun de ces cas.</li>
-              <li>Une dérogation reste impossible à partir de <b>J-{derogationLastAllowedDay}</b> avant le début du congé.</li>
+              <li>Lorsque le délai de prévenance n’est pas respecté, une dérogation peut être demandée jusqu’au début du congé.</li>
             </ul>
           </section>
         </div>
@@ -383,13 +378,6 @@ export function RhSummerPeriodPage() {
               <span>Congé long</span>
               <div><input type="number" min="1" max="90" value={form.longLeaveThreshold} onChange={(event) => setForm((current) => ({ ...current, longLeaveThreshold: Math.max(1, Math.min(90, Number(event.target.value) || 1)) }))} /><b>j</b></div>
               <small>déclenche le délai étendu</small>
-            </label>
-          </article>
-          <article>
-            <label>
-              <span>Dernier jour de dérogation</span>
-              <div><b>J-</b><input type="number" min="1" max="90" value={form.derogationLastAllowedDay} onChange={(event) => setForm((current) => ({ ...current, derogationLastAllowedDay: Math.max(1, Math.min(90, Number(event.target.value) || 1)) }))} /></div>
-              <small>avant le début du congé</small>
             </label>
           </article>
         </div>

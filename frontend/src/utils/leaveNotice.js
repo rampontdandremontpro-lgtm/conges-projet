@@ -19,8 +19,6 @@ export function buildNoticeRules(settings, seasonal) {
     specialDeadlineDays: Number(settings?.SPECIAL_REQUEST_DEADLINE_DAYS) || 60,
     specialDurationThresholdDays:
       Number(settings?.SPECIAL_DURATION_THRESHOLD_DAYS) || 21,
-    derogationLastAllowedDay:
-      Number(settings?.DEROGATION_LAST_ALLOWED_DAY) || 3,
     summerPeriodStart: seasonal?.summerPeriodStart ?? '05-01',
     summerPeriodEnd: seasonal?.summerPeriodEnd ?? '10-31',
   }
@@ -55,14 +53,6 @@ export function evaluateNotice({ startIso, endIso, settings, seasonal }) {
       ? rules.specialDeadlineDays
       : rules.normalDeadlineDays
 
-  const derogationCutoff = new Date(startDate)
-  derogationCutoff.setUTCDate(
-    derogationCutoff.getUTCDate() - rules.derogationLastAllowedDay,
-  )
-  // 16 h en Martinique = 20 h UTC (UTC-4 fixe).
-  derogationCutoff.setUTCHours(20, 0, 0, 0)
-  const now = new Date()
-
   return {
     daysBeforeStart,
     requiredNoticeDays,
@@ -70,10 +60,7 @@ export function evaluateNotice({ startIso, endIso, settings, seasonal }) {
     overlapsSummerPeriod,
     isNoticeCompliant: daysBeforeStart >= requiredNoticeDays,
     isDerogationWindow:
-      daysBeforeStart >= rules.derogationLastAllowedDay &&
-      daysBeforeStart < rules.normalDeadlineDays &&
-      now.getTime() < derogationCutoff.getTime(),
-    derogationCutoff,
+      daysBeforeStart >= 0 && daysBeforeStart < requiredNoticeDays,
   }
 }
 
