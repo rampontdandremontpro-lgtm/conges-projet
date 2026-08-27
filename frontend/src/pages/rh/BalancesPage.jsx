@@ -14,7 +14,6 @@ import {
   getRhEmployeeBalanceHistory,
   getRhEmployeeBalances,
 } from '@/services/rh/rhBalances'
-import { formatDays } from '@/utils/format'
 import {
   adjacentReferencePeriodOptions,
   currentReferencePeriod,
@@ -222,7 +221,7 @@ function BalanceDetailDrawer({ row, onClose, onChanged }) {
               </div>
 
               <div className="rh-balances-kpis">
-                <div><small>Congés à utiliser</small><strong>{formatDays(usableDays)} j</strong><span>N-1 · {formatCounterReferencePeriod(usable?.referencePeriod, usable?.counterType)}</span></div>
+                <div><small>Congés à utiliser</small><strong>{formatBalanceDays(usableDays)} j</strong><span>N-1 · {formatCounterReferencePeriod(usable?.referencePeriod, usable?.counterType)}</span></div>
                 <div><small>En cours d’acquisition</small><strong>{formatBalanceDays(Number(acquisition?.acquiredDays ?? 0))} j</strong><span>N · {formatCounterReferencePeriod(acquisition?.referencePeriod, acquisition?.counterType)}</span></div>
                 <div><small>En attente</small><strong>{formatBalanceDays(reserved)} j</strong><span>Demandes en attente</span></div>
                 <div className="rh-balances-kpis__available"><small>Disponible</small><strong>{formatBalanceDays(availableAfter)} j</strong><span>Après validation</span></div>
