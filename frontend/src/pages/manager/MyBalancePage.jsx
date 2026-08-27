@@ -5,7 +5,6 @@ import { AlertsCard } from '@/components/collab/dashboard/AlertsCard'
 import { LeaveBalanceCard } from '@/components/collab/dashboard/LeaveBalanceCard'
 import { NextLeaveCard } from '@/components/collab/dashboard/NextLeaveCard'
 import { PlanLeaveCard } from '@/components/collab/dashboard/PlanLeaveCard'
-import { PracticalInfoCard } from '@/components/collab/dashboard/PracticalInfoCard'
 import { RecentRequestsCard } from '@/components/collab/dashboard/RecentRequestsCard'
 import { PageContainer } from '@/components/ui/PageContainer'
 import {
@@ -169,7 +168,6 @@ export function ManagerMyBalancePage() {
             onRetryBalances={retryBalances}
             onRetryRequests={retryRequests}
           />
-          <PracticalInfoCard />
         </div>
       </div>
     </PageContainer>

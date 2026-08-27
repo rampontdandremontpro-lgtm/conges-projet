@@ -4,6 +4,7 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
 
@@ -12,6 +13,13 @@ import type { AuthenticatedUser } from '../auth/jwt-payload.interface';
 import { User } from '../users/user.entity';
 import { Setting } from './setting.entity';
 import { UpdateSettingDto } from './dto/update-setting.dto';
+import { CreatePracticalLinkDto } from './dto/create-practical-link.dto';
+import { UpdatePracticalLinkDto } from './dto/update-practical-link.dto';
+import {
+  normalizePracticalLinkInput,
+  parsePracticalLinks,
+  type PracticalLink,
+} from './practical-links.util';
 
 export interface SubmissionRules {
   normalDeadlineDays: number;
@@ -74,6 +82,89 @@ export class SettingsService {
         );
       }
     }
+  }
+
+
+  async getPracticalLinks(): Promise<PracticalLink[]> {
+    const raw = await this.getValue('PRACTICAL_LINKS_JSON');
+    return parsePracticalLinks(raw);
+  }
+
+  async createPracticalLink(
+    dto: CreatePracticalLinkDto,
+    authenticatedUser: AuthenticatedUser,
+  ): Promise<PracticalLink[]> {
+    const previous = await this.getPracticalLinks();
+    let normalized: Omit<PracticalLink, 'id'>;
+    try {
+      normalized = normalizePracticalLinkInput(dto);
+    } catch (error) {
+      throw new BadRequestException(error instanceof Error ? error.message : 'Lien invalide.');
+    }
+    const next = [...previous, { id: randomUUID(), ...normalized }];
+    await this.savePracticalLinks(previous, next, authenticatedUser, 'PRACTICAL_LINK_CREATED');
+    return next;
+  }
+
+  async updatePracticalLink(
+    id: string,
+    dto: UpdatePracticalLinkDto,
+    authenticatedUser: AuthenticatedUser,
+  ): Promise<PracticalLink[]> {
+    const previous = await this.getPracticalLinks();
+    const index = previous.findIndex((item) => item.id === id);
+    if (index < 0) throw new NotFoundException('Le lien pratique est introuvable.');
+
+    const current = previous[index];
+    let normalized: Omit<PracticalLink, 'id'>;
+    try {
+      normalized = normalizePracticalLinkInput({
+        title: dto.title ?? current.title,
+        description: dto.description ?? current.description,
+        url: dto.url ?? current.url,
+      });
+    } catch (error) {
+      throw new BadRequestException(error instanceof Error ? error.message : 'Lien invalide.');
+    }
+    const next = [...previous];
+    next[index] = { id: current.id, ...normalized };
+    await this.savePracticalLinks(previous, next, authenticatedUser, 'PRACTICAL_LINK_UPDATED');
+    return next;
+  }
+
+  async deletePracticalLink(
+    id: string,
+    authenticatedUser: AuthenticatedUser,
+  ): Promise<PracticalLink[]> {
+    const previous = await this.getPracticalLinks();
+    const next = previous.filter((item) => item.id !== id);
+    if (next.length === previous.length) {
+      throw new NotFoundException('Le lien pratique est introuvable.');
+    }
+    await this.savePracticalLinks(previous, next, authenticatedUser, 'PRACTICAL_LINK_DELETED');
+    return next;
+  }
+
+  private async savePracticalLinks(
+    previous: PracticalLink[],
+    next: PracticalLink[],
+    authenticatedUser: AuthenticatedUser,
+    action: string,
+  ): Promise<void> {
+    const saved = await this.upsertInternal(
+      'PRACTICAL_LINKS_JSON',
+      JSON.stringify(next),
+      'Liens affichés dans la page Informations pratiques.',
+      authenticatedUser.id,
+    );
+    await this.auditService.record({
+      actorId: authenticatedUser.id,
+      action,
+      resourceType: 'SETTINGS',
+      resourceId: saved.id,
+      oldValue: { practicalLinks: previous },
+      newValue: { practicalLinks: next },
+    });
   }
 
   async findAll(): Promise<Setting[]> {

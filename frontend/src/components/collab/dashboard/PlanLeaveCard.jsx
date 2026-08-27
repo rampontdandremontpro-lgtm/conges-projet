@@ -1,7 +1,7 @@
 import { Icon } from '@/components/ui/Icon'
 import { formatDays } from '@/utils/format'
 
-export function PlanLeaveCard({ availableDays, onNewRequest }) {
+export function PlanLeaveCard({ availableDays, periodLabel, onNewRequest }) {
   return (
     <section className="plan-card">
       <span className="plan-card__icon" aria-hidden="true">
@@ -9,7 +9,7 @@ export function PlanLeaveCard({ availableDays, onNewRequest }) {
       </span>
       <h2 className="plan-card__title">Planifier un congé</h2>
       {availableDays !== null && (
-        <p className="plan-card__balance">Solde de la période : {formatDays(availableDays)} j</p>
+        <p className="plan-card__balance">Solde {periodLabel ? `(${periodLabel})` : 'de la période'} : {formatDays(availableDays)} j</p>
       )}
       <p className="plan-card__text">
         Préparez votre prochaine période de congés en quelques clics.

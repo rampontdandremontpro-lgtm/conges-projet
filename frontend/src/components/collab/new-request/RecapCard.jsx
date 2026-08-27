@@ -186,8 +186,8 @@ export function RecapCard({
             <p className="nr-recap__note">
               {deductedDays != null
                 ? deductedDaysSource === 'server'
-                  ? 'Calcul confirmé. Un vendredi posé décompte aussi le samedi suivant ; les dimanches et jours non décomptables sont exclus.'
-                  : 'Calcul en temps réel. Un vendredi posé décompte aussi le samedi suivant ; les dimanches et jours non décomptables sont exclus.'
+                  ? 'Calcul confirmé. Un vendredi posé, ou un vendredi férié accolé à la fin du congé, peut entraîner le décompte du samedi suivant ; les dimanches et jours non décomptables sont exclus.'
+                  : 'Calcul en temps réel. Un vendredi posé, ou un vendredi férié accolé à la fin du congé, peut entraîner le décompte du samedi suivant ; les dimanches et jours non décomptables sont exclus.'
                 : 'Sélectionnez une période complète pour calculer le décompte.'}
             </p>
           </section>
@@ -239,14 +239,18 @@ export function RecapCard({
           )}
 
           {leaveType?.deductsPaidLeaveBalance && (
-            <section className="nr-recap__block">
-              <h4 className="nr-recap__subtitle">Situation sur la période</h4>
-              <div className="nr-solde">
-                <div className="nr-solde__row"><span className="nr-solde__label">Période de référence</span><span className="nr-solde__value">{requestReferencePeriod ? requestReferencePeriod.replace('-', '/') : '—'}</span></div>
-                <div className="nr-solde__row"><span className="nr-solde__label">Congés pris</span><span className="nr-solde__value">{formatDays(periodSummary?.takenDays ?? 0)} j</span></div>
-                <div className="nr-solde__row"><span className="nr-solde__label">Congés validés</span><span className="nr-solde__value">{formatDays(periodSummary?.validatedDays ?? 0)} j</span></div>
-                <div className="nr-solde__row"><span className="nr-solde__label">En attente</span><span className="nr-solde__value">{formatDays(periodSummary?.pendingDays ?? 0)} j</span></div>
+            <section className="nr-recap__block nr-recap__rights-block">
+              <h4 className="nr-recap__subtitle">Situation de vos droits</h4>
+              <p className="nr-recap__rights-period">Période affichée : <strong>{requestReferencePeriod ? requestReferencePeriod.replace('-', '/') : '—'}</strong></p>
+              <div className="nr-solde nr-solde--rights">
+                <div className="nr-solde__row"><span className="nr-solde__label">Acquis sur la période</span><span className="nr-solde__value">{formatDays(periodSummary?.acquiredDays ?? 0)} j</span></div>
+                <div className="nr-solde__row"><span className="nr-solde__label">Pris sur la période</span><span className="nr-solde__value">{formatDays(periodSummary?.takenDays ?? 0)} j</span></div>
+                <div className="nr-solde__row"><span className="nr-solde__label">Validés sur la période</span><span className="nr-solde__value">{formatDays(periodSummary?.validatedDays ?? 0)} j</span></div>
+                <div className="nr-solde__row"><span className="nr-solde__label">En attente sur la période</span><span className="nr-solde__value">{formatDays(periodSummary?.pendingDays ?? 0)} j</span></div>
+                <div className="nr-solde__divider" />
+                <div className={`nr-solde__row nr-solde__row--official ${Number(periodSummary?.balanceDays ?? 0) < 0 ? 'nr-solde__row--danger' : ''}`}><span className="nr-solde__label">Solde officiel</span><span className="nr-solde__value">{formatDays(periodSummary?.balanceDays ?? 0)} j</span></div>
               </div>
+              <p className="nr-recap__rights-note">Les indicateurs concernent uniquement la période de droits affichée. Les demandes validées ou en attente ne sont pas comptées comme des jours pris tant que le congé n’a pas commencé.</p>
             </section>
           )}
 

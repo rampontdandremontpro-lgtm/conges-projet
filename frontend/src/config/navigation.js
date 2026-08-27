@@ -28,6 +28,7 @@ export const NAVIGATION = {
     { id: 'dashboard', label: 'Tableau de bord', to: '/app/dashboard', icon: 'dashboard', group: 'MON ESPACE' },
     { id: 'my-requests', label: 'Mes demandes', to: '/app/my-requests', icon: 'list', group: 'MON ESPACE' },
     { id: 'my-documents', label: 'Mes documents', to: '/app/my-documents', icon: 'doc', group: 'MON ESPACE' },
+    { id: 'practical-info', label: 'Informations pratiques', to: '/app/practical-info', icon: 'info', group: 'OUTIL' },
     { id: 'notifications', label: 'Notifications', to: '/app/notifications', icon: 'bell', group: 'OUTIL' },
   ],
   [ROLES.RESPONSABLE_SERVICE]: [
@@ -36,6 +37,7 @@ export const NAVIGATION = {
     { id: 'alerts', label: 'Alertes de chevauchement', to: '/app/alerts', icon: 'alert', group: 'ÉQUIPE' },
     { id: 'service-presence', label: 'Présence du service', to: '/app/service-presence', icon: 'users', group: 'ÉQUIPE' },
 
+    { id: 'practical-info', label: 'Informations pratiques', to: '/app/practical-info', icon: 'info', group: 'OUTIL' },
     { id: 'notifications', label: 'Notifications', to: '/app/notifications', icon: 'bell', group: 'OUTIL' },
   ],
   [ROLES.RH]: [
@@ -57,6 +59,7 @@ export const NAVIGATION = {
     { id: 'rh-validators', label: 'Valideurs', to: '/app/rh-validators', icon: 'users', group: 'PARAMÉTRAGE' },
 
     { id: 'rh-history', label: 'Historique', to: '/app/rh-history', icon: 'clock', group: 'OUTILS' },
+    { id: 'practical-info', label: 'Informations pratiques', to: '/app/practical-info', icon: 'info', group: 'OUTILS' },
     { id: 'notifications', label: 'Notifications', to: '/app/notifications', icon: 'bell', group: 'OUTILS' },
   ],
   [ROLES.DIRECTEUR]: [
@@ -71,6 +74,7 @@ export const NAVIGATION = {
     { id: 'director-availability', label: 'Enregistrer mon indisponibilité', to: '/app/director-availability', icon: 'calendar', group: 'MON STATUT' },
     { id: 'director-unavailability', label: 'Mes indisponibilités', to: '/app/director-unavailability', icon: 'list', group: 'MON STATUT' },
 
+    { id: 'practical-info', label: 'Informations pratiques', to: '/app/practical-info', icon: 'info', group: 'OUTILS' },
     { id: 'notifications', label: 'Notifications', to: '/app/notifications', icon: 'bell', group: 'OUTILS' },
   ],
   [ROLES.ADMIN]: [
@@ -85,6 +89,7 @@ export const NAVIGATION = {
     { id: 'admin-summer-period', label: 'Période estivale', to: '/app/admin-summer-period', icon: 'sun', group: 'PARAMÉTRAGE' },
     { id: 'admin-holidays', label: 'Jours fériés / fermetures', to: '/app/admin-holidays', icon: 'calendar', group: 'PARAMÉTRAGE' },
 
+    { id: 'practical-info', label: 'Informations pratiques', to: '/app/practical-info', icon: 'info', group: 'OUTILS' },
     { id: 'notifications', label: 'Notifications', to: '/app/notifications', icon: 'bell', group: 'OUTILS' },
     { id: 'admin-technical-logs', label: 'Journaux techniques', to: '/app/admin-technical-logs', icon: 'cpu', group: 'OUTILS' },
   ],

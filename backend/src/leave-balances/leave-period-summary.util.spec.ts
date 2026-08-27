@@ -110,4 +110,57 @@ describe('buildLeavePeriodSummaries', () => {
     });
   });
 
+  it('ventile une demande en attente sur N-1 puis N selon le solde officiel restant', () => {
+    const result = buildLeavePeriodSummaries({
+      periodStartMonthDay: '06-01',
+      balances: [
+        { referencePeriod: '2026-2027', counterType: 'N-1', acquiredDays: 5, consumedDays: 0 },
+        { referencePeriod: '2026-2027', counterType: 'N', acquiredDays: 10, consumedDays: 0 },
+      ],
+      requests: [
+        {
+          startDate: '2026-11-02',
+          deductedDays: 8,
+          status: 'EN_ATTENTE_VALIDATION',
+          balanceProcessingStatus: 'DEMANDE_ACTUELLE',
+        },
+      ],
+    });
+
+    expect(result).toContainEqual(expect.objectContaining({
+      referencePeriod: '2025-2026',
+      pendingDays: 5,
+    }));
+    expect(result).toContainEqual(expect.objectContaining({
+      referencePeriod: '2026-2027',
+      pendingDays: 3,
+    }));
+  });
+
+  it('partage le reliquat ancien entre plusieurs engagements dans l’ordre chronologique', () => {
+    const result = buildLeavePeriodSummaries({
+      periodStartMonthDay: '06-01',
+      balances: [
+        { referencePeriod: '2026-2027', counterType: 'N-1', acquiredDays: 5, consumedDays: 0 },
+        { referencePeriod: '2026-2027', counterType: 'N', acquiredDays: 2, consumedDays: 0 },
+      ],
+      requests: [
+        { startDate: '2026-09-01', deductedDays: 4, status: 'VALIDEE', balanceProcessingStatus: 'DEMANDE_ACTUELLE' },
+        { startDate: '2026-10-01', deductedDays: 4, status: 'EN_ATTENTE_VALIDATION', balanceProcessingStatus: 'DEMANDE_ACTUELLE' },
+      ],
+    });
+
+    expect(result).toContainEqual(expect.objectContaining({
+      referencePeriod: '2025-2026',
+      validatedDays: 4,
+      pendingDays: 1,
+    }));
+    expect(result).toContainEqual(expect.objectContaining({
+      referencePeriod: '2026-2027',
+      validatedDays: 0,
+      pendingDays: 3,
+      balanceDays: 2,
+    }));
+  });
+
 });

@@ -9,6 +9,7 @@ import { ForgotPasswordPage } from '@/pages/auth/ForgotPasswordPage'
 import { ResetPasswordPage } from '@/pages/auth/ResetPasswordPage'
 import { NotFound } from '@/pages/shared/NotFound'
 import { DashboardGate } from '@/pages/shared/DashboardGate'
+import { PracticalInfoPage } from '@/pages/shared/PracticalInfoPage'
 import { NewRequest } from '@/pages/collab/NewRequestPage'
 import { HistoryPage } from '@/pages/collab/HistoryPage'
 import { MyRequestsPage } from '@/pages/collab/MyRequestsPage'
@@ -64,6 +65,7 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <Navigate to="/app/dashboard" replace /> },
       { path: 'dashboard', element: <DashboardGate /> },
+      { path: 'practical-info', element: <PracticalInfoPage /> },
       {
         path: 'director-all-requests',
         element: (

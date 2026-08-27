@@ -77,19 +77,67 @@ export function buildLeavePeriodSummaries(input: {
     }
   }
 
-  for (const request of input.requests) {
-    if (!request.startDate) continue;
-    const period = periodForDate(request.startDate, input.periodStartMonthDay);
-    const summary = ensure(period);
-    const days = Number(request.deductedDays || 0);
+  const officialBalanceByPeriod = new Map<string, number>();
+  for (const [referencePeriod, summary] of map.entries()) {
+    const acquiredDays = round(summary.canonicalAcquired ?? summary.fallbackAcquired);
+    officialBalanceByPeriod.set(
+      referencePeriod,
+      round(acquiredDays - Number(summary.takenDays || 0)),
+    );
+  }
+
+  const committedByPeriod = new Map<string, number>();
+  const previousPeriod = (referencePeriod: string): string => {
+    const match = PERIOD_PATTERN.exec(referencePeriod);
+    if (!match) return referencePeriod;
+    const start = Number(match[1]);
+    return `${start - 1}-${start}`;
+  };
+
+  const requests = [...input.requests]
+    .filter((request) => Boolean(request.startDate))
+    .sort((first, second) => {
+      const byDate = first.startDate.localeCompare(second.startDate);
+      if (byDate !== 0) return byDate;
+      const firstPriority = first.status === 'VALIDEE' ? 0 : 1;
+      const secondPriority = second.status === 'VALIDEE' ? 0 : 1;
+      return firstPriority - secondPriority;
+    });
+
+  for (const request of requests) {
     if (
-      request.status === 'VALIDEE' &&
-      request.balanceProcessingStatus !== 'DEFINITIF'
+      request.status !== 'EN_ATTENTE_VALIDATION' &&
+      !(request.status === 'VALIDEE' && request.balanceProcessingStatus !== 'DEFINITIF')
     ) {
-      summary.validatedDays = round(summary.validatedDays + days);
-    } else if (request.status === 'EN_ATTENTE_VALIDATION') {
-      summary.pendingDays = round(summary.pendingDays + days);
+      continue;
     }
+
+    const targetPeriod = periodForDate(request.startDate, input.periodStartMonthDay);
+    const oldPeriod = previousPeriod(targetPeriod);
+    const oldSummary = ensure(oldPeriod);
+    const targetSummary = ensure(targetPeriod);
+    const days = round(Math.max(0, Number(request.deductedDays || 0)));
+    if (days <= 0) continue;
+
+    const oldOfficialBalance = officialBalanceByPeriod.get(oldPeriod) ?? 0;
+    const oldAlreadyCommitted = committedByPeriod.get(oldPeriod) ?? 0;
+    const oldCapacity = round(Math.max(0, oldOfficialBalance - oldAlreadyCommitted));
+    const oldUsed = round(Math.min(days, oldCapacity));
+    const targetUsed = round(days - oldUsed);
+
+    if (oldUsed > 0) {
+      committedByPeriod.set(oldPeriod, round(oldAlreadyCommitted + oldUsed));
+    }
+    if (targetUsed > 0) {
+      committedByPeriod.set(
+        targetPeriod,
+        round((committedByPeriod.get(targetPeriod) ?? 0) + targetUsed),
+      );
+    }
+
+    const field = request.status === 'VALIDEE' ? 'validatedDays' : 'pendingDays';
+    oldSummary[field] = round(oldSummary[field] + oldUsed);
+    targetSummary[field] = round(targetSummary[field] + targetUsed);
   }
 
   return [...map.values()]

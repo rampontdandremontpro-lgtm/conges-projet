@@ -15,6 +15,19 @@ export async function getRhEmployeeBalanceHistory(employeeId) {
   return data
 }
 
+
+export async function initializeRhBalance({ employeeId, referencePeriod, counterType, acquiredDays = 0, reason }) {
+  const { data } = await apiClient.post('/leave-balances/initialize', {
+    employeeId,
+    referencePeriod,
+    counterType,
+    acquiredDays,
+    reason,
+  })
+  window.dispatchEvent(new CustomEvent('gmes:data-changed', { detail: { source: 'leave-balances-initialize' } }))
+  return data
+}
+
 export async function correctRhBalance(balanceId, days, reason, notifyEmployee = false) {
   const { data } = await apiClient.post(`/leave-balances/${balanceId}/correction`, {
     days,

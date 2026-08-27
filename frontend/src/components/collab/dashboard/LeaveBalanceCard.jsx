@@ -2,9 +2,19 @@ import { Icon } from '@/components/ui/Icon'
 import { formatDays } from '@/utils/format'
 import { CardSkeleton, CardError } from '@/components/collab/dashboard/DashboardStates'
 
+function periodRange(referencePeriod) {
+  const match = String(referencePeriod ?? '').match(/^(\d{4})-(\d{4})$/)
+  if (!match) return null
+  return `Du 1er juin ${match[1]} au 31 mai ${match[2]}`
+}
+
 export function LeaveBalanceCard({
   summary, loading, error, onRetry, periodOptions = [], selectedPeriod, onPeriodChange, actionLabel, actionIcon = 'arrowRight', onAction,
 }) {
+  const effectivePeriod = selectedPeriod ?? summary?.referencePeriod ?? ''
+  const option = periodOptions.find((item) => item.value === effectivePeriod)
+  const range = periodRange(effectivePeriod)
+
   let content
   if (loading) {
     content = <CardSkeleton rows={3} />
@@ -24,19 +34,25 @@ export function LeaveBalanceCard({
     content = (
       <>
         <div className="balance-period-grid">
-          <div className="balance-period-kpi">
-            <span>Acquis</span><strong>{formatDays(summary.acquiredDays)} j</strong>
+          <div className="balance-period-kpi balance-period-kpi--acquired">
+            <span className="balance-period-kpi__icon"><Icon name="plus" size={15} /></span>
+            <div><span>Acquis</span><strong>{formatDays(summary.acquiredDays)} j</strong><small>Droits acquis sur la période</small></div>
           </div>
-          <div className="balance-period-kpi">
-            <span>En attente</span><strong>{formatDays(summary.pendingDays)} j</strong>
+          <div className="balance-period-kpi balance-period-kpi--pending">
+            <span className="balance-period-kpi__icon"><Icon name="clock" size={15} /></span>
+            <div><span>En attente</span><strong>{formatDays(summary.pendingDays)} j</strong><small>Demandes en cours de décision</small></div>
           </div>
-          <div className={`balance-period-kpi balance-period-kpi--${tone}`}>
-            <span>Solde</span><strong>{formatDays(balance)} j</strong>
+          <div className={`balance-period-kpi balance-period-kpi--balance balance-period-kpi--${tone}`}>
+            <span className="balance-period-kpi__icon"><Icon name="wallet" size={15} /></span>
+            <div><span>Solde</span><strong>{formatDays(balance)} j</strong><small>Acquis − jours pris</small></div>
           </div>
         </div>
         {balance < 0 && (
           <p className="balance-negative-note"><Icon name="info" size={15} /> Solde anticipé : les prochaines acquisitions viendront le compenser.</p>
         )}
+        <p className="balance-period-note">
+          Les chiffres affichés concernent uniquement la période sélectionnée.
+        </p>
         {actionLabel && onAction && (
           <button type="button" className="balance-card__action" onClick={onAction}>
             <Icon name={actionIcon} size={17} /><span>{actionLabel}</span><Icon name="arrowRight" size={15} />
@@ -47,20 +63,23 @@ export function LeaveBalanceCard({
   }
 
   return (
-    <section className="dash-card">
-      <header className="dash-card__header">
-        <div className="dash-card__heading">
-          <h2 className="dash-card__title">Mes congés</h2>
-          {!loading && !error && periodOptions.length > 0 && onPeriodChange ? (
-            <label className="dash-card__period-select">
-              <select aria-label="Période de référence" value={selectedPeriod ?? summary?.referencePeriod ?? ''} onChange={(event) => onPeriodChange(event.target.value)}>
-                {periodOptions.map((period) => <option key={period.value} value={period.value}>{period.label}</option>)}
-              </select>
-            </label>
-          ) : summary && !loading && !error ? (
-            <span className="dash-card__period">Période {String(summary.referencePeriod).replace('-', '/')}</span>
-          ) : null}
+    <section className="dash-card dash-card--leave-balance">
+      <header className="balance-card-head">
+        <div className="balance-card-head__copy">
+          <span className="balance-card-head__eyebrow">Mes congés</span>
+          <h2>Situation de mes droits</h2>
+          {range && <p>{range}</p>}
         </div>
+        {!loading && !error && periodOptions.length > 0 && onPeriodChange ? (
+          <label className="balance-card-period-select">
+            <span>Période</span>
+            <select aria-label="Période de référence" value={effectivePeriod} onChange={(event) => onPeriodChange(event.target.value)}>
+              {periodOptions.map((period) => <option key={period.value} value={period.value}>{period.label}</option>)}
+            </select>
+          </label>
+        ) : summary && !loading && !error ? (
+          <span className="balance-card-period-static">{option?.label ?? `Période ${String(summary.referencePeriod).replace('-', '/')}`}</span>
+        ) : null}
       </header>
       {content}
     </section>

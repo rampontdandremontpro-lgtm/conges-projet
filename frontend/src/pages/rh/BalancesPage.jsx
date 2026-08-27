@@ -16,6 +16,7 @@ import {
   getRhEmployeePeriodSummaries,
   previewRhBalanceImport,
   confirmRhBalanceImport,
+  initializeRhBalance,
 } from '@/services/rh/rhBalances'
 import {
   adjacentReferencePeriodOptions,
@@ -78,6 +79,21 @@ function adjacentPeriods() {
   return adjacentReferencePeriodOptions()
 }
 
+function correctionCounterConfig(rightsPeriod) {
+  const current = currentReferencePeriod()
+  const start = Number(current.slice(0, 4))
+  if (rightsPeriod === `${start - 1}-${start}`) {
+    return { referencePeriod: current, counterType: 'N-1' }
+  }
+  if (rightsPeriod === current) {
+    return { referencePeriod: current, counterType: 'N' }
+  }
+  if (rightsPeriod === `${start + 1}-${start + 2}`) {
+    return { referencePeriod: current, counterType: 'N+1' }
+  }
+  return { referencePeriod: rightsPeriod, counterType: 'N' }
+}
+
 function errorMessage(error) {
   const message = error?.response?.data?.message
   if (Array.isArray(message)) return message.join(' ')
@@ -93,6 +109,7 @@ function movementChange(movement) {
 function BalanceDetailDrawer({ row, onClose, onChanged }) {
   const [state, setState] = useState({ loading: true, error: false, balances: [], summaries: [], history: [] })
   const [showCorrection, setShowCorrection] = useState(false)
+  const [selectedDetailPeriod, setSelectedDetailPeriod] = useState(row.referencePeriod)
   const [counterId, setCounterId] = useState('')
   const [direction, setDirection] = useState('credit')
   const [days, setDays] = useState('')
@@ -121,17 +138,57 @@ function BalanceDetailDrawer({ row, onClose, onChanged }) {
     return () => window.clearTimeout(timer)
   }, [load])
 
-  const periodSummary = state.summaries.find((item) => item.referencePeriod === row.referencePeriod) ?? row
+  const periodSummary = state.summaries.find((item) => item.referencePeriod === selectedDetailPeriod) ?? {
+    referencePeriod: selectedDetailPeriod,
+    acquiredDays: 0,
+    takenDays: 0,
+    balanceDays: 0,
+    validatedDays: 0,
+    pendingDays: 0,
+  }
   const correctionCounters = useMemo(
     () => state.balances
-      .filter((item) => counterReferencePeriod(item.referencePeriod, item.counterType) === row.referencePeriod)
+      .filter((item) => counterReferencePeriod(item.referencePeriod, item.counterType) === selectedDetailPeriod)
       .sort((a, b) => b.referencePeriod.localeCompare(a.referencePeriod)),
-    [row.referencePeriod, state.balances],
+    [selectedDetailPeriod, state.balances],
   )
 
   useEffect(() => {
-    if (!counterId && correctionCounters[0]) setCounterId(String(correctionCounters[0].id))
-  }, [counterId, correctionCounters])
+    const firstCounter = correctionCounters[0]
+    setCounterId(firstCounter ? String(firstCounter.id) : '')
+    setShowCorrection(false)
+    setFeedback('')
+  }, [correctionCounters, selectedDetailPeriod])
+
+  const toggleCorrection = async () => {
+    if (showCorrection) {
+      setShowCorrection(false)
+      return
+    }
+    if (correctionCounters.length > 0) {
+      setShowCorrection(true)
+      return
+    }
+
+    setBusy(true)
+    setFeedback('')
+    try {
+      const config = correctionCounterConfig(selectedDetailPeriod)
+      await initializeRhBalance({
+        employeeId: row.employee.id,
+        referencePeriod: config.referencePeriod,
+        counterType: config.counterType,
+        acquiredDays: 0,
+        reason: `Initialisation automatique pour correction de la période ${selectedDetailPeriod}.`,
+      })
+      await load({ silent: true })
+      setShowCorrection(true)
+    } catch (error) {
+      setFeedback(errorMessage(error))
+    } finally {
+      setBusy(false)
+    }
+  }
 
   const submitCorrection = async (event) => {
     event.preventDefault()
@@ -199,13 +256,20 @@ function BalanceDetailDrawer({ row, onClose, onChanged }) {
               <div className="rh-balances-summary-card__title">
                 <div>
                   <h3>Situation actuelle</h3>
-                  <p>Période {formatReferencePeriod(row.referencePeriod)}</p>
+                  <label className="rh-balances-detail-period">
+                    <span>Période</span>
+                    <select value={selectedDetailPeriod} onChange={(event) => setSelectedDetailPeriod(event.target.value)}>
+                      {adjacentPeriods().map((period) => (
+                        <option key={period.value} value={period.value}>{period.label}</option>
+                      ))}
+                    </select>
+                  </label>
                 </div>
                 <button
                   type="button"
                   className="rh-balances-correction-btn"
-                  disabled={correctionCounters.length === 0}
-                  onClick={() => setShowCorrection((value) => !value)}
+                  disabled={busy}
+                  onClick={toggleCorrection}
                 >
                   <Icon name="plus" size={16} /> Effectuer une correction
                 </button>
@@ -219,8 +283,16 @@ function BalanceDetailDrawer({ row, onClose, onChanged }) {
                 <div><small>En attente</small><strong>{formatBalanceDays(periodSummary.pendingDays)} j</strong><span>Décision en cours</span></div>
               </div>
 
-              {correctionCounters.length === 0 && (
-                <div className="rh-balances-info"><Icon name="info" size={16} /> Aucun compteur N-1 ou N n’est initialisé pour cette période.</div>
+              {correctionCounters.length === 0 && !busy && (
+                <div className="rh-balances-info"><Icon name="info" size={16} /> Aucun compteur n’était initialisé pour cette période. Cliquez sur « Effectuer une correction » pour le créer automatiquement.</div>
+              )}
+
+              {busy && correctionCounters.length === 0 && (
+                <div className="rh-balances-info"><Icon name="refresh" size={16} /> Initialisation du compteur…</div>
+              )}
+
+              {feedback && !showCorrection && (
+                <div className="rh-balances-correction__error">{feedback}</div>
               )}
 
               {showCorrection && correctionCounters.length > 0 && (
@@ -528,6 +600,20 @@ export function RhBalancesPage() {
     <PageContainer className="rh-balances-page">
       {feedback && <div className="rh-balances-flash"><Icon name="check" size={17} /> {feedback}</div>}
 
+      <div className="rh-balances-heading">
+        <div className="rh-balances-heading__count">
+          <p>{filtered.length} collaborateur{filtered.length > 1 ? 's' : ''} affiché{filtered.length > 1 ? 's' : ''}</p>
+        </div>
+        <div className="rh-balances-heading__actions">
+          <button type="button" className="rh-balances-top-action" onClick={downloadImportTemplate}>
+            <Icon name="download" size={17} /> Télécharger le modèle
+          </button>
+          <button type="button" className="rh-balances-top-action" onClick={() => { setImportOpen(true); setImportState({ busy: false, rows: [], preview: null, error: '' }) }}>
+            <Icon name="upload" size={17} /> Importer
+          </button>
+        </div>
+      </div>
+
       <section className="rh-balances-card">
         <div className="rh-balances-toolbar">
           <div className="rh-balances-filters">
@@ -572,10 +658,6 @@ export function RhBalancesPage() {
             >
               <Icon name="refresh" size={15} /> Réinitialiser
             </button>
-          </div>
-          <div className="rh-balances-import-actions">
-            <button type="button" onClick={downloadImportTemplate}><Icon name="download" size={15} /> Télécharger le modèle</button>
-            <button type="button" className="is-primary" onClick={() => { setImportOpen(true); setImportState({ busy: false, rows: [], preview: null, error: '' }) }}><Icon name="upload" size={15} /> Importer</button>
           </div>
         </div>
 

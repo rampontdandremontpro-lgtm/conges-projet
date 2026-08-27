@@ -7,7 +7,6 @@ import { NextLeaveCard } from '@/components/collab/dashboard/NextLeaveCard'
 import { RecentRequestsCard } from '@/components/collab/dashboard/RecentRequestsCard'
 import { PlanLeaveCard } from '@/components/collab/dashboard/PlanLeaveCard'
 import { AlertsCard } from '@/components/collab/dashboard/AlertsCard'
-import { PracticalInfoCard } from '@/components/collab/dashboard/PracticalInfoCard'
 import { getMyLeavePeriodSummaries, getMyLeaveRequests, getPublicSettings } from '@/services/collab/dashboard'
 import { todayISO } from '@/utils/format'
 import { adjacentReferencePeriodOptions, currentReferencePeriod } from '@/utils/referencePeriods'
@@ -96,6 +95,7 @@ export function DashboardCollaborateur() {
   }, [])
 
   const periodOptions = adjacentReferencePeriodOptions()
+  const selectedPeriodLabel = periodOptions.find((item) => item.value === selectedPeriod)?.label ?? selectedPeriod.replace('-', '/')
   const balanceSummary = balances.data.find((item) => item.referencePeriod === selectedPeriod) ?? {
     referencePeriod: selectedPeriod, acquiredDays: 0, takenDays: 0, balanceDays: 0, validatedDays: 0, pendingDays: 0,
   }
@@ -144,6 +144,7 @@ export function DashboardCollaborateur() {
           />
           <PlanLeaveCard
             availableDays={availableDays}
+            periodLabel={selectedPeriodLabel}
             onNewRequest={() => navigate('/app/new-request')}
           />
           <AlertsCard
@@ -153,7 +154,6 @@ export function DashboardCollaborateur() {
             onRetryBalances={retryBalances}
             onRetryRequests={retryRequests}
           />
-          <PracticalInfoCard />
         </div>
       </div>
     </PageContainer>

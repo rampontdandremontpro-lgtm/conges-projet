@@ -468,3 +468,12 @@
   outline-offset: -2px;
 }
 
+
+.nr-recap__rights-period { margin:0 0 10px; color:var(--nr-muted); font-size:11px; }
+.nr-recap__rights-period strong { color:var(--nr-fg); font-weight:850; }
+.nr-solde--rights { gap:7px; }
+.nr-solde__row--official { padding-top:2px; }
+.nr-solde__row--official .nr-solde__label { color:var(--nr-fg); font-weight:850; }
+.nr-solde__row--official .nr-solde__value { color:#14a870; font-size:15px; font-weight:900; }
+.nr-solde__row--official.nr-solde__row--danger .nr-solde__value { color:#b42318; }
+.nr-recap__rights-note { margin:10px 0 0; color:var(--nr-muted); font-size:10px; line-height:1.45; }

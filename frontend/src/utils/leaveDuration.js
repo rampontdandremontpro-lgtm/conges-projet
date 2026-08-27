@@ -46,5 +46,21 @@ export function calculateDeductedDaysPreview(selection, holidays) {
     if (!nonDeductibleDates.has(saturdayIso)) total += 1
   }
 
+  // Même règle que le backend : si l'absence couvre le jeudi jusqu'à
+  // l'après-midi et que le vendredi suivant est férié/non décomptable,
+  // le samedi reste un jour ouvrable à décompter. Une fin le jeudi matin
+  // correspond à une reprise le jeudi après-midi et n'ajoute pas le samedi.
+  if (end.getUTCDay() === 4 && endPeriod === 'APRES_MIDI') {
+    const friday = new Date(end)
+    friday.setUTCDate(friday.getUTCDate() + 1)
+    const fridayIso = friday.toISOString().slice(0, 10)
+    if (nonDeductibleDates.has(fridayIso)) {
+      const saturday = new Date(friday)
+      saturday.setUTCDate(saturday.getUTCDate() + 1)
+      const saturdayIso = saturday.toISOString().slice(0, 10)
+      if (!nonDeductibleDates.has(saturdayIso)) total += 1
+    }
+  }
+
   return Math.max(total, 0)
 }

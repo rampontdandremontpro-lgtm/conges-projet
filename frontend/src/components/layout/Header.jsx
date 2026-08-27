@@ -49,7 +49,7 @@ export function Header({ onOpenMobile, mobileOpen = false }) {
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false)
   const title = headerTitle(pathname)
   const hideSearch =
-    ['/app/dashboard', '/app/new-request', '/app/rh-prepare-request', '/app/rh-exports', '/app/rh-holidays', '/app/rh-summer-period', '/app/admin-summer-period', '/app/admin-holidays', '/app/admin-minimum-presence', '/app/director-statistics', '/app/rh-statistics', '/app/director-exports', '/app/director-availability', '/app/history', '/app/my-balance', '/app/my-balances', '/app/profile', '/app/settings'].includes(pathname) ||
+    ['/app/dashboard', '/app/new-request', '/app/rh-prepare-request', '/app/rh-exports', '/app/rh-holidays', '/app/rh-summer-period', '/app/admin-summer-period', '/app/admin-holidays', '/app/admin-minimum-presence', '/app/director-statistics', '/app/rh-statistics', '/app/director-exports', '/app/director-availability', '/app/history', '/app/my-balance', '/app/my-balances', '/app/profile', '/app/settings', '/app/practical-info'].includes(pathname) ||
     /^\/app\/new-request\/\d+$/.test(pathname) ||
     /^\/app\/director-availability\/(leave|absence)\/\d+$/.test(pathname) ||
     /^\/app\/my-requests\/(leave|absence)\/\d+$/.test(pathname) ||

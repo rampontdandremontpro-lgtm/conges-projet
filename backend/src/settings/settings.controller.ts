@@ -1,9 +1,11 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
+  Post,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -16,6 +18,8 @@ import { RolesGuard } from '../auth/roles.guard';
 import { UserRole } from '../users/user.entity';
 import { UpdateSeasonalPeriodDto } from './dto/update-seasonal-period.dto';
 import { UpdateSettingDto } from './dto/update-setting.dto';
+import { CreatePracticalLinkDto } from './dto/create-practical-link.dto';
+import { UpdatePracticalLinkDto } from './dto/update-practical-link.dto';
 import { SettingsService } from './settings.service';
 
 type AuthenticatedRequest = Request & { user: AuthenticatedUser };
@@ -35,6 +39,47 @@ export class SettingsController {
   )
   findPublic() {
     return this.settingsService.findPublic();
+  }
+
+
+  @Get('practical-links')
+  @Roles(
+    UserRole.COLLABORATEUR,
+    UserRole.RESPONSABLE_SERVICE,
+    UserRole.RH,
+    UserRole.DIRECTEUR,
+    UserRole.ADMIN,
+  )
+  getPracticalLinks() {
+    return this.settingsService.getPracticalLinks();
+  }
+
+  @Post('practical-links')
+  @Roles(UserRole.RH)
+  createPracticalLink(
+    @Req() request: AuthenticatedRequest,
+    @Body() dto: CreatePracticalLinkDto,
+  ) {
+    return this.settingsService.createPracticalLink(dto, request.user);
+  }
+
+  @Patch('practical-links/:id')
+  @Roles(UserRole.RH)
+  updatePracticalLink(
+    @Param('id') id: string,
+    @Req() request: AuthenticatedRequest,
+    @Body() dto: UpdatePracticalLinkDto,
+  ) {
+    return this.settingsService.updatePracticalLink(id, dto, request.user);
+  }
+
+  @Delete('practical-links/:id')
+  @Roles(UserRole.RH)
+  deletePracticalLink(
+    @Param('id') id: string,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    return this.settingsService.deletePracticalLink(id, request.user);
   }
 
   @Get('seasonal-period')
