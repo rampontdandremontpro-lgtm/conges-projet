@@ -135,7 +135,8 @@ export function LeaveCalendar({
   const [phase, setPhase] = useState(startDate && !endDate ? 'selecting' : 'idle')
   const [hovering, setHovering] = useState(null)
   const [hoverInfo, setHoverInfo] = useState(null)
-  const [boundaryEditor, setBoundaryEditor] = useState(null)
+  const [periodPopoverAnchor, setPeriodPopoverAnchor] = useState(null)
+  const [periodPopoverMode, setPeriodPopoverMode] = useState(null)
 
   useEffect(() => {
     let active = true
@@ -174,6 +175,8 @@ export function LeaveCalendar({
     if (!startDate) {
       setPhase('idle')
       setHovering(null)
+      setPeriodPopoverAnchor(null)
+      setPeriodPopoverMode(null)
       return
     }
 
@@ -218,7 +221,8 @@ export function LeaveCalendar({
       onPick(iso)
       setPhase('idle')
       setHovering(null)
-      setBoundaryEditor(null)
+      setPeriodPopoverAnchor(null)
+      setPeriodPopoverMode(null)
       return
     }
 
@@ -232,34 +236,69 @@ export function LeaveCalendar({
       selectedRangeStart && selectedRangeEnd && iso >= selectedRangeStart && iso <= selectedRangeEnd,
     )
 
-    // Un clic sur une journée déjà bleue annule la sélection complète.
-    // On ne rouvre jamais le choix des demi-journées sur un jour déjà sélectionné.
+    // Sélection finalisée : un clic sur n'importe quel jour bleu annule tout.
+    // Pour une journée unique, cela correspond bien au 3e clic sur ce jour.
     if (clickedSelectedDay) {
       onPick(iso)
       setPhase('idle')
       setHovering(null)
-      setBoundaryEditor(null)
+      setPeriodPopoverAnchor(null)
+      setPeriodPopoverMode(null)
       return
     }
 
-    if (phase === 'selecting' && startDate) {
-      const boundary = iso < startDate ? 'start' : 'end'
+    // 1er clic (ou clic hors d'une ancienne plage) : on choisit le départ.
+    if (!startDate || endDate) {
       onPick(iso)
-      if (allowsHalfDays) setBoundaryEditor({ iso, boundary })
+      setPhase('selecting')
+      setHovering(null)
+      setPeriodPopoverAnchor(allowsHalfDays ? iso : null)
+      setPeriodPopoverMode(allowsHalfDays ? 'departure' : null)
+      return
+    }
+
+    // La sélection n'a encore qu'un départ.
+    if (!endDate && startDate) {
+      // Un clic antérieur redémarre proprement la sélection sur ce nouveau jour.
+      if (iso < startDate) {
+        onPick(iso)
+        setPhase('selecting')
+        setHovering(null)
+        setPeriodPopoverAnchor(allowsHalfDays ? iso : null)
+        setPeriodPopoverMode(allowsHalfDays ? 'departure' : null)
+        return
+      }
+
+      // 2e clic sur le même jour : choix journée entière / matin / après-midi.
+      if (iso === startDate) {
+        onPick(iso)
+        setPhase('idle')
+        setHovering(null)
+        setPeriodPopoverAnchor(allowsHalfDays ? iso : null)
+        setPeriodPopoverMode(allowsHalfDays ? 'single' : null)
+        return
+      }
+
+      // 2e clic sur un autre jour : on fixe le retour et on ne demande que
+      // le moment de retour ; le choix du départ a déjà été fait au 1er clic.
+      onPick(iso)
       setPhase('idle')
       setHovering(null)
-      return
+      setPeriodPopoverAnchor(allowsHalfDays ? iso : null)
+      setPeriodPopoverMode(allowsHalfDays ? 'return' : null)
     }
-
-    onPick(iso)
-    setPhase('selecting')
-    setHovering(null)
-    if (allowsHalfDays) setBoundaryEditor({ iso, boundary: 'single' })
   }
 
-  const chooseBoundaryPeriod = (boundary, value) => {
-    onBoundaryPeriodChange?.({ boundary, value })
-    setBoundaryEditor(null)
+  const handlePeriodChoice = (change) => {
+    onBoundaryPeriodChange?.(change)
+    // Une fois le choix fait, on libère le calendrier pour l'étape suivante.
+    setPeriodPopoverAnchor(null)
+    setPeriodPopoverMode(null)
+  }
+
+  const closePeriodPopover = () => {
+    setPeriodPopoverAnchor(null)
+    setPeriodPopoverMode(null)
   }
 
   const currentBoundaryValue = (boundary) => {
@@ -294,7 +333,7 @@ export function LeaveCalendar({
         <button
           type="button"
           className="nr-cal__nav-btn"
-          onClick={onPrev}
+          onClick={() => { setPeriodPopoverAnchor(null); setPeriodPopoverMode(null); onPrev?.() }}
           aria-label="Mois précédent"
         >
           <ChevronIcon direction="left" />
@@ -314,7 +353,7 @@ export function LeaveCalendar({
                   ))}
                 </div>
                 <div className="nr-cal__grid">
-                  {cells.map((cell) => {
+                  {cells.map((cell, cellIndex) => {
                     const iso = cell.iso
                     const holiday = holidayMap.get(iso)
                     const date = parseISODate(iso)
@@ -341,9 +380,31 @@ export function LeaveCalendar({
                     const endAm = isEnd && !isSingle && endPeriod === 'MATIN'
                     const singleAm = single && startPeriod === 'MATIN' && endPeriod === 'MATIN'
                     const singlePm = single && startPeriod === 'APRES_MIDI' && endPeriod === 'APRES_MIDI'
-                    const activeEditor = allowsHalfDays && boundaryEditor?.iso === iso ? boundaryEditor : null
                     const today = iso === todayIso
                     const showDot = (isHoliday || isClosure) && cell.inMonth
+                    const showPeriodPopover = Boolean(
+                      allowsHalfDays &&
+                        periodPopoverAnchor === iso &&
+                        periodPopoverMode &&
+                        startDate &&
+                        cell.inMonth &&
+                        (
+                          (periodPopoverMode === 'departure' && iso === startDate && !endDate) ||
+                          (periodPopoverMode === 'single' && startDate === endDate && iso === startDate) ||
+                          (periodPopoverMode === 'return' && endDate && startDate !== endDate && iso === endDate)
+                        ),
+                    )
+                    const columnIndex = cellIndex % 7
+                    const rowIndex = Math.floor(cellIndex / 7)
+                    const rowCount = Math.ceil(cells.length / 7)
+                    const popoverHorizontal = columnIndex <= 1
+                      ? 'nr-cal__period-popover--right'
+                      : columnIndex >= 5
+                        ? 'nr-cal__period-popover--left'
+                        : 'nr-cal__period-popover--center'
+                    const popoverVertical = rowIndex >= rowCount - 2
+                      ? 'nr-cal__period-popover--above'
+                      : 'nr-cal__period-popover--below'
 
                     const cellClassName = [
                       'nr-cal__cell',
@@ -418,44 +479,90 @@ export function LeaveCalendar({
                           </span>
                         )}
                       </button>
-                      {activeEditor && (
-                        <div className="nr-cal__boundary-popover" role="dialog" aria-label="Choisir la demi-journée">
-                          <strong>
-                            {activeEditor.boundary === 'start'
-                              ? 'Je pars quand ?'
-                              : activeEditor.boundary === 'end'
-                                ? 'Je rentre quand ?'
-                                : 'Quelle demi-journée ?'}
-                          </strong>
-                          <p>{activeEditor.boundary === 'single' ? 'Choisissez la durée de cette journée.' : 'Choisissez matin ou après-midi.'}</p>
-                          <div className="nr-cal__boundary-actions">
-                            {activeEditor.boundary === 'single' && (
+                      {showPeriodPopover && (
+                        <div
+                          className={`nr-cal__period-popover ${popoverHorizontal} ${popoverVertical} ${periodPopoverMode === 'single' ? 'nr-cal__period-popover--single' : ''}`}
+                          role="dialog"
+                          aria-label={
+                            periodPopoverMode === 'departure'
+                              ? 'Choisir le moment du départ'
+                              : periodPopoverMode === 'return'
+                                ? 'Choisir le moment du retour'
+                                : 'Choisir la durée de la journée'
+                          }
+                        >
+                          <div className="nr-cal__period-popover-head">
+                            <div>
+                              <strong>
+                                {periodPopoverMode === 'departure'
+                                  ? 'Je pars quand ?'
+                                  : periodPopoverMode === 'return'
+                                    ? 'Je rentre quand ?'
+                                    : 'Quelle durée ?'}
+                              </strong>
+                              <span>
+                                {periodPopoverMode === 'single'
+                                  ? 'Choisissez la durée pour cette journée.'
+                                  : 'Choisissez le moment de la journée.'}
+                              </span>
+                            </div>
+                            <button
+                              type="button"
+                              className="nr-cal__period-popover-close"
+                              onClick={closePeriodPopover}
+                              aria-label="Fermer"
+                            >
+                              ×
+                            </button>
+                          </div>
+
+                          {periodPopoverMode === 'single' ? (
+                            <div className="nr-cal__period-actions nr-cal__period-actions--single" role="group" aria-label="Durée de la journée">
                               <button
                                 type="button"
                                 className={currentBoundaryValue('single') === 'FULL_DAY' ? 'is-active' : ''}
                                 aria-pressed={currentBoundaryValue('single') === 'FULL_DAY'}
-                                onClick={() => chooseBoundaryPeriod('single', 'FULL_DAY')}
+                                onClick={() => handlePeriodChoice({ boundary: 'single', value: 'FULL_DAY' })}
                               >
                                 Journée entière
                               </button>
-                            )}
-                            <button
-                              type="button"
-                              className={currentBoundaryValue(activeEditor.boundary) === 'MATIN' ? 'is-active' : ''}
-                              aria-pressed={currentBoundaryValue(activeEditor.boundary) === 'MATIN'}
-                              onClick={() => chooseBoundaryPeriod(activeEditor.boundary, 'MATIN')}
-                            >
-                              Matin
-                            </button>
-                            <button
-                              type="button"
-                              className={currentBoundaryValue(activeEditor.boundary) === 'APRES_MIDI' ? 'is-active' : ''}
-                              aria-pressed={currentBoundaryValue(activeEditor.boundary) === 'APRES_MIDI'}
-                              onClick={() => chooseBoundaryPeriod(activeEditor.boundary, 'APRES_MIDI')}
-                            >
-                              Après-midi
-                            </button>
-                          </div>
+                              <button
+                                type="button"
+                                className={currentBoundaryValue('single') === 'MATIN' ? 'is-active' : ''}
+                                aria-pressed={currentBoundaryValue('single') === 'MATIN'}
+                                onClick={() => handlePeriodChoice({ boundary: 'single', value: 'MATIN' })}
+                              >
+                                Matin
+                              </button>
+                              <button
+                                type="button"
+                                className={currentBoundaryValue('single') === 'APRES_MIDI' ? 'is-active' : ''}
+                                aria-pressed={currentBoundaryValue('single') === 'APRES_MIDI'}
+                                onClick={() => handlePeriodChoice({ boundary: 'single', value: 'APRES_MIDI' })}
+                              >
+                                Après-midi
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="nr-cal__period-actions" role="group" aria-label={periodPopoverMode === 'departure' ? 'Moment du départ' : 'Moment du retour'}>
+                              <button
+                                type="button"
+                                className={currentBoundaryValue(periodPopoverMode === 'departure' ? 'start' : 'end') === 'MATIN' ? 'is-active' : ''}
+                                aria-pressed={currentBoundaryValue(periodPopoverMode === 'departure' ? 'start' : 'end') === 'MATIN'}
+                                onClick={() => handlePeriodChoice({ boundary: periodPopoverMode === 'departure' ? 'start' : 'end', value: 'MATIN' })}
+                              >
+                                Matin
+                              </button>
+                              <button
+                                type="button"
+                                className={currentBoundaryValue(periodPopoverMode === 'departure' ? 'start' : 'end') === 'APRES_MIDI' ? 'is-active' : ''}
+                                aria-pressed={currentBoundaryValue(periodPopoverMode === 'departure' ? 'start' : 'end') === 'APRES_MIDI'}
+                                onClick={() => handlePeriodChoice({ boundary: periodPopoverMode === 'departure' ? 'start' : 'end', value: 'APRES_MIDI' })}
+                              >
+                                Après-midi
+                              </button>
+                            </div>
+                          )}
                         </div>
                       )}
                       </div>
@@ -470,7 +577,7 @@ export function LeaveCalendar({
         <button
           type="button"
           className="nr-cal__nav-btn"
-          onClick={onNext}
+          onClick={() => { setPeriodPopoverAnchor(null); setPeriodPopoverMode(null); onNext?.() }}
           aria-label="Mois suivant"
         >
           <ChevronIcon direction="right" />
@@ -478,6 +585,16 @@ export function LeaveCalendar({
       </div>
 
       {hoverInfo && <div className="nr-cal__hover-info">{hoverInfo}</div>}
+
+
+      {allowsHalfDays && startDate && !endDate && (
+        <div className="nr-cal__selection-confirmation" aria-live="polite">
+          <span className="nr-cal__selection-confirmation-mark">✓</span>
+          <span>
+            <strong>Départ :</strong> {formatCalendarDate(startDate)} · {startPeriod === 'APRES_MIDI' ? 'Après-midi' : 'Matin'}
+          </span>
+        </div>
+      )}
 
       {allowsHalfDays && startDate && endDate && (
         <div className="nr-cal__selection-confirmation" aria-live="polite">

@@ -1,6 +1,9 @@
 .rh-declaration-backdrop {
   position: fixed;
-  inset: 0;
+  top: var(--header-height);
+  right: 0;
+  bottom: 0;
+  left: 0;
   z-index: 1250;
   display: flex;
   justify-content: flex-end;
@@ -60,7 +63,6 @@
 .rh-declaration-calendar .nr-cal__month-title { margin-bottom:10px; font-size:15px; }
 .rh-declaration-calendar .nr-cal__cell-wrap { height:48px; }
 .rh-declaration-calendar .nr-cal__legend { margin-top:12px; }
-.rh-declaration-calendar .nr-cal__boundary-popover { z-index:10; width:225px; }
 .rh-declaration-selection-summary { display:flex; align-items:center; gap:8px; padding:10px 12px; border-radius:10px; background:#edf8f2; color:#267354; font-size:12px; }
 .rh-declaration-units { display:flex; flex-wrap:wrap; gap:9px; }
 .rh-declaration-units button { display:inline-flex; min-height:40px; align-items:center; gap:7px; padding:0 15px; border:1px solid #d6e3f1; border-radius:11px; background:#fff; color:#577493; font:inherit; font-size:12px; font-weight:850; cursor:pointer; }

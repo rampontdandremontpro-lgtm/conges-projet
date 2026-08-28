@@ -171,45 +171,6 @@
   width: 100%;
 }
 
-.nr-cal__boundary-popover {
-  position: absolute;
-  z-index: 90;
-  top: calc(100% - 2px);
-  left: 50%;
-  width: 150px;
-  padding: 9px;
-  border: 1px solid #d7e3f1;
-  border-radius: 12px;
-  background: #ffffff;
-  box-shadow: 0 12px 28px rgba(19, 48, 82, .16);
-  transform: translateX(-50%);
-}
-
-.nr-cal__boundary-popover strong {
-  display: block;
-  margin: 0 0 6px;
-  color: #173d68;
-  font-size: 11px;
-  text-align: center;
-}
-
-.nr-cal__boundary-popover button {
-  display: block;
-  width: 100%;
-  min-height: 32px;
-  padding: 6px 8px;
-  border-radius: 8px;
-  color: #315777;
-  font-size: 11px;
-  font-weight: 750;
-  text-align: left;
-}
-
-.nr-cal__boundary-popover button:hover {
-  background: #eef5ff;
-  color: #1769e0;
-}
-
 .nr-cal__cell {
   position: relative;
   height: 54px;
@@ -432,84 +393,10 @@
 
 
 /* Sélecteur de demi-journée contextuel : plus lisible et tactile. */
-.nr-cal__boundary-popover {
-  width: 230px;
-  padding: 16px;
-  border-radius: 15px;
-}
-.nr-cal__boundary-popover strong {
-  margin-bottom: 4px;
-  font-size: 15px;
-  text-align: left;
-}
-.nr-cal__boundary-popover p {
-  margin: 0 0 10px;
-  color: #7890aa;
-  font-size: 11px;
-}
-.nr-cal__boundary-actions {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-}
-.nr-cal__boundary-actions button {
-  min-height: 42px;
-  border: 1px solid #d8e4f2;
-  border-radius: 10px;
-  background: #f8fbff;
-  color: #234f78;
-  font-size: 12px;
-  font-weight: 850;
-  text-align: center;
-}
-.nr-cal__boundary-actions button:hover {
-  border-color: #8cb7ef;
-  background: #eef5ff;
-  color: #1769e0;
-}
+
 
 /* Choix de durée directement sur les bornes du calendrier. */
-.nr-cal__boundary-popover {
-  width: 190px;
-  padding: 12px;
-  border-radius: 14px;
-}
 
-.nr-cal__boundary-popover strong {
-  margin-bottom: 5px;
-  font-size: 13px;
-}
-
-.nr-cal__boundary-popover p {
-  margin: 0 0 9px;
-  color: #7b8ea5;
-  font-size: 10.5px;
-  line-height: 1.35;
-  text-align: center;
-}
-
-.nr-cal__boundary-actions {
-  display: grid;
-  gap: 6px;
-}
-
-.nr-cal__boundary-popover .nr-cal__boundary-actions button {
-  min-height: 38px;
-  padding: 8px 10px;
-  border: 1px solid #dce6f2;
-  border-radius: 9px;
-  background: #fff;
-  font-size: 11.5px;
-  font-weight: 800;
-  text-align: center;
-}
-
-.nr-cal__boundary-popover .nr-cal__boundary-actions button.is-active {
-  border-color: #1769e0;
-  background: #eaf3ff;
-  color: #1769e0;
-  box-shadow: inset 0 0 0 1px rgba(23, 105, 224, .08);
-}
 
 .nr-cal__selection-confirmation {
   display: flex;
@@ -535,4 +422,164 @@
   background: #dff5e9;
   color: #17734a;
   font-weight: 900;
+}
+
+/* Sélecteur contextuel ancré au jour choisi. */
+.nr-cal__period-popover {
+  position: absolute;
+  z-index: 180;
+  width: 318px;
+  padding: 13px;
+  border: 1px solid #d8e5f3;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 16px 38px rgba(19, 55, 96, .18), 0 4px 12px rgba(19, 55, 96, .1);
+  color: #173d68;
+}
+
+.nr-cal__period-popover--range {
+  width: 380px;
+}
+
+.nr-cal__period-popover--below {
+  top: calc(100% + 7px);
+}
+
+.nr-cal__period-popover--above {
+  bottom: calc(100% + 7px);
+}
+
+.nr-cal__period-popover--right {
+  left: 0;
+}
+
+.nr-cal__period-popover--left {
+  right: 0;
+}
+
+.nr-cal__period-popover--center {
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.nr-cal__period-popover-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 11px;
+}
+
+.nr-cal__period-popover-head > div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.nr-cal__period-popover-head strong {
+  color: #173d68;
+  font-size: 13px;
+  font-weight: 900;
+  line-height: 1.25;
+}
+
+.nr-cal__period-popover-head span {
+  color: #7c92aa;
+  font-size: 10.5px;
+  line-height: 1.3;
+}
+
+.nr-cal__period-popover-close {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  place-items: center;
+  border-radius: 8px;
+  background: #f4f7fb;
+  color: #7890aa;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.nr-cal__period-popover-close:hover {
+  background: #eaf1fa;
+  color: #173d68;
+}
+
+.nr-cal__period-popover-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.nr-cal__period-popover-section {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid #e4edf7;
+  border-radius: 11px;
+  background: #f9fbfe;
+}
+
+.nr-cal__period-popover-section > strong {
+  color: #244d74;
+  font-size: 11.5px;
+  font-weight: 900;
+}
+
+.nr-cal__period-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.nr-cal__period-actions--single {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.nr-cal__period-actions button {
+  min-height: 40px;
+  padding: 7px 9px;
+  border: 1px solid #d7e4f2;
+  border-radius: 9px;
+  background: #ffffff;
+  color: #315777;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 850;
+  line-height: 1.2;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 140ms ease, background 140ms ease, color 140ms ease, box-shadow 140ms ease;
+}
+
+.nr-cal__period-actions button:hover {
+  border-color: #8cb7ef;
+  background: #eef5ff;
+  color: #1769e0;
+}
+
+.nr-cal__period-actions button.is-active {
+  border-color: var(--nr-primary);
+  background: #eaf3ff;
+  color: #135cd6;
+  box-shadow: inset 0 0 0 1px rgba(23, 105, 224, .08), 0 0 0 3px rgba(27, 110, 243, .12);
+}
+
+@media (max-width: 760px) {
+  .nr-cal__period-popover,
+  .nr-cal__period-popover--range {
+    width: min(300px, calc(100vw - 36px));
+  }
+
+  .nr-cal__period-popover-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .nr-cal__period-actions--single {
+    grid-template-columns: 1fr;
+  }
 }
