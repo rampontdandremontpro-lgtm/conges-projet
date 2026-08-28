@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { Icon } from '@/components/ui/Icon'
 import { useAutoDismiss } from '@/hooks/useAutoDismiss'
 import { formatDays, formatRangeCompactFR } from '@/utils/format'
+import { formatRelativeReferencePeriod } from '@/utils/referencePeriods'
 import { evaluateNotice } from '@/utils/leaveNotice'
 import { calculateDeductedDaysPreview } from '@/utils/leaveDuration'
 
@@ -52,6 +53,7 @@ export function RecapCard({
   editingExisting = false,
   preparationMode = false,
   preparedForName = '',
+  isAnticipatedLeave = false,
 }) {
   const [derogationFormOpen, setDerogationFormOpen] = useState(false)
   const [derogationReason, setDerogationReason] = useState('')
@@ -235,28 +237,40 @@ export function RecapCard({
 
           {leaveType?.deductsPaidLeaveBalance && (
             <section className="nr-recap__block nr-recap__rights-block">
-              <h4 className="nr-recap__subtitle">Impact prévisionnel sur vos droits</h4>
+              <div className="nr-recap__rights-titleline">
+                <h4 className="nr-recap__subtitle">Répartition prévue des jours</h4>
+                {isAnticipatedLeave && <span className="nr-anticipated-badge">Congé anticipé</span>}
+              </div>
+              <p className="nr-recap__rights-note">Les jours seront imputés sur les compteurs indiqués au moment où le congé commencera.</p>
               {projectionLoading ? (
-                <p className="nr-recap__rights-note">Calcul de la répartition N-1 → N…</p>
+                <p className="nr-recap__rights-note">Calcul de la répartition…</p>
               ) : projection ? (
-                <div className="nr-rights-impact">
-                  {Number(projection.nMinus1Used ?? 0) > 0 && (
-                    <div className="nr-rights-impact__period">
-                      <strong>N-1 · {String(projection.nMinus1Period).replace('-', '/')}</strong>
-                      <span>Utilisé par cette demande <b>{formatDays(projection.nMinus1Used)} j</b></span>
-                      <span>Solde prévisionnel <b className={Number(projection.nMinus1BalanceAfter) < 0 ? 'is-negative' : ''}>{formatDays(projection.nMinus1BalanceAfter)} j</b></span>
-                    </div>
+                <>
+                  <div className="nr-rights-impact">
+                    {Number(projection.nMinus1Used ?? 0) > 0 && (
+                      <div className="nr-rights-impact__period">
+                        <strong>{formatRelativeReferencePeriod(projection.nMinus1Period)}</strong>
+                        <span>Jours prévus sur ce compteur <b>{formatDays(projection.nMinus1Used)} j</b></span>
+                        <span>Solde estimé après imputation <b className={Number(projection.nMinus1BalanceAfter) < 0 ? 'is-negative' : ''}>{formatDays(projection.nMinus1BalanceAfter)} j</b></span>
+                      </div>
+                    )}
+                    {Number(projection.nUsed ?? 0) > 0 && (
+                      <div className="nr-rights-impact__period">
+                        <strong>{formatRelativeReferencePeriod(projection.nPeriod)}</strong>
+                        <span>Jours prévus sur ce compteur <b>{formatDays(projection.nUsed)} j</b></span>
+                        <span>Solde estimé après imputation <b className={Number(projection.nBalanceAfter) < 0 ? 'is-negative' : ''}>{formatDays(projection.nBalanceAfter)} j</b></span>
+                      </div>
+                    )}
+                  </div>
+                  {Number(projection.negativeBalanceDays ?? projection.anticipatedDays ?? 0) > 0 && (
+                    <p className="nr-negative-balance-warning"><Icon name="alert" size={15} /> Solde prévisionnel négatif : dépassement de {formatDays(projection.negativeBalanceDays ?? projection.anticipatedDays)} j.</p>
                   )}
-                  {Number(projection.nUsed ?? 0) > 0 && (
-                    <div className="nr-rights-impact__period">
-                      <strong>N · {String(projection.nPeriod).replace('-', '/')}</strong>
-                      <span>Utilisé par cette demande <b>{formatDays(projection.nUsed)} j</b></span>
-                      <span>Solde prévisionnel <b className={Number(projection.nBalanceAfter) < 0 ? 'is-negative' : ''}>{formatDays(projection.nBalanceAfter)} j</b></span>
-                    </div>
+                  {isAnticipatedLeave && (
+                    <p className="nr-anticipated-note"><Icon name="info" size={15} /> Cette demande concerne la période N+1 : elle est identifiée comme congé anticipé.</p>
                   )}
-                </div>
+                </>
               ) : (
-                <p className="nr-recap__rights-note">Sélectionnez une période complète pour afficher l’impact prévisionnel.</p>
+                <p className="nr-recap__rights-note">Sélectionnez une période complète pour afficher la répartition prévue.</p>
               )}
             </section>
           )}

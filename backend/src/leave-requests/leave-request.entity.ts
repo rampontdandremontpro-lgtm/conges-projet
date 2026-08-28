@@ -138,6 +138,9 @@ export class LeaveRequest {
   })
   balanceProcessingStatus!: BalanceProcessingStatus;
 
+  @Column({ name: 'is_anticipated_leave', type: 'boolean', default: false })
+  isAnticipatedLeave!: boolean;
+
   @Column({ type: 'text', nullable: true })
   comment!: string | null;
 

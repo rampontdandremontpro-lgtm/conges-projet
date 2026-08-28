@@ -28,6 +28,8 @@ import { useNewRequestResources } from '@/hooks/collab/useNewRequestResources'
 import { getLeaveRequest } from '@/services/collab/requestDetails'
 import { notifyAppDataChanged } from '@/utils/dataRefresh'
 import { calculateDeductedDaysPreview } from '@/utils/leaveDuration'
+import { changeLeaveBoundaryPeriod, selectLeaveDate } from '@/utils/leaveDateSelection'
+import { currentReferencePeriod, isNPlusOneReferencePeriod, referencePeriodForIsoDate } from '@/utils/referencePeriods'
 
 import '@/styles/collab/new-request/index.css'
 
@@ -187,6 +189,15 @@ export function NewRequest() {
     return () => { cancelled = true }
   }, [draft?.id, previewDeductedDays, selectedType?.deductsPaidLeaveBalance, selection.startDate, todayIso])
 
+  const selectedReferencePeriod = referencePeriodForIsoDate(selection.startDate)
+  const activeReferencePeriod = currentReferencePeriod()
+  const isAnticipatedLeave = Boolean(
+    selection.startDate &&
+      (draft?.isAnticipatedLeave && draft.leaveTypeId === selection.leaveTypeId && draft.startDate === selection.startDate && draft.endDate === selection.endDate
+        ? true
+        : isNPlusOneReferencePeriod(selectedReferencePeriod, activeReferencePeriod)),
+  )
+
   const draftMatchesSelection = Boolean(
     draft &&
       draft.leaveTypeId === selection.leaveTypeId &&
@@ -220,33 +231,11 @@ export function NewRequest() {
   ])
 
   const handlePick = (iso) => {
-    setSelection((prev) => {
-      if (!prev.startDate) return { ...prev, startDate: iso, endDate: iso }
-      if (prev.startDate === prev.endDate) {
-        if (iso === prev.startDate) return { ...prev, startDate: null, endDate: null }
-        if (iso < prev.startDate) return { ...prev, startDate: iso, endDate: prev.startDate }
-        return { ...prev, endDate: iso }
-      }
-      return { ...prev, startDate: iso, endDate: iso }
-    })
+    setSelection((previous) => selectLeaveDate(previous, iso))
   }
 
-  const handleBoundaryPeriodChange = ({ boundary, value }) => {
-    setSelection((prev) => {
-      if (!prev.startDate || !prev.endDate) return prev
-      if (boundary === 'single') {
-        if (value === 'MATIN') return { ...prev, startPeriod: 'MATIN', endPeriod: 'MATIN' }
-        if (value === 'APRES_MIDI') return { ...prev, startPeriod: 'APRES_MIDI', endPeriod: 'APRES_MIDI' }
-        return { ...prev, startPeriod: 'MATIN', endPeriod: 'APRES_MIDI' }
-      }
-      if (boundary === 'start') {
-        return { ...prev, startPeriod: value === 'APRES_MIDI' ? 'APRES_MIDI' : 'MATIN' }
-      }
-      if (boundary === 'end') {
-        return { ...prev, endPeriod: value === 'MATIN' ? 'MATIN' : 'APRES_MIDI' }
-      }
-      return prev
-    })
+  const handleBoundaryPeriodChange = (change) => {
+    setSelection((previous) => changeLeaveBoundaryPeriod(previous, change))
   }
 
   const goPrev = () => {
@@ -495,6 +484,7 @@ export function NewRequest() {
               onSubmit={() => setReviewOpen(true)}
               onRequestDerogation={handleRequestDerogation}
               editingExisting={isEditMode}
+              isAnticipatedLeave={isAnticipatedLeave}
             />
           </div>
         </div>
@@ -509,6 +499,7 @@ export function NewRequest() {
         projection={projection.data}
         settings={resources.settings}
         seasonal={resources.seasonal}
+        isAnticipatedLeave={isAnticipatedLeave}
         onClose={() => setReviewOpen(false)}
         onConfirm={() => {
           setReviewOpen(false)

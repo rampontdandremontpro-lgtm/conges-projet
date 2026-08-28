@@ -48,6 +48,7 @@ function normalizeLeaveRequest(request) {
     duration: Number(request.deductedDays) || 0,
     durationUnit: 'j',
     status: request.status === 'EN_ATTENTE_VALIDATION' && request.finalDeciderId ? 'EN_COURS_TRAITEMENT' : request.status,
+    isAnticipatedLeave: Boolean(request.isAnticipatedLeave),
     preparedByRh: Boolean(
       request.status === 'BROUILLON' &&
       request.createdBy?.role === 'RH' &&

@@ -22,6 +22,7 @@ import {
   adjacentReferencePeriodOptions,
   currentReferencePeriod,
   formatCounterReferencePeriod,
+  formatReferencePeriodRange,
   counterReferencePeriod,
 } from '@/utils/referencePeriods'
 
@@ -68,7 +69,7 @@ function formatDateTime(value) {
 }
 
 function formatReferencePeriod(value) {
-  return String(value ?? '').replace('-', '/') || '—'
+  return formatReferencePeriodRange(value)
 }
 
 function formatBalanceDays(value) {

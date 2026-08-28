@@ -2,6 +2,7 @@ import { createPortal } from 'react-dom'
 
 import { Icon } from '@/components/ui/Icon'
 import { formatDays, formatRangeCompactFR } from '@/utils/format'
+import { formatRelativeReferencePeriod } from '@/utils/referencePeriods'
 import { evaluateNotice } from '@/utils/leaveNotice'
 
 function periodLabel(startPeriod, endPeriod, startDate, endDate) {
@@ -15,25 +16,29 @@ function periodLabel(startPeriod, endPeriod, startDate, endDate) {
   return `${start} → ${end}`
 }
 
-function RightsImpact({ projection }) {
+function RightsImpact({ projection, isAnticipatedLeave }) {
   if (!projection) return <p className="nr-review__muted">Impact non disponible.</p>
 
   return (
     <div className="nr-review__rights">
       {Number(projection.nMinus1Used ?? 0) > 0 && (
         <div>
-          <strong>N-1 · {String(projection.nMinus1Period).replace('-', '/')}</strong>
+          <strong>{formatRelativeReferencePeriod(projection.nMinus1Period)}</strong>
           <span>{formatDays(projection.nMinus1Used)} j utilisés</span>
           <small>Solde après demande : {formatDays(projection.nMinus1BalanceAfter)} j</small>
         </div>
       )}
       {Number(projection.nUsed ?? 0) > 0 && (
         <div>
-          <strong>N · {String(projection.nPeriod).replace('-', '/')}</strong>
+          <strong>{formatRelativeReferencePeriod(projection.nPeriod)}</strong>
           <span>{formatDays(projection.nUsed)} j utilisés</span>
           <small>Solde après demande : {formatDays(projection.nBalanceAfter)} j</small>
         </div>
       )}
+      {Number(projection.negativeBalanceDays ?? projection.anticipatedDays ?? 0) > 0 && (
+        <p className="nr-negative-balance-warning">Solde prévisionnel négatif : dépassement de {formatDays(projection.negativeBalanceDays ?? projection.anticipatedDays)} j.</p>
+      )}
+      {isAnticipatedLeave && <span className="nr-anticipated-badge">Congé anticipé</span>}
     </div>
   )
 }
@@ -49,6 +54,7 @@ export function RequestReviewModal({
   seasonal,
   onClose,
   onConfirm,
+  isAnticipatedLeave = false,
 }) {
   if (!open) return null
 
@@ -85,8 +91,8 @@ export function RequestReviewModal({
           </section>
           {leaveType?.deductsPaidLeaveBalance && (
             <section>
-              <small>IMPACT PRÉVISIONNEL SUR VOS DROITS</small>
-              <RightsImpact projection={projection} />
+              <small>RÉPARTITION PRÉVUE DES JOURS</small>
+              <RightsImpact projection={projection} isAnticipatedLeave={isAnticipatedLeave} />
             </section>
           )}
           {derogationRequired && (

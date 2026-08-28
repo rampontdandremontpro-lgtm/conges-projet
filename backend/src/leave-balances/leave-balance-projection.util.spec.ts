@@ -41,6 +41,7 @@ describe('projectLeaveAtDate', () => {
     expect(result.nMinus1Used).toBe(0);
     expect(result.nBefore).toBe(2.5);
     expect(result.nBalanceAfter).toBe(-9.5);
-    expect(result.anticipatedDays).toBe(9.5);
+    expect(result.negativeBalanceDays).toBe(9.5);
+    expect(result.anticipatedDays).toBe(9.5); // compatibilité API temporaire
   });
 });

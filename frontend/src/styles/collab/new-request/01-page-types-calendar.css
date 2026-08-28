@@ -430,3 +430,40 @@
   background: rgba(107, 127, 163, 0.3);
 }
 
+
+/* Sélecteur de demi-journée contextuel : plus lisible et tactile. */
+.nr-cal__boundary-popover {
+  width: 230px;
+  padding: 16px;
+  border-radius: 15px;
+}
+.nr-cal__boundary-popover strong {
+  margin-bottom: 4px;
+  font-size: 15px;
+  text-align: left;
+}
+.nr-cal__boundary-popover p {
+  margin: 0 0 10px;
+  color: #7890aa;
+  font-size: 11px;
+}
+.nr-cal__boundary-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.nr-cal__boundary-actions button {
+  min-height: 42px;
+  border: 1px solid #d8e4f2;
+  border-radius: 10px;
+  background: #f8fbff;
+  color: #234f78;
+  font-size: 12px;
+  font-weight: 850;
+  text-align: center;
+}
+.nr-cal__boundary-actions button:hover {
+  border-color: #8cb7ef;
+  background: #eef5ff;
+  color: #1769e0;
+}

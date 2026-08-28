@@ -388,7 +388,7 @@ export class ReferencePeriodService {
 
         for (const source of [sourceNMinus1, sourceN, sourceNPlus1]) {
           if (!source || source.availableDays <= 0) {
-            // Un solde négatif représente une anticipation non résorbée : il
+            // Un solde négatif représente un dépassement de droits non résorbé : il
             // reste visible sur la période clôturée et doit être traité par la RH.
             continue;
           }

@@ -237,6 +237,7 @@ export function RequestDetailPage() {
           </span>
           <div className="request-detail-hero__title-row">
             <h2>{title}</h2>
+            {isLeave && request.isAnticipatedLeave && <span className="request-detail-anticipated">Congé anticipé</span>}
             <RequestStatusBadge status={isLeave ? getEffectiveLeaveRequestStatus(request) : request.status} />
           </div>
           <p>{formatRangeNumericFR(request.startDate, request.endDate)} · <strong>{formatDuration(request, source)}</strong></p>

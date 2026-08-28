@@ -27,6 +27,8 @@ export interface LeaveBalanceProjectionResult {
   nMinus1BalanceAfter: number;
   nBalanceAfter: number;
   projectedBalanceAfter: number;
+  negativeBalanceDays: number;
+  /** @deprecated Compatibilité API : utiliser negativeBalanceDays. */
   anticipatedDays: number;
 }
 
@@ -133,6 +135,7 @@ export function projectLeaveAtDate(input: LeaveBalanceProjectionInput): LeaveBal
     nMinus1BalanceAfter: applied.nMinus1After,
     nBalanceAfter: applied.nAfter,
     projectedBalanceAfter: round(applied.nMinus1After + applied.nAfter),
+    negativeBalanceDays: round(Math.max(0, -applied.nAfter)),
     anticipatedDays: round(Math.max(0, -applied.nAfter)),
   };
 }

@@ -16,6 +16,7 @@ import {
 } from '@/services/rh/rhRequests'
 import { getRhBalanceProjection } from '@/services/rh/rhBalances'
 import { formatDateNumericFR, formatDays, formatRangeNumericFR } from '@/utils/format'
+import { formatRelativeReferencePeriod, relativeReferencePeriodLabel } from '@/utils/referencePeriods'
 
 import '@/styles/manager/requests/index.css'
 
@@ -260,18 +261,18 @@ export function RhRequestDecisionPage() {
           </section>
 
           {projection && request.leaveType?.deductsPaidLeaveBalance && (
-            <section className={`manager-request-detail-card rh-balance-projection${projection.anticipatedDays > 0 ? ' is-negative' : ''}`}>
+            <section className={`manager-request-detail-card rh-balance-projection${Number(projection.negativeBalanceDays ?? projection.anticipatedDays ?? 0) > 0 ? ' is-negative' : ''}`}>
               <div className="manager-request-detail-card__heading">
                 <span className="manager-request-detail-card__icon"><Icon name="wallet" size={18} /></span>
                 <div><h3>Projection des droits</h3><p>Répartition automatique estimée à la date du congé.</p></div>
               </div>
               <div className="rh-balance-projection__grid">
-                <div><small>N-1 · {String(projection.nMinus1Period).replace('-', '/')}</small><strong>{formatDays(projection.nMinus1Used)} j utilisés</strong><span>Projection avant demande : {formatDays(projection.nMinus1Before)} j</span></div>
-                <div><small>N · {String(projection.nPeriod).replace('-', '/')}</small><strong>{formatDays(projection.nUsed)} j utilisés</strong><span>Projection avant demande : {formatDays(projection.nBefore)} j</span></div>
-                <div><small>Solde N après demande</small><strong>{formatDays(projection.nBalanceAfter)} j</strong><span>Répartition recalculée lors de la consolidation</span></div>
+                <div><small>{formatRelativeReferencePeriod(projection.nMinus1Period)}</small><strong>{formatDays(projection.nMinus1Used)} j utilisés</strong><span>Projection avant demande : {formatDays(projection.nMinus1Before)} j</span></div>
+                <div><small>{formatRelativeReferencePeriod(projection.nPeriod)}</small><strong>{formatDays(projection.nUsed)} j utilisés</strong><span>Projection avant demande : {formatDays(projection.nBefore)} j</span></div>
+                <div><small>Solde {relativeReferencePeriodLabel(projection.nPeriod)} après demande</small><strong>{formatDays(projection.nBalanceAfter)} j</strong><span>Répartition recalculée lors de la consolidation</span></div>
               </div>
-              {projection.anticipatedDays > 0 ? (
-                <div className="rh-balance-projection__warning"><Icon name="alert" size={17} /><span>Cette validation entraînerait probablement une prise de congés par anticipation de <strong>{formatDays(projection.anticipatedDays)} jour(s)</strong>. La validation finale RH vaut autorisation de ce passage en négatif.</span></div>
+              {Number(projection.negativeBalanceDays ?? projection.anticipatedDays ?? 0) > 0 ? (
+                <div className="rh-balance-projection__warning"><Icon name="alert" size={17} /><span>Cette validation entraînerait un dépassement du solde disponible de <strong>{formatDays(projection.negativeBalanceDays ?? projection.anticipatedDays)} jour(s)</strong>. La validation finale RH autorise ce solde négatif.</span></div>
               ) : (
                 <div className="rh-balance-projection__ok"><Icon name="check" size={16} /> Couverture prévisionnelle suffisante à la date du congé.</div>
               )}

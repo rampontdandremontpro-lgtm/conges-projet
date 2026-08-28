@@ -1503,7 +1503,7 @@ export class LeaveBalancesService {
           balance.counterType === LeaveBalanceCounterType.N_MINUS_1
             ? 'Imputation automatique sur N-1 au début effectif du congé.'
             : balance.availableDays < 0
-              ? 'Imputation automatique sur N avec prise de congés par anticipation.'
+              ? 'Imputation automatique sur N avec dépassement du solde disponible.'
               : 'Imputation automatique sur N au début effectif du congé.',
       });
 

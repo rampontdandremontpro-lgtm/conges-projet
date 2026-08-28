@@ -5,7 +5,8 @@ import { ProfileAvatar } from '@/components/ui/ProfileAvatar'
 import { Icon } from '@/components/ui/Icon'
 import { PaginationBar } from '@/components/ui/PaginationBar'
 import { PageContainer } from '@/components/ui/PageContainer'
-import { CreateAbsenceDrawer, DetailDrawer } from '@/pages/rh/AbsencesPage'
+import { DetailDrawer } from '@/pages/rh/AbsencesPage'
+import { RhLeaveAbsenceDeclarationDrawer } from '@/components/rh/RhLeaveAbsenceDeclarationDrawer'
 import {
   cancelRhAbsence,
   deleteRhAbsenceDraft,
@@ -33,33 +34,15 @@ function formatEventDate(value) {
   }).format(date)
 }
 
-function CreationChoice({ onClose, onLeave, onAbsence }) {
-  return (
-    <div className="rh-event-choice-backdrop" role="presentation" onMouseDown={onClose}>
-      <div className="rh-event-choice" role="dialog" aria-modal="true" aria-labelledby="rh-event-choice-title" onMouseDown={(event) => event.stopPropagation()}>
-        <div className="rh-event-choice__head">
-          <div><span>GESTION RH</span><h2 id="rh-event-choice-title">Déclarer congé/absence</h2><p>Choisissez le type d’événement à enregistrer.</p></div>
-          <button type="button" onClick={onClose} aria-label="Fermer">×</button>
-        </div>
-        <div className="rh-event-choice__options">
-          <button type="button" onClick={onLeave}><span className="rh-event-choice__icon"><Icon name="calendar" size={22} /></span><span><strong>Congé</strong><small>Préparer une demande pour un collaborateur.</small></span><Icon name="arrowRight" size={17} /></button>
-          <button type="button" onClick={onAbsence}><span className="rh-event-choice__icon"><Icon name="plus" size={22} /></span><span><strong>Absence</strong><small>Enregistrer une absence pour un collaborateur.</small></span><Icon name="arrowRight" size={17} /></button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
 export function RhLeavesAndAbsencesPage() {
   const navigate = useNavigate()
   const location = useLocation()
   const [searchParams] = useSearchParams()
   const globalSearch = searchParams.get('q') ?? ''
-  const [state, setState] = useState({ loading: true, error: false, leaves: [], absences: [], employees: [], absenceTypes: [] })
+  const [state, setState] = useState({ loading: true, error: false, leaves: [], absences: [], employees: [], absenceTypes: [], leaveTypes: [] })
   const [filters, setFilters] = useState({ nature: 'ALL', status: 'ALL', type: 'ALL', employee: 'ALL', service: 'ALL' })
   const [page, setPage] = useState(1)
-  const [choiceOpen, setChoiceOpen] = useState(false)
-  const [absenceCreateOpen, setAbsenceCreateOpen] = useState(false)
+  const [declarationOpen, setDeclarationOpen] = useState(false)
   const [selectedAbsence, setSelectedAbsence] = useState(null)
   const [busy, setBusy] = useState(false)
   const [feedback, setFeedback] = useState(null)
@@ -114,7 +97,7 @@ export function RhLeavesAndAbsencesPage() {
   const typeOptions = useMemo(() => {
     const values = new Map()
     rows.filter((row) => filters.nature === 'ALL' || row.nature === filters.nature)
-      .forEach((row) => { if (row.type?.id && row.type?.name) values.set(String(row.type.id), row.type.name) })
+      .forEach((row) => { if (row.type?.id && row.type?.name) values.set(`${row.nature}:${row.type.id}`, row.type.name) })
     return [...values.entries()].sort((a, b) => a[1].localeCompare(b[1], 'fr'))
   }, [filters.nature, rows])
 
@@ -135,7 +118,7 @@ export function RhLeavesAndAbsencesPage() {
     return rows.filter((row) => {
       if (filters.nature !== 'ALL' && row.nature !== filters.nature) return false
       if (filters.status !== 'ALL' && row.status !== filters.status) return false
-      if (filters.type !== 'ALL' && String(row.type?.id ?? '') !== filters.type) return false
+      if (filters.type !== 'ALL' && `${row.nature}:${row.type?.id ?? ''}` !== filters.type) return false
       if (filters.employee !== 'ALL' && String(row.employee?.id ?? '') !== filters.employee) return false
       if (filters.service !== 'ALL' && String(row.service?.id ?? '') !== filters.service) return false
       if (!query) return true
@@ -157,8 +140,8 @@ export function RhLeavesAndAbsencesPage() {
   const resetDependentFilters = (nature) => setFilters((current) => ({ ...current, nature, status: 'ALL', type: 'ALL' }))
   const showFeedback = (kind, message) => setFeedback({ kind, message })
 
-  const handleAbsenceSaved = async (message) => {
-    setAbsenceCreateOpen(false)
+  const handleDeclarationSaved = async (message) => {
+    setDeclarationOpen(false)
     showFeedback('success', message)
     await load()
   }
@@ -208,11 +191,11 @@ export function RhLeavesAndAbsencesPage() {
 
       <div className="rh-events-heading">
         <div><h1>Congés et Absences</h1><p>Retrouvez au même endroit toutes les demandes de congé et les absences enregistrées.</p></div>
-        <button type="button" className="rh-events-create" onClick={() => setChoiceOpen(true)}><Icon name="plus" size={17} /> Déclarer congé/absence</button>
+        <button type="button" className="rh-events-create" onClick={() => setDeclarationOpen(true)}><Icon name="plus" size={17} /> Déclarer congé/absence</button>
       </div>
 
       <section className="rh-events-filters" aria-label="Filtres congés et absences">
-        <label><span>NATURE</span><select value={filters.nature} onChange={(event) => resetDependentFilters(event.target.value)}><option value="ALL">Tous</option><option value="CONGE">Congés</option><option value="ABSENCE">Absences</option></select></label>
+        <label><span>CATÉGORIE</span><select value={filters.nature} onChange={(event) => resetDependentFilters(event.target.value)}><option value="ALL">Tous</option><option value="CONGE">Congés</option><option value="ABSENCE">Absences</option></select></label>
         <label><span>STATUT</span><select value={filters.status} onChange={(event) => setFilters((current) => ({ ...current, status: event.target.value }))}><option value="ALL">Tous les statuts</option>{statusOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
         <label><span>TYPE</span><select value={filters.type} onChange={(event) => setFilters((current) => ({ ...current, type: event.target.value }))}><option value="ALL">Tous les types</option>{typeOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
         <label><span>COLLABORATEUR</span><select value={filters.employee} onChange={(event) => setFilters((current) => ({ ...current, employee: event.target.value }))}><option value="ALL">Tous les collaborateurs</option>{employeeOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
@@ -224,12 +207,12 @@ export function RhLeavesAndAbsencesPage() {
           <>
             <div className="rh-events-table-wrap">
               <div className="rh-events-table">
-                <div className="rh-events-row rh-events-row--head"><span>Collaborateur</span><span>Nature</span><span>Type</span><span>Début</span><span>Fin</span><span>Durée</span><span>Statut</span><span>Déclaré / soumis le</span><span /></div>
+                <div className="rh-events-row rh-events-row--head"><span>Collaborateur</span><span>Catégorie</span><span>Type</span><span>Début</span><span>Fin</span><span>Durée</span><span>Statut</span><span>Déclaré</span><span /></div>
                 {visible.length === 0 ? <div className="rh-events-empty">Aucun congé ou absence ne correspond aux filtres.</div> : visible.map((row) => (
                   <button key={row.key} type="button" className="rh-events-row rh-events-row--data" onClick={() => row.nature === 'CONGE' ? navigate(`/app/rh-all-requests/${row.id}`) : setSelectedAbsence(row.source)}>
                     <span className="rh-events-person"><ProfileAvatar user={row.employee} className="rh-events-avatar" /><span><strong>{fullName(row.employee)}</strong><small>{row.service?.name ?? 'Service non renseigné'}</small></span></span>
                     <span><b className={`rh-events-nature rh-events-nature--${row.nature.toLowerCase()}`}>{row.natureLabel}</b></span>
-                    <span>{row.type?.name ?? '—'}</span>
+                    <span className="rh-events-type"><span>{row.type?.name ?? '—'}</span>{row.nature === 'CONGE' && row.source?.isAnticipatedLeave && <b className="rh-events-anticipated">Congé anticipé</b>}</span>
                     <span>{formatDateNumericFR(row.startDate)}</span>
                     <span>{formatDateNumericFR(row.endDate)}</span>
                     <span>{row.duration == null ? '—' : `${formatDays(row.duration)} ${row.durationUnit}`}</span>
@@ -245,8 +228,15 @@ export function RhLeavesAndAbsencesPage() {
         )}
       </section>
 
-      {choiceOpen && <CreationChoice onClose={() => setChoiceOpen(false)} onLeave={() => navigate('/app/rh-prepare-request')} onAbsence={() => { setChoiceOpen(false); setAbsenceCreateOpen(true) }} />}
-      {absenceCreateOpen && <CreateAbsenceDrawer employees={state.employees} types={state.absenceTypes} onClose={() => setAbsenceCreateOpen(false)} onSaved={handleAbsenceSaved} />}
+      {declarationOpen && (
+        <RhLeaveAbsenceDeclarationDrawer
+          employees={state.employees}
+          leaveTypes={state.leaveTypes}
+          absenceTypes={state.absenceTypes}
+          onClose={() => setDeclarationOpen(false)}
+          onSaved={handleDeclarationSaved}
+        />
+      )}
       {selectedAbsence && <DetailDrawer declaration={selectedAbsence} busy={busy} onClose={() => setSelectedAbsence(null)} onRegister={handleRegister} onCancel={handleCancel} onDeleteDraft={handleDeleteDraft} onDeclarationChanged={async (declaration) => { setSelectedAbsence(declaration); await load({ silent: true }) }} onFeedback={showFeedback} />}
     </PageContainer>
   )

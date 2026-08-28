@@ -338,26 +338,42 @@ function PasswordResetModal({ user, onCancel, onSuccess }) {
   return (
     <div className="admin-users-confirm-overlay" role="presentation" onMouseDown={onCancel}>
       <form className="admin-users-confirm admin-users-password-reset" role="dialog" aria-modal="true" aria-labelledby="admin-users-password-reset-title" onSubmit={submit} onMouseDown={(event) => event.stopPropagation()}>
-        <span className="admin-users-confirm__icon is-password"><Icon name="shield" size={22} /></span>
-        <h3 id="admin-users-password-reset-title">Réinitialiser le mot de passe</h3>
-        <p>Définissez un mot de passe temporaire pour <strong>{fullName(user)}</strong>. Il devra obligatoirement le modifier à sa prochaine connexion.</p>
-        <label className="admin-users-password-field">
-          <span>Mot de passe temporaire</span>
-          <div className="admin-users-password-input">
-            <input type={visible ? 'text' : 'password'} minLength={12} maxLength={64} autoComplete="new-password" value={temporaryPassword} onChange={(event) => setTemporaryPassword(event.target.value)} autoFocus required />
-            <button type="button" onClick={() => setVisible((value) => !value)} aria-label={visible ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}><Icon name={visible ? 'eyeOff' : 'eye'} size={17} /></button>
-          </div>
-        </label>
-        <label className="admin-users-password-field">
-          <span>Confirmer le mot de passe</span>
-          <div className="admin-users-password-input">
-            <input type={visible ? 'text' : 'password'} minLength={12} maxLength={64} autoComplete="new-password" value={confirmation} onChange={(event) => setConfirmation(event.target.value)} required />
-          </div>
-        </label>
+        <div className="admin-users-password-reset__header">
+          <span className="admin-users-confirm__icon is-password"><Icon name="shield" size={22} /></span>
+          <div><span>SÉCURITÉ DU COMPTE</span><h3 id="admin-users-password-reset-title">Réinitialiser le mot de passe</h3></div>
+          <button type="button" className="admin-users-password-reset__close" onClick={onCancel} aria-label="Fermer">×</button>
+        </div>
+
+        <div className="admin-users-password-reset__user">
+          <ProfileAvatar user={user} className="admin-users-password-reset__avatar" />
+          <div><strong>{fullName(user)}</strong><span>{ROLE_LABELS[user.role] ?? user.role} · {user.email}</span></div>
+        </div>
+
+        <div className="admin-users-password-reset__notice">
+          <Icon name="info" size={17} />
+          <p>Le nouveau mot de passe est temporaire. L’utilisateur devra obligatoirement en choisir un autre à sa prochaine connexion.</p>
+        </div>
+
+        <div className="admin-users-password-reset__fields">
+          <label className="admin-users-password-field">
+            <span>Mot de passe temporaire</span>
+            <div className="admin-users-password-input">
+              <input type={visible ? 'text' : 'password'} minLength={12} maxLength={64} autoComplete="new-password" value={temporaryPassword} onChange={(event) => setTemporaryPassword(event.target.value)} autoFocus required />
+              <button type="button" onClick={() => setVisible((value) => !value)} aria-label={visible ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}><Icon name={visible ? 'eyeOff' : 'eye'} size={17} /></button>
+            </div>
+            <small>12 caractères minimum.</small>
+          </label>
+          <label className="admin-users-password-field">
+            <span>Confirmer le mot de passe</span>
+            <div className="admin-users-password-input">
+              <input type={visible ? 'text' : 'password'} minLength={12} maxLength={64} autoComplete="new-password" value={confirmation} onChange={(event) => setConfirmation(event.target.value)} required />
+            </div>
+          </label>
+        </div>
         {feedback && <div className="admin-users-form__feedback"><Icon name="alert" size={16} /> {feedback}</div>}
         <div className="admin-users-password-reset__actions">
           <button type="button" onClick={onCancel}>Annuler</button>
-          <button type="submit" className="is-password" disabled={busy}>{busy ? 'Réinitialisation…' : 'Réinitialiser'}</button>
+          <button type="submit" className="is-password" disabled={busy}><Icon name="refresh" size={16} /> {busy ? 'Réinitialisation…' : 'Réinitialiser le mot de passe'}</button>
         </div>
       </form>
     </div>

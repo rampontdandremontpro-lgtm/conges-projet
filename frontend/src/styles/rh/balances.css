@@ -674,3 +674,9 @@
 
 .rh-balances-summary-card__period { margin: 5px 0 0; color: #7188a3; font-size: 12px; font-weight: 750; }
 .rh-balances-history-pagination { display: flex; justify-content: flex-end; padding-top: 14px; }
+
+/* Les libellés N-1/N/N+1 affichent désormais les bornes complètes. */
+@media (min-width: 761px) {
+  .rh-balances-filters label:nth-child(3),
+  .rh-balances-filters label:nth-child(3) select { min-width: 310px; }
+}

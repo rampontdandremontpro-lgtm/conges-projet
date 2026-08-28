@@ -149,6 +149,9 @@ export class LeaveRequestsService {
       endPeriod,
       leaveType.allowsHalfDays,
     );
+    const isAnticipatedLeave = await this.isNPlusOneLeave(
+      createLeaveRequestDto.startDate,
+    );
 
     const leaveRequest = this.leaveRequestRepository.create({
       employeeId: employee.id,
@@ -167,6 +170,7 @@ export class LeaveRequestsService {
       deductedDays: dates.deductedDays,
       status: LeaveRequestStatus.BROUILLON,
       balanceProcessingStatus: BalanceProcessingStatus.DEMANDE_ACTUELLE,
+      isAnticipatedLeave,
       comment: createLeaveRequestDto.comment?.trim() || null,
       submittedAt: null,
       modificationDeadline: await this.calculateModificationDeadline(
@@ -241,6 +245,166 @@ export class LeaveRequestsService {
     }
 
     return this.findOwnedRequest(savedRequest.id, employee.id);
+  }
+
+  async createRhDirectLeave(
+    authenticatedUser: AuthenticatedUser,
+    createLeaveRequestDto: CreateLeaveRequestDto,
+  ): Promise<LeaveRequest> {
+    if (authenticatedUser.role !== UserRole.RH) {
+      throw new ForbiddenException('Seule la RH peut déclarer directement un congé.');
+    }
+
+    const employee = await this.resolveEmployee(
+      authenticatedUser,
+      createLeaveRequestDto.employeeId,
+    );
+    const employeeServiceId = employee.serviceId;
+    const employeeService = employee.service;
+    if (!employeeServiceId || !employeeService || !employeeService.isActive) {
+      throw new BadRequestException(
+        'Un service actif doit être affecté au collaborateur avant de déclarer un congé.',
+      );
+    }
+
+    const leaveType = await this.leaveTypesService.findOne(
+      createLeaveRequestDto.leaveTypeId,
+    );
+    this.validateRhDirectLeaveType(leaveType);
+
+    const startPeriod = createLeaveRequestDto.startPeriod ?? DayPeriod.MATIN;
+    const endPeriod = createLeaveRequestDto.endPeriod ?? DayPeriod.APRES_MIDI;
+    const dates = await this.validateAndCalculateDates(
+      createLeaveRequestDto.startDate,
+      createLeaveRequestDto.endDate,
+      startPeriod,
+      endPeriod,
+      leaveType.allowsHalfDays,
+    );
+
+    const today = getMartiniqueDateString(new Date());
+    const isAnticipatedLeave = await this.isNPlusOneLeave(
+      createLeaveRequestDto.startDate,
+      today,
+    );
+    let requestId = 0;
+
+    await this.dataSource.transaction(async (manager) => {
+      const now = new Date();
+      const requestReferencePeriod = await this.getReferencePeriodForDate(
+        createLeaveRequestDto.startDate,
+      );
+      const activeReferencePeriod = await this.getReferencePeriodForDate(today);
+      const balanceProcessingStatus = leaveType.deductsPaidLeaveBalance
+        ? createLeaveRequestDto.startDate <= today
+          ? BalanceProcessingStatus.DEFINITIF
+          : requestReferencePeriod === activeReferencePeriod
+            ? BalanceProcessingStatus.DEMANDE_ACTUELLE
+            : BalanceProcessingStatus.CONGE_PREVISIONNEL
+        : BalanceProcessingStatus.DEFINITIF;
+
+      const leaveRequest = manager.getRepository(LeaveRequest).create({
+        employeeId: employee.id,
+        employee,
+        createdById: authenticatedUser.id,
+        createdBy: { id: authenticatedUser.id } as User,
+        leaveTypeId: leaveType.id,
+        leaveType,
+        serviceId: employeeServiceId,
+        service: employeeService,
+        startDate: createLeaveRequestDto.startDate,
+        endDate: createLeaveRequestDto.endDate,
+        startPeriod,
+        endPeriod,
+        calendarDuration: dates.calendarDuration,
+        deductedDays: dates.deductedDays,
+        status: LeaveRequestStatus.VALIDEE,
+        balanceProcessingStatus,
+        isAnticipatedLeave,
+        comment: createLeaveRequestDto.comment?.trim() || null,
+        submittedAt: now,
+        modificationDeadline: null,
+        realBalanceBefore: null,
+        potentialBalanceBefore: null,
+        realBalanceAfter: null,
+        finalDeciderId: authenticatedUser.id,
+        finalDecider: { id: authenticatedUser.id } as User,
+        finalDeciderRole: UserRole.RH,
+        decisionAt: now,
+        refusalComment: null,
+        employeeSignatureType: null,
+        employeeSignatureData: null,
+        employeeSignedAt: null,
+        validatorSignatureType: null,
+        validatorSignatureData: null,
+        validatorSignedAt: null,
+        rhConfirmedDirectorAgreement: false,
+        rhDirectorAgreementConfirmedAt: null,
+        isUrgent: false,
+        urgentReason: null,
+        version: 1,
+        lockedAt: now,
+        cancellationRequestedById: null,
+        cancellationRequestedBy: null,
+        cancellationReason: null,
+        employeeCancellationConsent: null,
+        employeeCancellationResponseAt: null,
+        cancelledAt: null,
+      });
+
+      const saved = await manager.getRepository(LeaveRequest).save(leaveRequest);
+      requestId = saved.id;
+      await this.ensureNoPersonalOverlap(manager, saved);
+
+      if (leaveType.deductsPaidLeaveBalance && createLeaveRequestDto.startDate <= today) {
+        const balanceResult = await this.leaveBalancesService.applyPaidLeaveForRequest(
+          manager,
+          {
+            employeeId: employee.id,
+            leaveRequestId: saved.id,
+            actorId: authenticatedUser.id,
+            expectedDays: saved.deductedDays,
+            referencePeriod: requestReferencePeriod,
+          },
+        );
+        saved.realBalanceAfter = balanceResult.realBalanceAfter;
+        await manager.getRepository(LeaveRequest).save(saved);
+      }
+
+      await this.auditService.recordStatusChange(
+        {
+          actorId: authenticatedUser.id,
+          action: AuditAction.DEMANDE_VALIDEE,
+          resourceType: 'LEAVE_REQUESTS',
+          resourceId: saved.id,
+          oldStatus: null,
+          newStatus: LeaveRequestStatus.VALIDEE,
+          comment: 'Congé déclaré directement par la RH.',
+          metadata: {
+            declaredDirectlyByRh: true,
+            employeeId: employee.id,
+            deductedDays: saved.deductedDays,
+            isAnticipatedLeave,
+            referencePeriod: requestReferencePeriod,
+          },
+        },
+        manager,
+      );
+
+      await this.notificationsService.create(
+        {
+          userId: employee.id,
+          type: 'LEAVE_DECLARED_BY_RH',
+          title: 'Congé déclaré par la RH',
+          message: `La RH a déclaré un congé du ${saved.startDate} au ${saved.endDate}.`,
+          leaveRequestId: saved.id,
+        },
+        manager,
+      );
+    });
+
+    await this.presenceService.refreshUserStatus(employee.id);
+    return this.findDecidedRequest(requestId);
   }
 
   async createDirectorRequest(
@@ -903,6 +1067,7 @@ export class LeaveRequestsService {
       leaveRequest.endPeriod = endPeriod;
       leaveRequest.calendarDuration = dates.calendarDuration;
       leaveRequest.deductedDays = dates.deductedDays;
+      leaveRequest.isAnticipatedLeave = await this.isNPlusOneLeave(startDate);
       leaveRequest.modificationDeadline =
         await this.calculateModificationDeadline(startDate);
 
@@ -2603,6 +2768,38 @@ export class LeaveRequestsService {
       '06-01',
     );
     return currentReferencePeriod(date, startMonthDay);
+  }
+
+  private nextReferencePeriod(referencePeriod: string): string {
+    const match = /^(\d{4})-(\d{4})$/.exec(referencePeriod);
+    if (!match) {
+      return '';
+    }
+    const startYear = Number(match[2]);
+    return `${startYear}-${startYear + 1}`;
+  }
+
+  private async isNPlusOneLeave(
+    startDate: string,
+    comparisonDate = getMartiniqueDateString(new Date()),
+  ): Promise<boolean> {
+    const [requestPeriod, activePeriod] = await Promise.all([
+      this.getReferencePeriodForDate(startDate),
+      this.getReferencePeriodForDate(comparisonDate),
+    ]);
+    return requestPeriod === this.nextReferencePeriod(activePeriod);
+  }
+
+  private validateRhDirectLeaveType(leaveType: LeaveType): void {
+    if (!leaveType.isActive) {
+      throw new BadRequestException('Le type de congé sélectionné est désactivé.');
+    }
+    if (leaveType.category !== LeaveTypeCategory.DEMANDE_CONGE) {
+      throw new BadRequestException('Le type sélectionné ne correspond pas à un congé.');
+    }
+    if (!leaveType.allowsDays && !leaveType.allowsHalfDays) {
+      throw new BadRequestException('Ce type de congé ne peut pas être déclaré en jours ou demi-journées.');
+    }
   }
 
   private validateLeaveType(leaveType: LeaveType): void {

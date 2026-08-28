@@ -1,0 +1,6 @@
+
+.nr-recap__rights-titleline { display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; }
+.nr-anticipated-badge { display:inline-flex; align-items:center; min-height:24px; padding:4px 9px; border-radius:999px; background:#fff4e8; color:#b5570d; font-size:10px; font-weight:900; letter-spacing:.01em; }
+.nr-anticipated-note,.nr-negative-balance-warning { display:flex; align-items:flex-start; gap:7px; margin:9px 0 0; padding:9px 10px; border-radius:10px; font-size:10.5px; line-height:1.4; }
+.nr-anticipated-note { background:#fff8ef; color:#8d521e; }
+.nr-negative-balance-warning { background:#fff0f1; color:#a52a2a; font-weight:750; }

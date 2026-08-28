@@ -9,7 +9,7 @@ import { PlanLeaveCard } from '@/components/collab/dashboard/PlanLeaveCard'
 import { AlertsCard } from '@/components/collab/dashboard/AlertsCard'
 import { getMyLeavePeriodSummaries, getMyLeaveRequests, getPublicSettings } from '@/services/collab/dashboard'
 import { todayISO } from '@/utils/format'
-import { adjacentReferencePeriodOptions, counterReferencePeriod, currentReferencePeriod } from '@/utils/referencePeriods'
+import { adjacentReferencePeriodOptions, counterReferencePeriod, currentReferencePeriod, formatReferencePeriodRange } from '@/utils/referencePeriods'
 
 import '@/styles/collab/dashboard/index.css'
 
@@ -105,7 +105,7 @@ export function DashboardCollaborateur() {
   }, [])
 
   const periodOptions = adjacentReferencePeriodOptions()
-  const selectedPeriodLabel = periodOptions.find((item) => item.value === selectedPeriod)?.label ?? selectedPeriod.replace('-', '/')
+  const selectedPeriodLabel = periodOptions.find((item) => item.value === selectedPeriod)?.label ?? formatReferencePeriodRange(selectedPeriod)
   const balanceSummary = balances.data.find((item) => item.referencePeriod === selectedPeriod) ?? {
     referencePeriod: selectedPeriod, acquiredDays: 0, takenDays: 0, balanceDays: 0, validatedDays: 0, pendingDays: 0,
   }
@@ -127,7 +127,7 @@ export function DashboardCollaborateur() {
             onPeriodChange={setSelectedPeriod}
             actionLabel="Voir mon historique"
             actionIcon="clock"
-            onAction={() => navigate('/app/my-requests')}
+            onAction={() => navigate('/app/history')}
           />
           <RecentRequestsCard
             requests={recent}

@@ -4,7 +4,7 @@ import { Icon } from '@/components/ui/Icon'
 import { PageContainer } from '@/components/ui/PageContainer'
 import { PaginationBar } from '@/components/ui/PaginationBar'
 import { getRhHistoryLogs, getRhHistoryUsers } from '@/services/rh/rhHistory'
-import { formatCounterReferencePeriod } from '@/utils/referencePeriods'
+import { formatCounterReferencePeriod, formatReferencePeriodRange } from '@/utils/referencePeriods'
 import '@/styles/rh/history.css'
 
 const MARTINIQUE_TIME_ZONE = 'America/Martinique'
@@ -47,6 +47,7 @@ const HIDDEN_HISTORY_ACTIONS = new Set([
   'Export des soldes',
   'Export des solde',
   'Modification du paramétrage',
+  'Consultation des statistiques',
 ])
 
 const RESOURCE_LABELS = {
@@ -185,7 +186,7 @@ function humanValue(value) {
       const [year, month, day] = value.split('-')
       return `${day}/${month}/${year}`
     }
-    if (/^\d{4}-\d{4}$/.test(value)) return value.replace('-', '/')
+    if (/^\d{4}-\d{4}$/.test(value)) return formatReferencePeriodRange(value)
     return value.replaceAll('_', ' ')
   }
   if (typeof value === 'number') return new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 2 }).format(value)

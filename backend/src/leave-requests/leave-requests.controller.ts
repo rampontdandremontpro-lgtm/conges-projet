@@ -73,6 +73,18 @@ export class LeaveRequestsController {
     );
   }
 
+  @Post('rh/direct')
+  @Roles(UserRole.RH)
+  createRhDirectLeave(
+    @Req() request: AuthenticatedRequest,
+    @Body() createLeaveRequestDto: CreateLeaveRequestDto,
+  ) {
+    return this.leaveRequestsService.createRhDirectLeave(
+      request.user,
+      createLeaveRequestDto,
+    );
+  }
+
   @Post('director')
   @Roles(UserRole.DIRECTEUR)
   createDirectorRequest(
