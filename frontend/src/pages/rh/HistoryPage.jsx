@@ -20,6 +20,10 @@ const ACTION_LABELS = {
   DEROGATION_REFUSEE: 'Dérogation refusée',
   DEROGATION_UTILISEE: 'Dérogation appliquée',
   HOLIDAY_WORK_STATUS_CHANGED: 'Jour férié chômé / travaillé',
+  HOLIDAY_CREATED: 'Jour férié créé',
+  VALIDATOR_REPLACEMENT_CREATED: 'Remplacement de valideur créé',
+  VALIDATOR_REPLACEMENT_DISABLED: 'Remplacement de valideur désactivé',
+  VALIDATOR_REPLACEMENT_DISEBLED: 'Remplacement de valideur désactivé',
   RH_BALANCE_CORRECTED: 'Correction de solde',
   RH_STATISTICS_VIEWED: 'Consultation des statistiques',
   RH_LEAVE_REQUESTS_EXPORTED: 'Export des demandes de congé',
@@ -34,6 +38,16 @@ const ACTION_LABELS = {
   HTTP_PUT: 'Modification',
   HTTP_DELETE: 'Suppression',
 }
+
+const HIDDEN_HISTORY_ACTIONS = new Set([
+  'Export des absences',
+  'Export des demandes de congé',
+  'Export des dérogations',
+  'Export des mouvements de solde',
+  'Export des soldes',
+  'Export des solde',
+  'Modification du paramétrage',
+])
 
 const RESOURCE_LABELS = {
   LEAVE_REQUESTS: 'Demande de congé',
@@ -276,18 +290,20 @@ export function RhHistoryPage() {
     [users],
   )
   const actionOptions = useMemo(
-    () => [...new Set(logs.map((log) => actionLabel(log)))].sort((a, b) => a.localeCompare(b, 'fr')),
+    () => [...new Set(logs.map((log) => actionLabel(log)).filter((label) => !HIDDEN_HISTORY_ACTIONS.has(label)))].sort((a, b) => a.localeCompare(b, 'fr')),
     [logs],
   )
   const usersById = useMemo(() => new Map(users.map((user) => [Number(user.id), user])), [users])
 
   const visible = useMemo(() => logs.filter((log) => {
+    const label = actionLabel(log)
+    if (HIDDEN_HISTORY_ACTIONS.has(label)) return false
     const dateKey = String(log.createdAt ?? '').slice(0, 10)
     if (filters.start && dateKey < filters.start) return false
     if (filters.end && dateKey > filters.end) return false
     if (filters.actor && String(log.actorId ?? '') !== filters.actor) return false
     if (filters.collaborator && String(collaboratorId(log) ?? '') !== filters.collaborator) return false
-    if (filters.action && actionLabel(log) !== filters.action) return false
+    if (filters.action && label !== filters.action) return false
     return true
   }), [filters, logs])
 

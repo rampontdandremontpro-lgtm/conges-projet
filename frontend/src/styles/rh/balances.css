@@ -670,3 +670,7 @@
   .rh-balances-top-action { flex: 1; padding: 0 12px; }
   .rh-balances-detail-period { grid-template-columns: 1fr; }
 }
+
+
+.rh-balances-summary-card__period { margin: 5px 0 0; color: #7188a3; font-size: 12px; font-weight: 750; }
+.rh-balances-history-pagination { display: flex; justify-content: flex-end; padding-top: 14px; }

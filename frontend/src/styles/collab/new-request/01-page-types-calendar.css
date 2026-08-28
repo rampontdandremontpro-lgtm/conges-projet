@@ -160,6 +160,56 @@
   row-gap: 2px;
 }
 
+
+.nr-cal__cell-wrap {
+  position: relative;
+  min-width: 0;
+  height: 54px;
+}
+
+.nr-cal__cell-wrap > .nr-cal__cell {
+  width: 100%;
+}
+
+.nr-cal__boundary-popover {
+  position: absolute;
+  z-index: 90;
+  top: calc(100% - 2px);
+  left: 50%;
+  width: 150px;
+  padding: 9px;
+  border: 1px solid #d7e3f1;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 12px 28px rgba(19, 48, 82, .16);
+  transform: translateX(-50%);
+}
+
+.nr-cal__boundary-popover strong {
+  display: block;
+  margin: 0 0 6px;
+  color: #173d68;
+  font-size: 11px;
+  text-align: center;
+}
+
+.nr-cal__boundary-popover button {
+  display: block;
+  width: 100%;
+  min-height: 32px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  color: #315777;
+  font-size: 11px;
+  font-weight: 750;
+  text-align: left;
+}
+
+.nr-cal__boundary-popover button:hover {
+  background: #eef5ff;
+  color: #1769e0;
+}
+
 .nr-cal__cell {
   position: relative;
   height: 54px;

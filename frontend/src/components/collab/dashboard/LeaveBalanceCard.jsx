@@ -35,24 +35,21 @@ export function LeaveBalanceCard({
       <>
         <div className="balance-period-grid">
           <div className="balance-period-kpi balance-period-kpi--acquired">
-            <span className="balance-period-kpi__icon"><Icon name="plus" size={15} /></span>
-            <div><span>Acquis</span><strong>{formatDays(summary.acquiredDays)} j</strong><small>Droits acquis sur la période</small></div>
+            <span className="balance-period-kpi__icon"><Icon name="plus" size={19} /></span>
+            <div><span>Acquis</span><strong>{formatDays(summary.acquiredDays)} j</strong></div>
           </div>
           <div className="balance-period-kpi balance-period-kpi--pending">
-            <span className="balance-period-kpi__icon"><Icon name="clock" size={15} /></span>
-            <div><span>En attente</span><strong>{formatDays(summary.pendingDays)} j</strong><small>Demandes en cours de décision</small></div>
+            <span className="balance-period-kpi__icon"><Icon name="clock" size={19} /></span>
+            <div><span>En attente</span><strong>{formatDays(summary.pendingDays)} j</strong></div>
           </div>
           <div className={`balance-period-kpi balance-period-kpi--balance balance-period-kpi--${tone}`}>
-            <span className="balance-period-kpi__icon"><Icon name="wallet" size={15} /></span>
-            <div><span>Solde</span><strong>{formatDays(balance)} j</strong><small>Acquis − jours pris</small></div>
+            <span className="balance-period-kpi__icon"><Icon name="wallet" size={19} /></span>
+            <div><span>Solde</span><strong>{formatDays(balance)} j</strong></div>
           </div>
         </div>
         {balance < 0 && (
           <p className="balance-negative-note"><Icon name="info" size={15} /> Solde anticipé : les prochaines acquisitions viendront le compenser.</p>
         )}
-        <p className="balance-period-note">
-          Les chiffres affichés concernent uniquement la période sélectionnée.
-        </p>
         {actionLabel && onAction && (
           <button type="button" className="balance-card__action" onClick={onAction}>
             <Icon name={actionIcon} size={17} /><span>{actionLabel}</span><Icon name="arrowRight" size={15} />

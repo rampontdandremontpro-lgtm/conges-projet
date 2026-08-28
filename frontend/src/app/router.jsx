@@ -23,10 +23,9 @@ import { ManagerRequestDecisionPage } from '@/pages/manager/RequestDecisionPage'
 import { ManagerAlertsPage } from '@/pages/manager/AlertsPage'
 import { ManagerPresencePage } from '@/pages/manager/PresencePage'
 import { ManagerMyBalancePage } from '@/pages/manager/MyBalancePage'
-import { RhAllRequestsPage } from '@/pages/rh/AllRequestsPage'
+import { RhLeavesAndAbsencesPage } from '@/pages/rh/LeavesAndAbsencesPage'
 import { RhPrepareRequestPage } from '@/pages/rh/PrepareRequestPage'
 import { RhRequestDecisionPage } from '@/pages/rh/RequestDecisionPage'
-import { RhAbsencesPage } from '@/pages/rh/AbsencesPage'
 import { RhDerogationsPage } from '@/pages/rh/DerogationsPage'
 import { RhBalancesPage } from '@/pages/rh/BalancesPage'
 import { RhStatisticsPage } from '@/pages/rh/StatisticsPage'
@@ -203,13 +202,14 @@ export const router = createBrowserRouter([
         ),
       },
       {
-        path: 'rh-all-requests',
+        path: 'rh-leaves-absences',
         element: (
           <RoleRoute roles={[ROLES.RH]}>
-            <RhAllRequestsPage />
+            <RhLeavesAndAbsencesPage />
           </RoleRoute>
         ),
       },
+      { path: 'rh-all-requests', element: <Navigate to="/app/rh-leaves-absences" replace /> },
       {
         path: 'rh-prepare-request',
         element: (
@@ -226,14 +226,7 @@ export const router = createBrowserRouter([
           </RoleRoute>
         ),
       },
-      {
-        path: 'rh-absences',
-        element: (
-          <RoleRoute roles={[ROLES.RH]}>
-            <RhAbsencesPage />
-          </RoleRoute>
-        ),
-      },
+      { path: 'rh-absences', element: <Navigate to="/app/rh-leaves-absences" replace /> },
       {
         path: 'rh-derogations',
         element: (
@@ -331,9 +324,9 @@ export const router = createBrowserRouter([
         ),
       },
       { path: 'rh-balance-movements', element: <Navigate to="/app/rh-balances" replace /> },
-      { path: 'rh-justificatifs', element: <Navigate to="/app/rh-absences" replace /> },
-      { path: 'rh-authorized-absences', element: <Navigate to="/app/rh-absences" replace /> },
-      { path: 'rh-requests', element: <Navigate to="/app/rh-all-requests" replace /> },
+      { path: 'rh-justificatifs', element: <Navigate to="/app/rh-leaves-absences" replace /> },
+      { path: 'rh-authorized-absences', element: <Navigate to="/app/rh-leaves-absences" replace /> },
+      { path: 'rh-requests', element: <Navigate to="/app/rh-leaves-absences" replace /> },
       {
         path: 'rh-requests/:id',
         element: (

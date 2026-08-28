@@ -44,3 +44,10 @@ export async function requestDerogation(payload) {
   const { data } = await apiClient.post('/derogations', payload)
   return data
 }
+
+export async function getMyLeaveBalanceProjection({ startDate, days, excludeRequestId }) {
+  const { data } = await apiClient.get('/leave-balances/my/projection', {
+    params: { startDate, days, ...(excludeRequestId ? { excludeRequestId } : {}) },
+  })
+  return data
+}

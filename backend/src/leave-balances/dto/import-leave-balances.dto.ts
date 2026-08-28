@@ -1,11 +1,10 @@
 import { Type } from 'class-transformer';
-import { ArrayMaxSize, ArrayMinSize, IsArray, IsInt, IsNumber, Matches, Min, ValidateNested } from 'class-validator';
+import { ArrayMaxSize, ArrayMinSize, IsArray, IsEmail, IsNumber, IsString, Matches, ValidateNested } from 'class-validator';
 
 export class ImportLeaveBalanceRowDto {
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  employeeId!: number;
+  @IsString()
+  @IsEmail({}, { message: 'L’adresse e-mail collaborateur est invalide.' })
+  email!: string;
 
   @Type(() => Number)
   @IsNumber({ maxDecimalPlaces: 2 })

@@ -257,14 +257,61 @@
 }
 
 
-.balance-period-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 16px 0 12px; }
-.balance-period-kpi { padding: 14px; border: 1px solid var(--border-color, #e5e7eb); border-radius: 14px; background: #fff; }
-.balance-period-kpi span { display: block; font-size: 12px; color: #64748b; margin-bottom: 6px; }
-.balance-period-kpi strong { font-size: 22px; color: #1e293b; }
+ .balance-period-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin: 20px 0 14px;
+}
+.balance-period-kpi {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 116px;
+  padding: 20px;
+  border: 1px solid #dce6f2;
+  border-radius: 18px;
+  background: linear-gradient(180deg, #ffffff 0%, #f9fbfe 100%);
+  box-shadow: 0 8px 24px rgba(17, 50, 88, .055);
+}
+.balance-period-kpi__icon {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  margin: 0 !important;
+  flex: 0 0 auto;
+  border-radius: 13px;
+  background: #eef5ff;
+  color: #1769e0 !important;
+}
+.balance-period-kpi > div { min-width: 0; }
+.balance-period-kpi > div > span {
+  display: block;
+  margin: 0 0 5px;
+  color: #6e829c;
+  font-size: 12px;
+  font-weight: 800;
+}
+.balance-period-kpi strong {
+  display: block;
+  color: #153c67;
+  font-size: clamp(30px, 3.2vw, 42px);
+  font-weight: 950;
+  line-height: 1;
+  letter-spacing: -.035em;
+  font-variant-numeric: tabular-nums;
+}
+.balance-period-kpi--pending .balance-period-kpi__icon { background: #fff5e8; color: #c65b08 !important; }
+.balance-period-kpi--balance .balance-period-kpi__icon { background: #eefaf2; color: #198754 !important; }
+.balance-period-kpi--negative .balance-period-kpi__icon { background: #fff1f2; color: #b42318 !important; }
 .balance-period-kpi--negative strong { color: #b42318; }
 .balance-period-kpi--positive strong { color: #157347; }
 .balance-negative-note { display: flex; align-items: center; gap: 7px; margin: 8px 0 0; font-size: 12px; color: #b42318; }
-@media (max-width: 560px) { .balance-period-grid { grid-template-columns: 1fr; } }
+@media (max-width: 760px) { .balance-period-grid { grid-template-columns: 1fr; } .balance-period-kpi { min-height: 92px; } }
+@media (min-width: 761px) and (max-width: 1100px) { .balance-period-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } .balance-period-kpi { padding: 16px; } }
 
 
 .dash-card__period-select select {
@@ -303,3 +350,13 @@
 .balance-period-kpi--negative .balance-period-kpi__icon { background:#fff0f0; color:#b42318 !important; }
 .balance-period-note { margin:8px 0 0; color:#899cb3; font-size:10.5px; }
 @media(max-width:720px){ .balance-card-head{flex-direction:column}.balance-card-period-select{width:100%;min-width:0}.dash-card--leave-balance .balance-period-grid{grid-template-columns:1fr} }
+
+
+/* Ajustement final : chiffres prioritaires dans Mes congés. */
+.dash-card--leave-balance { padding: 24px; }
+.dash-card--leave-balance .balance-period-grid { gap: 14px; margin: 14px 0 12px; }
+.dash-card--leave-balance .balance-period-kpi { min-height: 118px; padding: 18px; align-items: center; }
+.dash-card--leave-balance .balance-period-kpi__icon { width: 40px; height: 40px; flex-basis: 40px; border-radius: 12px; }
+.dash-card--leave-balance .balance-period-kpi > div > span { margin-bottom: 7px; font-size: 12px; }
+.dash-card--leave-balance .balance-period-kpi strong { margin: 0; font-size: clamp(32px, 3.2vw, 42px); line-height: .95; }
+@media(max-width:720px){ .dash-card--leave-balance { padding:18px; } .dash-card--leave-balance .balance-period-kpi { min-height:96px; } }

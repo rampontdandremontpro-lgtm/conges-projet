@@ -1,2 +1,11 @@
 @import './01-page.css';
 @import './02-responsive.css';
+
+
+.settings-security-note--required {
+  margin-bottom: 18px;
+  border: 1px solid #f0b5b8;
+  background: #fff5f5;
+  color: #9f2630;
+  font-weight: 750;
+}

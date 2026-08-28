@@ -135,7 +135,7 @@ export function RhPrepareRequestPage() {
       })
       notifyAppDataChanged({ source: 'leave-request', action: 'prepared-by-rh', id: saved.id })
       const employeeName = `${selectedEmployee?.nom ?? ''} ${selectedEmployee?.prenom ?? ''}`.trim() || 'le collaborateur'
-      navigate('/app/rh-all-requests', {
+      navigate('/app/rh-leaves-absences', {
         replace: true,
         state: {
           flash: {

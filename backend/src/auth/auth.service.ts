@@ -198,6 +198,7 @@ export class AuthService {
         presenceStatus: user.presenceStatus,
         serviceId: user.serviceId,
         service: user.service,
+        mustChangePassword: user.mustChangePassword,
       },
     };
   }

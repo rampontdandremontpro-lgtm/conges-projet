@@ -198,7 +198,7 @@ function buildPriorityItems({
     urgent: Boolean(request.isUrgent),
     urgencyRank: request.isUrgent ? 650 : request.finalDeciderId ? 500 : 300,
     dueDate: request.startDate ?? null,
-    to: '/app/rh-all-requests',
+    to: '/app/rh-leaves-absences',
   }))
 
   const absenceItems = absences.map((absence) => ({
@@ -215,7 +215,7 @@ function buildPriorityItems({
     urgent: false,
     urgencyRank: 250,
     dueDate: absence.startDate ?? null,
-    to: '/app/rh-absences',
+    to: '/app/rh-leaves-absences',
   }))
 
   const documentItems = documents.map((document) => ({

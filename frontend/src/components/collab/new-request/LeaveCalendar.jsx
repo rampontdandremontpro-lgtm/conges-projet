@@ -99,12 +99,15 @@ export function LeaveCalendar({
   onPick,
   onPrev,
   onNext,
+  allowsHalfDays = false,
+  onBoundaryPeriodChange,
 }) {
   const { startDate, endDate, startPeriod, endPeriod } = selection ?? {}
   const [selectionEmojis, setSelectionEmojis] = useState({ startEmoji: '😊', endEmoji: '😔' })
   const [phase, setPhase] = useState(startDate && !endDate ? 'selecting' : 'idle')
   const [hovering, setHovering] = useState(null)
   const [hoverInfo, setHoverInfo] = useState(null)
+  const [boundaryEditor, setBoundaryEditor] = useState(null)
 
   useEffect(() => {
     let active = true
@@ -180,13 +183,23 @@ export function LeaveCalendar({
   }
 
   const handleDayClick = (iso, inMonth) => {
-    if (isBlockedDate(iso, inMonth)) {
+    if (isBlockedDate(iso, inMonth)) return
+
+    const completeRange = Boolean(startDate && endDate)
+    const isExistingBoundary = completeRange && (iso === startDate || iso === endDate)
+    if (allowsHalfDays && isExistingBoundary) {
+      const boundary = startDate === endDate ? 'single' : iso === startDate ? 'start' : 'end'
+      setBoundaryEditor((current) => current?.iso === iso ? null : { iso, boundary })
       return
     }
 
     if (phase === 'selecting' && startDate) {
       if (iso !== startDate) {
+        const boundary = iso < startDate ? 'start' : 'end'
         onPick(iso)
+        if (allowsHalfDays) setBoundaryEditor({ iso, boundary })
+      } else if (allowsHalfDays) {
+        setBoundaryEditor({ iso, boundary: 'single' })
       }
       setPhase('idle')
       setHovering(null)
@@ -196,6 +209,12 @@ export function LeaveCalendar({
     onPick(iso)
     setPhase('selecting')
     setHovering(null)
+    if (allowsHalfDays) setBoundaryEditor({ iso, boundary: 'single' })
+  }
+
+  const chooseBoundaryPeriod = (boundary, value) => {
+    onBoundaryPeriodChange?.({ boundary, value })
+    setBoundaryEditor(null)
   }
 
   const handleDayEnter = (iso, inMonth, holiday) => {
@@ -266,6 +285,9 @@ export function LeaveCalendar({
                     const showFace = (isStart || isEnd) && !single && cell.inMonth
                     const startPm = isStart && !isSingle && startPeriod === 'APRES_MIDI'
                     const endAm = isEnd && !isSingle && endPeriod === 'MATIN'
+                    const singleAm = single && startPeriod === 'MATIN' && endPeriod === 'MATIN'
+                    const singlePm = single && startPeriod === 'APRES_MIDI' && endPeriod === 'APRES_MIDI'
+                    const activeEditor = allowsHalfDays && boundaryEditor?.iso === iso ? boundaryEditor : null
                     const today = iso === todayIso
                     const showDot = (isHoliday || isClosure) && cell.inMonth
 
@@ -287,9 +309,9 @@ export function LeaveCalendar({
                       .join(' ')
 
                     return (
+                      <div className="nr-cal__cell-wrap" key={`${year}-${month}-${iso}`}>
                       <button
                         type="button"
-                        key={`${year}-${month}-${iso}`}
                         className={cellClassName}
                         onClick={() => handleDayClick(iso, cell.inMonth)}
                         onMouseEnter={() => handleDayEnter(iso, cell.inMonth, holiday)}
@@ -331,12 +353,26 @@ export function LeaveCalendar({
                             <MoonPic size={8} />
                           </span>
                         )}
-                        {endAm && (
+                        {(endAm || singleAm) && (
                           <span className="nr-cal__half-ico nr-cal__half-ico--am">
                             <SunPic size={8} />
                           </span>
                         )}
+                        {singlePm && (
+                          <span className="nr-cal__half-ico nr-cal__half-ico--pm">
+                            <MoonPic size={8} />
+                          </span>
+                        )}
                       </button>
+                      {activeEditor && (
+                        <div className="nr-cal__boundary-popover" role="dialog" aria-label="Choisir la demi-journée">
+                          <strong>{activeEditor.boundary === 'start' ? 'Départ' : activeEditor.boundary === 'end' ? 'Retour' : 'Cette journée'}</strong>
+                          <button type="button" onClick={() => chooseBoundaryPeriod(activeEditor.boundary, 'FULL')}>Journée entière</button>
+                          <button type="button" onClick={() => chooseBoundaryPeriod(activeEditor.boundary, 'MATIN')}>Matin</button>
+                          <button type="button" onClick={() => chooseBoundaryPeriod(activeEditor.boundary, 'APRES_MIDI')}>Après-midi</button>
+                        </div>
+                      )}
+                      </div>
                     )
                   })}
                 </div>

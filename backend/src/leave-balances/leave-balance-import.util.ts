@@ -1,12 +1,13 @@
 export interface RawBalanceImportRow {
-  employeeId: unknown;
+  email: unknown;
   acquiredDays: unknown;
   takenDays: unknown;
   balanceDays: unknown;
 }
 
 export interface NormalizedBalanceImportRow {
-  employeeId: number;
+  email: string;
+  employeeId?: number;
   acquiredDays: number;
   takenDays: number;
   balanceDays: number;
@@ -14,6 +15,9 @@ export interface NormalizedBalanceImportRow {
 
 function numberFrom(value: unknown, label: string): number {
   const normalized = typeof value === 'string' ? value.trim().replace(',', '.') : value;
+  if (normalized === '' || normalized === null || normalized === undefined) {
+    throw new Error(`${label} est obligatoire.`);
+  }
   const parsed = Number(normalized);
   if (!Number.isFinite(parsed)) {
     throw new Error(`${label} doit être un nombre.`);
@@ -22,9 +26,9 @@ function numberFrom(value: unknown, label: string): number {
 }
 
 export function normalizeBalanceImportRow(row: RawBalanceImportRow): NormalizedBalanceImportRow {
-  const employeeId = Number(row.employeeId);
-  if (!Number.isInteger(employeeId) || employeeId <= 0) {
-    throw new Error('Identifiant collaborateur invalide.');
+  const email = String(row.email ?? '').trim().toLowerCase();
+  if (!email || !email.includes('@')) {
+    throw new Error('Adresse e-mail collaborateur invalide.');
   }
   const acquiredDays = numberFrom(row.acquiredDays, 'Acquis');
   const takenDays = numberFrom(row.takenDays, 'Pris');
@@ -39,5 +43,5 @@ export function normalizeBalanceImportRow(row: RawBalanceImportRow): NormalizedB
   if (Math.abs(expected - balanceDays) > 0.001) {
     throw new Error(`Le solde doit respecter Acquis - Pris (${expected.toFixed(2)}).`);
   }
-  return { employeeId, acquiredDays, takenDays, balanceDays };
+  return { email, acquiredDays, takenDays, balanceDays };
 }

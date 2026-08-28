@@ -117,6 +117,7 @@ function BalanceDetailDrawer({ row, onClose, onChanged }) {
   const [notifyEmployee, setNotifyEmployee] = useState(false)
   const [busy, setBusy] = useState(false)
   const [feedback, setFeedback] = useState('')
+  const [historyPage, setHistoryPage] = useState(1)
   useAutoDismiss(feedback, setFeedback, { clearValue: '' })
 
   const load = useCallback(async ({ silent = false } = {}) => {
@@ -156,8 +157,8 @@ function BalanceDetailDrawer({ row, onClose, onChanged }) {
   useEffect(() => {
     const firstCounter = correctionCounters[0]
     setCounterId(firstCounter ? String(firstCounter.id) : '')
-    setShowCorrection(false)
     setFeedback('')
+    setHistoryPage(1)
   }, [correctionCounters, selectedDetailPeriod])
 
   const toggleCorrection = async () => {
@@ -183,6 +184,35 @@ function BalanceDetailDrawer({ row, onClose, onChanged }) {
       })
       await load({ silent: true })
       setShowCorrection(true)
+    } catch (error) {
+      setFeedback(errorMessage(error))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const handleCorrectionPeriodChange = async (nextPeriod) => {
+    setSelectedDetailPeriod(nextPeriod)
+    const existing = state.balances.find(
+      (item) => counterReferencePeriod(item.referencePeriod, item.counterType) === nextPeriod,
+    )
+    if (existing) {
+      setCounterId(String(existing.id))
+      return
+    }
+
+    setBusy(true)
+    setFeedback('')
+    try {
+      const config = correctionCounterConfig(nextPeriod)
+      await initializeRhBalance({
+        employeeId: row.employee.id,
+        referencePeriod: config.referencePeriod,
+        counterType: config.counterType,
+        acquiredDays: 0,
+        reason: `Initialisation automatique pour correction de la période ${nextPeriod}.`,
+      })
+      await load({ silent: true })
     } catch (error) {
       setFeedback(errorMessage(error))
     } finally {
@@ -221,6 +251,10 @@ function BalanceDetailDrawer({ row, onClose, onChanged }) {
     }
   }
 
+  const historyPageCount = Math.max(1, Math.ceil(state.history.length / PAGE_SIZE))
+  const safeHistoryPage = Math.min(historyPage, historyPageCount)
+  const visibleHistory = state.history.slice((safeHistoryPage - 1) * PAGE_SIZE, safeHistoryPage * PAGE_SIZE)
+
   return (
     <div className="rh-balances-overlay" role="presentation" onMouseDown={onClose}>
       <aside
@@ -256,14 +290,7 @@ function BalanceDetailDrawer({ row, onClose, onChanged }) {
               <div className="rh-balances-summary-card__title">
                 <div>
                   <h3>Situation actuelle</h3>
-                  <label className="rh-balances-detail-period">
-                    <span>Période</span>
-                    <select value={selectedDetailPeriod} onChange={(event) => setSelectedDetailPeriod(event.target.value)}>
-                      {adjacentPeriods().map((period) => (
-                        <option key={period.value} value={period.value}>{period.label}</option>
-                      ))}
-                    </select>
-                  </label>
+                  <p className="rh-balances-summary-card__period">{adjacentPeriods().find((period) => period.value === selectedDetailPeriod)?.label ?? formatReferencePeriod(selectedDetailPeriod)}</p>
                 </div>
                 <button
                   type="button"
@@ -314,11 +341,9 @@ function BalanceDetailDrawer({ row, onClose, onChanged }) {
 
                   <label>
                     <span>Compteur concerné</span>
-                    <select value={counterId} onChange={(event) => setCounterId(event.target.value)}>
-                      {correctionCounters.map((balance) => (
-                        <option key={balance.id} value={balance.id}>
-                          Période {formatCounterReferencePeriod(balance.referencePeriod, balance.counterType)} · compteur {balance.counterType}
-                        </option>
+                    <select value={selectedDetailPeriod} onChange={(event) => handleCorrectionPeriodChange(event.target.value)} disabled={busy}>
+                      {adjacentPeriods().map((period) => (
+                        <option key={period.value} value={period.value}>{period.label}</option>
                       ))}
                     </select>
                   </label>
@@ -376,7 +401,7 @@ function BalanceDetailDrawer({ row, onClose, onChanged }) {
                   <div className="rh-balances-history rh-balances-history--head">
                     <span>Date</span><span>Mouvement</span><span>Compteur</span><span>Montant</span><span>Motif</span><span>Effectué par</span>
                   </div>
-                  {state.history.map((movement) => {
+                  {visibleHistory.map((movement) => {
                     const meta = MOVEMENT_META[movement.movementType] ?? { label: movement.movementType, tone: 'neutral' }
                     const change = movementChange(movement)
                     return (
@@ -390,6 +415,11 @@ function BalanceDetailDrawer({ row, onClose, onChanged }) {
                       </div>
                     )
                   })}
+                </div>
+              )}
+              {state.history.length > PAGE_SIZE && (
+                <div className="rh-balances-history-pagination">
+                  <PaginationBar page={safeHistoryPage} pageSize={PAGE_SIZE} totalItems={state.history.length} onPageChange={setHistoryPage} />
                 </div>
               )}
             </section>
@@ -407,7 +437,7 @@ export function RhBalancesPage() {
   const [filterState, setFilterState] = useState({ services: [], users: [] })
   const [serviceFilter, setServiceFilter] = useState('all')
   const [employeeFilter, setEmployeeFilter] = useState('all')
-  const [periodFilter, setPeriodFilter] = useState(currentReferencePeriod())
+  const [periodFilter, setPeriodFilter] = useState(() => counterReferencePeriod(currentReferencePeriod(), 'N-1'))
   const [selected, setSelected] = useState(null)
   const [page, setPage] = useState(1)
   const [feedback, setFeedback] = useState('')
@@ -516,15 +546,14 @@ export function RhBalancesPage() {
   const downloadImportTemplate = () => {
     const escape = (value) => `"${String(value ?? '').replaceAll('"', '""')}"`
     const lines = [
-      ['Identifiant', 'NOM', 'Prénom', 'E-mail', 'Acquis', 'Pris', 'Solde'].join(';'),
+      ['NOM', 'Prénom', 'E-mail', 'Acquis', 'Pris', 'Solde'].join(';'),
       ...state.rows.map((row) => [
-        row.employee.id,
         escape(row.employee.nom),
         escape(row.employee.prenom),
         escape(row.employee.email),
-        String(row.acquiredDays ?? 0).replace('.', ','),
-        String(row.takenDays ?? 0).replace('.', ','),
-        String(row.balanceDays ?? 0).replace('.', ','),
+        '',
+        '',
+        '',
       ].join(';')),
     ]
     const blob = new Blob([`\uFEFF${lines.join('\n')}`], { type: 'text/csv;charset=utf-8' })
@@ -558,18 +587,21 @@ export function RhBalancesPage() {
       }
       const header = splitLine(lines[0]).map((value) => normalize(value))
       const indexOf = (...labels) => header.findIndex((value) => labels.includes(value))
-      const idIndex = indexOf('identifiant', 'id')
+      const emailIndex = indexOf('e-mail', 'email', 'adresse e-mail')
       const acquiredIndex = indexOf('acquis', 'jours acquis')
       const takenIndex = indexOf('pris', 'jours pris')
       const balanceIndex = indexOf('solde')
-      if ([idIndex, acquiredIndex, takenIndex, balanceIndex].some((index) => index < 0)) {
-        throw new Error('Format invalide : les colonnes Identifiant, Acquis, Pris et Solde sont obligatoires.')
+      if ([emailIndex, acquiredIndex, takenIndex, balanceIndex].some((index) => index < 0)) {
+        throw new Error('Format invalide : les colonnes E-mail, Acquis, Pris et Solde sont obligatoires.')
       }
-      const numeric = (value) => Number(String(value ?? '').replace(/\s/g, '').replace(',', '.'))
+      const numeric = (value) => {
+        const normalizedValue = String(value ?? '').replace(/\s/g, '').replace(',', '.')
+        return normalizedValue === '' ? null : Number(normalizedValue)
+      }
       const rows = lines.slice(1).map((line) => {
         const cells = splitLine(line)
         return {
-          employeeId: numeric(cells[idIndex]),
+          email: cells[emailIndex]?.trim().toLowerCase(),
           acquiredDays: numeric(cells[acquiredIndex]),
           takenDays: numeric(cells[takenIndex]),
           balanceDays: numeric(cells[balanceIndex]),
@@ -606,7 +638,7 @@ export function RhBalancesPage() {
         </div>
         <div className="rh-balances-heading__actions">
           <button type="button" className="rh-balances-top-action" onClick={downloadImportTemplate}>
-            <Icon name="download" size={17} /> Télécharger le modèle
+            <Icon name="download" size={17} /> Télécharger un modèle
           </button>
           <button type="button" className="rh-balances-top-action" onClick={() => { setImportOpen(true); setImportState({ busy: false, rows: [], preview: null, error: '' }) }}>
             <Icon name="upload" size={17} /> Importer
@@ -652,7 +684,7 @@ export function RhBalancesPage() {
               onClick={() => {
                 setServiceFilter('all')
                 setEmployeeFilter('all')
-                setPeriodFilter(currentReferencePeriod())
+                setPeriodFilter(counterReferencePeriod(currentReferencePeriod(), 'N-1'))
                 setPage(1)
               }}
             >

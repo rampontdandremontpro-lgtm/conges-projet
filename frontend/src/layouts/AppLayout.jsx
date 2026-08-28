@@ -68,7 +68,6 @@ function ManagerBackgroundDecor() {
       <span className="gmes-manager-bg__shape gmes-manager-bg__shape--blob" />
       <span className="gmes-manager-bg__shape gmes-manager-bg__shape--arc" />
       <span className="gmes-manager-bg__shape gmes-manager-bg__shape--dots" />
-      <span className="gmes-manager-bg__shape gmes-manager-bg__shape--accent" />
     </div>
   )
 }
@@ -77,6 +76,7 @@ function getRhBackgroundVariant(pathname, role) {
   if (role !== ROLES.RH) return null
 
   if (pathname === '/app/dashboard') return 'dashboard'
+  if (pathname === '/app/rh-leaves-absences') return 'requests'
   if (pathname === '/app/rh-all-requests') return 'requests'
   if (pathname.startsWith('/app/rh-all-requests/')) return 'request-detail'
   if (pathname === '/app/rh-prepare-request') return 'prepare'
@@ -121,7 +121,6 @@ function RhBackgroundDecor() {
       <span className="gmes-rh-bg__shape gmes-rh-bg__shape--blob" />
       <span className="gmes-rh-bg__shape gmes-rh-bg__shape--arc" />
       <span className="gmes-rh-bg__shape gmes-rh-bg__shape--dots" />
-      <span className="gmes-rh-bg__shape gmes-rh-bg__shape--accent" />
     </div>
   )
 }
@@ -158,7 +157,6 @@ function DirectorBackgroundDecor() {
       <span className="gmes-director-bg__shape gmes-director-bg__shape--blob" />
       <span className="gmes-director-bg__shape gmes-director-bg__shape--arc" />
       <span className="gmes-director-bg__shape gmes-director-bg__shape--dots" />
-      <span className="gmes-director-bg__shape gmes-director-bg__shape--accent" />
     </div>
   )
 }
@@ -189,7 +187,6 @@ function AdminBackgroundDecor() {
       <span className="gmes-admin-bg__shape gmes-admin-bg__shape--blob" />
       <span className="gmes-admin-bg__shape gmes-admin-bg__shape--arc" />
       <span className="gmes-admin-bg__shape gmes-admin-bg__shape--grid" />
-      <span className="gmes-admin-bg__shape gmes-admin-bg__shape--accent" />
     </div>
   )
 }
@@ -202,7 +199,6 @@ function CollaboratorBackgroundDecor() {
       <span className="gmes-collab-bg__shape gmes-collab-bg__shape--blob" />
       <span className="gmes-collab-bg__shape gmes-collab-bg__shape--arc" />
       <span className="gmes-collab-bg__shape gmes-collab-bg__shape--dots" />
-      <span className="gmes-collab-bg__shape gmes-collab-bg__shape--accent" />
     </div>
   )
 }

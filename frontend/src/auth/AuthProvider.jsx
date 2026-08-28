@@ -12,6 +12,16 @@ export function AuthProvider({ children }) {
   const [profileMode, setProfileMode] = useState(() => sessionStorage.getItem(PROFILE_MODE_KEY) === 'COLLABORATOR' ? 'COLLABORATOR' : 'MANAGEMENT')
   const [isLoading, setIsLoading] = useState(() => Boolean(getToken()))
 
+  const refreshUser = useCallback(async () => {
+    if (!getToken()) {
+      setUser(null)
+      return null
+    }
+    const response = await apiClient.get('/auth/me')
+    setUser(response.data)
+    return response.data
+  }, [])
+
   useEffect(() => {
     if (!getToken()) {
       return undefined
@@ -19,13 +29,8 @@ export function AuthProvider({ children }) {
 
     let active = true
 
-    apiClient
-      .get('/auth/me')
-      .then((response) => {
-        if (active) {
-          setUser(response.data)
-        }
-      })
+    refreshUser()
+      .then(() => undefined)
       .catch(() => {
         clearToken()
         if (active) {
@@ -41,7 +46,7 @@ export function AuthProvider({ children }) {
     return () => {
       active = false
     }
-  }, [])
+  }, [refreshUser])
 
   const login = useCallback(async (email, password) => {
     const response = await apiClient.post('/auth/login', { email, password })
@@ -88,8 +93,9 @@ export function AuthProvider({ children }) {
       isLoading,
       login,
       logout,
+      refreshUser,
     }),
-    [user, effectiveRole, profileMode, availableProfiles, switchProfile, isLoading, login, logout],
+    [user, effectiveRole, profileMode, availableProfiles, switchProfile, isLoading, login, logout, refreshUser],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

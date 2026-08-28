@@ -14,4 +14,5 @@ export interface AuthenticatedUser {
   email: string;
   role: UserRole;
   serviceId: number | null;
+  mustChangePassword: boolean;
 }

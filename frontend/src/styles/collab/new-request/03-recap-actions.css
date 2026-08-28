@@ -477,3 +477,10 @@
 .nr-solde__row--official .nr-solde__value { color:#14a870; font-size:15px; font-weight:900; }
 .nr-solde__row--official.nr-solde__row--danger .nr-solde__value { color:#b42318; }
 .nr-recap__rights-note { margin:10px 0 0; color:var(--nr-muted); font-size:10px; line-height:1.45; }
+
+.nr-rights-impact { display:grid; gap:10px; margin-top:10px; }
+.nr-rights-impact__period { display:grid; gap:5px; padding:12px; border:1px solid #dfe8f3; border-radius:12px; background:#f8fbff; }
+.nr-rights-impact__period > strong { color:#174a7c; font-size:12px; }
+.nr-rights-impact__period > span { display:flex; justify-content:space-between; gap:12px; color:#637b96; font-size:11.5px; }
+.nr-rights-impact__period b { color:#173f6b; }
+.nr-rights-impact__period b.is-negative { color:#b42318; }

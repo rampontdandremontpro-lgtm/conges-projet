@@ -93,6 +93,20 @@ export class LeaveBalancesController {
   }
 
 
+  @Get('my/projection')
+  @Roles(
+    UserRole.COLLABORATEUR,
+    UserRole.RESPONSABLE_SERVICE,
+    UserRole.RH,
+    UserRole.DIRECTEUR,
+  )
+  getMyBalanceProjection(
+    @Req() request: AuthenticatedRequest,
+    @Query() query: LeaveBalanceProjectionQueryDto,
+  ) {
+    return this.leaveBalancesService.getEmployeeBalanceProjection(request.user.id, query);
+  }
+
   @Get('employee/:employeeId/projection')
   @Roles(UserRole.RH, UserRole.DIRECTEUR)
   getEmployeeBalanceProjection(

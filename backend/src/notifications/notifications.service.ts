@@ -311,6 +311,7 @@ export class NotificationsService {
       email: currentUser.email,
       role: currentUser.role,
       serviceId: currentUser.serviceId,
+      mustChangePassword: currentUser.mustChangePassword,
     };
 
     const today = getMartiniqueDateString(new Date());

@@ -441,17 +441,19 @@ export class LeaveBalancesService {
     this.validateReferencePeriod(dto.referencePeriod);
     const managedEmployees = (await this.usersService.findAll())
       .filter((employee) => isManagedBalanceEmployee(employee));
-    const employeeById = new Map(managedEmployees.map((employee) => [employee.id, employee]));
-    const seen = new Set<number>();
+    const employeeByEmail = new Map(
+      managedEmployees.map((employee) => [employee.email.trim().toLowerCase(), employee]),
+    );
+    const seen = new Set<string>();
 
     const rows = dto.rows.map((raw, index) => {
       try {
         const normalized = normalizeBalanceImportRow(raw);
-        if (seen.has(normalized.employeeId)) {
+        if (seen.has(normalized.email)) {
           throw new Error('Collaborateur présent plusieurs fois dans le fichier.');
         }
-        seen.add(normalized.employeeId);
-        const employee = employeeById.get(normalized.employeeId);
+        seen.add(normalized.email);
+        const employee = employeeByEmail.get(normalized.email);
         if (!employee) {
           throw new Error('Collaborateur introuvable ou non éligible à la gestion des soldes.');
         }
@@ -466,6 +468,7 @@ export class LeaveBalancesService {
             email: employee.email,
           },
           ...normalized,
+          employeeId: employee.id,
         };
       } catch (error) {
         return {
@@ -473,7 +476,8 @@ export class LeaveBalancesService {
           valid: false,
           error: error instanceof Error ? error.message : 'Ligne invalide.',
           employee: null,
-          employeeId: Number(raw.employeeId) || 0,
+          employeeId: 0,
+          email: String(raw.email ?? '').trim().toLowerCase(),
           acquiredDays: Number(raw.acquiredDays) || 0,
           takenDays: Number(raw.takenDays) || 0,
           balanceDays: Number(raw.balanceDays) || 0,
@@ -500,11 +504,12 @@ export class LeaveBalancesService {
     }
 
     const rows = preview.rows.map((row) => ({
+      email: row.email,
       employeeId: row.employeeId,
       acquiredDays: row.acquiredDays,
       takenDays: row.takenDays,
       balanceDays: row.balanceDays,
-    })) as NormalizedBalanceImportRow[];
+    })) as Array<NormalizedBalanceImportRow & { employeeId: number }>;
     const periodStart = await this.settingsService.getString('REFERENCE_PERIOD_START', '06-01');
     const currentFrame = currentReferencePeriod(this.martiniqueDateString(new Date()), periodStart);
     const { startYear: currentStartYear } = parseReferencePeriod(currentFrame);

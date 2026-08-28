@@ -129,7 +129,7 @@ function errorMessage(error) {
   return message || error?.message || 'Une erreur est survenue.'
 }
 
-function CreateAbsenceDrawer({ employees, types, onClose, onSaved }) {
+export function CreateAbsenceDrawer({ employees, types, onClose, onSaved }) {
   const firstType = types[0] ?? null
   const [form, setForm] = useState({
     employeeId: employees[0]?.id ?? '',
@@ -398,7 +398,7 @@ function documentStatusMeta(status) {
   return { label: 'À vérifier', tone: 'pending' }
 }
 
-function DetailDrawer({
+export function DetailDrawer({
   declaration,
   busy,
   onClose,

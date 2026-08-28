@@ -47,6 +47,13 @@ const ICON_PATHS = {
       <path d="M5 21h14" />
     </>
   ),
+  upload: (
+    <>
+      <path d="M12 21V9" />
+      <path d="m7 14 5-5 5 5" />
+      <path d="M5 3h14" />
+    </>
+  ),
   refresh: (
     <>
       <path d="M20 6v5h-5" />

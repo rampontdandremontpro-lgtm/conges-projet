@@ -31,6 +31,7 @@ import type { AuthenticatedUser } from '../auth/jwt-payload.interface';
 import { ValidatorResolutionService } from '../validators/validator-resolution.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { canRhResetPassword } from './password-reset-policy';
 import { END_SELECTION_EMOJIS, START_SELECTION_EMOJIS, UpdateOwnPreferencesDto } from './dto/update-own-preferences.dto';
 import {
   EmploymentType,
@@ -990,7 +991,7 @@ export class UsersService {
   async setPassword(id: number, passwordHash: string): Promise<void> {
     const result = await this.userRepository.update(
       { id },
-      { passwordHash },
+      { passwordHash, mustChangePassword: false },
     );
 
     if (!result.affected) {
@@ -998,6 +999,35 @@ export class UsersService {
         `L’utilisateur ${id} est introuvable.`,
       );
     }
+  }
+
+
+  async resetPassword(
+    id: number,
+    temporaryPassword: string,
+    actorRole: UserRole,
+  ): Promise<{ message: string }> {
+    const user = await this.findOne(id);
+
+    if (actorRole === UserRole.RH && !canRhResetPassword(user.role)) {
+      throw new ForbiddenException(
+        'La RH peut réinitialiser uniquement le mot de passe d’un collaborateur ou d’un responsable de service.',
+      );
+    }
+
+    const passwordHash = await bcrypt.hash(temporaryPassword, 12);
+    const result = await this.userRepository.update(
+      { id },
+      { passwordHash, mustChangePassword: true },
+    );
+
+    if (!result.affected) {
+      throw new NotFoundException(`L’utilisateur ${id} est introuvable.`);
+    }
+
+    return {
+      message: `Le mot de passe temporaire de ${user.nom} ${user.prenom} a été enregistré.`,
+    };
   }
 
   async update(

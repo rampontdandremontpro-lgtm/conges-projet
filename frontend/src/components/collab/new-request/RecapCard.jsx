@@ -36,8 +36,8 @@ function lateSubmissionMessage(daysBeforeStart) {
 export function RecapCard({
   selection,
   leaveType,
-  periodSummary,
-  requestReferencePeriod,
+  projection,
+  projectionLoading = false,
   settings,
   seasonal,
   holidays,
@@ -186,8 +186,8 @@ export function RecapCard({
             <p className="nr-recap__note">
               {deductedDays != null
                 ? deductedDaysSource === 'server'
-                  ? 'Calcul confirmé. Un vendredi posé, ou un vendredi férié accolé à la fin du congé, peut entraîner le décompte du samedi suivant ; les dimanches et jours non décomptables sont exclus.'
-                  : 'Calcul en temps réel. Un vendredi posé, ou un vendredi férié accolé à la fin du congé, peut entraîner le décompte du samedi suivant ; les dimanches et jours non décomptables sont exclus.'
+                  ? 'Calcul confirmé.'
+                  : 'Calcul en temps réel.'
                 : 'Sélectionnez une période complète pour calculer le décompte.'}
             </p>
           </section>
@@ -208,12 +208,7 @@ export function RecapCard({
                   <Icon name="alert" size={15} />
                   <span>
                     Dérogation nécessaire
-                    <em>
-                      Délai exigé {notice.requiredNoticeDays} jours — dérogation possible jusqu’au début du congé
-                      {notice.isLongLeave || notice.overlapsSummerPeriod
-                        ? ' (période spéciale)'
-                        : ''}
-                    </em>
+                    <em>Le délai de prévenance n’est pas respecté. Une dérogation est nécessaire pour poursuivre cette demande.</em>
                   </span>
                 </p>
               ) : (
@@ -240,17 +235,29 @@ export function RecapCard({
 
           {leaveType?.deductsPaidLeaveBalance && (
             <section className="nr-recap__block nr-recap__rights-block">
-              <h4 className="nr-recap__subtitle">Situation de vos droits</h4>
-              <p className="nr-recap__rights-period">Période affichée : <strong>{requestReferencePeriod ? requestReferencePeriod.replace('-', '/') : '—'}</strong></p>
-              <div className="nr-solde nr-solde--rights">
-                <div className="nr-solde__row"><span className="nr-solde__label">Acquis sur la période</span><span className="nr-solde__value">{formatDays(periodSummary?.acquiredDays ?? 0)} j</span></div>
-                <div className="nr-solde__row"><span className="nr-solde__label">Pris sur la période</span><span className="nr-solde__value">{formatDays(periodSummary?.takenDays ?? 0)} j</span></div>
-                <div className="nr-solde__row"><span className="nr-solde__label">Validés sur la période</span><span className="nr-solde__value">{formatDays(periodSummary?.validatedDays ?? 0)} j</span></div>
-                <div className="nr-solde__row"><span className="nr-solde__label">En attente sur la période</span><span className="nr-solde__value">{formatDays(periodSummary?.pendingDays ?? 0)} j</span></div>
-                <div className="nr-solde__divider" />
-                <div className={`nr-solde__row nr-solde__row--official ${Number(periodSummary?.balanceDays ?? 0) < 0 ? 'nr-solde__row--danger' : ''}`}><span className="nr-solde__label">Solde officiel</span><span className="nr-solde__value">{formatDays(periodSummary?.balanceDays ?? 0)} j</span></div>
-              </div>
-              <p className="nr-recap__rights-note">Les indicateurs concernent uniquement la période de droits affichée. Les demandes validées ou en attente ne sont pas comptées comme des jours pris tant que le congé n’a pas commencé.</p>
+              <h4 className="nr-recap__subtitle">Impact prévisionnel sur vos droits</h4>
+              {projectionLoading ? (
+                <p className="nr-recap__rights-note">Calcul de la répartition N-1 → N…</p>
+              ) : projection ? (
+                <div className="nr-rights-impact">
+                  {Number(projection.nMinus1Used ?? 0) > 0 && (
+                    <div className="nr-rights-impact__period">
+                      <strong>N-1 · {String(projection.nMinus1Period).replace('-', '/')}</strong>
+                      <span>Utilisé par cette demande <b>{formatDays(projection.nMinus1Used)} j</b></span>
+                      <span>Solde prévisionnel <b className={Number(projection.nMinus1BalanceAfter) < 0 ? 'is-negative' : ''}>{formatDays(projection.nMinus1BalanceAfter)} j</b></span>
+                    </div>
+                  )}
+                  {Number(projection.nUsed ?? 0) > 0 && (
+                    <div className="nr-rights-impact__period">
+                      <strong>N · {String(projection.nPeriod).replace('-', '/')}</strong>
+                      <span>Utilisé par cette demande <b>{formatDays(projection.nUsed)} j</b></span>
+                      <span>Solde prévisionnel <b className={Number(projection.nBalanceAfter) < 0 ? 'is-negative' : ''}>{formatDays(projection.nBalanceAfter)} j</b></span>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <p className="nr-recap__rights-note">Sélectionnez une période complète pour afficher l’impact prévisionnel.</p>
+              )}
             </section>
           )}
 

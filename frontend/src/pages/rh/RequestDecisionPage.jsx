@@ -142,7 +142,7 @@ export function RhRequestDecisionPage() {
         minimumPresenceJustification: minimumPresenceJustification.trim() || undefined,
       })
       window.dispatchEvent(new Event('gmes:data-changed'))
-      navigate('/app/rh-all-requests', {
+      navigate('/app/rh-leaves-absences', {
         replace: true,
         state: { flash: { kind: 'success', message: 'Demande validée avec succès.' } },
       })
@@ -163,7 +163,7 @@ export function RhRequestDecisionPage() {
     try {
       await refuseRhRequest(id, comment ? { comment } : {})
       window.dispatchEvent(new Event('gmes:data-changed'))
-      navigate('/app/rh-all-requests', {
+      navigate('/app/rh-leaves-absences', {
         replace: true,
         state: { flash: { kind: 'success', message: 'Demande refusée.' } },
       })
@@ -189,7 +189,7 @@ export function RhRequestDecisionPage() {
   if (state.error || !state.request) {
     return (
       <div className="manager-request-detail-page">
-        <button type="button" className="manager-request-back" onClick={() => navigate('/app/rh-all-requests')}>
+        <button type="button" className="manager-request-back" onClick={() => navigate('/app/rh-leaves-absences')}>
           <Icon name="chevronLeft" size={16} /> Retour aux demandes
         </button>
         <div className="manager-request-detail-state manager-request-detail-state--error">
@@ -216,7 +216,7 @@ export function RhRequestDecisionPage() {
 
   return (
     <div className="manager-request-detail-page">
-      <button type="button" className="manager-request-back" onClick={() => navigate('/app/rh-all-requests')}>
+      <button type="button" className="manager-request-back" onClick={() => navigate('/app/rh-leaves-absences')}>
         <Icon name="chevronLeft" size={16} /> Retour aux demandes
       </button>
 

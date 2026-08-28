@@ -19,7 +19,7 @@ export function getNotificationTarget(item, effectiveRole, actualRole = effectiv
   }
 
   if (item.absenceDeclarationId) {
-    if (accountRole === 'RH') return '/app/rh-absences'
+    if (accountRole === 'RH') return '/app/rh-leaves-absences'
     if (accountRole === 'DIRECTEUR') return '/app/director-presence'
     if (accountRole === 'RESPONSABLE_SERVICE' && role !== 'COLLABORATEUR') return '/app/service-presence'
     return `/app/my-requests/absence/${item.absenceDeclarationId}`

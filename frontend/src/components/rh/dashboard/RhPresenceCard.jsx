@@ -46,11 +46,11 @@ export function RhPresenceCard({ presence, onNavigate }) {
           <span>Présents</span>
           <strong>{present}</strong>
         </button>
-        <button type="button" onClick={() => onNavigate(`/app/rh-all-requests?status=approved&from=${today}&to=${today}`)}>
+        <button type="button" onClick={() => onNavigate(`/app/rh-leaves-absences?status=approved&from=${today}&to=${today}`)}>
           <span>En vacances</span>
           <strong>{presence?.onLeave ?? 0}</strong>
         </button>
-        <button type="button" onClick={() => onNavigate('/app/rh-absences')}>
+        <button type="button" onClick={() => onNavigate('/app/rh-leaves-absences')}>
           <span>Absents</span>
           <strong>{presence?.absent ?? 0}</strong>
         </button>

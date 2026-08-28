@@ -58,7 +58,7 @@ function resizeProfileImage(file) {
 }
 
 export function SettingsPage() {
-  const { user } = useAuth()
+  const { user, refreshUser } = useAuth()
   const canSign = user?.role !== 'ADMIN'
   const [signature, setSignature] = useState({ loading: canSign, saving: false, data: null })
   const [feedback, setFeedback] = useState(null)
@@ -192,6 +192,7 @@ export function SettingsPage() {
         newPassword: password.newPassword,
       })
       setPassword({ currentPassword: '', newPassword: '', confirmPassword: '' })
+      await refreshUser()
       setFeedback({ kind: 'success', message: response.message ?? 'Votre mot de passe a été modifié.' })
     } catch (error) {
       setFeedback({ kind: 'error', message: errorMessage(error, 'Impossible de modifier votre mot de passe.') })
@@ -285,6 +286,12 @@ export function SettingsPage() {
       )}
 
       <section className="settings-card">
+        {user?.mustChangePassword && (
+          <div className="settings-security-note settings-security-note--required" role="alert">
+            <Icon name="alert" size={17} />
+            <span>Votre mot de passe a été réinitialisé. Choisissez un nouveau mot de passe avant de poursuivre dans l’application.</span>
+          </div>
+        )}
         <div className="settings-card__heading">
           <span className="settings-card__icon settings-card__icon--security">
             <Icon name="shield" size={19} />

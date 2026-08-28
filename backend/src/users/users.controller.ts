@@ -18,6 +18,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { CreateUserDto } from './dto/create-user.dto';
+import { ResetUserPasswordDto } from './dto/reset-user-password.dto';
 import { UpdateOwnSignatureDto } from './dto/update-own-signature.dto';
 import { UpdateOwnPreferencesDto } from './dto/update-own-preferences.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -181,6 +182,20 @@ export class UsersController {
   ) {
     return this.usersService.create(
       createUserDto,
+      request.user.role,
+    );
+  }
+
+  @Patch(':id/reset-password')
+  @Roles(UserRole.ADMIN, UserRole.RH)
+  resetPassword(
+    @Req() request: AuthenticatedRequest,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() resetUserPasswordDto: ResetUserPasswordDto,
+  ) {
+    return this.usersService.resetPassword(
+      id,
+      resetUserPasswordDto.temporaryPassword,
       request.user.role,
     );
   }

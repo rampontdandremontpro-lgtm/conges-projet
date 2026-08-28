@@ -381,3 +381,13 @@
   border-radius: 8px; background: transparent; color: #7187a7; cursor: pointer;
 }
 .admin-users-password-input button:hover { background: #edf4fd; color: #1b6ef3; }
+
+
+.admin-users-actions button.is-password { color: #6b5bbd; }
+.admin-users-actions button.is-password:hover { background: #f2efff; color: #5642ae; }
+.admin-users-confirm__icon.is-password { background: #f2efff; color: #6553b5; }
+.admin-users-password-reset { text-align: left; }
+.admin-users-password-reset h3,
+.admin-users-password-reset > p { text-align: center; }
+.admin-users-password-reset__actions { display: flex; justify-content: center; gap: 9px; margin-top: 18px; }
+.admin-users-password-reset__actions button.is-password { border-color: #6553b5; background: #6553b5; color: #fff; }

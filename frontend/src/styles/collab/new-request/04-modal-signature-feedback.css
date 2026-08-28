@@ -397,3 +397,41 @@
   -webkit-backdrop-filter: blur(5px);
 }
 .nr-modal { max-width: 590px; }
+
+.nr-review {
+  width: min(720px, calc(100vw - 28px));
+  max-height: min(88vh, 820px);
+  overflow: auto;
+  border-radius: 22px;
+  background: #fff;
+  box-shadow: 0 24px 70px rgba(11, 35, 68, .24);
+}
+
+.nr-review__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 22px 24px 16px;
+  border-bottom: 1px solid #e4ebf3;
+}
+.nr-review__head span { color: #7891ad; font-size: 10px; font-weight: 900; letter-spacing: .11em; }
+.nr-review__head h3 { margin: 4px 0 0; color: #123b69; font-size: 22px; }
+.nr-review__document { margin: 20px 24px; padding: 24px; border: 1px solid #dbe5f0; border-radius: 16px; background: #fbfdff; }
+.nr-review__brand { display:flex; align-items:center; gap:9px; margin-bottom:18px; color:#154f98; }
+.nr-review__document section { padding: 14px 0; border-top: 1px solid #e7edf5; }
+.nr-review__document section:first-of-type { border-top: 0; }
+.nr-review__document small { display:block; margin-bottom:6px; color:#7a8fa8; font-size:9px; font-weight:900; letter-spacing:.08em; }
+.nr-review__document strong { color:#183f69; }
+.nr-review__two-cols { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+.nr-review__rights { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; margin-top:8px; }
+.nr-review__rights > div { padding:12px; border-radius:12px; background:#eef5ff; }
+.nr-review__rights span,.nr-review__rights small { display:block; margin-top:4px; color:#526d8a; font-size:11px; }
+.nr-review__warning { display:flex; gap:10px; align-items:flex-start; margin-top:6px; padding:12px !important; border:1px solid #ffd8a8 !important; border-radius:12px; background:#fff8ed; color:#99500c; }
+.nr-review__warning p { margin:4px 0 0; font-size:12px; line-height:1.45; }
+.nr-review__muted { margin:6px 0 0; color:#71859d; font-size:12px; }
+.nr-review__question { padding:0 24px 18px; text-align:center; }
+.nr-review__question strong { color:#173f6c; }
+.nr-review__question p { margin:5px 0 0; color:#7c8da2; font-size:12px; }
+.nr-review__actions { display:flex; justify-content:flex-end; gap:10px; padding:16px 24px 22px; border-top:1px solid #e7edf5; }
+@media(max-width:600px){ .nr-review__two-cols,.nr-review__rights{grid-template-columns:1fr}.nr-review__actions{flex-direction:column-reverse}.nr-review__actions .nr-btn{width:100%} }

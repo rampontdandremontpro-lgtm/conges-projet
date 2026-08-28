@@ -35,3 +35,9 @@ export async function enableAdminUser(id) {
   window.dispatchEvent(new Event('gmes:data-changed'))
   return response.data
 }
+
+export async function resetManagedUserPassword(id, temporaryPassword) {
+  const response = await apiClient.patch(`/users/${id}/reset-password`, { temporaryPassword })
+  window.dispatchEvent(new Event('gmes:data-changed'))
+  return response.data
+}

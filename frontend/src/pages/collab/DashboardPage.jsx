@@ -9,7 +9,7 @@ import { PlanLeaveCard } from '@/components/collab/dashboard/PlanLeaveCard'
 import { AlertsCard } from '@/components/collab/dashboard/AlertsCard'
 import { getMyLeavePeriodSummaries, getMyLeaveRequests, getPublicSettings } from '@/services/collab/dashboard'
 import { todayISO } from '@/utils/format'
-import { adjacentReferencePeriodOptions, currentReferencePeriod } from '@/utils/referencePeriods'
+import { adjacentReferencePeriodOptions, counterReferencePeriod, currentReferencePeriod } from '@/utils/referencePeriods'
 
 import '@/styles/collab/dashboard/index.css'
 
@@ -27,7 +27,7 @@ export function DashboardCollaborateur() {
   const [balances, setBalances] = useState({ loading: true, error: false, data: [] })
   const [requests, setRequests] = useState({ loading: true, error: false, data: [] })
   const [settings, setSettings] = useState({ loading: true, error: false, data: null })
-  const [selectedPeriod, setSelectedPeriod] = useState(() => currentReferencePeriod())
+  const [selectedPeriod, setSelectedPeriod] = useState(() => counterReferencePeriod(currentReferencePeriod(), 'N-1'))
 
   const loadBalances = useCallback(async () => {
     try {
@@ -81,6 +81,16 @@ export function DashboardCollaborateur() {
   }, [loadBalances, loadRequests])
 
   useEffect(() => {
+    if (balances.loading || balances.error) return
+    const nMinus1 = counterReferencePeriod(currentReferencePeriod(), 'N-1')
+    const hasSelectedPeriod = balances.data.some((item) => item.referencePeriod === selectedPeriod)
+    const hasNMinus1 = balances.data.some((item) => item.referencePeriod === nMinus1)
+    if (!hasSelectedPeriod && selectedPeriod === nMinus1 && !hasNMinus1) {
+      setSelectedPeriod(currentReferencePeriod())
+    }
+  }, [balances.data, balances.error, balances.loading, selectedPeriod])
+
+  useEffect(() => {
     let cancelled = false
     getPublicSettings()
       .then((data) => {
@@ -115,7 +125,7 @@ export function DashboardCollaborateur() {
             periodOptions={periodOptions}
             selectedPeriod={selectedPeriod}
             onPeriodChange={setSelectedPeriod}
-            actionLabel="Voir mes demandes"
+            actionLabel="Voir mon historique"
             actionIcon="clock"
             onAction={() => navigate('/app/my-requests')}
           />

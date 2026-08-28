@@ -12,6 +12,7 @@ import {
   disableAdminUser,
   enableAdminUser,
   getAdminUsersData,
+  resetManagedUserPassword,
   updateAdminUser,
 } from '@/services/admin/adminUsers'
 
@@ -305,6 +306,64 @@ function UserDrawer({ mode, user, services, onClose, onSaved, onEdit, rhMode = f
   )
 }
 
+function PasswordResetModal({ user, onCancel, onSuccess }) {
+  const [temporaryPassword, setTemporaryPassword] = useState('')
+  const [confirmation, setConfirmation] = useState('')
+  const [visible, setVisible] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [feedback, setFeedback] = useState('')
+
+  const submit = async (event) => {
+    event.preventDefault()
+    setFeedback('')
+    if (temporaryPassword.length < 12) {
+      setFeedback('Le mot de passe temporaire doit contenir au moins 12 caractères.')
+      return
+    }
+    if (temporaryPassword !== confirmation) {
+      setFeedback('La confirmation ne correspond pas au mot de passe temporaire.')
+      return
+    }
+    setBusy(true)
+    try {
+      const response = await resetManagedUserPassword(user.id, temporaryPassword)
+      onSuccess(response?.message ?? `Le mot de passe de ${fullName(user)} a été réinitialisé.`)
+    } catch (error) {
+      setFeedback(errorMessage(error))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="admin-users-confirm-overlay" role="presentation" onMouseDown={onCancel}>
+      <form className="admin-users-confirm admin-users-password-reset" role="dialog" aria-modal="true" aria-labelledby="admin-users-password-reset-title" onSubmit={submit} onMouseDown={(event) => event.stopPropagation()}>
+        <span className="admin-users-confirm__icon is-password"><Icon name="shield" size={22} /></span>
+        <h3 id="admin-users-password-reset-title">Réinitialiser le mot de passe</h3>
+        <p>Définissez un mot de passe temporaire pour <strong>{fullName(user)}</strong>. Il devra obligatoirement le modifier à sa prochaine connexion.</p>
+        <label className="admin-users-password-field">
+          <span>Mot de passe temporaire</span>
+          <div className="admin-users-password-input">
+            <input type={visible ? 'text' : 'password'} minLength={12} maxLength={64} autoComplete="new-password" value={temporaryPassword} onChange={(event) => setTemporaryPassword(event.target.value)} autoFocus required />
+            <button type="button" onClick={() => setVisible((value) => !value)} aria-label={visible ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}><Icon name={visible ? 'eyeOff' : 'eye'} size={17} /></button>
+          </div>
+        </label>
+        <label className="admin-users-password-field">
+          <span>Confirmer le mot de passe</span>
+          <div className="admin-users-password-input">
+            <input type={visible ? 'text' : 'password'} minLength={12} maxLength={64} autoComplete="new-password" value={confirmation} onChange={(event) => setConfirmation(event.target.value)} required />
+          </div>
+        </label>
+        {feedback && <div className="admin-users-form__feedback"><Icon name="alert" size={16} /> {feedback}</div>}
+        <div className="admin-users-password-reset__actions">
+          <button type="button" onClick={onCancel}>Annuler</button>
+          <button type="submit" className="is-password" disabled={busy}>{busy ? 'Réinitialisation…' : 'Réinitialiser'}</button>
+        </div>
+      </form>
+    </div>
+  )
+}
+
 function StatusConfirm({ user, busy, onCancel, onConfirm }) {
   const nextActive = !user.isActive
   return (
@@ -326,6 +385,7 @@ export function AdminUsersPage({ rhMode = false }) {
   const [filters, setFilters] = useState({ role: 'ALL', serviceId: 'ALL', type: 'ALL', status: 'ALL' })
   const [drawer, setDrawer] = useState(null)
   const [statusTarget, setStatusTarget] = useState(null)
+  const [passwordResetTarget, setPasswordResetTarget] = useState(null)
   const [statusBusy, setStatusBusy] = useState(false)
   const [feedback, setFeedback] = useState(null)
   const [page, setPage] = useState(1)
@@ -473,6 +533,9 @@ export function AdminUsersPage({ rhMode = false }) {
                       <span className={`admin-users-status ${item.isActive ? 'is-active' : 'is-inactive'}`}>{item.isActive ? 'Actif' : 'Inactif'}</span>
                       <div className="admin-users-actions">
                         <button type="button" title="Modifier" aria-label={`Modifier ${fullName(item)}`} onClick={(event) => { event.stopPropagation(); setDrawer({ mode: 'edit', user: item }) }}><Icon name="edit" size={16} /></button>
+                        {rhMode && RH_MANAGEABLE_ROLES.has(item.role) && (
+                          <button type="button" className="is-password" title="Réinitialiser le mot de passe" aria-label={`Réinitialiser le mot de passe de ${fullName(item)}`} onClick={(event) => { event.stopPropagation(); setPasswordResetTarget(item) }}><Icon name="shield" size={16} /></button>
+                        )}
                         <button type="button" className={item.isActive ? 'is-disable' : 'is-enable'} disabled={isSelf} title={isSelf ? 'Votre propre compte ne peut pas être désactivé ici' : item.isActive ? 'Désactiver' : 'Réactiver'} aria-label={item.isActive ? `Désactiver ${fullName(item)}` : `Réactiver ${fullName(item)}`} onClick={(event) => { event.stopPropagation(); if (!isSelf) setStatusTarget(item) }}><Icon name={item.isActive ? 'ban' : 'refresh'} size={16} /></button>
                       </div>
                     </div>
@@ -487,6 +550,7 @@ export function AdminUsersPage({ rhMode = false }) {
 
       {drawer && <UserDrawer mode={drawer.mode} user={drawer.user} services={state.services} rhMode={rhMode} onClose={() => setDrawer(null)} onEdit={(selected) => setDrawer({ mode: 'edit', user: selected })} onSaved={handleSaved} />}
       {statusTarget && <StatusConfirm user={statusTarget} busy={statusBusy} onCancel={() => setStatusTarget(null)} onConfirm={confirmStatus} />}
+      {passwordResetTarget && <PasswordResetModal user={passwordResetTarget} onCancel={() => setPasswordResetTarget(null)} onSuccess={(message) => { setPasswordResetTarget(null); setFeedback({ kind: 'success', message }) }} />}
     </PageContainer>
   )
 }

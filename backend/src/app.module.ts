@@ -11,6 +11,7 @@ import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { DerogationsModule } from './derogations/derogations.module';
 import { AddBalanceProcessingStatus20260827230000 } from './database/migrations/20260827230000-add-balance-processing-status';
+import { AddMustChangePassword20260828140000 } from './database/migrations/20260828140000-add-must-change-password';
 import { DocumentsModule } from './documents/documents.module';
 import { ExportsModule } from './exports/exports.module';
 import { HolidaysModule } from './holidays/holidays.module';
@@ -46,7 +47,10 @@ import { ValidatorsModule } from './validators/validators.module';
         ),
         autoLoadEntities: true,
         synchronize: false,
-        migrations: [AddBalanceProcessingStatus20260827230000],
+        migrations: [
+          AddBalanceProcessingStatus20260827230000,
+          AddMustChangePassword20260828140000,
+        ],
         migrationsRun: true,
         migrationsTableName: 'typeorm_migrations',
         supportBigNumbers: true,

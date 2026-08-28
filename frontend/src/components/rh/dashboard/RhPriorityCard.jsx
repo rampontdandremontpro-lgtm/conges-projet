@@ -27,7 +27,7 @@ export function RhPriorityCard({ items, onNavigate }) {
     <section className="dash-card rh-priority-card">
       <header className="dash-card__header">
         <h2 className="dash-card__title dash-card__title--lg">Demandes à traiter en priorité</h2>
-        <button type="button" className="dash-card__view-all" onClick={() => onNavigate('/app/rh-all-requests')}>
+        <button type="button" className="dash-card__view-all" onClick={() => onNavigate('/app/rh-leaves-absences')}>
           Voir tout <Icon name="arrowRight" size={14} />
         </button>
       </header>

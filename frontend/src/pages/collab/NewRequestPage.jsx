@@ -1,16 +1,19 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 
+import { useAuth } from '@/auth/AuthContext'
+
 import { Toast } from '@/components/ui/Toast'
 import { Icon } from '@/components/ui/Icon'
-import { HalfDaySelector } from '@/components/collab/new-request/HalfDaySelector'
 import { LeaveCalendar } from '@/components/collab/new-request/LeaveCalendar'
 import { LeaveTypeSelector } from '@/components/collab/new-request/LeaveTypeSelector'
 import { RecapCard } from '@/components/collab/new-request/RecapCard'
+import { RequestReviewModal } from '@/components/collab/new-request/RequestReviewModal'
 import { SignatureModal } from '@/components/collab/new-request/SignatureModal'
 import {
   createLeaveRequest,
   getMyDerogations,
+  getMyLeaveBalanceProjection,
   requestDerogation,
   submitLeaveRequest,
   updateLeaveRequest,
@@ -24,7 +27,7 @@ import {
 import { useNewRequestResources } from '@/hooks/collab/useNewRequestResources'
 import { getLeaveRequest } from '@/services/collab/requestDetails'
 import { notifyAppDataChanged } from '@/utils/dataRefresh'
-import { referencePeriodForIsoDate } from '@/utils/referencePeriods'
+import { calculateDeductedDaysPreview } from '@/utils/leaveDuration'
 
 import '@/styles/collab/new-request/index.css'
 
@@ -34,6 +37,7 @@ function monthFromIso(iso) {
 }
 
 export function NewRequest() {
+  const { user } = useAuth()
   const navigate = useNavigate()
   const { id: editId } = useParams()
   const isEditMode = Boolean(editId)
@@ -56,7 +60,9 @@ export function NewRequest() {
 
   const [saving, setSaving] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [reviewOpen, setReviewOpen] = useState(false)
   const [signatureOpen, setSignatureOpen] = useState(false)
+  const [projection, setProjection] = useState({ loading: false, data: null })
   const [toast, setToast] = useState(null)
   const [editLoading, setEditLoading] = useState(isEditMode)
   const [editError, setEditError] = useState(false)
@@ -92,6 +98,7 @@ export function NewRequest() {
         endPeriod: 'APRES_MIDI',
       })
       setMonths([first, nextMonthOf(first)])
+      setReviewOpen(false)
       setSignatureOpen(false)
       setToast(null)
       setEditError(false)
@@ -140,8 +147,6 @@ export function NewRequest() {
     }
   }, [editId, isEditMode, navigate])
 
-  const requestReferencePeriod = referencePeriodForIsoDate(selection.startDate)
-  const periodSummary = resources.periodSummaries.find((item) => item.referencePeriod === requestReferencePeriod) ?? null
   const selectedType = resources.leaveTypes.find(
     (type) => type.id === selection.leaveTypeId,
   )
@@ -157,6 +162,30 @@ export function NewRequest() {
       ),
     [resources.leaveTypes],
   )
+
+  const previewDeductedDays = useMemo(
+    () => selection.startDate && selection.endDate
+      ? calculateDeductedDaysPreview(selection, resources.holidays)
+      : null,
+    [resources.holidays, selection],
+  )
+
+  useEffect(() => {
+    if (!selectedType?.deductsPaidLeaveBalance || !selection.startDate || !previewDeductedDays || selection.startDate < todayIso) {
+      setProjection({ loading: false, data: null })
+      return undefined
+    }
+    let cancelled = false
+    setProjection((current) => ({ ...current, loading: true }))
+    getMyLeaveBalanceProjection({
+      startDate: selection.startDate,
+      days: previewDeductedDays,
+      excludeRequestId: draft?.id,
+    })
+      .then((data) => { if (!cancelled) setProjection({ loading: false, data }) })
+      .catch(() => { if (!cancelled) setProjection({ loading: false, data: null }) })
+    return () => { cancelled = true }
+  }, [draft?.id, previewDeductedDays, selectedType?.deductsPaidLeaveBalance, selection.startDate, todayIso])
 
   const draftMatchesSelection = Boolean(
     draft &&
@@ -199,6 +228,24 @@ export function NewRequest() {
         return { ...prev, endDate: iso }
       }
       return { ...prev, startDate: iso, endDate: iso }
+    })
+  }
+
+  const handleBoundaryPeriodChange = ({ boundary, value }) => {
+    setSelection((prev) => {
+      if (!prev.startDate || !prev.endDate) return prev
+      if (boundary === 'single') {
+        if (value === 'MATIN') return { ...prev, startPeriod: 'MATIN', endPeriod: 'MATIN' }
+        if (value === 'APRES_MIDI') return { ...prev, startPeriod: 'APRES_MIDI', endPeriod: 'APRES_MIDI' }
+        return { ...prev, startPeriod: 'MATIN', endPeriod: 'APRES_MIDI' }
+      }
+      if (boundary === 'start') {
+        return { ...prev, startPeriod: value === 'APRES_MIDI' ? 'APRES_MIDI' : 'MATIN' }
+      }
+      if (boundary === 'end') {
+        return { ...prev, endPeriod: value === 'MATIN' ? 'MATIN' : 'APRES_MIDI' }
+      }
+      return prev
     })
   }
 
@@ -424,43 +471,18 @@ export function NewRequest() {
                 onPick={handlePick}
                 onPrev={goPrev}
                 onNext={goNext}
+                allowsHalfDays={Boolean(selectedType?.allowsHalfDays)}
+                onBoundaryPeriodChange={handleBoundaryPeriodChange}
               />
             </section>
-
-            {hasCompleteRange && selectedType?.allowsHalfDays && (
-              <HalfDaySelector
-                startPeriod={selection.startPeriod}
-                endPeriod={selection.endPeriod}
-                onStartChange={(startPeriod) =>
-                  setSelection((prev) => ({
-                    ...prev,
-                    startPeriod,
-                    endPeriod:
-                      prev.startDate === prev.endDate && startPeriod === 'APRES_MIDI'
-                        ? 'APRES_MIDI'
-                        : prev.endPeriod,
-                  }))
-                }
-                onEndChange={(endPeriod) =>
-                  setSelection((prev) => ({
-                    ...prev,
-                    endPeriod,
-                    startPeriod:
-                      prev.startDate === prev.endDate && endPeriod === 'MATIN'
-                        ? 'MATIN'
-                        : prev.startPeriod,
-                  }))
-                }
-              />
-            )}
           </div>
 
           <div className="nr-col nr-col--side">
             <RecapCard
               selection={selection}
               leaveType={selectedType}
-              periodSummary={periodSummary}
-              requestReferencePeriod={requestReferencePeriod}
+              projection={projection.data}
+              projectionLoading={projection.loading}
               settings={resources.settings}
               seasonal={resources.seasonal}
               holidays={resources.holidays}
@@ -470,13 +492,29 @@ export function NewRequest() {
               saving={saving}
               submitting={submitting}
               onSaveDraft={handleSaveDraft}
-              onSubmit={() => setSignatureOpen(true)}
+              onSubmit={() => setReviewOpen(true)}
               onRequestDerogation={handleRequestDerogation}
               editingExisting={isEditMode}
             />
           </div>
         </div>
       )}
+
+      <RequestReviewModal
+        open={reviewOpen}
+        selection={selection}
+        employee={user}
+        leaveType={selectedType}
+        deductedDays={draftMatchesSelection ? draft?.deductedDays : previewDeductedDays}
+        projection={projection.data}
+        settings={resources.settings}
+        seasonal={resources.seasonal}
+        onClose={() => setReviewOpen(false)}
+        onConfirm={() => {
+          setReviewOpen(false)
+          setSignatureOpen(true)
+        }}
+      />
 
       <SignatureModal
         key={signatureOpen ? 'open' : 'closed'}

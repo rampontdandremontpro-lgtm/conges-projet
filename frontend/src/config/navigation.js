@@ -42,8 +42,7 @@ export const NAVIGATION = {
   ],
   [ROLES.RH]: [
     { id: 'dashboard', label: 'Tableau de bord', to: '/app/dashboard', icon: 'dashboard', group: 'DEMANDES' },
-    { id: 'rh-all-requests', label: 'Toutes les demandes', to: '/app/rh-all-requests', icon: 'doc', group: 'DEMANDES' },
-    { id: 'rh-absences', label: 'Absences', to: '/app/rh-absences', icon: 'calendar', group: 'DEMANDES' },
+    { id: 'rh-leaves-absences', label: 'Congés et Absences', to: '/app/rh-leaves-absences', icon: 'calendar', group: 'DEMANDES' },
     { id: 'rh-derogations', label: 'Dérogations', to: '/app/rh-derogations', icon: 'shield', group: 'DEMANDES' },
 
     { id: 'rh-users', label: 'Utilisateurs', to: '/app/rh-users', icon: 'users', group: 'ADMINISTRATION' },
