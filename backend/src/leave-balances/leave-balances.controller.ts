@@ -62,6 +62,7 @@ export class LeaveBalancesController {
 
   @Get('my/history')
   @Roles(
+    UserRole.COLLABORATEUR,
     UserRole.RESPONSABLE_SERVICE,
     UserRole.RH,
     UserRole.DIRECTEUR,

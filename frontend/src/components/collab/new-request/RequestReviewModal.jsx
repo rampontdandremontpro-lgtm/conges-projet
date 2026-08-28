@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { Icon } from '@/components/ui/Icon'
 import { formatDays, formatRangeCompactFR } from '@/utils/format'
 import { formatRelativeReferencePeriod } from '@/utils/referencePeriods'
+import { buildRequestRightsSituation } from '@/utils/requestRightsSituation'
 import { evaluateNotice } from '@/utils/leaveNotice'
 
 function periodLabel(startPeriod, endPeriod, startDate, endDate) {
@@ -16,28 +17,27 @@ function periodLabel(startPeriod, endPeriod, startDate, endDate) {
   return `${start} → ${end}`
 }
 
-function RightsImpact({ projection, isAnticipatedLeave }) {
-  if (!projection) return <p className="nr-review__muted">Impact non disponible.</p>
+function LeaveSituation({ periodSummaries, projection, selectedReferencePeriod, isAnticipatedLeave }) {
+  const situations = buildRequestRightsSituation({
+    periodSummaries,
+    projection,
+    selectedReferencePeriod,
+  })
+
+  if (situations.length === 0) {
+    return <p className="nr-review__muted">Indicateurs non disponibles.</p>
+  }
 
   return (
     <div className="nr-review__rights">
-      {Number(projection.nMinus1Used ?? 0) > 0 && (
-        <div>
-          <strong>{formatRelativeReferencePeriod(projection.nMinus1Period)}</strong>
-          <span>{formatDays(projection.nMinus1Used)} j utilisés</span>
-          <small>Solde après demande : {formatDays(projection.nMinus1BalanceAfter)} j</small>
+      {situations.map((item) => (
+        <div key={item.referencePeriod}>
+          <strong>{formatRelativeReferencePeriod(item.referencePeriod)}</strong>
+          <span>Pris : {formatDays(item.metrics.takenDays)} j</span>
+          <span>En attente : {formatDays(item.metrics.pendingDays)} j</span>
+          <span>Validées : {formatDays(item.metrics.validatedDays)} j</span>
         </div>
-      )}
-      {Number(projection.nUsed ?? 0) > 0 && (
-        <div>
-          <strong>{formatRelativeReferencePeriod(projection.nPeriod)}</strong>
-          <span>{formatDays(projection.nUsed)} j utilisés</span>
-          <small>Solde après demande : {formatDays(projection.nBalanceAfter)} j</small>
-        </div>
-      )}
-      {Number(projection.negativeBalanceDays ?? projection.anticipatedDays ?? 0) > 0 && (
-        <p className="nr-negative-balance-warning">Solde prévisionnel négatif : dépassement de {formatDays(projection.negativeBalanceDays ?? projection.anticipatedDays)} j.</p>
-      )}
+      ))}
       {isAnticipatedLeave && <span className="nr-anticipated-badge">Congé anticipé</span>}
     </div>
   )
@@ -50,6 +50,8 @@ export function RequestReviewModal({
   leaveType,
   deductedDays,
   projection,
+  periodSummaries = [],
+  selectedReferencePeriod = null,
   settings,
   seasonal,
   onClose,
@@ -91,8 +93,8 @@ export function RequestReviewModal({
           </section>
           {leaveType?.deductsPaidLeaveBalance && (
             <section>
-              <small>RÉPARTITION PRÉVUE DES JOURS</small>
-              <RightsImpact projection={projection} isAnticipatedLeave={isAnticipatedLeave} />
+              <small>SITUATION DE VOS CONGÉS</small>
+              <LeaveSituation periodSummaries={periodSummaries} projection={projection} selectedReferencePeriod={selectedReferencePeriod} isAnticipatedLeave={isAnticipatedLeave} />
             </section>
           )}
           {derogationRequired && (

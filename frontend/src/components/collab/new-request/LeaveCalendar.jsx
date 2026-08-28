@@ -91,6 +91,32 @@ function parseISODate(iso) {
   return new Date(`${iso}T00:00:00.000Z`)
 }
 
+function formatCalendarDate(iso) {
+  if (!iso) return ''
+  return new Intl.DateTimeFormat('fr-FR', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'UTC',
+  }).format(parseISODate(iso))
+}
+
+function singleDayPeriodLabel(startPeriod, endPeriod) {
+  if (startPeriod === 'MATIN' && endPeriod === 'MATIN') return 'Matin'
+  if (startPeriod === 'APRES_MIDI' && endPeriod === 'APRES_MIDI') return 'Après-midi'
+  return 'Journée entière'
+}
+
+function selectionTimingLabel({ startDate, endDate, startPeriod, endPeriod }) {
+  if (!startDate || !endDate) return ''
+  if (startDate === endDate) {
+    return `${formatCalendarDate(startDate)} · ${singleDayPeriodLabel(startPeriod, endPeriod)}`
+  }
+  const departure = startPeriod === 'APRES_MIDI' ? 'après-midi' : 'matin'
+  const returnPeriod = endPeriod === 'MATIN' ? 'matin' : 'après-midi'
+  return `Du ${formatCalendarDate(startDate)} (${departure}) au ${formatCalendarDate(endDate)} (${returnPeriod})`
+}
+
 export function LeaveCalendar({
   months,
   todayIso,
@@ -196,27 +222,32 @@ export function LeaveCalendar({
       return
     }
 
-    // Le premier clic constitue déjà une sélection d'une journée complète.
-    // Le second clic sert uniquement à étendre/finaliser la plage : cliquer
-    // plusieurs fois sur la même date ne doit jamais effacer la sélection.
-    if (phase === 'selecting' && startDate) {
-      if (iso !== startDate) {
-        const boundary = iso < startDate ? 'start' : 'end'
-        onPick(iso)
-        if (allowsHalfDays) setBoundaryEditor({ iso, boundary })
-      } else if (allowsHalfDays) {
-        setBoundaryEditor({ iso, boundary: 'single' })
-      }
+    const selectedRangeStart = startDate && endDate
+      ? (endDate < startDate ? endDate : startDate)
+      : null
+    const selectedRangeEnd = startDate && endDate
+      ? (endDate < startDate ? startDate : endDate)
+      : null
+    const clickedSelectedDay = Boolean(
+      selectedRangeStart && selectedRangeEnd && iso >= selectedRangeStart && iso <= selectedRangeEnd,
+    )
+
+    // Un clic sur une journée déjà bleue annule la sélection complète.
+    // On ne rouvre jamais le choix des demi-journées sur un jour déjà sélectionné.
+    if (clickedSelectedDay) {
+      onPick(iso)
       setPhase('idle')
       setHovering(null)
+      setBoundaryEditor(null)
       return
     }
 
-    const completeRange = Boolean(startDate && endDate)
-    const isExistingBoundary = completeRange && (iso === startDate || iso === endDate)
-    if (allowsHalfDays && isExistingBoundary) {
-      const boundary = startDate === endDate ? 'single' : iso === startDate ? 'start' : 'end'
-      setBoundaryEditor((current) => current?.iso === iso ? null : { iso, boundary })
+    if (phase === 'selecting' && startDate) {
+      const boundary = iso < startDate ? 'start' : 'end'
+      onPick(iso)
+      if (allowsHalfDays) setBoundaryEditor({ iso, boundary })
+      setPhase('idle')
+      setHovering(null)
       return
     }
 
@@ -229,6 +260,15 @@ export function LeaveCalendar({
   const chooseBoundaryPeriod = (boundary, value) => {
     onBoundaryPeriodChange?.({ boundary, value })
     setBoundaryEditor(null)
+  }
+
+  const currentBoundaryValue = (boundary) => {
+    if (boundary === 'single') {
+      if (startPeriod === 'MATIN' && endPeriod === 'MATIN') return 'MATIN'
+      if (startPeriod === 'APRES_MIDI' && endPeriod === 'APRES_MIDI') return 'APRES_MIDI'
+      return 'FULL_DAY'
+    }
+    return boundary === 'start' ? startPeriod : endPeriod
   }
 
   const handleDayEnter = (iso, inMonth, holiday) => {
@@ -387,10 +427,34 @@ export function LeaveCalendar({
                                 ? 'Je rentre quand ?'
                                 : 'Quelle demi-journée ?'}
                           </strong>
-                          <p>Choisissez matin ou après-midi.</p>
+                          <p>{activeEditor.boundary === 'single' ? 'Choisissez la durée de cette journée.' : 'Choisissez matin ou après-midi.'}</p>
                           <div className="nr-cal__boundary-actions">
-                            <button type="button" onClick={() => chooseBoundaryPeriod(activeEditor.boundary, 'MATIN')}>Matin</button>
-                            <button type="button" onClick={() => chooseBoundaryPeriod(activeEditor.boundary, 'APRES_MIDI')}>Après-midi</button>
+                            {activeEditor.boundary === 'single' && (
+                              <button
+                                type="button"
+                                className={currentBoundaryValue('single') === 'FULL_DAY' ? 'is-active' : ''}
+                                aria-pressed={currentBoundaryValue('single') === 'FULL_DAY'}
+                                onClick={() => chooseBoundaryPeriod('single', 'FULL_DAY')}
+                              >
+                                Journée entière
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              className={currentBoundaryValue(activeEditor.boundary) === 'MATIN' ? 'is-active' : ''}
+                              aria-pressed={currentBoundaryValue(activeEditor.boundary) === 'MATIN'}
+                              onClick={() => chooseBoundaryPeriod(activeEditor.boundary, 'MATIN')}
+                            >
+                              Matin
+                            </button>
+                            <button
+                              type="button"
+                              className={currentBoundaryValue(activeEditor.boundary) === 'APRES_MIDI' ? 'is-active' : ''}
+                              aria-pressed={currentBoundaryValue(activeEditor.boundary) === 'APRES_MIDI'}
+                              onClick={() => chooseBoundaryPeriod(activeEditor.boundary, 'APRES_MIDI')}
+                            >
+                              Après-midi
+                            </button>
                           </div>
                         </div>
                       )}
@@ -414,6 +478,13 @@ export function LeaveCalendar({
       </div>
 
       {hoverInfo && <div className="nr-cal__hover-info">{hoverInfo}</div>}
+
+      {allowsHalfDays && startDate && endDate && (
+        <div className="nr-cal__selection-confirmation" aria-live="polite">
+          <span className="nr-cal__selection-confirmation-mark">✓</span>
+          <span><strong>Sélection :</strong> {selectionTimingLabel({ startDate, endDate, startPeriod, endPeriod })}</span>
+        </div>
+      )}
 
       <div className="nr-cal__legend">
         <span className="nr-cal__legend-item">

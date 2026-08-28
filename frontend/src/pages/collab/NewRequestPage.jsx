@@ -472,6 +472,8 @@ export function NewRequest() {
               leaveType={selectedType}
               projection={projection.data}
               projectionLoading={projection.loading}
+              periodSummaries={resources.periodSummaries}
+              selectedReferencePeriod={selectedReferencePeriod}
               settings={resources.settings}
               seasonal={resources.seasonal}
               holidays={resources.holidays}
@@ -497,6 +499,8 @@ export function NewRequest() {
         leaveType={selectedType}
         deductedDays={draftMatchesSelection ? draft?.deductedDays : previewDeductedDays}
         projection={projection.data}
+        periodSummaries={resources.periodSummaries}
+        selectedReferencePeriod={selectedReferencePeriod}
         settings={resources.settings}
         seasonal={resources.seasonal}
         isAnticipatedLeave={isAnticipatedLeave}

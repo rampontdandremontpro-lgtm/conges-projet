@@ -2,7 +2,6 @@ import { ProfileAvatar } from '@/components/ui/ProfileAvatar'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
-import { HalfDaySelector } from '@/components/collab/new-request/HalfDaySelector'
 import { LeaveCalendar } from '@/components/collab/new-request/LeaveCalendar'
 import { LeaveTypeSelector } from '@/components/collab/new-request/LeaveTypeSelector'
 import { RecapCard } from '@/components/collab/new-request/RecapCard'
@@ -14,6 +13,7 @@ import { getRhEligibleCollaborators } from '@/services/rh/rhPrepareRequest'
 import { currentMonth, errorMessage, nextMonthOf, prevMonthOf } from '@/utils/newRequest'
 import { notifyAppDataChanged } from '@/utils/dataRefresh'
 import { referencePeriodForIsoDate } from '@/utils/referencePeriods'
+import { changeLeaveBoundaryPeriod, selectLeaveDate } from '@/utils/leaveDateSelection'
 
 import '@/styles/collab/new-request/index.css'
 import '@/styles/rh/prepare-request.css'
@@ -70,7 +70,6 @@ export function RhPrepareRequestPage() {
   )
   const selectedType = resources.leaveTypes.find((type) => type.id === selection.leaveTypeId)
   const requestReferencePeriod = referencePeriodForIsoDate(selection.startDate)
-  const periodSummary = resources.periodSummaries.find((item) => item.referencePeriod === requestReferencePeriod) ?? null
   const displayLeaveTypes = useMemo(
     () => [...resources.leaveTypes].sort((a, b) =>
       a.deductsPaidLeaveBalance === b.deductsPaidLeaveBalance
@@ -94,15 +93,11 @@ export function RhPrepareRequestPage() {
   }
 
   const handlePick = (iso) => {
-    setSelection((prev) => {
-      if (!prev.startDate) return { ...prev, startDate: iso, endDate: iso }
-      if (prev.startDate === prev.endDate) {
-        if (iso === prev.startDate) return { ...prev, startDate: null, endDate: null }
-        if (iso < prev.startDate) return { ...prev, startDate: iso, endDate: prev.startDate }
-        return { ...prev, endDate: iso }
-      }
-      return { ...prev, startDate: iso, endDate: iso }
-    })
+    setSelection((previous) => selectLeaveDate(previous, iso))
+  }
+
+  const handleBoundaryPeriodChange = (change) => {
+    setSelection((previous) => changeLeaveBoundaryPeriod(previous, change))
   }
 
   const goPrev = () => setMonths(([first, second]) => {
@@ -150,7 +145,6 @@ export function RhPrepareRequestPage() {
     }
   }
 
-  const hasCompleteRange = Boolean(selection.startDate && selection.endDate && selection.startDate !== selection.endDate)
   const employeeName = selectedEmployee ? `${selectedEmployee.nom} ${selectedEmployee.prenom}` : ''
 
   return (
@@ -238,24 +232,18 @@ export function RhPrepareRequestPage() {
                 onPick={handlePick}
                 onPrev={goPrev}
                 onNext={goNext}
+                allowsHalfDays={Boolean(selectedType?.allowsHalfDays)}
+                onBoundaryPeriodChange={handleBoundaryPeriodChange}
               />
             </section>
-            {hasCompleteRange && selectedType?.allowsHalfDays && (
-              <HalfDaySelector
-                startPeriod={selection.startPeriod}
-                endPeriod={selection.endPeriod}
-                onStartChange={(startPeriod) => setSelection((prev) => ({ ...prev, startPeriod }))}
-                onEndChange={(endPeriod) => setSelection((prev) => ({ ...prev, endPeriod }))}
-              />
-            )}
           </div>
 
           <div className="nr-col nr-col--side">
             <RecapCard
               selection={selection}
               leaveType={selectedType}
-              periodSummary={periodSummary}
-              requestReferencePeriod={requestReferencePeriod}
+              periodSummaries={resources.periodSummaries}
+              selectedReferencePeriod={requestReferencePeriod}
               settings={resources.settings}
               seasonal={resources.seasonal}
               holidays={resources.holidays}

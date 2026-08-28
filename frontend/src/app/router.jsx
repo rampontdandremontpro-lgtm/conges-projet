@@ -434,7 +434,7 @@ export const router = createBrowserRouter([
       {
         path: 'history',
         element: (
-          <RoleRoute roles={[ROLES.RESPONSABLE_SERVICE, ROLES.RH]}>
+          <RoleRoute roles={[ROLES.COLLABORATEUR, ROLES.RESPONSABLE_SERVICE, ROLES.RH]}>
             <HistoryPage />
           </RoleRoute>
         ),

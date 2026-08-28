@@ -189,8 +189,7 @@ export function RhLeavesAndAbsencesPage() {
     <PageContainer className="rh-events-page">
       {feedback && <div className={`rh-events-feedback rh-events-feedback--${feedback.kind}`}><Icon name={feedback.kind === 'success' ? 'check' : 'alert'} size={16} />{feedback.message}</div>}
 
-      <div className="rh-events-heading">
-        <div><h1>Congés et Absences</h1><p>Retrouvez au même endroit toutes les demandes de congé et les absences enregistrées.</p></div>
+      <div className="rh-events-actions">
         <button type="button" className="rh-events-create" onClick={() => setDeclarationOpen(true)}><Icon name="plus" size={17} /> Déclarer congé/absence</button>
       </div>
 

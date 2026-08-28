@@ -4,6 +4,7 @@ import { Icon } from '@/components/ui/Icon'
 import { useAutoDismiss } from '@/hooks/useAutoDismiss'
 import { formatDays, formatRangeCompactFR } from '@/utils/format'
 import { formatRelativeReferencePeriod } from '@/utils/referencePeriods'
+import { buildRequestRightsSituation } from '@/utils/requestRightsSituation'
 import { evaluateNotice } from '@/utils/leaveNotice'
 import { calculateDeductedDaysPreview } from '@/utils/leaveDuration'
 
@@ -39,6 +40,8 @@ export function RecapCard({
   leaveType,
   projection,
   projectionLoading = false,
+  periodSummaries = [],
+  selectedReferencePeriod = null,
   settings,
   seasonal,
   holidays,
@@ -76,15 +79,21 @@ export function RecapCard({
     : null
   const deductedDays = draftClean ? draft.deductedDays : previewDeductedDays
   const deductedDaysSource = draftClean ? 'server' : 'preview'
+  const rightsSituation = buildRequestRightsSituation({
+    periodSummaries,
+    projection,
+    selectedReferencePeriod,
+  })
 
   const startLabel = startPeriod === 'MATIN' ? 'matin' : 'après-midi'
   const endLabel = endPeriod === 'MATIN' ? 'matin' : 'après-midi'
-  const halfDayLabel =
-    startPeriod === 'MATIN' && endPeriod === 'APRES_MIDI'
+  const halfDayLabel = startDate === endDate
+    ? startPeriod === 'MATIN' && endPeriod === 'APRES_MIDI'
+      ? 'journée entière'
+      : startLabel
+    : startPeriod === 'MATIN' && endPeriod === 'APRES_MIDI'
       ? null
-      : startDate === endDate
-        ? startLabel
-        : `${startLabel} → ${endLabel}`
+      : `${startLabel} → ${endLabel}`
 
   const derogationNeeded =
     !preparationMode &&
@@ -238,39 +247,28 @@ export function RecapCard({
           {leaveType?.deductsPaidLeaveBalance && (
             <section className="nr-recap__block nr-recap__rights-block">
               <div className="nr-recap__rights-titleline">
-                <h4 className="nr-recap__subtitle">Répartition prévue des jours</h4>
+                <h4 className="nr-recap__subtitle">Situation de vos congés</h4>
                 {isAnticipatedLeave && <span className="nr-anticipated-badge">Congé anticipé</span>}
               </div>
-              <p className="nr-recap__rights-note">Les jours seront imputés sur les compteurs indiqués au moment où le congé commencera.</p>
+              <p className="nr-recap__rights-note">Les indicateurs ci-dessous correspondent aux périodes concernées par votre demande.</p>
               {projectionLoading ? (
-                <p className="nr-recap__rights-note">Calcul de la répartition…</p>
-              ) : projection ? (
-                <>
-                  <div className="nr-rights-impact">
-                    {Number(projection.nMinus1Used ?? 0) > 0 && (
-                      <div className="nr-rights-impact__period">
-                        <strong>{formatRelativeReferencePeriod(projection.nMinus1Period)}</strong>
-                        <span>Jours prévus sur ce compteur <b>{formatDays(projection.nMinus1Used)} j</b></span>
-                        <span>Solde estimé après imputation <b className={Number(projection.nMinus1BalanceAfter) < 0 ? 'is-negative' : ''}>{formatDays(projection.nMinus1BalanceAfter)} j</b></span>
-                      </div>
-                    )}
-                    {Number(projection.nUsed ?? 0) > 0 && (
-                      <div className="nr-rights-impact__period">
-                        <strong>{formatRelativeReferencePeriod(projection.nPeriod)}</strong>
-                        <span>Jours prévus sur ce compteur <b>{formatDays(projection.nUsed)} j</b></span>
-                        <span>Solde estimé après imputation <b className={Number(projection.nBalanceAfter) < 0 ? 'is-negative' : ''}>{formatDays(projection.nBalanceAfter)} j</b></span>
-                      </div>
-                    )}
-                  </div>
-                  {Number(projection.negativeBalanceDays ?? projection.anticipatedDays ?? 0) > 0 && (
-                    <p className="nr-negative-balance-warning"><Icon name="alert" size={15} /> Solde prévisionnel négatif : dépassement de {formatDays(projection.negativeBalanceDays ?? projection.anticipatedDays)} j.</p>
-                  )}
-                  {isAnticipatedLeave && (
-                    <p className="nr-anticipated-note"><Icon name="info" size={15} /> Cette demande concerne la période N+1 : elle est identifiée comme congé anticipé.</p>
-                  )}
-                </>
+                <p className="nr-recap__rights-note">Actualisation des indicateurs…</p>
+              ) : rightsSituation.length > 0 ? (
+                <div className="nr-rights-impact">
+                  {rightsSituation.map((item) => (
+                    <div className="nr-rights-impact__period" key={item.referencePeriod}>
+                      <strong>{formatRelativeReferencePeriod(item.referencePeriod)}</strong>
+                      <span>Pris <b>{formatDays(item.metrics.takenDays)} j</b></span>
+                      <span>En attente <b>{formatDays(item.metrics.pendingDays)} j</b></span>
+                      <span>Validées <b>{formatDays(item.metrics.validatedDays)} j</b></span>
+                    </div>
+                  ))}
+                </div>
               ) : (
-                <p className="nr-recap__rights-note">Sélectionnez une période complète pour afficher la répartition prévue.</p>
+                <p className="nr-recap__rights-note">Les indicateurs de cette période ne sont pas disponibles.</p>
+              )}
+              {isAnticipatedLeave && (
+                <p className="nr-anticipated-note"><Icon name="info" size={15} /> Cette demande concerne la période N+1 : elle est identifiée comme congé anticipé.</p>
               )}
             </section>
           )}

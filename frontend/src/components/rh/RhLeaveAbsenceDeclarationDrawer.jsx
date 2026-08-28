@@ -346,12 +346,6 @@ export function RhLeaveAbsenceDeclarationDrawer({
                   onBoundaryPeriodChange={handleLeaveBoundary}
                 />
               </div>
-              {form.startDate && (
-                <div className="rh-declaration-selection-summary">
-                  <Icon name="check" size={16} />
-                  <span>Du <strong>{form.startDate}</strong> au <strong>{form.endDate}</strong>{selectedType.allowsHalfDays ? ` · ${form.startPeriod === 'MATIN' ? 'matin' : 'après-midi'} → ${form.endPeriod === 'MATIN' ? 'matin' : 'après-midi'}` : ''}</span>
-                </div>
-              )}
             </section>
           )}
 
