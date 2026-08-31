@@ -1,4 +1,4 @@
-# Backend — Gestion des congés GMES
+# Backend — G Congé & Absences
 
 API NestJS, TypeORM et MySQL pour la gestion des demandes de congés, déclarations d'absence, dérogations, soldes, justificatifs, PDF, notifications et circuits de validation.
 
