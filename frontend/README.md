@@ -70,4 +70,4 @@ Compatibilité des anciennes URL :
 /app/documents        -> /app/my-documents
 ```
 
-Les espaces Responsable de service, RH, Directeur et Admin sont déclarés dans la navigation et seront implémentés progressivement.
+<!-- Les espaces Responsable de service, RH, Directeur et Admin sont déclarés dans la navigation et seront implémentés progressivement. -->
