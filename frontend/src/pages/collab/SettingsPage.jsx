@@ -242,7 +242,8 @@ export function SettingsPage() {
         </div>
       </section>
 
-      <section className="settings-card settings-preferences-card">
+      {user?.role !== 'ADMIN' && (
+        <section className="settings-card settings-preferences-card">
         <div className="settings-card__heading">
           <span className="settings-card__icon"><Icon name="calendar" size={19} /></span>
           <div>
@@ -273,7 +274,8 @@ export function SettingsPage() {
             {preferences.saving ? 'Enregistrement…' : 'Enregistrer les emojis'}
           </button>
         </div>
-      </section>
+        </section>
+      )}
 
       {canSign && (
         <SignatureSettingsCard

@@ -782,3 +782,44 @@
   background: var(--da-blue);
   color: #fff;
 }
+
+/* Directeur : une journée peut être enregistrée en journée/demi-journée ou en heures. */
+.director-availability-duration-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+.director-availability-duration-heading > span { color: #28496f; font-size: 12px; font-weight: 900; }
+.director-availability-duration-heading > small { color: #7f93ae; font-size: 10.5px; line-height: 1.45; }
+.director-availability-duration-choice {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+}
+.director-availability-duration-choice button {
+  display: inline-flex;
+  min-height: 42px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 8px 10px;
+  border: 1px solid #d8e5f3;
+  border-radius: 12px;
+  background: #f8fbff;
+  color: #577493;
+  font: inherit;
+  font-size: 10.8px;
+  font-weight: 850;
+  cursor: pointer;
+}
+.director-availability-duration-choice button.is-active {
+  border-color: #2475ef;
+  background: #eef6ff;
+  color: #155fc9;
+  box-shadow: 0 0 0 3px rgba(36,117,239,.08);
+}
+.director-availability-hours-field { margin-top: 13px; }
+@media (max-width: 560px) {
+  .director-availability-duration-choice { grid-template-columns: 1fr; }
+}

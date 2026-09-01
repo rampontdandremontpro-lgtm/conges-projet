@@ -79,7 +79,7 @@
   border-top: 1px solid var(--rh-type-border);
 }
 
-.rh-leave-types-table { min-width: 1110px; }
+.rh-leave-types-table { min-width: 1190px; }
 
 .rh-leave-types-row {
   display: grid;
@@ -90,7 +90,7 @@
     minmax(125px, .95fr)
     minmax(145px, 1.05fr)
     110px
-    92px
+    170px
     86px
     54px;
   align-items: center;
@@ -508,7 +508,7 @@
   .rh-leave-types-toolbar { min-height: 102px; padding-inline: 30px; }
   .rh-leave-types-toolbar h2 { font-size: 22px; }
   .rh-leave-types-toolbar p { font-size: 13.5px; }
-  .rh-leave-types-row { grid-template-columns: minmax(230px, 1.6fr) 115px 90px minmax(138px, 1fr) minmax(155px, 1.08fr) 120px 98px 90px 56px; column-gap: 12px; }
+  .rh-leave-types-row { grid-template-columns: minmax(230px, 1.6fr) 115px 90px minmax(138px, 1fr) minmax(155px, 1.08fr) 120px 180px 90px 56px; column-gap: 12px; }
   .rh-leave-types-row--head { min-height: 53px; padding-inline: 28px; font-size: 10.2px; }
   .rh-leave-types-row--body { min-height: 84px; padding: 12px 28px; font-size: 13px; }
   .rh-leave-types-name strong { font-size: 14.2px; }
@@ -685,6 +685,32 @@
   color: #7087a5;
 }
 
+.rh-leave-types-treatment--director {
+  min-width: 158px;
+  padding-inline: 14px;
+  white-space: nowrap;
+}
+
+.rh-leave-types-name__titleline {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.rh-leave-types-director-info {
+  display: inline-flex;
+  flex: 0 0 auto;
+}
+
+.rh-leave-types-director-info .statistic-info-button__popover {
+  width: min(310px, calc(100vw - 42px));
+}
+
+.rh-leave-types-director-info p {
+  margin: 0;
+  line-height: 1.5;
+}
+
 .rh-leave-types-filters { display: flex; align-items: end; gap: 11px; flex-wrap: wrap; }
 .rh-leave-types-filters label { display: grid; min-width: 180px; gap: 6px; }
 .rh-leave-types-filters label > span { color: #7892b0; font-size: 9.8px; font-weight: 850; letter-spacing: .055em; text-transform: uppercase; }
@@ -694,18 +720,3 @@
 .rh-leave-types-reset:hover { background: #edf5ff; color: #1d6bdd; }
 @media (max-width: 760px) { .rh-leave-types-filters { width: 100%; } .rh-leave-types-filters label, .rh-leave-types-filters select, .rh-leave-types-reset { width: 100%; } }
 
-.rh-leave-types-director-note {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  margin-bottom: 14px;
-  padding: 12px 14px;
-  border: 1px solid #d6e5f8;
-  border-radius: 12px;
-  background: #f5f9ff;
-  color: #355275;
-  line-height: 1.45;
-}
-
-.rh-leave-types-director-note svg { flex: 0 0 auto; margin-top: 1px; color: #176ff2; }
-.rh-leave-types-director-note strong { color: #12335d; }

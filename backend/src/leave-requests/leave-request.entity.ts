@@ -124,6 +124,16 @@ export class LeaveRequest {
   deductedDays!: number;
 
   @Column({
+    name: 'duration_hours',
+    type: 'decimal',
+    precision: 7,
+    scale: 2,
+    nullable: true,
+    transformer: nullableDecimalTransformer,
+  })
+  durationHours!: number | null;
+
+  @Column({
     type: 'enum',
     enum: LeaveRequestStatus,
     default: LeaveRequestStatus.BROUILLON,

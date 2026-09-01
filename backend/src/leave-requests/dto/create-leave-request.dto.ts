@@ -2,8 +2,10 @@ import {
   IsDateString,
   IsEnum,
   IsInt,
+  IsNumber,
   IsOptional,
   IsString,
+  Max,
   MaxLength,
   Min,
 } from 'class-validator';
@@ -33,6 +35,12 @@ export class CreateLeaveRequestDto {
   @IsOptional()
   @IsEnum(DayPeriod)
   endPeriod?: DayPeriod;
+
+  @IsOptional()
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0.25)
+  @Max(24)
+  durationHours?: number | null;
 
   @IsOptional()
   @IsString()

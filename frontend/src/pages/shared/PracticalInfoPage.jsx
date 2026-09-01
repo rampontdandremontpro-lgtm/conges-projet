@@ -23,7 +23,7 @@ function errorMessage(error) {
 
 export function PracticalInfoPage() {
   const { effectiveRole } = useAuth()
-  const canManage = effectiveRole === ROLES.RH
+  const canManage = [ROLES.RH, ROLES.ADMIN].includes(effectiveRole)
   const [state, setState] = useState({ loading: true, error: false, links: [] })
   const [editor, setEditor] = useState(null)
   const [form, setForm] = useState(EMPTY_FORM)
@@ -160,7 +160,7 @@ export function PracticalInfoPage() {
           <section className="practical-info-modal" role="dialog" aria-modal="true" onMouseDown={(event) => event.stopPropagation()}>
             <header>
               <div>
-                <span className="practical-info-eyebrow">RH</span>
+                <span className="practical-info-eyebrow">{effectiveRole === ROLES.ADMIN ? 'ADMINISTRATION' : 'RH'}</span>
                 <h2>{editor.mode === 'edit' ? 'Modifier le lien' : 'Ajouter un lien'}</h2>
               </div>
               <button type="button" onClick={closeEditor} disabled={busy} aria-label="Fermer">×</button>

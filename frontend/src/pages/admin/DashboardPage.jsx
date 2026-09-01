@@ -186,7 +186,6 @@ function AdminUsersOverview({ metrics, onNavigate }) {
       <header className="dash-card__header">
         <div className="dash-card__heading">
           <h2 className="dash-card__title">Gestion des utilisateurs</h2>
-          <span className="dash-card__period">Comptes et accès G Congés & Absences</span>
         </div>
         <span className={`admin-dashboard-status ${stable ? 'is-ok' : 'is-warning'}`}>
           {stable ? 'Comptes actifs' : 'À surveiller'}
@@ -232,9 +231,6 @@ function AdminServicesOverview({ metrics, onNavigate }) {
           <h2 className="dash-card__title">Services GMES</h2>
           <span className="dash-card__period">Organisation des services</span>
         </div>
-        <span className={`admin-dashboard-status ${needsAction ? 'is-warning' : 'is-ok'}`}>
-          {needsAction ? 'Action requise' : 'Configuration OK'}
-        </span>
       </header>
 
       <div className="admin-dashboard-services-hero">

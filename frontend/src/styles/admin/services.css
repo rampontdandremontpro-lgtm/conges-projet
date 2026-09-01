@@ -265,7 +265,7 @@
 @keyframes admin-services-fade { from { opacity: 0; } }
 
 .admin-services-drawer {
-  width: min(570px, 95vw);
+  width: min(760px, 96vw);
   height: 100%;
   overflow-y: auto;
   background: #f7faff;

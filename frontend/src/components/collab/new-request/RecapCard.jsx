@@ -248,9 +248,18 @@ export function RecapCard({
             <section className="nr-recap__block nr-recap__rights-block">
               <div className="nr-recap__rights-titleline">
                 <h4 className="nr-recap__subtitle">Situation de vos congés</h4>
-                {isAnticipatedLeave && <span className="nr-anticipated-badge">Congé anticipé</span>}
+                {isAnticipatedLeave && <span className="nr-anticipated-badge">Période N+1</span>}
               </div>
-              <p className="nr-recap__rights-note">Les indicateurs ci-dessous correspondent aux périodes concernées par votre demande.</p>
+              {isAnticipatedLeave && (
+                <div className="nr-anticipated-panel" role="note">
+                  <span className="nr-anticipated-panel__icon"><Icon name="calendar" size={17} /></span>
+                  <span className="nr-anticipated-panel__content">
+                    <strong>Congé anticipé</strong>
+                    <small>Cette demande utilise les droits de la prochaine période de congés. Les indicateurs ci-dessous correspondent à cette période.</small>
+                  </span>
+                </div>
+              )}
+              {!isAnticipatedLeave && <p className="nr-recap__rights-note">Les indicateurs ci-dessous correspondent aux périodes concernées par votre demande.</p>}
               {projectionLoading ? (
                 <p className="nr-recap__rights-note">Actualisation des indicateurs…</p>
               ) : rightsSituation.length > 0 ? (
@@ -266,9 +275,6 @@ export function RecapCard({
                 </div>
               ) : (
                 <p className="nr-recap__rights-note">Les indicateurs de cette période ne sont pas disponibles.</p>
-              )}
-              {isAnticipatedLeave && (
-                <div className="nr-anticipated-note"><span className="nr-anticipated-note__icon"><Icon name="info" size={15} /></span><span><strong>Congé anticipé · période N+1</strong><small>Cette demande porte sur la prochaine période de congés.</small></span></div>
               )}
             </section>
           )}

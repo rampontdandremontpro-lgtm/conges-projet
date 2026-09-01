@@ -80,6 +80,7 @@ export function DirectorAvailabilityPage() {
   })
   const [comment, setComment] = useState('')
   const [durationHours, setDurationHours] = useState('')
+  const [durationMode, setDurationMode] = useState('PERIOD')
   const [absenceDraft, setAbsenceDraft] = useState(null)
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState(false)
@@ -124,6 +125,8 @@ export function DirectorAvailabilityPage() {
       if (!existing) {
         setMode('LEAVE')
         setSelectedTypeId(preferredDirectorLeave?.id ?? null)
+        setDurationMode('PERIOD')
+        setDurationHours('')
         return
       }
 
@@ -144,11 +147,13 @@ export function DirectorAvailabilityPage() {
       if (editSource === 'leave') {
         setMode('LEAVE')
         setSelectedTypeId(existing.leaveTypeId ?? directorLeaveTypes[0]?.id ?? null)
-        setDurationHours('')
+        setDurationHours(existing.durationHours != null ? String(existing.durationHours) : '')
+        setDurationMode(existing.durationHours != null ? 'HOURS' : 'PERIOD')
       } else {
         setMode('ABSENCE')
         setSelectedTypeId(existing.leaveTypeId ?? existing.leaveType?.id ?? null)
         setDurationHours(existing.durationHours != null ? String(existing.durationHours) : '')
+        setDurationMode('PERIOD')
       }
     }
 
@@ -206,12 +211,17 @@ export function DirectorAvailabilityPage() {
     [availableTypes, selectedTypeId],
   )
 
-  const hoursOnly = Boolean(
+  const singleDaySelected = Boolean(
+    selection.startDate && selection.endDate && selection.startDate === selection.endDate,
+  )
+  const directorHoursMode = mode === 'LEAVE' && durationMode === 'HOURS'
+  const absenceHoursOnly = Boolean(
     mode === 'ABSENCE' &&
       selectedType?.allowsHours &&
       !selectedType?.allowsDays &&
       !selectedType?.allowsHalfDays,
   )
+  const hoursOnly = directorHoursMode || absenceHoursOnly
   const halfDaysAllowed = Boolean(selectedType?.allowsHalfDays) && !hoursOnly
 
   useEffect(() => {
@@ -230,11 +240,32 @@ export function DirectorAvailabilityPage() {
 
   const handlePick = (iso) => {
     if (hoursOnly) {
-      setSelection((current) => ({ ...current, startDate: iso, endDate: iso }))
+      setSelection((current) => ({
+        ...current,
+        startDate: iso,
+        endDate: iso,
+        startPeriod: 'MATIN',
+        endPeriod: 'APRES_MIDI',
+      }))
       return
     }
 
     setSelection((current) => selectLeaveDate(current, iso))
+  }
+
+  const chooseDurationMode = (nextMode) => {
+    if (nextMode === 'HOURS' && !singleDaySelected) return
+    setDurationMode(nextMode)
+    if (nextMode === 'HOURS') {
+      setSelection((current) => ({
+        ...current,
+        endDate: current.startDate,
+        startPeriod: 'MATIN',
+        endPeriod: 'APRES_MIDI',
+      }))
+    } else {
+      setDurationHours('')
+    }
   }
 
   const handleBoundaryPeriodChange = (change) => {
@@ -273,7 +304,7 @@ export function DirectorAvailabilityPage() {
     }
     if (hoursOnly) {
       const hours = Number(durationHours)
-      if (!Number.isFinite(hours) || hours <= 0) return 'Indiquez la durée de l’absence en heures.'
+      if (!Number.isFinite(hours) || hours <= 0 || hours > 24) return mode === 'LEAVE' ? 'Indiquez une durée comprise entre 0,25 et 24 heures.' : 'Indiquez la durée de l’absence en heures.'
     }
     return null
   }, [durationHours, hoursOnly, mode, selectedType, selection])
@@ -289,6 +320,7 @@ export function DirectorAvailabilityPage() {
     })
     setComment('')
     setDurationHours('')
+    setDurationMode('PERIOD')
     setAbsenceDraft(null)
   }
 
@@ -311,6 +343,7 @@ export function DirectorAvailabilityPage() {
             : {
                 startPeriod: selection.startPeriod,
                 endPeriod: selection.endPeriod,
+                ...(mode === 'LEAVE' ? { durationHours: null } : {}),
               }),
         }
 
@@ -335,6 +368,7 @@ export function DirectorAvailabilityPage() {
           : {
               startPeriod: selection.startPeriod,
               endPeriod: selection.endPeriod,
+              ...(mode === 'LEAVE' ? { durationHours: null } : {}),
             }),
       }
 
@@ -397,20 +431,38 @@ export function DirectorAvailabilityPage() {
             </div>
           </section>
 
-          {hoursOnly && (
+          {mode === 'LEAVE' && singleDaySelected && (
+            <section className="director-availability-card director-availability-duration-card">
+              <div className="director-availability-duration-heading">
+                <span>Durée de l’indisponibilité</span>
+                <small>Pour une journée sélectionnée, choisissez une journée/demi-journée ou indiquez un nombre d’heures.</small>
+              </div>
+              <div className="director-availability-duration-choice" role="group" aria-label="Mode de durée">
+                <button type="button" className={durationMode === 'PERIOD' ? 'is-active' : ''} onClick={() => chooseDurationMode('PERIOD')}>
+                  <Icon name="calendar" size={16} /> Journée / demi-journée
+                </button>
+                <button type="button" className={durationMode === 'HOURS' ? 'is-active' : ''} onClick={() => chooseDurationMode('HOURS')}>
+                  <Icon name="clock" size={16} /> Nombre d’heures
+                </button>
+              </div>
+              {directorHoursMode && (
+                <label className="director-availability-field director-availability-hours-field">
+                  <span>Nombre d’heures</span>
+                  <div className="director-availability-hours">
+                    <input type="number" min="0.25" max="24" step="0.25" value={durationHours} onChange={(event) => setDurationHours(event.target.value)} placeholder="Ex. 2,5" />
+                    <span>heures</span>
+                  </div>
+                </label>
+              )}
+            </section>
+          )}
+
+          {mode === 'ABSENCE' && absenceHoursOnly && (
             <section className="director-availability-card director-availability-duration-card">
               <label className="director-availability-field">
                 <span>Durée de l’absence</span>
                 <div className="director-availability-hours">
-                  <input
-                    type="number"
-                    min="0.25"
-                    max="744"
-                    step="0.25"
-                    value={durationHours}
-                    onChange={(event) => setDurationHours(event.target.value)}
-                    placeholder="Ex. 2"
-                  />
+                  <input type="number" min="0.25" max="744" step="0.25" value={durationHours} onChange={(event) => setDurationHours(event.target.value)} placeholder="Ex. 2" />
                   <span>heures</span>
                 </div>
               </label>
@@ -445,8 +497,8 @@ export function DirectorAvailabilityPage() {
             ) : (
               <div className="director-availability-recap-grid">
                 <span><small>Type</small><strong>Indisponibilité</strong></span>
-                <span><small>Début</small><strong>{formatDateFR(selection.startDate)} · {periodLabel(selection.startPeriod)}</strong></span>
-                <span><small>Fin</small><strong>{formatDateFR(selection.endDate)} · {periodLabel(selection.endPeriod)}</strong></span>
+                <span><small>Date</small><strong>{formatDateFR(selection.startDate)}{hoursOnly ? '' : ` · ${periodLabel(selection.startPeriod)}`}</strong></span>
+                <span><small>Fin</small><strong>{hoursOnly ? 'Même journée' : `${formatDateFR(selection.endDate)} · ${periodLabel(selection.endPeriod)}`}</strong></span>
                 <span><small>Durée</small><strong>{duration ? `${formatDays(duration.value)} ${duration.unit}` : '—'}</strong></span>
               </div>
             )}

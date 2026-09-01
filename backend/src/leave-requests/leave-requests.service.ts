@@ -65,6 +65,7 @@ import {
   calculateDeductedLeaveDays,
   getMartiniqueDateString,
 } from './leave-request-period.util';
+import { normalizeDirectorUnavailabilityDuration } from './director-unavailability-duration.util';
 import { AuditAction } from '../audit/audit-log.entity';
 import { currentReferencePeriod } from '../leave-balances/reference-period.util';
 import { AuditService } from '../audit/audit.service';
@@ -453,13 +454,20 @@ export class LeaveRequestsService {
     const endPeriod =
       createLeaveRequestDto.endPeriod ?? DayPeriod.APRES_MIDI;
 
-    const dates = await this.validateAndCalculateDates(
-      createLeaveRequestDto.startDate,
-      createLeaveRequestDto.endDate,
+    const duration = await normalizeDirectorUnavailabilityDuration({
+      startDate: createLeaveRequestDto.startDate,
+      endDate: createLeaveRequestDto.endDate,
+      durationHours: createLeaveRequestDto.durationHours ?? null,
       startPeriod,
       endPeriod,
-      leaveType.allowsHalfDays,
-    );
+      calculateDays: () => this.validateAndCalculateDates(
+        createLeaveRequestDto.startDate,
+        createLeaveRequestDto.endDate,
+        startPeriod,
+        endPeriod,
+        leaveType.allowsHalfDays,
+      ),
+    });
 
     let requestId = 0;
     let requestEmployeeId = employee.id;
@@ -479,10 +487,11 @@ export class LeaveRequestsService {
             service: employeeService,
             startDate: createLeaveRequestDto.startDate,
             endDate: createLeaveRequestDto.endDate,
-            startPeriod,
-            endPeriod,
-            calendarDuration: dates.calendarDuration,
-            deductedDays: dates.deductedDays,
+            startPeriod: duration.startPeriod,
+            endPeriod: duration.endPeriod,
+            calendarDuration: duration.calendarDuration,
+            deductedDays: duration.deductedDays,
+            durationHours: duration.durationHours,
             status: LeaveRequestStatus.VALIDEE,
             balanceProcessingStatus: BalanceProcessingStatus.DEFINITIF,
             comment: createLeaveRequestDto.comment?.trim() || null,
@@ -531,6 +540,7 @@ export class LeaveRequestsService {
             startDate: savedRequest.startDate,
             endDate: savedRequest.endDate,
             deductedDays: savedRequest.deductedDays,
+            durationHours: savedRequest.durationHours,
             realBalanceBefore: savedRequest.realBalanceBefore,
             realBalanceAfter: savedRequest.realBalanceAfter,
             signature: 'NON_REQUISE',
@@ -648,22 +658,33 @@ export class LeaveRequestsService {
 
       const startPeriod = dto.startPeriod ?? leaveRequest.startPeriod;
       const endPeriod = dto.endPeriod ?? leaveRequest.endPeriod;
-      const dates = await this.validateAndCalculateDates(
+      const requestedDurationHours = dto.durationHours !== undefined
+        ? dto.durationHours
+        : leaveRequest.durationHours;
+      const duration = await normalizeDirectorUnavailabilityDuration({
         startDate,
         endDate,
+        durationHours: requestedDurationHours,
         startPeriod,
         endPeriod,
-        leaveType.allowsHalfDays,
-      );
+        calculateDays: () => this.validateAndCalculateDates(
+          startDate,
+          endDate,
+          startPeriod,
+          endPeriod,
+          leaveType.allowsHalfDays,
+        ),
+      });
 
       leaveRequest.leaveTypeId = leaveType.id;
       leaveRequest.leaveType = leaveType;
       leaveRequest.startDate = startDate;
       leaveRequest.endDate = endDate;
-      leaveRequest.startPeriod = startPeriod;
-      leaveRequest.endPeriod = endPeriod;
-      leaveRequest.calendarDuration = dates.calendarDuration;
-      leaveRequest.deductedDays = dates.deductedDays;
+      leaveRequest.startPeriod = duration.startPeriod;
+      leaveRequest.endPeriod = duration.endPeriod;
+      leaveRequest.calendarDuration = duration.calendarDuration;
+      leaveRequest.deductedDays = duration.deductedDays;
+      leaveRequest.durationHours = duration.durationHours;
       leaveRequest.comment = dto.comment !== undefined
         ? dto.comment.trim() || null
         : leaveRequest.comment;

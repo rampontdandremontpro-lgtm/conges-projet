@@ -59,7 +59,7 @@ export class DocumentPdfService {
   private readonly pdfTemplateWidthPx = 1055;
   private readonly pdfTemplateHeightPx = 1491;
 
-  private readonly validationPdfDesignVersion = 'code-v7-trace-uniform';
+  private readonly validationPdfDesignVersion = 'code-v8-balance-clean';
 
   constructor(
     @InjectRepository(Document)
@@ -1831,7 +1831,7 @@ export class DocumentPdfService {
       'DOCUMENT PROVISOIRE – NE CONSTITUE PAS UNE AUTORISATION D’ABSENCE',
       {
         xPx: 255,
-        yPx: 1411,
+        yPx: 1388,
         widthPx: 550,
         fontSizePx: 12.5,
         font: 'Helvetica-Bold',
@@ -2496,9 +2496,9 @@ export class DocumentPdfService {
       document,
       'Sous réserve du solde inscrit sur votre bulletin de paie.',
       {
-        xPx: 160,
-        yPx: 1442,
-        widthPx: 735,
+        xPx: 330,
+        yPx: 1408,
+        widthPx: 395,
         fontSizePx: 13,
         font: 'Helvetica-Bold',
         color: '#B91C1C',

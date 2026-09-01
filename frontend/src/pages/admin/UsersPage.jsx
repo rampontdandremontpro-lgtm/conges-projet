@@ -345,14 +345,16 @@ function PasswordResetModal({ user, onCancel, onSuccess }) {
           <button type="button" className="admin-users-password-reset__close" onClick={onCancel} aria-label="Fermer">×</button>
         </div>
 
-        <div className="admin-users-password-reset__user">
-          <ProfileAvatar user={user} className="admin-users-password-reset__avatar" />
-          <div><strong>{fullName(user)}</strong><span>{ROLE_LABELS[user.role] ?? user.role} · {user.email}</span></div>
-        </div>
+        <div className="admin-users-password-reset__context">
+          <div className="admin-users-password-reset__user">
+            <ProfileAvatar user={user} className="admin-users-password-reset__avatar" />
+            <div><strong>{fullName(user)}</strong><span>{ROLE_LABELS[user.role] ?? user.role} · {user.email}</span></div>
+          </div>
 
-        <div className="admin-users-password-reset__notice">
-          <Icon name="info" size={17} />
-          <p>Le nouveau mot de passe est temporaire. L’utilisateur devra obligatoirement en choisir un autre à sa prochaine connexion.</p>
+          <div className="admin-users-password-reset__notice">
+            <Icon name="info" size={17} />
+            <p>Le mot de passe créé ici est temporaire. L’utilisateur devra le remplacer à sa prochaine connexion.</p>
+          </div>
         </div>
 
         <div className="admin-users-password-reset__fields">
@@ -368,7 +370,9 @@ function PasswordResetModal({ user, onCancel, onSuccess }) {
             <span>Confirmer le mot de passe</span>
             <div className="admin-users-password-input">
               <input type={visible ? 'text' : 'password'} minLength={12} maxLength={64} autoComplete="new-password" value={confirmation} onChange={(event) => setConfirmation(event.target.value)} required />
+              <button type="button" onClick={() => setVisible((value) => !value)} aria-label={visible ? 'Masquer les mots de passe' : 'Afficher les mots de passe'}><Icon name={visible ? 'eyeOff' : 'eye'} size={17} /></button>
             </div>
+            <small>Retapez exactement le mot de passe temporaire.</small>
           </label>
         </div>
         {feedback && <div className="admin-users-password-reset__feedback"><Icon name="alert" size={16} /> <span>{feedback}</span></div>}

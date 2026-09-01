@@ -61,6 +61,7 @@ function durationLabel(item) {
 }
 
 function normalizeLeave(request, today) {
+  const usesHours = request.durationHours !== null && request.durationHours !== undefined
   const item = {
     key: `leave-${request.id}`,
     id: request.id,
@@ -69,10 +70,10 @@ function normalizeLeave(request, today) {
     type: 'Indisponibilité',
     startDate: request.startDate,
     endDate: request.endDate,
-    startPeriod: request.startPeriod,
-    endPeriod: request.endPeriod,
-    duration: Number(request.deductedDays) || 0,
-    durationUnit: 'j',
+    startPeriod: usesHours ? null : request.startPeriod,
+    endPeriod: usesHours ? null : request.endPeriod,
+    duration: Number(usesHours ? request.durationHours : request.deductedDays) || 0,
+    durationUnit: usesHours ? 'h' : 'j',
     comment: request.comment || '',
     backendStatus: request.status,
     createdAt: request.createdAt,

@@ -97,10 +97,21 @@ export function RhLeavesAndAbsencesPage() {
 
   const typeOptions = useMemo(() => {
     const values = new Map()
-    rows.filter((row) => filters.nature === 'ALL' || row.nature === filters.nature)
-      .forEach((row) => { if (row.type?.id && row.type?.name && !isReservedDirectorLeaveType(row.type)) values.set(`${row.nature}:${row.type.id}`, row.type.name) })
+
+    if (filters.nature === 'ALL' || filters.nature === 'CONGE') {
+      state.leaveTypes
+        .filter((type) => type?.isActive !== false && type?.id && type?.name && !isReservedDirectorLeaveType(type))
+        .forEach((type) => values.set(`CONGE:${type.id}`, type.name))
+    }
+
+    if (filters.nature === 'ALL' || filters.nature === 'ABSENCE') {
+      state.absenceTypes
+        .filter((type) => type?.isActive !== false && type?.id && type?.name)
+        .forEach((type) => values.set(`ABSENCE:${type.id}`, type.name))
+    }
+
     return [...values.entries()].sort((a, b) => a[1].localeCompare(b[1], 'fr'))
-  }, [filters.nature, rows])
+  }, [filters.nature, state.absenceTypes, state.leaveTypes])
 
   const employeeOptions = useMemo(() => {
     const values = new Map()

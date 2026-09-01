@@ -55,7 +55,7 @@ export class SettingsController {
   }
 
   @Post('practical-links')
-  @Roles(UserRole.RH)
+  @Roles(UserRole.RH, UserRole.ADMIN)
   createPracticalLink(
     @Req() request: AuthenticatedRequest,
     @Body() dto: CreatePracticalLinkDto,
@@ -64,7 +64,7 @@ export class SettingsController {
   }
 
   @Patch('practical-links/:id')
-  @Roles(UserRole.RH)
+  @Roles(UserRole.RH, UserRole.ADMIN)
   updatePracticalLink(
     @Param('id') id: string,
     @Req() request: AuthenticatedRequest,
@@ -74,7 +74,7 @@ export class SettingsController {
   }
 
   @Delete('practical-links/:id')
-  @Roles(UserRole.RH)
+  @Roles(UserRole.RH, UserRole.ADMIN)
   deletePracticalLink(
     @Param('id') id: string,
     @Req() request: AuthenticatedRequest,
