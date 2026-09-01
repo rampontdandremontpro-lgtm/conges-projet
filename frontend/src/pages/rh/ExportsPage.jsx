@@ -4,6 +4,7 @@ import { Icon } from '@/components/ui/Icon'
 import { PageContainer } from '@/components/ui/PageContainer'
 import { downloadRhExport, getRhExportsOverview } from '@/services/rh/rhExports'
 import { resolveExportPeriodRange } from '@/utils/exportPeriodRange'
+import { isReservedDirectorLeaveType } from '@/utils/filterOptions'
 import { adjacentReferencePeriodOptions, currentReferencePeriod } from '@/utils/referencePeriods'
 
 import '@/styles/rh/exports.css'
@@ -246,7 +247,7 @@ export function RhExportsPage() {
             <span>Type</span>
             <select value={filters.leaveTypeId} onChange={(event) => changeFilter('leaveTypeId', event.target.value)}>
               <option value="">Tous les types</option>
-              {(overview.filters?.leaveTypes ?? []).map((type) => (
+              {(overview.filters?.leaveTypes ?? []).filter((type) => !isReservedDirectorLeaveType(type)).map((type) => (
                 <option key={type.id} value={type.id}>{type.name}</option>
               ))}
             </select>

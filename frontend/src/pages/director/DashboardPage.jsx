@@ -50,7 +50,6 @@ function DecisionsCard({ decisions, onNavigate }) {
       <header className="dash-card__header">
         <div className="dash-card__heading">
           <h2 className="dash-card__title">Décisions à prendre</h2>
-          <span className="dash-card__period">Votre file de décision</span>
         </div>
         <span className={`director-status-badge ${total > 0 ? 'is-warning' : 'is-ok'}`}>
           {total > 0 ? 'Action requise' : 'À jour'}
@@ -72,8 +71,8 @@ function DecisionsCard({ decisions, onNavigate }) {
           <strong>{decisions?.rh ?? 0}</strong>
         </div>
         <div className="director-decision-metric director-decision-metric--orange">
-          <span>Autres</span>
-          <strong>{decisions?.others ?? 0}</strong>
+          <span>Collaborateurs</span>
+          <strong>{decisions?.collaborators ?? 0}</strong>
         </div>
       </div>
 

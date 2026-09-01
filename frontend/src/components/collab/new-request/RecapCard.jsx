@@ -268,7 +268,7 @@ export function RecapCard({
                 <p className="nr-recap__rights-note">Les indicateurs de cette période ne sont pas disponibles.</p>
               )}
               {isAnticipatedLeave && (
-                <p className="nr-anticipated-note"><Icon name="info" size={15} /> Cette demande concerne la période N+1 : elle est identifiée comme congé anticipé.</p>
+                <div className="nr-anticipated-note"><span className="nr-anticipated-note__icon"><Icon name="info" size={15} /></span><span><strong>Congé anticipé · période N+1</strong><small>Cette demande porte sur la prochaine période de congés.</small></span></div>
               )}
             </section>
           )}

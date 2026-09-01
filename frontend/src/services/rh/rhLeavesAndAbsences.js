@@ -6,21 +6,25 @@ import {
   getRhAbsenceTypes,
 } from '@/services/rh/rhAbsences'
 import { getRhLeaveTypes } from '@/services/rh/rhLeaveTypes'
+import { isReservedDirectorLeaveType } from '@/utils/filterOptions'
 
 export async function getRhLeavesAndAbsencesData() {
-  const [leaves, absences, employees, absenceTypes, allLeaveTypes] = await Promise.all([
+  const [leaves, absences, employees, absenceTypes, allLeaveTypes, servicesResponse] = await Promise.all([
     getRhAllRequests(),
     getRhAbsenceDeclarations(),
     getRhAbsenceEmployees(),
     getRhAbsenceTypes(),
     getRhLeaveTypes(),
+    apiClient.get('/services'),
   ])
 
   const leaveTypes = (Array.isArray(allLeaveTypes) ? allLeaveTypes : [])
-    .filter((type) => type?.isActive && type?.category === 'DEMANDE_CONGE')
+    .filter((type) => type?.isActive && type?.category === 'DEMANDE_CONGE' && !isReservedDirectorLeaveType(type))
     .sort((left, right) => String(left?.name ?? '').localeCompare(String(right?.name ?? ''), 'fr'))
 
-  return { leaves, absences, employees, absenceTypes, leaveTypes }
+  const services = Array.isArray(servicesResponse?.data) ? servicesResponse.data : []
+
+  return { leaves, absences, employees, absenceTypes, leaveTypes, services }
 }
 
 export async function createRhDirectLeave(payload) {

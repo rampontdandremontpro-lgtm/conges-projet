@@ -15,6 +15,7 @@ import {
 import { getRhLeavesAndAbsencesData } from '@/services/rh/rhLeavesAndAbsences'
 import { formatDateNumericFR, formatDays } from '@/utils/format'
 import { normalizeRhEventSearch, normalizeRhLeaveAndAbsenceRows } from '@/utils/rhLeavesAndAbsences'
+import { buildGroupedServiceOptions, isExternalService, isReservedDirectorLeaveType, matchesGroupedServiceFilter } from '@/utils/filterOptions'
 
 import '@/styles/rh/leaves-and-absences.css'
 
@@ -39,7 +40,7 @@ export function RhLeavesAndAbsencesPage() {
   const location = useLocation()
   const [searchParams] = useSearchParams()
   const globalSearch = searchParams.get('q') ?? ''
-  const [state, setState] = useState({ loading: true, error: false, leaves: [], absences: [], employees: [], absenceTypes: [], leaveTypes: [] })
+  const [state, setState] = useState({ loading: true, error: false, leaves: [], absences: [], employees: [], absenceTypes: [], leaveTypes: [], services: [] })
   const [filters, setFilters] = useState({ nature: 'ALL', status: 'ALL', type: 'ALL', employee: 'ALL', service: 'ALL' })
   const [page, setPage] = useState(1)
   const [declarationOpen, setDeclarationOpen] = useState(false)
@@ -97,7 +98,7 @@ export function RhLeavesAndAbsencesPage() {
   const typeOptions = useMemo(() => {
     const values = new Map()
     rows.filter((row) => filters.nature === 'ALL' || row.nature === filters.nature)
-      .forEach((row) => { if (row.type?.id && row.type?.name) values.set(`${row.nature}:${row.type.id}`, row.type.name) })
+      .forEach((row) => { if (row.type?.id && row.type?.name && !isReservedDirectorLeaveType(row.type)) values.set(`${row.nature}:${row.type.id}`, row.type.name) })
     return [...values.entries()].sort((a, b) => a[1].localeCompare(b[1], 'fr'))
   }, [filters.nature, rows])
 
@@ -107,11 +108,26 @@ export function RhLeavesAndAbsencesPage() {
     return [...values.entries()].sort((a, b) => a[1].localeCompare(b[1], 'fr'))
   }, [rows])
 
-  const serviceOptions = useMemo(() => {
+  const serviceRecords = useMemo(() => {
     const values = new Map()
-    rows.forEach((row) => { if (row.service?.id && row.service?.name) values.set(String(row.service.id), row.service.name) })
-    return [...values.entries()].sort((a, b) => a[1].localeCompare(b[1], 'fr'))
-  }, [rows])
+    state.services.forEach((service) => {
+      if (service?.id && service?.name) values.set(String(service.id), service)
+    })
+    state.employees.forEach((employee) => {
+      if (employee.service?.id && employee.service?.name && !values.has(String(employee.service.id))) {
+        values.set(String(employee.service.id), employee.service)
+      }
+    })
+    rows.forEach((row) => {
+      if (row.service?.id && row.service?.name && !values.has(String(row.service.id))) values.set(String(row.service.id), row.service)
+    })
+    return [...values.values()]
+  }, [rows, state.employees, state.services])
+
+  const serviceOptions = useMemo(() => buildGroupedServiceOptions(serviceRecords), [serviceRecords])
+  const externalServiceIds = useMemo(() => new Set(
+    serviceRecords.filter(isExternalService).map((service) => String(service.id)),
+  ), [serviceRecords])
 
   const filtered = useMemo(() => {
     const query = normalizeRhEventSearch(globalSearch)
@@ -120,7 +136,7 @@ export function RhLeavesAndAbsencesPage() {
       if (filters.status !== 'ALL' && row.status !== filters.status) return false
       if (filters.type !== 'ALL' && `${row.nature}:${row.type?.id ?? ''}` !== filters.type) return false
       if (filters.employee !== 'ALL' && String(row.employee?.id ?? '') !== filters.employee) return false
-      if (filters.service !== 'ALL' && String(row.service?.id ?? '') !== filters.service) return false
+      if (!matchesGroupedServiceFilter(row.service?.id, filters.service, externalServiceIds)) return false
       if (!query) return true
       const haystack = normalizeRhEventSearch([
         row.id, row.natureLabel, fullName(row.employee), row.employee?.email, row.type?.name,
@@ -132,7 +148,7 @@ export function RhLeavesAndAbsencesPage() {
       if (start !== 0) return start
       return String(b.eventDate ?? '').localeCompare(String(a.eventDate ?? ''))
     })
-  }, [filters, globalSearch, rows])
+  }, [externalServiceIds, filters, globalSearch, rows])
 
   const safePage = Math.min(page, Math.max(1, Math.ceil(filtered.length / PAGE_SIZE)))
   const visible = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE)
@@ -198,7 +214,7 @@ export function RhLeavesAndAbsencesPage() {
         <label><span>STATUT</span><select value={filters.status} onChange={(event) => setFilters((current) => ({ ...current, status: event.target.value }))}><option value="ALL">Tous les statuts</option>{statusOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
         <label><span>TYPE</span><select value={filters.type} onChange={(event) => setFilters((current) => ({ ...current, type: event.target.value }))}><option value="ALL">Tous les types</option>{typeOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
         <label><span>COLLABORATEUR</span><select value={filters.employee} onChange={(event) => setFilters((current) => ({ ...current, employee: event.target.value }))}><option value="ALL">Tous les collaborateurs</option>{employeeOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
-        <label><span>SERVICE</span><select value={filters.service} onChange={(event) => setFilters((current) => ({ ...current, service: event.target.value }))}><option value="ALL">Tous les services</option>{serviceOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+        <label><span>SERVICE</span><select value={filters.service} onChange={(event) => setFilters((current) => ({ ...current, service: event.target.value }))}><option value="ALL">Tous les services</option>{serviceOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
       </section>
 
       <section className="rh-events-card">

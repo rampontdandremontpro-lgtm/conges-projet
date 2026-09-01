@@ -509,8 +509,11 @@ export class UsersService {
         nom: member.nom,
         prenom: member.prenom,
         role: member.role,
+        employmentType: member.employmentType,
         serviceId: member.serviceId,
         serviceName: member.service?.name ?? 'Direction',
+        serviceType: member.service?.serviceType ?? null,
+        externalCompanyName: member.service?.externalCompanyName ?? null,
       })),
       holidays: holidays.map((holiday) => ({
         id: holiday.id,

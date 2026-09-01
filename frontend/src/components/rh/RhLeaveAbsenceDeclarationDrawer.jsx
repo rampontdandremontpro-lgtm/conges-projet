@@ -12,6 +12,7 @@ import { createRhDirectLeave } from '@/services/rh/rhLeavesAndAbsences'
 import { getHolidays } from '@/services/leaveRequests'
 import { todayISO } from '@/utils/format'
 import { changeLeaveBoundaryPeriod, selectLeaveDate } from '@/utils/leaveDateSelection'
+import { isReservedDirectorLeaveType } from '@/utils/filterOptions'
 
 import '@/styles/collab/new-request/01-page-types-calendar.css'
 import '@/styles/rh/leave-absence-declaration.css'
@@ -90,7 +91,7 @@ export function RhLeaveAbsenceDeclarationDrawer({
   const [error, setError] = useState('')
 
   const allTypes = useMemo(() => [
-    ...(leaveTypes ?? []).map((type) => ({ ...type, declarationCategory: 'CONGE' })),
+    ...(leaveTypes ?? []).filter((type) => !isReservedDirectorLeaveType(type)).map((type) => ({ ...type, declarationCategory: 'CONGE' })),
     ...(absenceTypes ?? []).map((type) => ({ ...type, declarationCategory: 'ABSENCE' })),
   ], [absenceTypes, leaveTypes])
 
@@ -289,7 +290,6 @@ export function RhLeaveAbsenceDeclarationDrawer({
           <div>
             <span>GESTION RH</span>
             <h2 id="rh-declaration-title">Déclarer congés/absences</h2>
-            <p>Déclarez directement un congé ou une absence pour un collaborateur.</p>
           </div>
           <button type="button" onClick={onClose} aria-label="Fermer">×</button>
         </header>
@@ -310,7 +310,7 @@ export function RhLeaveAbsenceDeclarationDrawer({
               <select value={form.typeToken} onChange={(event) => changeType(event.target.value)}>
                 <option value="">Sélectionner un type</option>
                 <optgroup label="Congés">
-                  {leaveTypes.map((type) => <option key={`leave-${type.id}`} value={selectedTypeToken('CONGE', type.id)}>{type.name}</option>)}
+                  {leaveTypes.filter((type) => !isReservedDirectorLeaveType(type)).map((type) => <option key={`leave-${type.id}`} value={selectedTypeToken('CONGE', type.id)}>{type.name}</option>)}
                 </optgroup>
                 <optgroup label="Absences">
                   {absenceTypes.map((type) => <option key={`absence-${type.id}`} value={selectedTypeToken('ABSENCE', type.id)}>{type.name}</option>)}
@@ -331,7 +331,6 @@ export function RhLeaveAbsenceDeclarationDrawer({
             <section className="rh-declaration-section">
               <div className="rh-declaration-section__title">
                 <div><span>CONGÉ</span><h3>Sélectionner la période</h3></div>
-                <p>La RH peut déclarer une période passée, actuelle ou future. Aucune dérogation n’est demandée.</p>
               </div>
               <div className="rh-declaration-calendar nr-page">
                 <LeaveCalendar
@@ -352,11 +351,10 @@ export function RhLeaveAbsenceDeclarationDrawer({
           {isAbsence && (
             <section className="rh-declaration-section">
               <div className="rh-declaration-section__title">
-                <div><span>ABSENCE</span><h3>Unité de déclaration</h3></div>
-                <p>Choisissez l’unité : le calendrier s’adapte automatiquement.</p>
+                <div><span>ABSENCE</span><h3>Format de saisie</h3></div>
               </div>
 
-              <div className="rh-declaration-units" role="group" aria-label="Unité de déclaration">
+              <div className="rh-declaration-units" role="group" aria-label="Format de saisie">
                 {units.map((unit) => (
                   <button key={unit.id} type="button" className={form.mode === unit.id ? 'is-active' : ''} onClick={() => changeMode(unit.id)}>
                     <Icon name={unit.id === 'hours' ? 'clock' : 'calendar'} size={16} /> {unit.label}

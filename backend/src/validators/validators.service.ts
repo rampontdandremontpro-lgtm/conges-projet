@@ -7,6 +7,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import {
   FindOptionsWhere,
+  In,
   LessThanOrEqual,
   MoreThanOrEqual,
   Repository,
@@ -30,6 +31,11 @@ const ELIGIBLE_VALIDATOR_ROLES = [
   UserRole.RESPONSABLE_SERVICE,
   UserRole.RH,
   UserRole.DIRECTEUR,
+];
+
+const VALIDATOR_PAGE_ROLES = [
+  UserRole.COLLABORATEUR,
+  ...ELIGIBLE_VALIDATOR_ROLES,
 ];
 
 const DATE_ONLY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
@@ -61,6 +67,36 @@ export class ValidatorsService {
 
     private readonly auditService: AuditService,
   ) {}
+
+  async listValidatorUsers() {
+    const users = await this.userRepository.find({
+      where: {
+        isActive: true,
+        role: In(VALIDATOR_PAGE_ROLES),
+      },
+      relations: { service: true },
+      order: { nom: 'ASC', prenom: 'ASC', id: 'ASC' },
+    });
+
+    return users.map((user) => ({
+      id: user.id,
+      nom: user.nom,
+      prenom: user.prenom,
+      email: user.email,
+      role: user.role,
+      employmentType: user.employmentType,
+      isActive: user.isActive,
+      serviceId: user.serviceId,
+      service: user.service
+        ? {
+            id: user.service.id,
+            name: user.service.name,
+            serviceType: user.service.serviceType,
+            externalCompanyName: user.service.externalCompanyName,
+          }
+        : null,
+    }));
+  }
 
   async getServiceValidators(serviceId: number) {
     const service = await this.serviceRepository.findOneBy({

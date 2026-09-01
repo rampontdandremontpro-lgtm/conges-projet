@@ -26,7 +26,7 @@ export async function enableRhBackupValidator(serviceId, validatorId) {
 }
 
 export async function getRhValidatorUsers() {
-  const response = await apiClient.get('/users')
+  const response = await apiClient.get('/validator-candidates')
   return response.data
 }
 

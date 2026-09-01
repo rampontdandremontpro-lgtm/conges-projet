@@ -7,6 +7,7 @@ import { PaginationBar } from '@/components/ui/PaginationBar'
 import { PageContainer } from '@/components/ui/PageContainer'
 import { getRhAllRequestFilterOptions, getRhAllRequests } from '@/services/rh/rhAllRequests'
 import { formatDateNumericFR, formatDays } from '@/utils/format'
+import { isReservedDirectorLeaveType } from '@/utils/filterOptions'
 
 import '@/styles/rh/all-requests.css'
 
@@ -225,7 +226,9 @@ export function RhAllRequestsPage() {
   const leaveTypes = useMemo(() => {
     const values = new Map()
     state.filterOptions.leaveTypes.forEach((leaveType) => {
-      if (leaveType?.id && leaveType?.name) values.set(String(leaveType.id), leaveType.name)
+      if (leaveType?.id && leaveType?.name && !isReservedDirectorLeaveType(leaveType)) {
+        values.set(String(leaveType.id), leaveType.name)
+      }
     })
     return [...values.entries()].sort((left, right) => left[1].localeCompare(right[1], 'fr'))
   }, [state.filterOptions.leaveTypes])

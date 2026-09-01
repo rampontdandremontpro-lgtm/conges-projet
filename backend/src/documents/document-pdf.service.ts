@@ -936,8 +936,7 @@ export class DocumentPdfService {
         ['Type de congé', 572],
         ['Date de début', 610],
         ['Date de fin', 648],
-        ['Durée calendaire', 686],
-        ['Jours ouvrables décomptés', 724],
+        ['Jours ouvrables décomptés', 686],
       ],
       labelXPx: 110,
       valueXPx: 412,
@@ -955,9 +954,9 @@ export class DocumentPdfService {
       title: 'SITUATION DU SOLDE',
       icon: 'balance',
       labels: [
-        ['Solde réel avant validation', 825],
-        ['Solde potentiel avant validation', 863],
-        ['Solde réel après validation', 901],
+        ['Solde avant décompte', 825],
+        ['Jours décomptés', 863],
+        ['Solde après décompte', 901],
       ],
       labelXPx: 110,
       valueXPx: 412,
@@ -2080,8 +2079,7 @@ export class DocumentPdfService {
             `${this.formatDateOnly(leaveRequest.endDate)} — ${this.formatDayPeriod(leaveRequest.endPeriod)}`,
             648,
           ],
-          [`${leaveRequest.calendarDuration} jour(s)`, 686],
-          [this.formatDays(leaveRequest.deductedDays), 724],
+          [this.formatDays(leaveRequest.deductedDays), 686],
         ].forEach(([value, yPx]) => {
           this.drawExactPdfText(document, String(value), {
             xPx: 412,
@@ -2098,12 +2096,7 @@ export class DocumentPdfService {
             this.formatOptionalDays(leaveRequest.realBalanceBefore),
             825,
           ],
-          [
-            this.formatOptionalDays(
-              leaveRequest.potentialBalanceBefore,
-            ),
-            863,
-          ],
+          [this.formatDays(leaveRequest.deductedDays), 863],
           [
             this.formatOptionalDays(leaveRequest.realBalanceAfter),
             901,
@@ -2504,7 +2497,7 @@ export class DocumentPdfService {
       'Sous réserve du solde inscrit sur votre bulletin de paie.',
       {
         xPx: 160,
-        yPx: 1422,
+        yPx: 1442,
         widthPx: 735,
         fontSizePx: 13,
         font: 'Helvetica-Bold',

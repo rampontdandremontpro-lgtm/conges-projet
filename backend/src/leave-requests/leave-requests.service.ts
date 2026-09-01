@@ -446,18 +446,7 @@ export class LeaveRequestsService {
       createLeaveRequestDto.leaveTypeId,
     );
 
-    this.validateLeaveType(leaveType);
-
-    const directorLeaveTypeName = leaveType.name
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .trim()
-      .toLocaleLowerCase('fr-FR');
-    if (directorLeaveTypeName !== 'conge') {
-      throw new BadRequestException(
-        'Le Directeur peut uniquement enregistrer le type « Congé ».',
-      );
-    }
+    this.validateDirectorLeaveType(leaveType);
 
     const startPeriod =
       createLeaveRequestDto.startPeriod ?? DayPeriod.MATIN;
@@ -647,17 +636,7 @@ export class LeaveRequestsService {
         throw new NotFoundException('Le type « Congé » est introuvable.');
       }
 
-      this.validateLeaveType(leaveType);
-      const directorLeaveTypeName = leaveType.name
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .trim()
-        .toLocaleLowerCase('fr-FR');
-      if (directorLeaveTypeName !== 'conge') {
-        throw new BadRequestException(
-          'Le Directeur peut uniquement utiliser le type « Congé ».',
-        );
-      }
+      this.validateDirectorLeaveType(leaveType);
 
       const startDate = dto.startDate ?? leaveRequest.startDate;
       const endDate = dto.endDate ?? leaveRequest.endDate;
@@ -2790,12 +2769,36 @@ export class LeaveRequestsService {
     return requestPeriod === this.nextReferencePeriod(activePeriod);
   }
 
+  private isDirectorUnavailabilityType(leaveType: LeaveType): boolean {
+    const normalizedName = leaveType.name
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim()
+      .toLocaleLowerCase('fr-FR');
+    return leaveType.category === LeaveTypeCategory.DEMANDE_CONGE && normalizedName === 'conge';
+  }
+
+  private validateDirectorLeaveType(leaveType: LeaveType): void {
+    if (!leaveType.isActive) {
+      throw new BadRequestException('Le type « Congé » réservé au Directeur est désactivé.');
+    }
+    if (!this.isDirectorUnavailabilityType(leaveType)) {
+      throw new BadRequestException('Le Directeur peut uniquement utiliser le type « Congé » pour son indisponibilité.');
+    }
+    if (!leaveType.allowsDays && !leaveType.allowsHalfDays) {
+      throw new BadRequestException('Le type « Congé » du Directeur doit autoriser les jours ou demi-journées.');
+    }
+  }
+
   private validateRhDirectLeaveType(leaveType: LeaveType): void {
     if (!leaveType.isActive) {
       throw new BadRequestException('Le type de congé sélectionné est désactivé.');
     }
     if (leaveType.category !== LeaveTypeCategory.DEMANDE_CONGE) {
       throw new BadRequestException('Le type sélectionné ne correspond pas à un congé.');
+    }
+    if (this.isDirectorUnavailabilityType(leaveType)) {
+      throw new ForbiddenException('Le type « Congé » est réservé uniquement à l’indisponibilité du Directeur.');
     }
     if (!leaveType.allowsDays && !leaveType.allowsHalfDays) {
       throw new BadRequestException('Ce type de congé ne peut pas être déclaré en jours ou demi-journées.');
@@ -2812,6 +2815,12 @@ export class LeaveRequestsService {
     if (leaveType.category !== LeaveTypeCategory.DEMANDE_CONGE) {
       throw new BadRequestException(
         'Le type sélectionné ne correspond pas à une demande de congé.',
+      );
+    }
+
+    if (this.isDirectorUnavailabilityType(leaveType)) {
+      throw new ForbiddenException(
+        'Le type « Congé » est réservé uniquement à l’indisponibilité du Directeur.',
       );
     }
 

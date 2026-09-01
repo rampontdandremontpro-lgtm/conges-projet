@@ -5,6 +5,7 @@ import { Icon } from '@/components/ui/Icon'
 import { useAutoDismiss } from '@/hooks/useAutoDismiss'
 import { PaginationBar } from '@/components/ui/PaginationBar'
 import { PageContainer } from '@/components/ui/PageContainer'
+import { isReservedDirectorLeaveType } from '@/utils/filterOptions'
 import {
   createRhLeaveType,
   disableRhLeaveType,
@@ -428,6 +429,11 @@ export function RhLeaveTypesPage() {
     <PageContainer className="rh-leave-types-page">
       {feedback && <div className="rh-leave-types-feedback"><Icon name="check" size={16} /> {feedback}</div>}
 
+      <div className="rh-leave-types-director-note" role="note">
+        <Icon name="info" size={18} />
+        <span><strong>Type « Congé » réservé au Directeur.</strong> Il représente uniquement son indisponibilité et ne doit pas être utilisé pour un collaborateur.</span>
+      </div>
+
       <section className="rh-leave-types-card">
         <div className="rh-leave-types-toolbar">
           <div className="rh-leave-types-filters">
@@ -495,7 +501,8 @@ export function RhLeaveTypesPage() {
 
                 {visibleItems.map((type) => {
                   const category = CATEGORY_META[type.category] ?? { label: type.category, tone: 'neutral' }
-                  const treatment = treatmentMeta(type)
+                  const directorOnly = isReservedDirectorLeaveType(type)
+                  const treatment = directorOnly ? { label: 'Indisponibilité Directeur', tone: 'neutral' } : treatmentMeta(type)
                   return (
                     <div
                       key={type.id}
@@ -512,7 +519,7 @@ export function RhLeaveTypesPage() {
                     >
                       <div className="rh-leave-types-name">
                         <span className={`rh-leave-types-name__icon rh-leave-types-name__icon--${category.tone}`}><Icon name={type.category === 'DECLARATION_ABSENCE' ? 'calendar' : 'file'} size={17} /></span>
-                        <div><strong>{type.name}</strong><small>{type.category === 'DECLARATION_ABSENCE' ? 'Déclaration d’absence' : 'Demande de congé'}</small></div>
+                        <div><strong>{type.name}</strong><small>{directorOnly ? 'Indisponibilité du Directeur' : type.category === 'DECLARATION_ABSENCE' ? 'Déclaration d’absence' : 'Demande de congé'}</small></div>
                       </div>
                       <span className={`rh-leave-types-badge rh-leave-types-badge--${category.tone}`}>{category.label}</span>
                       <span className={type.deductsPaidLeaveBalance ? 'rh-leave-types-yes' : 'rh-leave-types-muted'}>{type.deductsPaidLeaveBalance ? 'Déduit' : 'Non'}</span>
@@ -520,7 +527,7 @@ export function RhLeaveTypesPage() {
                         {type.documentRequired ? (type.documentCanBeAddedLater ? 'Obligatoire · ultérieur' : 'Obligatoire') : 'Non requis'}
                       </span>
                       <span className="rh-leave-types-units">{unitsLabel(type)}</span>
-                      <span>{creationLabel(type)}</span>
+                      <span>{directorOnly ? 'Directeur uniquement' : creationLabel(type)}</span>
                       <span className={`rh-leave-types-treatment rh-leave-types-treatment--${treatment.tone}`}>{treatment.label}</span>
                       <span className={`rh-leave-types-status${type.isActive ? ' is-active' : ' is-inactive'}`}>{type.isActive ? 'Actif' : 'Inactif'}</span>
                       <div className="rh-leave-types-actions">

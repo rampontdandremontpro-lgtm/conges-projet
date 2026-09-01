@@ -3,6 +3,7 @@ import { DataSource } from 'typeorm';
 
 import { AuditService } from '../audit/audit.service';
 import { HolidaysService } from '../holidays/holidays.service';
+import { UserRole } from '../users/user.entity';
 import type { AuthenticatedUser } from '../auth/jwt-payload.interface';
 import {
   StatisticsDataType,
@@ -102,13 +103,16 @@ export class ReportsService {
     const dataType = query.dataType ?? StatisticsDataType.ALL;
     const includeLeave = dataType !== StatisticsDataType.ABSENCE;
     const includeAbsence = dataType !== StatisticsDataType.LEAVE;
-    const userFilter = this.buildUserFilter(query);
+    const userFilter = this.buildUserFilter(query, actor.role);
 
     const leaveWhere = `
       lr.start_date <= ?
       AND lr.end_date >= ?
       AND lr.status NOT IN ('BROUILLON','REFUSEE','ANNULEE','ANNULEE_APRES_VALIDATION','EXPIREE_NON_VALIDEE')
       ${query.leaveTypeId ? 'AND lr.leave_type_id = ?' : ''}
+      AND lr.leave_type_id NOT IN (
+        SELECT id FROM leave_types WHERE name = 'Congé' AND category = 'DEMANDE_CONGE'
+      )
       AND ${userFilter.sql}
     `;
     const absenceWhere = `
@@ -480,11 +484,14 @@ export class ReportsService {
     };
   }
 
-  private buildUserFilter(query: StatisticsQueryDto): {
+  private buildUserFilter(query: StatisticsQueryDto, actorRole: UserRole): {
     sql: string;
     params: Array<string | number>;
   } {
-    const conditions = ["u.is_active = 1", "u.role NOT IN ('ADMIN','RH','DIRECTEUR')"];
+    const excludedRoles = actorRole === UserRole.DIRECTEUR
+      ? "u.role NOT IN ('ADMIN','DIRECTEUR')"
+      : "u.role NOT IN ('ADMIN','RH','DIRECTEUR')";
+    const conditions = ["u.is_active = 1", excludedRoles];
     const params: Array<string | number> = [];
 
     if (query.serviceId) {

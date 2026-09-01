@@ -307,7 +307,7 @@ export function CreateAbsenceDrawer({ employees, types, onClose, onSaved }) {
           )}
 
           <fieldset className="rh-absence-mode rh-absence-field--full">
-            <legend>Unité de déclaration</legend>
+            <legend>Format de saisie</legend>
             <div>
               {modes.map((mode) => (
                 <button

@@ -13,6 +13,7 @@ import {
 import { getDirectorRequest, getDirectorRequestAvailability, validateDirectorRequest } from '@/services/director/directorRequests'
 import { getRhRequest, getRhRequestAvailability, validateRhRequest } from '@/services/rh/rhRequests'
 import { getCurrentMonthKey, shiftMonthKey } from '@/utils/managerCalendar'
+import { buildGroupedServiceOptions, matchesGroupedServiceFilter } from '@/utils/filterOptions'
 
 import '@/styles/manager/presence/index.css'
 import '@/styles/director/presence.css'
@@ -37,22 +38,27 @@ function uniqueCalendarServices(data) {
   const map = new Map()
   ;(data?.members ?? []).forEach((member) => {
     if (member?.serviceId && member?.serviceName) {
-      map.set(String(member.serviceId), member.serviceName)
+      map.set(String(member.serviceId), {
+        id: String(member.serviceId),
+        name: member.serviceName,
+        serviceType: member.serviceType ?? null,
+        externalCompanyName: member.externalCompanyName ?? null,
+      })
     }
   })
 
-  return Array.from(map.entries())
-    .map(([id, name]) => ({ id, name }))
+  return Array.from(map.values())
     .sort((left, right) => left.name.localeCompare(right.name, 'fr'))
 }
 
-function filteredCalendarData(data, { query, serviceId, role }) {
+function filteredCalendarData(data, { query, serviceId, role, employmentType, externalServiceIds }) {
   if (!data) return null
 
   const normalizedQuery = normalize(query)
   const visibleMembers = (data.members ?? []).filter((member) => {
-    if (serviceId !== 'all' && String(member.serviceId ?? '') !== serviceId) return false
+    if (!matchesGroupedServiceFilter(member.serviceId, serviceId, externalServiceIds)) return false
     if (role !== 'all' && member.role !== role) return false
+    if (employmentType !== 'all' && member.employmentType !== employmentType) return false
 
     if (!normalizedQuery) return true
 
@@ -127,6 +133,7 @@ export function DirectorPresencePage() {
   const [calendarMonth, setCalendarMonth] = useState(getCurrentMonthKey())
   const [serviceFilter, setServiceFilter] = useState('all')
   const [roleFilter, setRoleFilter] = useState('all')
+  const [employmentTypeFilter, setEmploymentTypeFilter] = useState('all')
   const [state, setState] = useState({ loading: true, error: false, data: null })
   const [servicesState, setServicesState] = useState({ loading: true, data: [] })
   const [calendarDecision, setCalendarDecision] = useState(null)
@@ -184,24 +191,31 @@ export function DirectorPresencePage() {
 
   const query = searchParams.get('q') ?? ''
 
-  const services = useMemo(() => {
-    const source = isRhView
-      ? uniqueCalendarServices(state.data)
-      : servicesState.data.length > 0
-        ? servicesState.data
-        : uniqueCalendarServices(state.data)
+  const serviceRecords = useMemo(() => {
+    const source = servicesState.data.length > 0
+      ? servicesState.data
+      : uniqueCalendarServices(state.data)
+    return source.filter((service) => service?.id && service?.name)
+  }, [servicesState.data, state.data])
 
-    return source
-      .map((service) => ({ id: String(service.id), name: service.name }))
-      .filter((service) => service.id && service.name)
-      .sort((left, right) => left.name.localeCompare(right.name, 'fr'))
-  }, [isRhView, servicesState.data, state.data])
+  const services = useMemo(
+    () => buildGroupedServiceOptions(serviceRecords),
+    [serviceRecords],
+  )
+  const externalServiceIds = useMemo(
+    () => new Set(serviceRecords
+      .filter((service) => service.serviceType === 'EXTERNE' || service.externalCompanyName)
+      .map((service) => String(service.id))),
+    [serviceRecords],
+  )
 
   const calendarData = useMemo(() => filteredCalendarData(state.data, {
     query,
     serviceId: serviceFilter,
     role: roleFilter,
-  }), [query, roleFilter, serviceFilter, state.data])
+    employmentType: employmentTypeFilter,
+    externalServiceIds,
+  }), [employmentTypeFilter, externalServiceIds, query, roleFilter, serviceFilter, state.data])
 
   useEffect(() => {
     if (!actionFeedback) return undefined
@@ -266,11 +280,12 @@ export function DirectorPresencePage() {
     setCalendarMonth((current) => exactMonth ?? shiftMonthKey(current, offset))
   }
 
-  const filtersAreActive = serviceFilter !== 'all' || roleFilter !== 'all' || Boolean(query.trim())
+  const filtersAreActive = serviceFilter !== 'all' || roleFilter !== 'all' || employmentTypeFilter !== 'all' || Boolean(query.trim())
 
   const resetFilters = () => {
     setServiceFilter('all')
     setRoleFilter('all')
+    setEmploymentTypeFilter('all')
 
     if (query.trim()) {
       const nextParams = new URLSearchParams(searchParams)
@@ -308,7 +323,7 @@ export function DirectorPresencePage() {
               >
                 <option value="all">Tous les services</option>
                 {services.map((service) => (
-                  <option key={service.id} value={service.id}>{service.name}</option>
+                  <option key={service.value} value={service.value}>{service.label}</option>
                 ))}
               </select>
             </label>
@@ -319,6 +334,15 @@ export function DirectorPresencePage() {
                 {roleOptions.map((role) => (
                   <option key={role.value} value={role.value}>{role.label}</option>
                 ))}
+              </select>
+            </label>
+
+            <label>
+              <span>Types</span>
+              <select value={employmentTypeFilter} onChange={(event) => setEmploymentTypeFilter(event.target.value)}>
+                <option value="all">Tous</option>
+                <option value="INTERNE">Interne</option>
+                <option value="EXTERNE">Externe</option>
               </select>
             </label>
 

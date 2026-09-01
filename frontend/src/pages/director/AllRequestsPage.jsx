@@ -10,6 +10,7 @@ import {
   getDirectorRequestFilterOptions,
 } from '@/services/director/directorRequests'
 import { formatDateNumericFR, formatDays } from '@/utils/format'
+import { buildGroupedServiceOptions, isReservedDirectorLeaveType, matchesGroupedServiceFilter } from '@/utils/filterOptions'
 
 import '@/styles/director/all-requests.css'
 
@@ -121,6 +122,7 @@ export function DirectorAllRequestsPage() {
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [serviceFilter, setServiceFilter] = useState('all')
   const [typeFilter, setTypeFilter] = useState('all')
+  const [employeeFilter, setEmployeeFilter] = useState('all')
   const [page, setPage] = useState(1)
   const search = searchParams.get('q') ?? ''
 
@@ -172,37 +174,51 @@ export function DirectorAllRequestsPage() {
     }
   }, [load])
 
-  const services = useMemo(() => {
+  const serviceRecords = useMemo(() => {
     const values = new Map()
-
     state.filterOptions.services.forEach((service) => {
-      if (service?.id && service?.name) values.set(String(service.id), service.name)
+      if (service?.id && service?.name) values.set(String(service.id), service)
     })
-
     state.requests.forEach((request) => {
-      if (request.service?.id && request.service?.name) {
-        values.set(String(request.service.id), request.service.name)
+      if (request.service?.id && request.service?.name && !values.has(String(request.service.id))) {
+        values.set(String(request.service.id), request.service)
       }
     })
-
-    return [...values.entries()].sort((left, right) => left[1].localeCompare(right[1], 'fr'))
+    return [...values.values()]
   }, [state.filterOptions.services, state.requests])
+
+  const services = useMemo(() => buildGroupedServiceOptions(serviceRecords), [serviceRecords])
+  const externalServiceIds = useMemo(() => new Set(
+    serviceRecords
+      .filter((service) => service?.serviceType === 'EXTERNE' || service?.externalCompanyName)
+      .map((service) => String(service.id)),
+  ), [serviceRecords])
 
   const leaveTypes = useMemo(() => {
     const values = new Map()
 
     state.filterOptions.leaveTypes.forEach((leaveType) => {
-      if (leaveType?.id && leaveType?.name) values.set(String(leaveType.id), leaveType.name)
+      if (leaveType?.id && leaveType?.name && !isReservedDirectorLeaveType(leaveType)) values.set(String(leaveType.id), leaveType.name)
     })
 
     state.requests.forEach((request) => {
-      if (request.leaveType?.id && request.leaveType?.name) {
+      if (request.leaveType?.id && request.leaveType?.name && !isReservedDirectorLeaveType(request.leaveType)) {
         values.set(String(request.leaveType.id), request.leaveType.name)
       }
     })
 
     return [...values.entries()].sort((left, right) => left[1].localeCompare(right[1], 'fr'))
   }, [state.filterOptions.leaveTypes, state.requests])
+
+  const employeeOptions = useMemo(() => {
+    const values = new Map()
+    state.requests.forEach((request) => {
+      if (request.employee?.id) {
+        values.set(String(request.employee.id), `${request.employee.nom ?? ''} ${request.employee.prenom ?? ''}`.trim())
+      }
+    })
+    return [...values.entries()].sort((left, right) => left[1].localeCompare(right[1], 'fr'))
+  }, [state.requests])
 
   const counts = useMemo(() => ({
     all: state.requests.length,
@@ -215,13 +231,15 @@ export function DirectorAllRequestsPage() {
   const activeAdvancedFilters = [
     serviceFilter !== 'all',
     typeFilter !== 'all',
+    employeeFilter !== 'all',
   ].filter(Boolean).length
 
   const filteredRequests = useMemo(() => {
     const result = state.requests.filter((request) => {
       if (!statusMatchesFilter(request.status, statusFilter)) return false
-      if (serviceFilter !== 'all' && String(request.service?.id) !== serviceFilter) return false
+      if (!matchesGroupedServiceFilter(request.service?.id, serviceFilter, externalServiceIds)) return false
       if (typeFilter !== 'all' && String(request.leaveType?.id) !== typeFilter) return false
+      if (employeeFilter !== 'all' && String(request.employee?.id) !== employeeFilter) return false
       return requestMatchesSearch(request, search)
     })
 
@@ -238,11 +256,11 @@ export function DirectorAllRequestsPage() {
 
       return new Date(right.decisionAt ?? right.submittedAt ?? right.createdAt ?? 0).getTime() - new Date(left.decisionAt ?? left.submittedAt ?? left.createdAt ?? 0).getTime()
     })
-  }, [search, serviceFilter, state.requests, statusFilter, typeFilter])
+  }, [employeeFilter, externalServiceIds, search, serviceFilter, state.requests, statusFilter, typeFilter])
 
   useEffect(() => {
     setPage(1)
-  }, [search, serviceFilter, statusFilter, typeFilter])
+  }, [employeeFilter, search, serviceFilter, statusFilter, typeFilter])
 
   const totalPages = Math.max(1, Math.ceil(filteredRequests.length / PAGE_SIZE))
   const safePage = Math.min(page, totalPages)
@@ -251,6 +269,7 @@ export function DirectorAllRequestsPage() {
   const resetFilters = () => {
     setServiceFilter('all')
     setTypeFilter('all')
+    setEmployeeFilter('all')
     const nextParams = new URLSearchParams(searchParams)
     nextParams.delete('q')
     setSearchParams(nextParams, { replace: true })
@@ -296,7 +315,7 @@ export function DirectorAllRequestsPage() {
               <span>Service</span>
               <select value={serviceFilter} onChange={(event) => setServiceFilter(event.target.value)}>
                 <option value="all">Tous les services</option>
-                {services.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
+                {services.map((service) => <option key={service.value} value={service.value}>{service.label}</option>)}
               </select>
             </label>
 
@@ -305,6 +324,14 @@ export function DirectorAllRequestsPage() {
               <select value={typeFilter} onChange={(event) => setTypeFilter(event.target.value)}>
                 <option value="all">Tous les types de congés</option>
                 {leaveTypes.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
+              </select>
+            </label>
+
+            <label>
+              <span>Collaborateur</span>
+              <select value={employeeFilter} onChange={(event) => setEmployeeFilter(event.target.value)}>
+                <option value="all">Tous les collaborateurs</option>
+                {employeeOptions.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
               </select>
             </label>
 

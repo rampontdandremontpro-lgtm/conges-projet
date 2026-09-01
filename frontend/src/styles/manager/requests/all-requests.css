@@ -564,7 +564,7 @@
 /* Adaptation Responsable de service : son périmètre est déjà fixé côté API,
    donc aucun sélecteur Service n'est nécessaire dans la page. */
 .manager-all-requests-filter-panel--service {
-  grid-template-columns: minmax(320px, 560px) minmax(150px, 190px);
+  grid-template-columns: repeat(2, minmax(230px, 360px)) minmax(150px, 190px);
   justify-content: start;
 }
 

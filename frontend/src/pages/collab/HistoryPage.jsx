@@ -311,7 +311,7 @@ export function HistoryPage() {
       <div className="history-page__notice">
         <span className="history-page__notice-icon" aria-hidden="true"><Icon name="info" size={17} /></span>
         <p>
-          Cet historique affiche uniquement les mouvements qui modifient réellement vos compteurs. Les demandes en attente et les congés futurs validés apparaissent dans vos demandes, mais ne deviennent des jours pris qu’au moment de leur imputation effective.
+          Cet historique affiche uniquement ce qui modifie votre solde de congés. Les demandes en attente et les congés futurs restent visibles dans Mes demandes et seront décomptés lorsqu’ils seront effectivement pris.
         </p>
       </div>
 

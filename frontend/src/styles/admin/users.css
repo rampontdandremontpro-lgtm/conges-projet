@@ -393,7 +393,7 @@
 .admin-users-password-reset__actions button.is-password { border-color: #6553b5; background: #6553b5; color: #fff; }
 
 /* Réinitialisation du mot de passe : modal dédiée, plus lisible et cohérente avec Utilisateurs. */
-.admin-users-password-reset { width:min(570px,calc(100vw - 28px)); max-width:570px; padding:0; overflow:hidden; border-radius:20px; text-align:left; }
+.admin-users-password-reset { width:min(570px,calc(100vw - 28px)); max-width:570px; max-height:calc(100vh - var(--header-height) - 30px); padding:0; overflow-x:hidden; overflow-y:auto; border-radius:20px; text-align:left; }
 .admin-users-password-reset__header { display:grid; grid-template-columns:46px 1fr 36px; align-items:center; gap:12px; padding:20px 22px; border-bottom:1px solid #e3ebf4; background:#fbfdff; }
 .admin-users-password-reset__header .admin-users-confirm__icon { margin:0; }
 .admin-users-password-reset__header > div > span { color:#879ab2; font-size:9px; font-weight:900; letter-spacing:.08em; }
@@ -411,6 +411,8 @@
 .admin-users-password-reset__fields input { min-height:44px; border:1px solid #d7e3f0; border-radius:11px; background:#fff; color:#173d68; font:inherit; font-size:13px; outline:none; }
 .admin-users-password-reset__fields input:focus { border-color:#8b7ee2; box-shadow:0 0 0 4px rgba(101,83,181,.09); }
 .admin-users-password-reset__fields small { color:#8a9db5; font-size:9.8px; font-weight:600; }
+.admin-users-password-reset__feedback { display:flex; align-items:flex-start; gap:8px; margin:2px 22px 14px; padding:10px 12px; border:1px solid #f0ccd1; border-radius:11px; background:#fff4f5; color:#b64451; font-size:11.5px; font-weight:750; line-height:1.4; }
+.admin-users-password-reset__feedback svg { flex:0 0 auto; margin-top:1px; }
 .admin-users-password-reset__actions { justify-content:flex-end; margin-top:4px; padding:15px 22px 20px; border-top:1px solid #e9eef5; }
 .admin-users-password-reset__actions button { min-height:41px; padding:0 15px; border:1px solid #d8e2ee; border-radius:10px; background:#fff; color:#55718f; font:inherit; font-size:11.5px; font-weight:850; cursor:pointer; }
 .admin-users-password-reset__actions button.is-password { display:inline-flex; align-items:center; gap:7px; padding:0 17px; }

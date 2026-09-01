@@ -24,7 +24,6 @@ export function ManagerOverviewCard({ requests, loading, error, onRetry, onViewR
       <div className="dash-card__header">
         <div className="dash-card__heading">
           <span className="dash-card__title">Demandes à traiter</span>
-          <span className="dash-card__period">Votre périmètre de validation</span>
         </div>
         {!loading && !error && pending.length === 0 && (
           <span className="dash-card__status-ok">À jour</span>

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
+import { useAuth } from '@/auth/AuthContext'
 import { StatisticInfoButton } from '@/components/shared/StatisticInfoButton'
 import { Icon } from '@/components/ui/Icon'
 import {
@@ -7,6 +8,7 @@ import {
   getDirectorStatisticsServices,
   getDirectorStatisticsLeaveTypes,
 } from '@/services/director/directorStatistics'
+import { isReservedDirectorLeaveType } from '@/utils/filterOptions'
 
 import '@/styles/director/statistics.css'
 
@@ -22,6 +24,7 @@ const ROLE_OPTIONS = [
   { value: 'all', label: 'Tous les rôles' },
   { value: 'COLLABORATEUR', label: 'Collaborateur' },
   { value: 'RESPONSABLE_SERVICE', label: 'Responsable de service' },
+  { value: 'RH', label: 'RH' },
 ]
 
 
@@ -284,6 +287,9 @@ export function DirectorStatisticsPage({
   getStatisticsServices = getDirectorStatisticsServices,
   getStatisticsLeaveTypes = getDirectorStatisticsLeaveTypes,
 } = {}) {
+  const { user } = useAuth()
+  const isRhView = user?.role === 'RH'
+  const roleOptions = isRhView ? ROLE_OPTIONS.filter((option) => option.value !== 'RH') : ROLE_OPTIONS
   const defaultPeriod = resolvePresetPeriod('month')
   const [periodPreset, setPeriodPreset] = useState('month')
   const [customStartDate, setCustomStartDate] = useState(defaultPeriod.startDate)
@@ -334,7 +340,7 @@ export function DirectorStatisticsPage({
 
   useEffect(() => {
     getStatisticsLeaveTypes()
-      .then((result) => setLeaveTypes(Array.isArray(result) ? result : []))
+      .then((result) => setLeaveTypes((Array.isArray(result) ? result : []).filter((type) => !isReservedDirectorLeaveType(type))))
       .catch(() => setLeaveTypes([]))
   }, [getStatisticsLeaveTypes])
 
@@ -434,7 +440,7 @@ export function DirectorStatisticsPage({
         <label className="director-stat-filter director-stat-filter--select">
           <span>Rôle</span>
           <select value={roleFilter} onChange={(event) => setRoleFilter(event.target.value)}>
-            {ROLE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+            {roleOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
           </select>
         </label>
 
@@ -486,7 +492,7 @@ export function DirectorStatisticsPage({
               info={(
                 <StatisticInfoButton title="Taux de présence">
                   <p><strong>Calcul :</strong> (jours ouvrables disponibles − jours d’indisponibilité) ÷ jours ouvrables disponibles × 100.</p>
-                  <p>Les jours ouvrables disponibles tiennent compte des collaborateurs actifs concernés, de leur date d’entrée, des week-ends et des jours fériés/fermetures non décomptables. Les rôles Admin, RH et Directeur sont exclus.</p>
+                  <p>Les jours ouvrables disponibles tiennent compte des utilisateurs actifs concernés, de leur date d’entrée, des week-ends et des jours fériés/fermetures non décomptables. {isRhView ? 'Les rôles Admin, RH et Directeur sont exclus.' : 'Les rôles Admin et Directeur sont exclus. La RH est incluse uniquement dans les statistiques du Directeur.'}</p>
                   <p>Les congés validés et les absences enregistrées sont comptés sur la période, sans doubler une même journée pour un même collaborateur. Les filtres sélectionnés sont appliqués.</p>
                 </StatisticInfoButton>
               )}

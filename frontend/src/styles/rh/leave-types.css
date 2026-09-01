@@ -693,3 +693,19 @@
 .rh-leave-types-reset { display: inline-flex; min-height: 42px; align-items: center; gap: 7px; padding: 0 13px; border: 1px solid #d8e4f1; border-radius: 11px; background: #f6f9fd; color: #58789d; font: inherit; font-size: 12px; font-weight: 800; cursor: pointer; }
 .rh-leave-types-reset:hover { background: #edf5ff; color: #1d6bdd; }
 @media (max-width: 760px) { .rh-leave-types-filters { width: 100%; } .rh-leave-types-filters label, .rh-leave-types-filters select, .rh-leave-types-reset { width: 100%; } }
+
+.rh-leave-types-director-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 14px;
+  padding: 12px 14px;
+  border: 1px solid #d6e5f8;
+  border-radius: 12px;
+  background: #f5f9ff;
+  color: #355275;
+  line-height: 1.45;
+}
+
+.rh-leave-types-director-note svg { flex: 0 0 auto; margin-top: 1px; color: #176ff2; }
+.rh-leave-types-director-note strong { color: #12335d; }

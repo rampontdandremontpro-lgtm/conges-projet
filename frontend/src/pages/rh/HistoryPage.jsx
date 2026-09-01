@@ -115,6 +115,17 @@ function resourceLabel(log) {
   return RESOURCE_LABELS[key] ?? key.replaceAll('_', ' ').toLocaleLowerCase('fr-FR').replace(/^./, (c) => c.toUpperCase())
 }
 
+function isHiddenHistoryLog(log) {
+  const action = String(log?.action ?? '').toUpperCase().replace(/[\s-]+/g, '_')
+  const resource = String(log?.resourceType ?? '').toUpperCase()
+  const route = String(log?.newValue?.route ?? '').toLowerCase()
+
+  if (resource === 'SETTINGS' || resource === 'NOTIFICATION' || resource === 'NOTIFICATIONS') return true
+  if (route.includes('/settings') || route.includes('/notifications')) return true
+  if (['PRACTICAL_LINK_CREATED', 'PRACTICAL_LINK_DELETED', 'PRACTICAL_LINK_UPDATED'].includes(action)) return true
+  return HIDDEN_HISTORY_ACTIONS.has(actionLabel(log))
+}
+
 const VALUE_LABELS = {
   status: 'Statut',
   days: 'Nombre de jours',
@@ -291,14 +302,14 @@ export function RhHistoryPage() {
     [users],
   )
   const actionOptions = useMemo(
-    () => [...new Set(logs.map((log) => actionLabel(log)).filter((label) => !HIDDEN_HISTORY_ACTIONS.has(label)))].sort((a, b) => a.localeCompare(b, 'fr')),
+    () => [...new Set(logs.filter((log) => !isHiddenHistoryLog(log)).map((log) => actionLabel(log)))].sort((a, b) => a.localeCompare(b, 'fr')),
     [logs],
   )
   const usersById = useMemo(() => new Map(users.map((user) => [Number(user.id), user])), [users])
 
   const visible = useMemo(() => logs.filter((log) => {
     const label = actionLabel(log)
-    if (HIDDEN_HISTORY_ACTIONS.has(label)) return false
+    if (isHiddenHistoryLog(log)) return false
     const dateKey = String(log.createdAt ?? '').slice(0, 10)
     if (filters.start && dateKey < filters.start) return false
     if (filters.end && dateKey > filters.end) return false

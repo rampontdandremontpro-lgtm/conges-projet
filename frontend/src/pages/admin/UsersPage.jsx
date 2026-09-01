@@ -15,6 +15,7 @@ import {
   resetManagedUserPassword,
   updateAdminUser,
 } from '@/services/admin/adminUsers'
+import { buildGroupedServiceOptions, isExternalService, matchesGroupedServiceFilter } from '@/utils/filterOptions'
 
 import '@/styles/admin/users.css'
 
@@ -370,7 +371,7 @@ function PasswordResetModal({ user, onCancel, onSuccess }) {
             </div>
           </label>
         </div>
-        {feedback && <div className="admin-users-form__feedback"><Icon name="alert" size={16} /> {feedback}</div>}
+        {feedback && <div className="admin-users-password-reset__feedback"><Icon name="alert" size={16} /> <span>{feedback}</span></div>}
         <div className="admin-users-password-reset__actions">
           <button type="button" onClick={onCancel}>Annuler</button>
           <button type="submit" className="is-password" disabled={busy}><Icon name="refresh" size={16} /> {busy ? 'Réinitialisation…' : 'Réinitialiser le mot de passe'}</button>
@@ -457,18 +458,32 @@ export function AdminUsersPage({ rhMode = false }) {
     }
   }, [searchParams, setSearchParams])
 
+  const serviceFilterOptions = useMemo(() => (
+    rhMode
+      ? buildGroupedServiceOptions(state.services)
+      : state.services.map((service) => ({
+          value: String(service.id),
+          label: `${service.name}${service.isActive ? '' : ' (inactif)'}`,
+        }))
+  ), [rhMode, state.services])
+  const externalServiceIds = useMemo(() => new Set(
+    state.services.filter(isExternalService).map((service) => String(service.id)),
+  ), [state.services])
+
   const query = normalize(searchParams.get('q'))
   const filtered = useMemo(() => state.users.filter((item) => {
     if (rhMode && !RH_MANAGEABLE_ROLES.has(item.role)) return false
     if (filters.role !== 'ALL' && item.role !== filters.role) return false
-    if (filters.serviceId !== 'ALL' && String(item.serviceId ?? '') !== filters.serviceId) return false
+    if (rhMode) {
+      if (!matchesGroupedServiceFilter(item.serviceId, filters.serviceId, externalServiceIds)) return false
+    } else if (filters.serviceId !== 'ALL' && String(item.serviceId ?? '') !== filters.serviceId) return false
     if (filters.type !== 'ALL' && item.employmentType !== filters.type) return false
     if (filters.status === 'ACTIVE' && !item.isActive) return false
     if (filters.status === 'INACTIVE' && item.isActive) return false
     if (!query) return true
     const searchable = `${item.nom} ${item.prenom} ${item.email} ${ROLE_LABELS[item.role] ?? item.role} ${item.service?.name ?? ''} ${item.employmentType === 'EXTERNE' ? 'externe' : 'interne'} ${item.isActive ? 'actif' : 'inactif'}`
     return normalize(searchable).includes(query)
-  }), [filters, query, rhMode, state.users])
+  }), [externalServiceIds, filters, query, rhMode, state.users])
 
   useEffect(() => setPage(1), [filters, query])
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
@@ -519,7 +534,7 @@ export function AdminUsersPage({ rhMode = false }) {
 
       <section className="admin-users-filters" aria-label="Filtres utilisateurs">
         <label><span>RÔLE</span><select value={filters.role} onChange={(event) => setFilters((current) => ({ ...current, role: event.target.value }))}><option value="ALL">Tous les rôles</option>{Object.entries(ROLE_LABELS).filter(([value]) => !rhMode || RH_MANAGEABLE_ROLES.has(value)).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
-        <label><span>SERVICE</span><select value={filters.serviceId} onChange={(event) => setFilters((current) => ({ ...current, serviceId: event.target.value }))}><option value="ALL">Tous les services</option>{state.services.map((service) => <option key={service.id} value={service.id}>{service.name}{service.isActive ? '' : ' (inactif)'}</option>)}</select></label>
+        <label><span>SERVICE</span><select value={filters.serviceId} onChange={(event) => setFilters((current) => ({ ...current, serviceId: event.target.value }))}><option value="ALL">Tous les services</option>{serviceFilterOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
         <label><span>TYPE</span><select value={filters.type} onChange={(event) => setFilters((current) => ({ ...current, type: event.target.value }))}><option value="ALL">Tous les types</option><option value="INTERNE">Interne</option><option value="EXTERNE">Externe</option></select></label>
         <label><span>STATUT</span><select value={filters.status} onChange={(event) => setFilters((current) => ({ ...current, status: event.target.value }))}><option value="ALL">Tous les statuts</option><option value="ACTIVE">Actifs</option><option value="INACTIVE">Inactifs</option></select></label>
         <button type="button" className="admin-users-reset" onClick={resetFilters}><Icon name="refresh" size={15} /> Réinitialiser</button>

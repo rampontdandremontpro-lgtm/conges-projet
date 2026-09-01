@@ -96,16 +96,16 @@ export async function getDirectorDashboardData() {
   const rhRequests = requests.filter(
     (request) => request.employee?.role === 'RH',
   ).length
+  const collaboratorRequests = requests.filter(
+    (request) => request.employee?.role === 'COLLABORATEUR',
+  ).length
 
   return {
     decisions: {
       total: requests.length,
       responsible: responsibleRequests,
       rh: rhRequests,
-      others: Math.max(
-        0,
-        requests.length - responsibleRequests - rhRequests,
-      ),
+      collaborators: collaboratorRequests,
     },
     priorities: buildPriorities(requests),
     presence,

@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 
-import { HalfDaySelector } from '@/components/collab/new-request/HalfDaySelector'
 import { LeaveCalendar } from '@/components/collab/new-request/LeaveCalendar'
 import { Icon } from '@/components/ui/Icon'
 import { Toast } from '@/components/ui/Toast'
 import {
+  createDirectorLeaveRequest,
   getHolidays,
   getLeaveTypes,
 } from '@/services/leaveRequests'
@@ -15,6 +15,8 @@ import {
   updateAbsenceDeclaration,
 } from '@/services/absenceDeclarations'
 import { calculateDeductedDaysPreview } from '@/utils/leaveDuration'
+import { changeLeaveBoundaryPeriod, selectLeaveDate } from '@/utils/leaveDateSelection'
+import { isReservedDirectorLeaveType } from '@/utils/filterOptions'
 import { formatDateFR, formatDays, todayISO } from '@/utils/format'
 import { currentMonth, errorMessage, nextMonthOf, prevMonthOf } from '@/utils/newRequest'
 import { notifyAppDataChanged } from '@/utils/dataRefresh'
@@ -117,24 +119,11 @@ export function DirectorAvailabilityPage() {
       const directorLeaveTypes = available.filter(
         (type) => type.category === 'DEMANDE_CONGE',
       )
-      const directorAbsenceTypes = available.filter(
-        (type) => type.category === 'DECLARATION_ABSENCE',
-      )
-      const normalizeTypeName = (value) => String(value ?? '')
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .toLocaleLowerCase('fr-FR')
-        .trim()
-      const preferredDirectorAbsence =
-        directorAbsenceTypes.find((type) => normalizeTypeName(type.name) === 'absence autorisee') ??
-        directorAbsenceTypes.find((type) => type.allowsDays && !type.documentRequired) ??
-        directorAbsenceTypes.find((type) => type.allowsDays) ??
-        directorAbsenceTypes[0] ??
-        null
+      const preferredDirectorLeave = directorLeaveTypes.find(isReservedDirectorLeaveType) ?? null
 
       if (!existing) {
-        setMode('ABSENCE')
-        setSelectedTypeId(preferredDirectorAbsence?.id ?? null)
+        setMode('LEAVE')
+        setSelectedTypeId(preferredDirectorLeave?.id ?? null)
         return
       }
 
@@ -234,18 +223,10 @@ export function DirectorAvailabilityPage() {
     }))
   }, [halfDaysAllowed, hoursOnly, selectedType])
 
-  const preferredAbsenceType = useMemo(() => {
-    const normalizeTypeName = (value) => String(value ?? '')
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .toLocaleLowerCase('fr-FR')
-      .trim()
-    return absenceTypes.find((type) => normalizeTypeName(type.name) === 'absence autorisee') ??
-      absenceTypes.find((type) => type.allowsDays && !type.documentRequired) ??
-      absenceTypes.find((type) => type.allowsDays) ??
-      absenceTypes[0] ??
-      null
-  }, [absenceTypes])
+  const preferredDirectorLeaveType = useMemo(
+    () => leaveTypes.find(isReservedDirectorLeaveType) ?? null,
+    [leaveTypes],
+  )
 
   const handlePick = (iso) => {
     if (hoursOnly) {
@@ -253,21 +234,11 @@ export function DirectorAvailabilityPage() {
       return
     }
 
-    setSelection((current) => {
-      if (!current.startDate) {
-        return { ...current, startDate: iso, endDate: iso }
-      }
-      if (current.startDate === current.endDate) {
-        if (iso === current.startDate) {
-          return { ...current, startDate: null, endDate: null }
-        }
-        if (iso < current.startDate) {
-          return { ...current, startDate: iso, endDate: current.startDate }
-        }
-        return { ...current, endDate: iso }
-      }
-      return { ...current, startDate: iso, endDate: iso }
-    })
+    setSelection((current) => selectLeaveDate(current, iso))
+  }
+
+  const handleBoundaryPeriodChange = (change) => {
+    setSelection((current) => changeLeaveBoundaryPeriod(current, change))
   }
 
   const duration = useMemo(() => {
@@ -286,7 +257,9 @@ export function DirectorAvailabilityPage() {
 
   const validationError = useMemo(() => {
     if (!selectedType) {
-      return 'Aucun type d’absence utilisable n’est disponible pour enregistrer l’indisponibilité.'
+      return mode === 'LEAVE'
+        ? 'Le type « Congé » réservé au Directeur est indisponible. Vérifiez son paramétrage.'
+        : 'Aucun type d’absence utilisable n’est disponible pour enregistrer l’indisponibilité.'
     }
     if (!selection.startDate) return 'Sélectionnez la date de début.'
     if (!selection.endDate) return 'Sélectionnez la date de fin.'
@@ -306,8 +279,8 @@ export function DirectorAvailabilityPage() {
   }, [durationHours, hoursOnly, mode, selectedType, selection])
 
   const resetForm = () => {
-    setMode('ABSENCE')
-    setSelectedTypeId(preferredAbsenceType?.id ?? null)
+    setMode('LEAVE')
+    setSelectedTypeId(preferredDirectorLeaveType?.id ?? null)
     setSelection({
       startDate: null,
       endDate: null,
@@ -365,12 +338,16 @@ export function DirectorAvailabilityPage() {
             }),
       }
 
-      const draft = absenceDraft
-        ? await updateAbsenceDeclaration(absenceDraft.id, payload)
-        : await createAbsenceDeclaration(payload)
-      setAbsenceDraft(draft)
+      if (mode === 'LEAVE') {
+        await createDirectorLeaveRequest(payload)
+      } else {
+        const draft = absenceDraft
+          ? await updateAbsenceDeclaration(absenceDraft.id, payload)
+          : await createAbsenceDeclaration(payload)
+        setAbsenceDraft(draft)
+        await submitAbsenceDeclaration(draft.id, { certifiedAccurate: true })
+      }
 
-      await submitAbsenceDeclaration(draft.id, { certifiedAccurate: true })
       notifyAppDataChanged()
       resetForm()
       showToast('success', 'Votre indisponibilité a été enregistrée directement.')
@@ -420,32 +397,23 @@ export function DirectorAvailabilityPage() {
             </div>
           </section>
 
-          {(halfDaysAllowed || hoursOnly) && (
+          {hoursOnly && (
             <section className="director-availability-card director-availability-duration-card">
-              {halfDaysAllowed ? (
-                <HalfDaySelector
-                  startPeriod={selection.startPeriod}
-                  endPeriod={selection.endPeriod}
-                  onStartChange={(value) => setSelection((current) => ({ ...current, startPeriod: value }))}
-                  onEndChange={(value) => setSelection((current) => ({ ...current, endPeriod: value }))}
-                />
-              ) : (
-                <label className="director-availability-field">
-                  <span>Durée de l’absence</span>
-                  <div className="director-availability-hours">
-                    <input
-                      type="number"
-                      min="0.25"
-                      max="744"
-                      step="0.25"
-                      value={durationHours}
-                      onChange={(event) => setDurationHours(event.target.value)}
-                      placeholder="Ex. 2"
-                    />
-                    <span>heures</span>
-                  </div>
-                </label>
-              )}
+              <label className="director-availability-field">
+                <span>Durée de l’absence</span>
+                <div className="director-availability-hours">
+                  <input
+                    type="number"
+                    min="0.25"
+                    max="744"
+                    step="0.25"
+                    value={durationHours}
+                    onChange={(event) => setDurationHours(event.target.value)}
+                    placeholder="Ex. 2"
+                  />
+                  <span>heures</span>
+                </div>
+              </label>
             </section>
           )}
 
@@ -517,6 +485,8 @@ export function DirectorAvailabilityPage() {
                 selection={selection}
                 holidays={holidays}
                 onPick={handlePick}
+                allowsHalfDays={halfDaysAllowed}
+                onBoundaryPeriodChange={handleBoundaryPeriodChange}
                 onPrev={() => setMonth((current) => prevMonthOf(current))}
                 onNext={() => setMonth((current) => nextMonthOf(current))}
               />

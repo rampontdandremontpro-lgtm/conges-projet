@@ -33,6 +33,12 @@ export class ValidatorsController {
     private readonly validatorsService: ValidatorsService,
   ) {}
 
+  @Get('validator-candidates')
+  @Roles(UserRole.ADMIN, UserRole.RH)
+  listValidatorUsers() {
+    return this.validatorsService.listValidatorUsers();
+  }
+
   @Get('services/:id/validators')
   @Roles(UserRole.ADMIN, UserRole.RH)
   getServiceValidators(@Param('id', ParseIntPipe) id: number) {

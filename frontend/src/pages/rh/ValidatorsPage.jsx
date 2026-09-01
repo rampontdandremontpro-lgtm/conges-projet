@@ -85,18 +85,6 @@ function formatDate(value) {
   return `${day}/${month}/${year}`
 }
 
-function formatDateLong(value) {
-  if (!value) return '—'
-  const date = new Date(`${String(value).slice(0, 10)}T12:00:00Z`)
-  if (Number.isNaN(date.getTime())) return formatDate(value)
-  return new Intl.DateTimeFormat('fr-FR', {
-    timeZone: 'UTC',
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  }).format(date)
-}
-
 function formatDateTime(value) {
   if (!value) return '—'
   const date = new Date(value)
@@ -756,7 +744,6 @@ export function RhValidatorsPage() {
                 </button>
               ))}
             </div>
-            {referenceRange && <span className="rh-validator-reference-period">Période de référence : {formatDateLong(referenceRange.start)} → {formatDateLong(referenceRange.end)}</span>}
           </div>
 
           {paginatedReplacements.length === 0 ? (

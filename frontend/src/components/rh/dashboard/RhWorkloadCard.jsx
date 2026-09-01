@@ -6,7 +6,6 @@ export function RhWorkloadCard({ workload, onNavigate }) {
       <header className="dash-card__header">
         <div className="dash-card__heading">
           <h2 className="dash-card__title">Dossiers à traiter</h2>
-          <span className="dash-card__period">Votre file d&apos;action RH</span>
         </div>
         <span className={`rh-workload-status ${total > 0 ? 'is-warning' : 'is-ok'}`}>
           {total > 0 ? 'Action requise' : 'À jour'}

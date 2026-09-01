@@ -6,7 +6,9 @@ import { Icon } from '@/components/ui/Icon'
 import { PaginationBar } from '@/components/ui/PaginationBar'
 import { PageContainer } from '@/components/ui/PageContainer'
 import { getManagerAllRequests } from '@/services/manager/managerRequests'
+import { getLeaveTypes } from '@/services/leaveRequests'
 import { formatDateNumericFR, formatDays } from '@/utils/format'
+import { isReservedDirectorLeaveType } from '@/utils/filterOptions'
 
 import '@/styles/manager/requests/all-requests.css'
 
@@ -135,10 +137,11 @@ function LoadingRows() {
 export function ManagerRequestsPage() {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
-  const [state, setState] = useState({ loading: true, error: false, requests: [] })
+  const [state, setState] = useState({ loading: true, error: false, requests: [], leaveTypes: [] })
   const [statusFilter, setStatusFilter] = useState('all')
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [typeFilter, setTypeFilter] = useState('all')
+  const [employeeFilter, setEmployeeFilter] = useState('all')
   const [page, setPage] = useState(1)
   const search = searchParams.get('q') ?? ''
 
@@ -148,11 +151,14 @@ export function ManagerRequestsPage() {
     }
 
     try {
-      const requests = await getManagerAllRequests()
-      setState({ loading: false, error: false, requests })
+      const [requests, leaveTypes] = await Promise.all([
+        getManagerAllRequests(),
+        getLeaveTypes().catch(() => []),
+      ])
+      setState({ loading: false, error: false, requests, leaveTypes: Array.isArray(leaveTypes) ? leaveTypes : [] })
     } catch {
       if (!silent) {
-        setState({ loading: false, error: true, requests: [] })
+        setState({ loading: false, error: true, requests: [], leaveTypes: [] })
       }
     }
   }, [])
@@ -179,12 +185,28 @@ export function ManagerRequestsPage() {
   const leaveTypes = useMemo(() => {
     const values = new Map()
 
+    state.leaveTypes
+      .filter((type) => type?.category === 'DEMANDE_CONGE' && !isReservedDirectorLeaveType(type))
+      .forEach((type) => {
+        if (type?.id && type?.name) values.set(String(type.id), type.name)
+      })
+
     state.requests.forEach((request) => {
-      if (request.leaveType?.id && request.leaveType?.name) {
+      if (request.leaveType?.id && request.leaveType?.name && !isReservedDirectorLeaveType(request.leaveType)) {
         values.set(String(request.leaveType.id), request.leaveType.name)
       }
     })
 
+    return [...values.entries()].sort((left, right) => left[1].localeCompare(right[1], 'fr'))
+  }, [state.leaveTypes, state.requests])
+
+  const employeeOptions = useMemo(() => {
+    const values = new Map()
+    state.requests.forEach((request) => {
+      if (request.employee?.id) {
+        values.set(String(request.employee.id), `${request.employee.nom ?? ''} ${request.employee.prenom ?? ''}`.trim())
+      }
+    })
     return [...values.entries()].sort((left, right) => left[1].localeCompare(right[1], 'fr'))
   }, [state.requests])
 
@@ -196,17 +218,18 @@ export function ManagerRequestsPage() {
     cancelled: state.requests.filter((request) => statusMatchesFilter(effectiveStatus(request), 'cancelled')).length,
   }), [state.requests])
 
-  const activeAdvancedFilters = typeFilter !== 'all' ? 1 : 0
+  const activeAdvancedFilters = [typeFilter !== 'all', employeeFilter !== 'all'].filter(Boolean).length
 
   const filteredRequests = useMemo(() => state.requests.filter((request) => {
     if (!statusMatchesFilter(effectiveStatus(request), statusFilter)) return false
     if (typeFilter !== 'all' && String(request.leaveType?.id) !== typeFilter) return false
+    if (employeeFilter !== 'all' && String(request.employee?.id) !== employeeFilter) return false
     return requestMatchesSearch(request, search)
-  }).sort(sortMostUrgentFirst), [search, state.requests, statusFilter, typeFilter])
+  }).sort(sortMostUrgentFirst), [employeeFilter, search, state.requests, statusFilter, typeFilter])
 
   useEffect(() => {
     setPage(1)
-  }, [search, statusFilter, typeFilter])
+  }, [employeeFilter, search, statusFilter, typeFilter])
 
   const totalPages = Math.max(1, Math.ceil(filteredRequests.length / PAGE_SIZE))
   const safePage = Math.min(page, totalPages)
@@ -218,6 +241,7 @@ export function ManagerRequestsPage() {
 
   const resetFilters = () => {
     setTypeFilter('all')
+    setEmployeeFilter('all')
     const nextParams = new URLSearchParams(searchParams)
     nextParams.delete('q')
     setSearchParams(nextParams, { replace: true })
@@ -264,6 +288,14 @@ export function ManagerRequestsPage() {
               <select value={typeFilter} onChange={(event) => setTypeFilter(event.target.value)}>
                 <option value="all">Tous les types de congés</option>
                 {leaveTypes.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
+              </select>
+            </label>
+
+            <label>
+              <span>Collaborateur</span>
+              <select value={employeeFilter} onChange={(event) => setEmployeeFilter(event.target.value)}>
+                <option value="all">Tous les collaborateurs</option>
+                {employeeOptions.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
               </select>
             </label>
 

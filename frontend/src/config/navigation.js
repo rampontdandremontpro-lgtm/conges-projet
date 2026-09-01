@@ -33,7 +33,7 @@ export const NAVIGATION = {
   ],
   [ROLES.RESPONSABLE_SERVICE]: [
     { id: 'dashboard', label: 'Tableau de bord', to: '/app/dashboard', icon: 'dashboard', group: 'ÉQUIPE' },
-    { id: 'requests', label: 'Demandes', to: '/app/requests', icon: 'list', group: 'ÉQUIPE' },
+    { id: 'requests', label: 'Demandes de congés', to: '/app/requests', icon: 'list', group: 'ÉQUIPE' },
     { id: 'alerts', label: 'Alertes de chevauchement', to: '/app/alerts', icon: 'alert', group: 'ÉQUIPE' },
     { id: 'service-presence', label: 'Présence du service', to: '/app/service-presence', icon: 'users', group: 'ÉQUIPE' },
 
@@ -63,7 +63,7 @@ export const NAVIGATION = {
   ],
   [ROLES.DIRECTEUR]: [
     { id: 'dashboard', label: 'Tableau de bord', to: '/app/dashboard', icon: 'dashboard', group: 'DÉCISION' },
-    { id: 'director-all-requests', label: 'Toutes les demandes', to: '/app/director-all-requests', icon: 'doc', group: 'DÉCISION' },
+    { id: 'director-all-requests', label: 'Demandes de congés', to: '/app/director-all-requests', icon: 'doc', group: 'DÉCISION' },
     { id: 'director-derogations', label: 'Dérogations', to: '/app/director-derogations', icon: 'shield', group: 'DÉCISION' },
 
     { id: 'director-presence', label: 'Présence globale', to: '/app/director-presence', icon: 'users', group: 'PILOTAGE' },
