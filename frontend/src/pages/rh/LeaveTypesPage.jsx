@@ -520,7 +520,7 @@ export function RhLeaveTypesPage() {
                             <strong>{type.name}</strong>
                             {directorOnly && (
                               <span className="rh-leave-types-director-info" onClick={(event) => event.stopPropagation()} onKeyDown={(event) => event.stopPropagation()}>
-                                <StatisticInfoButton title="Type réservé au Directeur" ariaLabel="Informations sur le type Congé">
+                                <StatisticInfoButton title="Type réservé au Directeur" ariaLabel="Informations sur le type Congé" portal>
                                   <p>Ce type représente uniquement l’indisponibilité du Directeur. Il n’est pas proposé pour les demandes de congé des collaborateurs.</p>
                                 </StatisticInfoButton>
                               </span>
@@ -536,7 +536,11 @@ export function RhLeaveTypesPage() {
                       </span>
                       <span className="rh-leave-types-units">{unitsLabel(type)}</span>
                       <span>{directorOnly ? 'Directeur uniquement' : creationLabel(type)}</span>
-                      <span className={`rh-leave-types-treatment rh-leave-types-treatment--${treatment.tone}${directorOnly ? ' rh-leave-types-treatment--director' : ''}`}>{treatment.label}</span>
+                      <div className="rh-leave-types-treatment-cell">
+                        <span className={`rh-leave-types-treatment rh-leave-types-treatment--${treatment.tone}${directorOnly ? ' rh-leave-types-treatment--director' : ''}`}>
+                          {directorOnly ? <><span>Indisponibilité</span><span>Directeur</span></> : treatment.label}
+                        </span>
+                      </div>
                       <span className={`rh-leave-types-status${type.isActive ? ' is-active' : ' is-inactive'}`}>{type.isActive ? 'Actif' : 'Inactif'}</span>
                       <div className="rh-leave-types-actions">
                         {type.isActive && (
