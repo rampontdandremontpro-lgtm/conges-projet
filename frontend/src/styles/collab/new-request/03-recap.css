@@ -22,6 +22,12 @@
   white-space: nowrap;
 }
 
+.nr-anticipated-badge--current {
+  border-color: var(--color-brand-200);
+  background: var(--color-brand-100);
+  color: var(--color-brand-700);
+}
+
 .nr-anticipated-panel {
   position: relative;
   display: grid;

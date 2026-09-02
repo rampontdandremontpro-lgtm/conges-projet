@@ -1,5 +1,6 @@
 import { apiClient } from '@/services/apiClient'
 import { getRhAllRequests } from '@/services/rh/rhAllRequests'
+import { getRhPendingRequests } from '@/services/rh/rhRequests'
 import {
   getRhAbsenceDeclarations,
   getRhAbsenceEmployees,
@@ -9,8 +10,9 @@ import { getRhLeaveTypes } from '@/services/rh/rhLeaveTypes'
 import { isReservedDirectorLeaveType } from '@/utils/filterOptions'
 
 export async function getRhLeavesAndAbsencesData() {
-  const [leaves, absences, employees, absenceTypes, allLeaveTypes, servicesResponse] = await Promise.all([
+  const [leaves, actionableLeaves, absences, employees, absenceTypes, allLeaveTypes, servicesResponse] = await Promise.all([
     getRhAllRequests(),
+    getRhPendingRequests().catch(() => []),
     getRhAbsenceDeclarations(),
     getRhAbsenceEmployees(),
     getRhAbsenceTypes(),
@@ -24,7 +26,9 @@ export async function getRhLeavesAndAbsencesData() {
 
   const services = Array.isArray(servicesResponse?.data) ? servicesResponse.data : []
 
-  return { leaves, absences, employees, absenceTypes, leaveTypes, services }
+  const actionableLeaveIds = (Array.isArray(actionableLeaves) ? actionableLeaves : []).map((item) => String(item.id))
+
+  return { leaves, actionableLeaveIds, absences, employees, absenceTypes, leaveTypes, services }
 }
 
 export async function createRhDirectLeave(payload) {

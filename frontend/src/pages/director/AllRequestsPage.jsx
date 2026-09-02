@@ -7,10 +7,12 @@ import { PaginationBar } from '@/components/ui/PaginationBar'
 import { PageContainer } from '@/components/ui/PageContainer'
 import {
   getDirectorAllRequests,
+  getDirectorPendingRequests,
   getDirectorRequestFilterOptions,
 } from '@/services/director/directorRequests'
 import { formatDateNumericFR, formatDays } from '@/utils/format'
 import { buildGroupedServiceOptions, isReservedDirectorLeaveType, matchesGroupedServiceFilter } from '@/utils/filterOptions'
+import { requestValidationStageMeta } from '@/utils/requestValidationStage'
 
 import '@/styles/director/all-requests.css'
 
@@ -56,8 +58,10 @@ function formatDateTime(value) {
 }
 
 
-function statusMeta(status) {
-  return STATUS_META[status] ?? { label: status || '—', tone: 'neutral' }
+function statusMeta(request) {
+  const stage = requestValidationStageMeta(request)
+  if (stage) return stage
+  return STATUS_META[request?.status] ?? { label: request?.status || '—', tone: 'neutral' }
 }
 
 function statusMatchesFilter(status, filter) {
@@ -86,7 +90,7 @@ function requestMatchesSearch(request, query) {
     request.service?.name,
     request.startDate,
     request.endDate,
-    statusMeta(request.status).label,
+    statusMeta(request).label,
     request.finalDecider?.prenom,
     request.finalDecider?.nom,
     request.id,
@@ -117,6 +121,7 @@ export function DirectorAllRequestsPage() {
     error: false,
     requests: [],
     filterOptions: { services: [], leaveTypes: [] },
+    actionableIds: [],
   })
   const [statusFilter, setStatusFilter] = useState('all')
   const [filtersOpen, setFiltersOpen] = useState(false)
@@ -125,6 +130,7 @@ export function DirectorAllRequestsPage() {
   const [employeeFilter, setEmployeeFilter] = useState('all')
   const [page, setPage] = useState(1)
   const search = searchParams.get('q') ?? ''
+  const actionableOnly = searchParams.get('actionable') === '1'
 
   const load = useCallback(async ({ silent = false } = {}) => {
     if (!silent) {
@@ -132,8 +138,9 @@ export function DirectorAllRequestsPage() {
     }
 
     try {
-      const [requests, filterOptions] = await Promise.all([
+      const [requests, actionableRequests, filterOptions] = await Promise.all([
         getDirectorAllRequests(),
+        getDirectorPendingRequests().catch(() => []),
         getDirectorRequestFilterOptions().catch(() => ({ services: [], leaveTypes: [] })),
       ])
 
@@ -141,6 +148,7 @@ export function DirectorAllRequestsPage() {
         loading: false,
         error: false,
         requests,
+        actionableIds: actionableRequests.map((request) => String(request.id)),
         filterOptions,
       })
     } catch {
@@ -149,6 +157,7 @@ export function DirectorAllRequestsPage() {
           loading: false,
           error: true,
           requests: [],
+          actionableIds: [],
           filterOptions: { services: [], leaveTypes: [] },
         })
       }
@@ -173,6 +182,12 @@ export function DirectorAllRequestsPage() {
       document.removeEventListener('visibilitychange', refreshWhenVisible)
     }
   }, [load])
+
+  useEffect(() => {
+    if (actionableOnly) setStatusFilter('pending')
+  }, [actionableOnly])
+
+  const actionableIds = useMemo(() => new Set(state.actionableIds.map(String)), [state.actionableIds])
 
   const serviceRecords = useMemo(() => {
     const values = new Map()
@@ -220,13 +235,18 @@ export function DirectorAllRequestsPage() {
     return [...values.entries()].sort((left, right) => left[1].localeCompare(right[1], 'fr'))
   }, [state.requests])
 
+  const scopedRequests = useMemo(
+    () => actionableOnly ? state.requests.filter((request) => actionableIds.has(String(request.id))) : state.requests,
+    [actionableIds, actionableOnly, state.requests],
+  )
+
   const counts = useMemo(() => ({
-    all: state.requests.length,
-    pending: state.requests.filter((request) => statusMatchesFilter(request.status, 'pending')).length,
-    approved: state.requests.filter((request) => statusMatchesFilter(request.status, 'approved')).length,
-    refused: state.requests.filter((request) => statusMatchesFilter(request.status, 'refused')).length,
-    cancelled: state.requests.filter((request) => statusMatchesFilter(request.status, 'cancelled')).length,
-  }), [state.requests])
+    all: scopedRequests.length,
+    pending: scopedRequests.filter((request) => statusMatchesFilter(request.status, 'pending')).length,
+    approved: scopedRequests.filter((request) => statusMatchesFilter(request.status, 'approved')).length,
+    refused: scopedRequests.filter((request) => statusMatchesFilter(request.status, 'refused')).length,
+    cancelled: scopedRequests.filter((request) => statusMatchesFilter(request.status, 'cancelled')).length,
+  }), [scopedRequests])
 
   const activeAdvancedFilters = [
     serviceFilter !== 'all',
@@ -235,7 +255,7 @@ export function DirectorAllRequestsPage() {
   ].filter(Boolean).length
 
   const filteredRequests = useMemo(() => {
-    const result = state.requests.filter((request) => {
+    const result = scopedRequests.filter((request) => {
       if (!statusMatchesFilter(request.status, statusFilter)) return false
       if (!matchesGroupedServiceFilter(request.service?.id, serviceFilter, externalServiceIds)) return false
       if (typeFilter !== 'all' && String(request.leaveType?.id) !== typeFilter) return false
@@ -256,7 +276,7 @@ export function DirectorAllRequestsPage() {
 
       return new Date(right.decisionAt ?? right.submittedAt ?? right.createdAt ?? 0).getTime() - new Date(left.decisionAt ?? left.submittedAt ?? left.createdAt ?? 0).getTime()
     })
-  }, [employeeFilter, externalServiceIds, search, serviceFilter, state.requests, statusFilter, typeFilter])
+  }, [employeeFilter, externalServiceIds, scopedRequests, search, serviceFilter, statusFilter, typeFilter])
 
   useEffect(() => {
     setPage(1)
@@ -272,6 +292,7 @@ export function DirectorAllRequestsPage() {
     setEmployeeFilter('all')
     const nextParams = new URLSearchParams(searchParams)
     nextParams.delete('q')
+    nextParams.delete('actionable')
     setSearchParams(nextParams, { replace: true })
   }
 
@@ -287,7 +308,14 @@ export function DirectorAllRequestsPage() {
                 role="tab"
                 aria-selected={statusFilter === filter.id}
                 className={`director-all-requests-tab${statusFilter === filter.id ? ' is-active' : ''}`}
-                onClick={() => setStatusFilter(filter.id)}
+                onClick={() => {
+                  setStatusFilter(filter.id)
+                  if (actionableOnly) {
+                    const nextParams = new URLSearchParams(searchParams)
+                    nextParams.delete('actionable')
+                    setSearchParams(nextParams, { replace: true })
+                  }
+                }}
               >
                 <span>{filter.label}</span>
                 <span className="director-all-requests-tab__count">{counts[filter.id]}</span>
@@ -378,7 +406,7 @@ export function DirectorAllRequestsPage() {
               </div>
             ) : (
               visibleRequests.map((request) => {
-                const meta = statusMeta(request.status)
+                const meta = statusMeta(request)
 
                 return (
                   <button

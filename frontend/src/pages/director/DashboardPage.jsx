@@ -76,7 +76,7 @@ function DecisionsCard({ decisions, onNavigate }) {
         </div>
       </div>
 
-      <button type="button" className="director-primary-action" onClick={() => onNavigate('/app/director-all-requests')}>
+      <button type="button" className="director-primary-action" onClick={() => onNavigate('/app/director-all-requests?actionable=1')}>
         <Icon name="list" size={17} />
         <span>Voir les demandes en attente</span>
         <Icon name="arrowRight" size={15} />
@@ -111,18 +111,18 @@ function GlobalPresenceCard({ presence, onNavigate }) {
       </div>
 
       <div className="director-presence-metrics">
-        <div>
+        <button type="button" onClick={() => onNavigate('/app/director-presence?situation=PRESENT')}>
           <span>Présents</span>
           <strong>{summary.present ?? 0}</strong>
-        </div>
-        <div>
+        </button>
+        <button type="button" onClick={() => onNavigate('/app/director-presence?situation=EN_VACANCES')}>
           <span>En congés</span>
           <strong>{summary.onLeave ?? 0}</strong>
-        </div>
-        <div>
+        </button>
+        <button type="button" onClick={() => onNavigate('/app/director-presence?situation=ABSENT')}>
           <span>Absents</span>
           <strong>{summary.absent ?? 0}</strong>
-        </div>
+        </button>
       </div>
 
       <button type="button" className="director-primary-action" onClick={() => onNavigate('/app/director-presence')}>

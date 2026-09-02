@@ -877,6 +877,30 @@ export class LeaveRequestsService {
           });
         }
 
+        const treatment =
+          await this.validatorResolutionService.describeTreatment(
+            leaveRequest,
+          );
+
+        let canDecideNow = false;
+        let decisionAccess: DecisionAccess | null = null;
+
+        try {
+          decisionAccess =
+            await this.validatorResolutionService.resolveAccess(
+              leaveRequest,
+              authenticatedUser,
+            );
+          canDecideNow = true;
+        } catch (error) {
+          if (
+            !(error instanceof ForbiddenException) &&
+            !(error instanceof BadRequestException)
+          ) {
+            throw error;
+          }
+        }
+
         try {
           const availability =
             await this.serviceAvailabilityService.analyzeLeaveRequest(
@@ -885,6 +909,9 @@ export class LeaveRequestsService {
           const overlapCount = availability.overlaps.length;
 
           return Object.assign(leaveRequest, {
+            treatment,
+            canDecideNow,
+            decisionAccess,
             hasAvailabilityAlert:
               availability.minimumPresenceBreached || overlapCount > 0,
             minimumPresenceBreached:
@@ -893,6 +920,9 @@ export class LeaveRequestsService {
           });
         } catch {
           return Object.assign(leaveRequest, {
+            treatment,
+            canDecideNow,
+            decisionAccess,
             hasAvailabilityAlert: false,
             minimumPresenceBreached: false,
             overlapCount: 0,

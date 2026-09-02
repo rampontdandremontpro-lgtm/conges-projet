@@ -89,7 +89,7 @@
 }
 
 .director-decision-metric,
-.director-presence-metrics > div {
+.director-presence-metrics > button {
   display: flex;
   min-width: 0;
   flex-direction: column;
@@ -127,19 +127,37 @@
   color: #9a3412;
 }
 
-.director-presence-metrics > div:nth-child(1) {
+.director-presence-metrics > button:nth-child(1) {
   background: var(--color-success-soft);
   color: #166534;
 }
 
-.director-presence-metrics > div:nth-child(2) {
+.director-presence-metrics > button:nth-child(2) {
   background: var(--color-brand-100);
   color: var(--color-brand-800);
 }
 
-.director-presence-metrics > div:nth-child(3) {
+.director-presence-metrics > button:nth-child(3) {
   background: #fee2e2;
   color: #b91c1c;
+}
+
+.director-presence-metrics > button {
+  border: 0;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+
+.director-presence-metrics > button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgb(15 23 42 / 8%);
+}
+
+.director-presence-metrics > button:focus-visible {
+  outline: 2px solid var(--color-brand-500);
+  outline-offset: 2px;
 }
 
 .director-primary-action {

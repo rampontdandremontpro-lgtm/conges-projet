@@ -1,6 +1,7 @@
+import { requestValidationStageMeta } from './requestValidationStage.js'
+
 const LEAVE_STATUS = {
   EN_ATTENTE_VALIDATION: { label: 'En attente', tone: 'pending' },
-  EN_COURS_TRAITEMENT: { label: 'En cours de traitement', tone: 'pending' },
   VALIDEE: { label: 'Validée · traitement terminé', tone: 'approved' },
   REFUSEE: { label: 'Refusée', tone: 'refused' },
   ANNULEE: { label: 'Annulée', tone: 'cancelled' },
@@ -19,10 +20,42 @@ const ABSENCE_STATUS = {
   ANNULEE: { label: 'Annulée', tone: 'cancelled' },
 }
 
+const LEAVE_STATUS_OPTIONS = [
+  ['WAITING_MANAGER', 'Attente responsable'],
+  ['READY', 'À valider'],
+  ['PENDING', 'En attente'],
+  ['VALIDEE', 'Validée · traitement terminé'],
+  ['REFUSEE', 'Refusée'],
+  ['ANNULATION_EN_ATTENTE_ACCORD', 'Annulation en attente'],
+  ['ANNULEE', 'Annulée'],
+  ['ANNULEE_APRES_VALIDATION', 'Annulée après validation'],
+  ['EXPIREE_NON_VALIDEE', 'Expirée'],
+]
+
+const ABSENCE_STATUS_OPTIONS = [
+  ['BROUILLON', 'Brouillon RH'],
+  ['DECLAREE', 'Déclarée'],
+  ['JUSTIFICATIF_EN_ATTENTE', 'Justificatif attendu'],
+  ['JUSTIFICATIF_REJETE', 'Justificatif attendu'],
+  ['A_VERIFIER_PAR_RH', 'À vérifier'],
+  ['ENREGISTREE', 'Autorisée'],
+  ['ANNULEE', 'Annulée'],
+]
+
+export function getRhEventStatusOptions(nature = 'ALL') {
+  if (nature === 'CONGE') return LEAVE_STATUS_OPTIONS.map((option) => [...option])
+  if (nature === 'ABSENCE') return ABSENCE_STATUS_OPTIONS.map((option) => [...option])
+
+  const values = new Map()
+  for (const option of [...LEAVE_STATUS_OPTIONS, ...ABSENCE_STATUS_OPTIONS]) {
+    if (!values.has(option[0])) values.set(option[0], option[1])
+  }
+  return [...values.entries()]
+}
+
 function leaveEffectiveStatus(item) {
-  return item?.status === 'EN_ATTENTE_VALIDATION' && item?.finalDeciderId
-    ? 'EN_COURS_TRAITEMENT'
-    : item?.status
+  const stage = requestValidationStageMeta(item)
+  return stage?.key ?? item?.status
 }
 
 function durationOfAbsence(item) {
@@ -38,7 +71,8 @@ function durationOfAbsence(item) {
 export function normalizeRhLeaveAndAbsenceRows({ leaves = [], absences = [] } = {}) {
   const leaveRows = leaves.map((item) => {
     const status = leaveEffectiveStatus(item)
-    const meta = LEAVE_STATUS[status] ?? { label: status || '—', tone: 'neutral' }
+    const stage = requestValidationStageMeta(item)
+    const meta = stage ?? LEAVE_STATUS[status] ?? { label: status || '—', tone: 'neutral' }
     return {
       id: item.id,
       key: `CONGE-${item.id}`,
