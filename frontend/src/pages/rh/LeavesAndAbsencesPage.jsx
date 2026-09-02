@@ -14,7 +14,7 @@ import {
 } from '@/services/rh/rhAbsences'
 import { getRhLeavesAndAbsencesData } from '@/services/rh/rhLeavesAndAbsences'
 import { formatDateNumericFR, formatDays } from '@/utils/format'
-import { getRhEventStatusOptions, normalizeRhEventSearch, normalizeRhLeaveAndAbsenceRows } from '@/utils/rhLeavesAndAbsences'
+import { compareRhEventPriority, getRhEventStatusOptions, normalizeRhEventSearch, normalizeRhLeaveAndAbsenceRows, rhEventStatusMatchesFilter } from '@/utils/rhLeavesAndAbsences'
 import { buildGroupedServiceOptions, isExternalService, isReservedDirectorLeaveType, matchesGroupedServiceFilter } from '@/utils/filterOptions'
 
 import '@/styles/rh/leaves-and-absences.css'
@@ -150,7 +150,7 @@ export function RhLeavesAndAbsencesPage() {
     return rows.filter((row) => {
       if (filters.nature !== 'ALL' && row.nature !== filters.nature) return false
       if (actionableOnly && (row.nature !== 'CONGE' || !actionableLeaveIds.has(String(row.id)))) return false
-      if (filters.status !== 'ALL' && row.status !== filters.status) return false
+      if (!rhEventStatusMatchesFilter(row.status, filters.status)) return false
       if (filters.type !== 'ALL' && `${row.nature}:${row.type?.id ?? ''}` !== filters.type) return false
       if (filters.employee !== 'ALL' && String(row.employee?.id ?? '') !== filters.employee) return false
       if (!matchesGroupedServiceFilter(row.service?.id, filters.service, externalServiceIds)) return false
@@ -160,11 +160,7 @@ export function RhLeavesAndAbsencesPage() {
         row.service?.name, row.startDate, row.endDate, row.statusLabel,
       ].join(' '))
       return query.split(/\s+/).every((token) => haystack.includes(token))
-    }).sort((a, b) => {
-      const start = String(a.startDate ?? '').localeCompare(String(b.startDate ?? ''))
-      if (start !== 0) return start
-      return String(b.eventDate ?? '').localeCompare(String(a.eventDate ?? ''))
-    })
+    }).sort(compareRhEventPriority)
   }, [actionableLeaveIds, actionableOnly, externalServiceIds, filters, globalSearch, rows])
 
   const safePage = Math.min(page, Math.max(1, Math.ceil(filtered.length / PAGE_SIZE)))

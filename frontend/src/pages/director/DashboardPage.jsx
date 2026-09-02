@@ -62,25 +62,19 @@ function DecisionsCard({ decisions, onNavigate }) {
       </div>
 
       <div className="director-decision-metrics">
-        <div className="director-decision-metric director-decision-metric--blue">
+        <button type="button" className="director-decision-metric director-decision-metric--blue" onClick={() => onNavigate('/app/director-all-requests?actionable=1&role=RESPONSABLE_SERVICE')}>
           <span>Responsables</span>
           <strong>{decisions?.responsible ?? 0}</strong>
-        </div>
-        <div className="director-decision-metric director-decision-metric--cyan">
+        </button>
+        <button type="button" className="director-decision-metric director-decision-metric--cyan" onClick={() => onNavigate('/app/director-all-requests?actionable=1&role=RH')}>
           <span>RH</span>
           <strong>{decisions?.rh ?? 0}</strong>
-        </div>
-        <div className="director-decision-metric director-decision-metric--orange">
+        </button>
+        <button type="button" className="director-decision-metric director-decision-metric--orange" onClick={() => onNavigate('/app/director-all-requests?actionable=1&role=COLLABORATEUR')}>
           <span>Collaborateurs</span>
           <strong>{decisions?.collaborators ?? 0}</strong>
-        </div>
+        </button>
       </div>
-
-      <button type="button" className="director-primary-action" onClick={() => onNavigate('/app/director-all-requests?actionable=1')}>
-        <Icon name="list" size={17} />
-        <span>Voir les demandes en attente</span>
-        <Icon name="arrowRight" size={15} />
-      </button>
     </section>
   )
 }
@@ -125,11 +119,6 @@ function GlobalPresenceCard({ presence, onNavigate }) {
         </button>
       </div>
 
-      <button type="button" className="director-primary-action" onClick={() => onNavigate('/app/director-presence')}>
-        <Icon name="users" size={17} />
-        <span>Voir la présence globale</span>
-        <Icon name="arrowRight" size={15} />
-      </button>
     </section>
   )
 }

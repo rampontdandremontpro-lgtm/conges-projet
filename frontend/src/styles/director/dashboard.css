@@ -612,3 +612,22 @@
     justify-self: start;
   }
 }
+
+/* Les trois compteurs de décisions sont des cartes de navigation directes. */
+.director-decision-metric {
+  border: 0;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+
+.director-decision-metric:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgb(15 23 42 / 8%);
+}
+
+.director-decision-metric:focus-visible {
+  outline: 2px solid var(--color-brand-500);
+  outline-offset: 2px;
+}

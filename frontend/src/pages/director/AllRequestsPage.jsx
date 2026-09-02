@@ -131,6 +131,8 @@ export function DirectorAllRequestsPage() {
   const [page, setPage] = useState(1)
   const search = searchParams.get('q') ?? ''
   const actionableOnly = searchParams.get('actionable') === '1'
+  const requestedRole = searchParams.get('role') ?? ''
+  const roleFilter = ['RESPONSABLE_SERVICE', 'RH', 'COLLABORATEUR'].includes(requestedRole) ? requestedRole : ''
 
   const load = useCallback(async ({ silent = false } = {}) => {
     if (!silent) {
@@ -235,10 +237,14 @@ export function DirectorAllRequestsPage() {
     return [...values.entries()].sort((left, right) => left[1].localeCompare(right[1], 'fr'))
   }, [state.requests])
 
-  const scopedRequests = useMemo(
-    () => actionableOnly ? state.requests.filter((request) => actionableIds.has(String(request.id))) : state.requests,
-    [actionableIds, actionableOnly, state.requests],
-  )
+  const scopedRequests = useMemo(() => {
+    const actionableScoped = actionableOnly
+      ? state.requests.filter((request) => actionableIds.has(String(request.id)))
+      : state.requests
+
+    if (!roleFilter) return actionableScoped
+    return actionableScoped.filter((request) => request.employee?.role === roleFilter)
+  }, [actionableIds, actionableOnly, roleFilter, state.requests])
 
   const counts = useMemo(() => ({
     all: scopedRequests.length,
@@ -293,6 +299,7 @@ export function DirectorAllRequestsPage() {
     const nextParams = new URLSearchParams(searchParams)
     nextParams.delete('q')
     nextParams.delete('actionable')
+    nextParams.delete('role')
     setSearchParams(nextParams, { replace: true })
   }
 
@@ -366,7 +373,7 @@ export function DirectorAllRequestsPage() {
             <button
               type="button"
               className="director-all-requests-reset"
-              disabled={activeAdvancedFilters === 0 && !search.trim()}
+              disabled={activeAdvancedFilters === 0 && !search.trim() && !actionableOnly && !roleFilter}
               onClick={resetFilters}
             >
               <Icon name="refresh" size={15} />
@@ -442,7 +449,7 @@ export function DirectorAllRequestsPage() {
           <footer className="director-all-requests-footer">
             <span>
               {filteredRequests.length} demande{filteredRequests.length > 1 ? 's' : ''}
-              {filteredRequests.length !== state.requests.length ? ` sur ${state.requests.length}` : ''}
+              {filteredRequests.length !== scopedRequests.length ? ` sur ${scopedRequests.length}` : ''}
             </span>
             <PaginationBar
               page={safePage}

@@ -21,36 +21,71 @@ const ABSENCE_STATUS = {
 }
 
 const LEAVE_STATUS_OPTIONS = [
-  ['WAITING_MANAGER', 'Attente responsable'],
   ['READY', 'À valider'],
+  ['WAITING_MANAGER', 'Attente responsable'],
   ['PENDING', 'En attente'],
+  ['ANNULATION_EN_ATTENTE_ACCORD', 'Annulation en attente'],
   ['VALIDEE', 'Validée · traitement terminé'],
   ['REFUSEE', 'Refusée'],
-  ['ANNULATION_EN_ATTENTE_ACCORD', 'Annulation en attente'],
   ['ANNULEE', 'Annulée'],
   ['ANNULEE_APRES_VALIDATION', 'Annulée après validation'],
   ['EXPIREE_NON_VALIDEE', 'Expirée'],
 ]
 
 const ABSENCE_STATUS_OPTIONS = [
-  ['BROUILLON', 'Brouillon RH'],
-  ['DECLAREE', 'Déclarée'],
-  ['JUSTIFICATIF_EN_ATTENTE', 'Justificatif attendu'],
-  ['JUSTIFICATIF_REJETE', 'Justificatif attendu'],
   ['A_VERIFIER_PAR_RH', 'À vérifier'],
+  ['JUSTIFICATIF_ATTENDU', 'Justificatif attendu'],
+  ['DECLAREE', 'Déclarée'],
   ['ENREGISTREE', 'Autorisée'],
   ['ANNULEE', 'Annulée'],
 ]
 
+const ALL_STATUS_OPTIONS = [
+  ['READY', 'À valider'],
+  ['WAITING_MANAGER', 'Attente responsable'],
+  ['PENDING', 'En attente'],
+  ['ANNULATION_EN_ATTENTE_ACCORD', 'Annulation en attente'],
+  ['A_VERIFIER_PAR_RH', 'À vérifier'],
+  ['JUSTIFICATIF_ATTENDU', 'Justificatif attendu'],
+  ['DECLAREE', 'Déclarée'],
+  ['VALIDEE', 'Validée · traitement terminé'],
+  ['ENREGISTREE', 'Autorisée'],
+  ['REFUSEE', 'Refusée'],
+  ['ANNULEE', 'Annulée'],
+  ['ANNULEE_APRES_VALIDATION', 'Annulée après validation'],
+  ['EXPIREE_NON_VALIDEE', 'Expirée'],
+]
+
+const STATUS_PRIORITY = {
+  READY: 0,
+  WAITING_MANAGER: 1,
+  PENDING: 2,
+  ANNULATION_EN_ATTENTE_ACCORD: 3,
+  A_VERIFIER_PAR_RH: 4,
+  JUSTIFICATIF_EN_ATTENTE: 5,
+  JUSTIFICATIF_REJETE: 5,
+  DECLAREE: 6,
+  VALIDEE: 20,
+  ENREGISTREE: 21,
+  REFUSEE: 22,
+  ANNULEE: 23,
+  ANNULEE_APRES_VALIDATION: 24,
+  EXPIREE_NON_VALIDEE: 25,
+  BROUILLON: 30,
+}
+
 export function getRhEventStatusOptions(nature = 'ALL') {
   if (nature === 'CONGE') return LEAVE_STATUS_OPTIONS.map((option) => [...option])
   if (nature === 'ABSENCE') return ABSENCE_STATUS_OPTIONS.map((option) => [...option])
+  return ALL_STATUS_OPTIONS.map((option) => [...option])
+}
 
-  const values = new Map()
-  for (const option of [...LEAVE_STATUS_OPTIONS, ...ABSENCE_STATUS_OPTIONS]) {
-    if (!values.has(option[0])) values.set(option[0], option[1])
+export function rhEventStatusMatchesFilter(status, filter = 'ALL') {
+  if (filter === 'ALL') return true
+  if (filter === 'JUSTIFICATIF_ATTENDU') {
+    return status === 'JUSTIFICATIF_EN_ATTENTE' || status === 'JUSTIFICATIF_REJETE'
   }
-  return [...values.entries()]
+  return status === filter
 }
 
 function leaveEffectiveStatus(item) {
@@ -66,6 +101,17 @@ function durationOfAbsence(item) {
     return { duration: Number(item.durationDays), durationUnit: 'j' }
   }
   return { duration: null, durationUnit: '' }
+}
+
+export function compareRhEventPriority(left, right) {
+  const leftPriority = STATUS_PRIORITY[left.status] ?? 15
+  const rightPriority = STATUS_PRIORITY[right.status] ?? 15
+  if (leftPriority !== rightPriority) return leftPriority - rightPriority
+
+  const byStartDate = String(left.startDate ?? '').localeCompare(String(right.startDate ?? ''))
+  if (byStartDate !== 0) return byStartDate
+
+  return String(right.eventDate ?? '').localeCompare(String(left.eventDate ?? ''))
 }
 
 export function normalizeRhLeaveAndAbsenceRows({ leaves = [], absences = [] } = {}) {
