@@ -14,7 +14,7 @@ import {
 } from '@/services/rh/rhAbsences'
 import { getRhLeavesAndAbsencesData } from '@/services/rh/rhLeavesAndAbsences'
 import { formatDateNumericFR, formatDays } from '@/utils/format'
-import { compareRhEventPriority, getRhEventStatusOptions, normalizeRhEventSearch, normalizeRhLeaveAndAbsenceRows, rhEventStatusMatchesFilter } from '@/utils/rhLeavesAndAbsences'
+import { normalizeRhEventSearch, normalizeRhLeaveAndAbsenceRows } from '@/utils/rhLeavesAndAbsences'
 import { buildGroupedServiceOptions, isExternalService, isReservedDirectorLeaveType, matchesGroupedServiceFilter } from '@/utils/filterOptions'
 
 import '@/styles/rh/leaves-and-absences.css'
@@ -40,8 +40,7 @@ export function RhLeavesAndAbsencesPage() {
   const location = useLocation()
   const [searchParams] = useSearchParams()
   const globalSearch = searchParams.get('q') ?? ''
-  const actionableOnly = searchParams.get('actionable') === '1'
-  const [state, setState] = useState({ loading: true, error: false, leaves: [], actionableLeaveIds: [], absences: [], employees: [], absenceTypes: [], leaveTypes: [], services: [] })
+  const [state, setState] = useState({ loading: true, error: false, leaves: [], absences: [], employees: [], absenceTypes: [], leaveTypes: [], services: [] })
   const [filters, setFilters] = useState({ nature: 'ALL', status: 'ALL', type: 'ALL', employee: 'ALL', service: 'ALL' })
   const [page, setPage] = useState(1)
   const [declarationOpen, setDeclarationOpen] = useState(false)
@@ -72,10 +71,6 @@ export function RhLeavesAndAbsencesPage() {
 
   useEffect(() => setPage(1), [filters, globalSearch])
   useEffect(() => {
-    if (!actionableOnly) return
-    setFilters((current) => ({ ...current, nature: 'CONGE', status: 'READY' }))
-  }, [actionableOnly])
-  useEffect(() => {
     const flash = location.state?.flash
     if (!flash?.message) return
     setFeedback({ kind: flash.kind === 'error' ? 'error' : 'success', message: flash.message })
@@ -93,10 +88,12 @@ export function RhLeavesAndAbsencesPage() {
     absences: state.absences.filter((item) => item.status !== 'BROUILLON' || item.createdBy?.role === 'RH'),
   }), [state.absences, state.leaves])
 
-  const statusOptions = useMemo(
-    () => getRhEventStatusOptions(filters.nature),
-    [filters.nature],
-  )
+  const statusOptions = useMemo(() => {
+    const values = new Map()
+    rows.filter((row) => filters.nature === 'ALL' || row.nature === filters.nature)
+      .forEach((row) => values.set(row.status, row.statusLabel))
+    return [...values.entries()].sort((a, b) => a[1].localeCompare(b[1], 'fr'))
+  }, [filters.nature, rows])
 
   const typeOptions = useMemo(() => {
     const values = new Map()
@@ -143,14 +140,11 @@ export function RhLeavesAndAbsencesPage() {
     serviceRecords.filter(isExternalService).map((service) => String(service.id)),
   ), [serviceRecords])
 
-  const actionableLeaveIds = useMemo(() => new Set((state.actionableLeaveIds ?? []).map(String)), [state.actionableLeaveIds])
-
   const filtered = useMemo(() => {
     const query = normalizeRhEventSearch(globalSearch)
     return rows.filter((row) => {
       if (filters.nature !== 'ALL' && row.nature !== filters.nature) return false
-      if (actionableOnly && (row.nature !== 'CONGE' || !actionableLeaveIds.has(String(row.id)))) return false
-      if (!rhEventStatusMatchesFilter(row.status, filters.status)) return false
+      if (filters.status !== 'ALL' && row.status !== filters.status) return false
       if (filters.type !== 'ALL' && `${row.nature}:${row.type?.id ?? ''}` !== filters.type) return false
       if (filters.employee !== 'ALL' && String(row.employee?.id ?? '') !== filters.employee) return false
       if (!matchesGroupedServiceFilter(row.service?.id, filters.service, externalServiceIds)) return false
@@ -160,20 +154,17 @@ export function RhLeavesAndAbsencesPage() {
         row.service?.name, row.startDate, row.endDate, row.statusLabel,
       ].join(' '))
       return query.split(/\s+/).every((token) => haystack.includes(token))
-    }).sort(compareRhEventPriority)
-  }, [actionableLeaveIds, actionableOnly, externalServiceIds, filters, globalSearch, rows])
+    }).sort((a, b) => {
+      const start = String(a.startDate ?? '').localeCompare(String(b.startDate ?? ''))
+      if (start !== 0) return start
+      return String(b.eventDate ?? '').localeCompare(String(a.eventDate ?? ''))
+    })
+  }, [externalServiceIds, filters, globalSearch, rows])
 
   const safePage = Math.min(page, Math.max(1, Math.ceil(filtered.length / PAGE_SIZE)))
   const visible = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE)
 
-  const resetDependentFilters = (nature) => {
-    if (actionableOnly) {
-      const nextParams = new URLSearchParams(searchParams)
-      nextParams.delete('actionable')
-      navigate(`${location.pathname}${nextParams.toString() ? `?${nextParams}` : ''}`, { replace: true })
-    }
-    setFilters((current) => ({ ...current, nature, status: 'ALL', type: 'ALL' }))
-  }
+  const resetDependentFilters = (nature) => setFilters((current) => ({ ...current, nature, status: 'ALL', type: 'ALL' }))
   const showFeedback = (kind, message) => setFeedback({ kind, message })
 
   const handleDeclarationSaved = async (message) => {
@@ -231,7 +222,7 @@ export function RhLeavesAndAbsencesPage() {
 
       <section className="rh-events-filters" aria-label="Filtres congés et absences">
         <label><span>CATÉGORIE</span><select value={filters.nature} onChange={(event) => resetDependentFilters(event.target.value)}><option value="ALL">Tous</option><option value="CONGE">Congés</option><option value="ABSENCE">Absences</option></select></label>
-        <label><span>STATUT</span><select value={filters.status} onChange={(event) => { const nextParams = new URLSearchParams(searchParams); nextParams.delete('actionable'); navigate(`${location.pathname}${nextParams.toString() ? `?${nextParams}` : ''}`, { replace: true }); setFilters((current) => ({ ...current, status: event.target.value })) }}><option value="ALL">Tous les statuts</option>{statusOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+        <label><span>STATUT</span><select value={filters.status} onChange={(event) => setFilters((current) => ({ ...current, status: event.target.value }))}><option value="ALL">Tous les statuts</option>{statusOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
         <label><span>TYPE</span><select value={filters.type} onChange={(event) => setFilters((current) => ({ ...current, type: event.target.value }))}><option value="ALL">Tous les types</option>{typeOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
         <label><span>COLLABORATEUR</span><select value={filters.employee} onChange={(event) => setFilters((current) => ({ ...current, employee: event.target.value }))}><option value="ALL">Tous les collaborateurs</option>{employeeOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
         <label><span>SERVICE</span><select value={filters.service} onChange={(event) => setFilters((current) => ({ ...current, service: event.target.value }))}><option value="ALL">Tous les services</option>{serviceOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>

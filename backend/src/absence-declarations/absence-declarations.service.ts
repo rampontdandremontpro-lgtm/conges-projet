@@ -347,11 +347,19 @@ export class AbsenceDeclarationsService {
       declaration.verifiedAt = now;
     } else if (
       isRhOnlyDeclaration &&
-      !declaration.leaveType.documentRequired
+      declaration.leaveType.documentRequired
     ) {
-      declaration.status = AbsenceDeclarationStatus.ENREGISTREE;
-      declaration.verifiedByRhId = authenticatedUser.id;
-      declaration.verifiedAt = now;
+      const hasActiveDocument = await this.hasActiveDocument(
+        declaration.id,
+      );
+
+      if (hasActiveDocument) {
+        declaration.status = AbsenceDeclarationStatus.ENREGISTREE;
+        declaration.verifiedByRhId = authenticatedUser.id;
+        declaration.verifiedAt = now;
+      } else {
+        declaration.status = AbsenceDeclarationStatus.JUSTIFICATIF_EN_ATTENTE;
+      }
     } else if (declaration.leaveType.documentRequired) {
       const hasActiveDocument = await this.hasActiveDocument(
         declaration.id,
@@ -745,6 +753,7 @@ export class AbsenceDeclarationsService {
       ![
         AbsenceDeclarationStatus.JUSTIFICATIF_EN_ATTENTE,
         AbsenceDeclarationStatus.JUSTIFICATIF_REJETE,
+        AbsenceDeclarationStatus.JUSTIFICATIF_ATTENDU,
       ].includes(declaration.status)
     ) {
       throw new BadRequestException(
@@ -754,6 +763,32 @@ export class AbsenceDeclarationsService {
 
     declaration.status =
       AbsenceDeclarationStatus.A_VERIFIER_PAR_RH;
+
+    await this.absenceDeclarationRepository.save(declaration);
+
+    return this.findOneWithRelations(id);
+  }
+
+  async markDocumentProvidedByRh(
+    id: number,
+    rhUserId: number,
+  ): Promise<AbsenceDeclaration> {
+    const declaration = await this.findOneWithRelations(id);
+
+    if (
+      ![
+        AbsenceDeclarationStatus.JUSTIFICATIF_EN_ATTENTE,
+        AbsenceDeclarationStatus.JUSTIFICATIF_ATTENDU,
+      ].includes(declaration.status)
+    ) {
+      throw new BadRequestException(
+        'Cette déclaration ne peut pas recevoir un justificatif RH dans son état actuel.',
+      );
+    }
+
+    declaration.status = AbsenceDeclarationStatus.ENREGISTREE;
+    declaration.verifiedByRhId = rhUserId;
+    declaration.verifiedAt = new Date();
 
     await this.absenceDeclarationRepository.save(declaration);
 
@@ -777,7 +812,7 @@ export class AbsenceDeclarationsService {
     // Le refus porte uniquement sur le justificatif : l’absence elle-même
     // n’est jamais refusée par la RH. Un nouveau document est attendu.
     declaration.status =
-      AbsenceDeclarationStatus.JUSTIFICATIF_EN_ATTENTE;
+      AbsenceDeclarationStatus.JUSTIFICATIF_ATTENDU;
     declaration.verifiedByRhId = null;
     declaration.verifiedAt = null;
 

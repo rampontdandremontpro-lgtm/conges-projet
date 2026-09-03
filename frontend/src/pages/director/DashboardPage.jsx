@@ -62,19 +62,25 @@ function DecisionsCard({ decisions, onNavigate }) {
       </div>
 
       <div className="director-decision-metrics">
-        <button type="button" className="director-decision-metric director-decision-metric--blue" onClick={() => onNavigate('/app/director-all-requests?actionable=1&role=RESPONSABLE_SERVICE')}>
+        <div className="director-decision-metric director-decision-metric--blue">
           <span>Responsables</span>
           <strong>{decisions?.responsible ?? 0}</strong>
-        </button>
-        <button type="button" className="director-decision-metric director-decision-metric--cyan" onClick={() => onNavigate('/app/director-all-requests?actionable=1&role=RH')}>
+        </div>
+        <div className="director-decision-metric director-decision-metric--cyan">
           <span>RH</span>
           <strong>{decisions?.rh ?? 0}</strong>
-        </button>
-        <button type="button" className="director-decision-metric director-decision-metric--orange" onClick={() => onNavigate('/app/director-all-requests?actionable=1&role=COLLABORATEUR')}>
+        </div>
+        <div className="director-decision-metric director-decision-metric--orange">
           <span>Collaborateurs</span>
           <strong>{decisions?.collaborators ?? 0}</strong>
-        </button>
+        </div>
       </div>
+
+      <button type="button" className="director-primary-action" onClick={() => onNavigate('/app/director-all-requests')}>
+        <Icon name="list" size={17} />
+        <span>Voir les demandes en attente</span>
+        <Icon name="arrowRight" size={15} />
+      </button>
     </section>
   )
 }
@@ -105,20 +111,25 @@ function GlobalPresenceCard({ presence, onNavigate }) {
       </div>
 
       <div className="director-presence-metrics">
-        <button type="button" onClick={() => onNavigate('/app/director-presence?situation=PRESENT')}>
+        <div>
           <span>Présents</span>
           <strong>{summary.present ?? 0}</strong>
-        </button>
-        <button type="button" onClick={() => onNavigate('/app/director-presence?situation=EN_VACANCES')}>
+        </div>
+        <div>
           <span>En congés</span>
           <strong>{summary.onLeave ?? 0}</strong>
-        </button>
-        <button type="button" onClick={() => onNavigate('/app/director-presence?situation=ABSENT')}>
+        </div>
+        <div>
           <span>Absents</span>
           <strong>{summary.absent ?? 0}</strong>
-        </button>
+        </div>
       </div>
 
+      <button type="button" className="director-primary-action" onClick={() => onNavigate('/app/director-presence')}>
+        <Icon name="users" size={17} />
+        <span>Voir la présence globale</span>
+        <Icon name="arrowRight" size={15} />
+      </button>
     </section>
   )
 }

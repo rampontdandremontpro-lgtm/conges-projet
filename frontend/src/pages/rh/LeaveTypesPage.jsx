@@ -536,11 +536,7 @@ export function RhLeaveTypesPage() {
                       </span>
                       <span className="rh-leave-types-units">{unitsLabel(type)}</span>
                       <span>{directorOnly ? 'Directeur uniquement' : creationLabel(type)}</span>
-                      <div className="rh-leave-types-treatment-cell">
-                        <span className={`rh-leave-types-treatment rh-leave-types-treatment--${treatment.tone}${directorOnly ? ' rh-leave-types-treatment--director' : ''}`}>
-                          {directorOnly ? <><span>Indisponibilité</span><span>Directeur</span></> : treatment.label}
-                        </span>
-                      </div>
+                      <span className={`rh-leave-types-treatment rh-leave-types-treatment--${treatment.tone}${directorOnly ? ' rh-leave-types-treatment--director' : ''}`}>{treatment.label}</span>
                       <span className={`rh-leave-types-status${type.isActive ? ' is-active' : ' is-inactive'}`}>{type.isActive ? 'Actif' : 'Inactif'}</span>
                       <div className="rh-leave-types-actions">
                         {type.isActive && (

@@ -18,7 +18,7 @@ export function RhWorkloadCard({ workload, onNavigate }) {
       </div>
 
       <div className="rh-workload-grid">
-        <button type="button" className="rh-workload-metric rh-workload-metric--blue" onClick={() => onNavigate('/app/rh-leaves-absences?actionable=1')}>
+        <button type="button" className="rh-workload-metric rh-workload-metric--blue" onClick={() => onNavigate('/app/rh-leaves-absences')}>
           <span>Demandes</span>
           <strong>{workload?.leaveRequests ?? 0}</strong>
         </button>

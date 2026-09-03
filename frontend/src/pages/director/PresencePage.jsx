@@ -14,7 +14,6 @@ import { getDirectorRequest, getDirectorRequestAvailability, validateDirectorReq
 import { getRhRequest, getRhRequestAvailability, validateRhRequest } from '@/services/rh/rhRequests'
 import { getCurrentMonthKey, shiftMonthKey } from '@/utils/managerCalendar'
 import { buildGroupedServiceOptions, matchesGroupedServiceFilter } from '@/utils/filterOptions'
-import { PRESENCE_SITUATIONS } from '@/utils/globalPresenceSituation'
 
 import '@/styles/manager/presence/index.css'
 import '@/styles/director/presence.css'
@@ -135,7 +134,6 @@ export function DirectorPresencePage() {
   const [serviceFilter, setServiceFilter] = useState('all')
   const [roleFilter, setRoleFilter] = useState('all')
   const [employmentTypeFilter, setEmploymentTypeFilter] = useState('all')
-  const [situationFilter, setSituationFilter] = useState(PRESENCE_SITUATIONS.ALL)
   const [state, setState] = useState({ loading: true, error: false, data: null })
   const [servicesState, setServicesState] = useState({ loading: true, data: [] })
   const [calendarDecision, setCalendarDecision] = useState(null)
@@ -192,12 +190,6 @@ export function DirectorPresencePage() {
   }, [loadServices])
 
   const query = searchParams.get('q') ?? ''
-
-  useEffect(() => {
-    const requested = searchParams.get('situation')
-    const allowed = new Set(Object.values(PRESENCE_SITUATIONS))
-    setSituationFilter(allowed.has(requested) ? requested : PRESENCE_SITUATIONS.ALL)
-  }, [searchParams])
 
   const serviceRecords = useMemo(() => {
     const source = servicesState.data.length > 0
@@ -288,26 +280,18 @@ export function DirectorPresencePage() {
     setCalendarMonth((current) => exactMonth ?? shiftMonthKey(current, offset))
   }
 
-  const filtersAreActive = serviceFilter !== 'all' || roleFilter !== 'all' || employmentTypeFilter !== 'all' || situationFilter !== PRESENCE_SITUATIONS.ALL || Boolean(query.trim())
-
-  const updateSituationFilter = (value) => {
-    setSituationFilter(value)
-    const nextParams = new URLSearchParams(searchParams)
-    if (value === PRESENCE_SITUATIONS.ALL) nextParams.delete('situation')
-    else nextParams.set('situation', value)
-    setSearchParams(nextParams, { replace: true })
-  }
+  const filtersAreActive = serviceFilter !== 'all' || roleFilter !== 'all' || employmentTypeFilter !== 'all' || Boolean(query.trim())
 
   const resetFilters = () => {
     setServiceFilter('all')
     setRoleFilter('all')
     setEmploymentTypeFilter('all')
-    setSituationFilter(PRESENCE_SITUATIONS.ALL)
 
-    const nextParams = new URLSearchParams(searchParams)
-    nextParams.delete('q')
-    nextParams.delete('situation')
-    setSearchParams(nextParams, { replace: true })
+    if (query.trim()) {
+      const nextParams = new URLSearchParams(searchParams)
+      nextParams.delete('q')
+      setSearchParams(nextParams, { replace: true })
+    }
   }
 
   return (
@@ -362,17 +346,6 @@ export function DirectorPresencePage() {
               </select>
             </label>
 
-            <label>
-              <span>Situation</span>
-              <select value={situationFilter} onChange={(event) => updateSituationFilter(event.target.value)}>
-                <option value={PRESENCE_SITUATIONS.ALL}>Toutes</option>
-                <option value={PRESENCE_SITUATIONS.PRESENT}>Présence</option>
-                <option value={PRESENCE_SITUATIONS.PENDING}>En attente de validation</option>
-                <option value={PRESENCE_SITUATIONS.LEAVE}>Congé</option>
-                <option value={PRESENCE_SITUATIONS.ABSENCE}>Absence</option>
-              </select>
-            </label>
-
             <button
               type="button"
               className="director-presence-filters__reset"
@@ -388,7 +361,7 @@ export function DirectorPresencePage() {
             key={calendarMonth}
             data={calendarData}
             month={calendarMonth}
-            filter={situationFilter}
+            filter="all"
             onMonthChange={changeCalendarMonth}
             currentUserId={authenticatedUser?.id}
             onPendingRequestClick={openCalendarValidation}

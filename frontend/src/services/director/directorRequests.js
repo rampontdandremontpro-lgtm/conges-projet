@@ -23,12 +23,6 @@ export async function getDirectorAllRequests() {
 }
 
 
-export async function getDirectorPendingRequests() {
-  const { data } = await apiClient.get('/leave-requests/director/pending')
-  return Array.isArray(data) ? data : []
-}
-
-
 export async function getDirectorRequest(id) {
   const { data: request } = await apiClient.get(`/leave-requests/management/${id}`)
 

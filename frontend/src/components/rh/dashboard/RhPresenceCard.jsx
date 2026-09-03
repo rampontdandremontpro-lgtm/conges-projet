@@ -1,4 +1,5 @@
 import { StatisticInfoButton } from '@/components/shared/StatisticInfoButton'
+import { todayISO } from '@/utils/format'
 
 function presenceStatus(percentage) {
   return percentage > 50
@@ -11,6 +12,7 @@ export function RhPresenceCard({ presence, onNavigate }) {
   const present = presence?.present ?? 0
   const percentage = presence?.percentage ?? 100
   const status = presenceStatus(percentage)
+  const today = todayISO()
 
   return (
     <section className="dash-card rh-global-presence-card">
@@ -40,15 +42,15 @@ export function RhPresenceCard({ presence, onNavigate }) {
       </div>
 
       <div className="rh-presence-stats">
-        <button type="button" onClick={() => onNavigate('/app/rh-presence?situation=PRESENT')}>
+        <button type="button" onClick={() => onNavigate('/app/rh-statistics')}>
           <span>Présents</span>
           <strong>{present}</strong>
         </button>
-        <button type="button" onClick={() => onNavigate('/app/rh-presence?situation=EN_VACANCES')}>
+        <button type="button" onClick={() => onNavigate(`/app/rh-leaves-absences?status=approved&from=${today}&to=${today}`)}>
           <span>En vacances</span>
           <strong>{presence?.onLeave ?? 0}</strong>
         </button>
-        <button type="button" onClick={() => onNavigate('/app/rh-presence?situation=ABSENT')}>
+        <button type="button" onClick={() => onNavigate('/app/rh-leaves-absences')}>
           <span>Absents</span>
           <strong>{presence?.absent ?? 0}</strong>
         </button>

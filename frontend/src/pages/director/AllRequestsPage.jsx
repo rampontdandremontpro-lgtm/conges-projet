@@ -7,12 +7,10 @@ import { PaginationBar } from '@/components/ui/PaginationBar'
 import { PageContainer } from '@/components/ui/PageContainer'
 import {
   getDirectorAllRequests,
-  getDirectorPendingRequests,
   getDirectorRequestFilterOptions,
 } from '@/services/director/directorRequests'
 import { formatDateNumericFR, formatDays } from '@/utils/format'
 import { buildGroupedServiceOptions, isReservedDirectorLeaveType, matchesGroupedServiceFilter } from '@/utils/filterOptions'
-import { requestValidationStageMeta } from '@/utils/requestValidationStage'
 
 import '@/styles/director/all-requests.css'
 
@@ -58,10 +56,8 @@ function formatDateTime(value) {
 }
 
 
-function statusMeta(request) {
-  const stage = requestValidationStageMeta(request)
-  if (stage) return stage
-  return STATUS_META[request?.status] ?? { label: request?.status || '—', tone: 'neutral' }
+function statusMeta(status) {
+  return STATUS_META[status] ?? { label: status || '—', tone: 'neutral' }
 }
 
 function statusMatchesFilter(status, filter) {
@@ -90,7 +86,7 @@ function requestMatchesSearch(request, query) {
     request.service?.name,
     request.startDate,
     request.endDate,
-    statusMeta(request).label,
+    statusMeta(request.status).label,
     request.finalDecider?.prenom,
     request.finalDecider?.nom,
     request.id,
@@ -121,7 +117,6 @@ export function DirectorAllRequestsPage() {
     error: false,
     requests: [],
     filterOptions: { services: [], leaveTypes: [] },
-    actionableIds: [],
   })
   const [statusFilter, setStatusFilter] = useState('all')
   const [filtersOpen, setFiltersOpen] = useState(false)
@@ -130,9 +125,6 @@ export function DirectorAllRequestsPage() {
   const [employeeFilter, setEmployeeFilter] = useState('all')
   const [page, setPage] = useState(1)
   const search = searchParams.get('q') ?? ''
-  const actionableOnly = searchParams.get('actionable') === '1'
-  const requestedRole = searchParams.get('role') ?? ''
-  const roleFilter = ['RESPONSABLE_SERVICE', 'RH', 'COLLABORATEUR'].includes(requestedRole) ? requestedRole : ''
 
   const load = useCallback(async ({ silent = false } = {}) => {
     if (!silent) {
@@ -140,9 +132,8 @@ export function DirectorAllRequestsPage() {
     }
 
     try {
-      const [requests, actionableRequests, filterOptions] = await Promise.all([
+      const [requests, filterOptions] = await Promise.all([
         getDirectorAllRequests(),
-        getDirectorPendingRequests().catch(() => []),
         getDirectorRequestFilterOptions().catch(() => ({ services: [], leaveTypes: [] })),
       ])
 
@@ -150,7 +141,6 @@ export function DirectorAllRequestsPage() {
         loading: false,
         error: false,
         requests,
-        actionableIds: actionableRequests.map((request) => String(request.id)),
         filterOptions,
       })
     } catch {
@@ -159,7 +149,6 @@ export function DirectorAllRequestsPage() {
           loading: false,
           error: true,
           requests: [],
-          actionableIds: [],
           filterOptions: { services: [], leaveTypes: [] },
         })
       }
@@ -184,12 +173,6 @@ export function DirectorAllRequestsPage() {
       document.removeEventListener('visibilitychange', refreshWhenVisible)
     }
   }, [load])
-
-  useEffect(() => {
-    if (actionableOnly) setStatusFilter('pending')
-  }, [actionableOnly])
-
-  const actionableIds = useMemo(() => new Set(state.actionableIds.map(String)), [state.actionableIds])
 
   const serviceRecords = useMemo(() => {
     const values = new Map()
@@ -237,22 +220,13 @@ export function DirectorAllRequestsPage() {
     return [...values.entries()].sort((left, right) => left[1].localeCompare(right[1], 'fr'))
   }, [state.requests])
 
-  const scopedRequests = useMemo(() => {
-    const actionableScoped = actionableOnly
-      ? state.requests.filter((request) => actionableIds.has(String(request.id)))
-      : state.requests
-
-    if (!roleFilter) return actionableScoped
-    return actionableScoped.filter((request) => request.employee?.role === roleFilter)
-  }, [actionableIds, actionableOnly, roleFilter, state.requests])
-
   const counts = useMemo(() => ({
-    all: scopedRequests.length,
-    pending: scopedRequests.filter((request) => statusMatchesFilter(request.status, 'pending')).length,
-    approved: scopedRequests.filter((request) => statusMatchesFilter(request.status, 'approved')).length,
-    refused: scopedRequests.filter((request) => statusMatchesFilter(request.status, 'refused')).length,
-    cancelled: scopedRequests.filter((request) => statusMatchesFilter(request.status, 'cancelled')).length,
-  }), [scopedRequests])
+    all: state.requests.length,
+    pending: state.requests.filter((request) => statusMatchesFilter(request.status, 'pending')).length,
+    approved: state.requests.filter((request) => statusMatchesFilter(request.status, 'approved')).length,
+    refused: state.requests.filter((request) => statusMatchesFilter(request.status, 'refused')).length,
+    cancelled: state.requests.filter((request) => statusMatchesFilter(request.status, 'cancelled')).length,
+  }), [state.requests])
 
   const activeAdvancedFilters = [
     serviceFilter !== 'all',
@@ -261,7 +235,7 @@ export function DirectorAllRequestsPage() {
   ].filter(Boolean).length
 
   const filteredRequests = useMemo(() => {
-    const result = scopedRequests.filter((request) => {
+    const result = state.requests.filter((request) => {
       if (!statusMatchesFilter(request.status, statusFilter)) return false
       if (!matchesGroupedServiceFilter(request.service?.id, serviceFilter, externalServiceIds)) return false
       if (typeFilter !== 'all' && String(request.leaveType?.id) !== typeFilter) return false
@@ -282,7 +256,7 @@ export function DirectorAllRequestsPage() {
 
       return new Date(right.decisionAt ?? right.submittedAt ?? right.createdAt ?? 0).getTime() - new Date(left.decisionAt ?? left.submittedAt ?? left.createdAt ?? 0).getTime()
     })
-  }, [employeeFilter, externalServiceIds, scopedRequests, search, serviceFilter, statusFilter, typeFilter])
+  }, [employeeFilter, externalServiceIds, search, serviceFilter, state.requests, statusFilter, typeFilter])
 
   useEffect(() => {
     setPage(1)
@@ -298,8 +272,6 @@ export function DirectorAllRequestsPage() {
     setEmployeeFilter('all')
     const nextParams = new URLSearchParams(searchParams)
     nextParams.delete('q')
-    nextParams.delete('actionable')
-    nextParams.delete('role')
     setSearchParams(nextParams, { replace: true })
   }
 
@@ -315,14 +287,7 @@ export function DirectorAllRequestsPage() {
                 role="tab"
                 aria-selected={statusFilter === filter.id}
                 className={`director-all-requests-tab${statusFilter === filter.id ? ' is-active' : ''}`}
-                onClick={() => {
-                  setStatusFilter(filter.id)
-                  if (actionableOnly) {
-                    const nextParams = new URLSearchParams(searchParams)
-                    nextParams.delete('actionable')
-                    setSearchParams(nextParams, { replace: true })
-                  }
-                }}
+                onClick={() => setStatusFilter(filter.id)}
               >
                 <span>{filter.label}</span>
                 <span className="director-all-requests-tab__count">{counts[filter.id]}</span>
@@ -373,7 +338,7 @@ export function DirectorAllRequestsPage() {
             <button
               type="button"
               className="director-all-requests-reset"
-              disabled={activeAdvancedFilters === 0 && !search.trim() && !actionableOnly && !roleFilter}
+              disabled={activeAdvancedFilters === 0 && !search.trim()}
               onClick={resetFilters}
             >
               <Icon name="refresh" size={15} />
@@ -413,7 +378,7 @@ export function DirectorAllRequestsPage() {
               </div>
             ) : (
               visibleRequests.map((request) => {
-                const meta = statusMeta(request)
+                const meta = statusMeta(request.status)
 
                 return (
                   <button
@@ -449,7 +414,7 @@ export function DirectorAllRequestsPage() {
           <footer className="director-all-requests-footer">
             <span>
               {filteredRequests.length} demande{filteredRequests.length > 1 ? 's' : ''}
-              {filteredRequests.length !== scopedRequests.length ? ` sur ${scopedRequests.length}` : ''}
+              {filteredRequests.length !== state.requests.length ? ` sur ${state.requests.length}` : ''}
             </span>
             <PaginationBar
               page={safePage}

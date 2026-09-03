@@ -101,6 +101,22 @@ function formatCalendarDate(iso) {
   }).format(parseISODate(iso))
 }
 
+function singleDayPeriodLabel(startPeriod, endPeriod) {
+  if (startPeriod === 'MATIN' && endPeriod === 'MATIN') return 'Matin'
+  if (startPeriod === 'APRES_MIDI' && endPeriod === 'APRES_MIDI') return 'Après-midi'
+  return 'Journée entière'
+}
+
+function selectionTimingLabel({ startDate, endDate, startPeriod, endPeriod }) {
+  if (!startDate || !endDate) return ''
+  if (startDate === endDate) {
+    return `${formatCalendarDate(startDate)} · ${singleDayPeriodLabel(startPeriod, endPeriod)}`
+  }
+  const departure = startPeriod === 'APRES_MIDI' ? 'après-midi' : 'matin'
+  const returnPeriod = endPeriod === 'MATIN' ? 'matin' : 'après-midi'
+  return `Du ${formatCalendarDate(startDate)} (${departure}) au ${formatCalendarDate(endDate)} (${returnPeriod})`
+}
+
 export function LeaveCalendar({
   months,
   todayIso,
@@ -570,6 +586,22 @@ export function LeaveCalendar({
 
       {hoverInfo && <div className="nr-cal__hover-info">{hoverInfo}</div>}
 
+
+      {allowsHalfDays && startDate && !endDate && (
+        <div className="nr-cal__selection-confirmation" aria-live="polite">
+          <span className="nr-cal__selection-confirmation-mark">✓</span>
+          <span>
+            <strong>Départ :</strong> {formatCalendarDate(startDate)} · {startPeriod === 'APRES_MIDI' ? 'Après-midi' : 'Matin'}
+          </span>
+        </div>
+      )}
+
+      {allowsHalfDays && startDate && endDate && (
+        <div className="nr-cal__selection-confirmation" aria-live="polite">
+          <span className="nr-cal__selection-confirmation-mark">✓</span>
+          <span><strong>Sélection :</strong> {selectionTimingLabel({ startDate, endDate, startPeriod, endPeriod })}</span>
+        </div>
+      )}
 
       <div className="nr-cal__legend">
         <span className="nr-cal__legend-item">

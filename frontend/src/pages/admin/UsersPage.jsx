@@ -4,7 +4,6 @@ import { useSearchParams } from 'react-router-dom'
 
 import { useAuth } from '@/auth/AuthContext'
 import { Icon } from '@/components/ui/Icon'
-import { StatisticInfoButton } from '@/components/shared/StatisticInfoButton'
 import { PaginationBar } from '@/components/ui/PaginationBar'
 import { PageContainer } from '@/components/ui/PageContainer'
 import { useAutoDismiss } from '@/hooks/useAutoDismiss'
@@ -314,6 +313,7 @@ function PasswordResetModal({ user, onCancel, onSuccess }) {
   const [visible, setVisible] = useState(false)
   const [busy, setBusy] = useState(false)
   const [feedback, setFeedback] = useState('')
+  const [infoOpen, setInfoOpen] = useState(false)
 
   const submit = async (event) => {
     event.preventDefault()
@@ -345,25 +345,30 @@ function PasswordResetModal({ user, onCancel, onSuccess }) {
             <span>SÉCURITÉ DU COMPTE</span>
             <div className="admin-users-password-reset__titleline">
               <h3 id="admin-users-password-reset-title">Réinitialiser le mot de passe</h3>
-              <span className="admin-users-password-reset__info-wrap">
-                <StatisticInfoButton
-                  title="Réinitialisation du mot de passe"
-                  ariaLabel="Informations sur la réinitialisation du mot de passe"
-                  portal
-                >
-                  <p>Le mot de passe créé ici est temporaire. L’utilisateur devra obligatoirement le remplacer lors de sa prochaine connexion.</p>
-                </StatisticInfoButton>
-              </span>
+              <button
+                type="button"
+                className="admin-users-password-reset__info"
+                aria-label="Informations sur la réinitialisation du mot de passe"
+                aria-expanded={infoOpen}
+                onClick={() => setInfoOpen((current) => !current)}
+              >
+                <Icon name="info" size={15} />
+              </button>
             </div>
           </div>
-          <button type="button" className="admin-users-password-reset__close" onClick={onCancel} aria-label="Fermer">×</button>
+          <button type="button" className="admin-users-password-reset__close" onClick={onCancel} aria-label="Fermer">
+            <Icon name="plus" size={18} />
+          </button>
         </div>
 
-        <div className="admin-users-password-reset__user">
+        <div className={`admin-users-password-reset__user${infoOpen ? ' is-expanded' : ''}`}>
           <ProfileAvatar user={user} className="admin-users-password-reset__avatar" />
           <div className="admin-users-password-reset__identity">
             <strong>{fullName(user)}</strong>
             <span>{ROLE_LABELS[user.role] ?? user.role} · {user.email}</span>
+            {infoOpen && (
+              <p>Le mot de passe créé ici est temporaire. L’utilisateur devra obligatoirement le remplacer lors de sa prochaine connexion.</p>
+            )}
           </div>
         </div>
 

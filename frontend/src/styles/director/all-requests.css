@@ -376,12 +376,6 @@
   color: #b9680a;
 }
 
-.director-request-status--ready {
-  border-color: #b9d9ff;
-  background: #eef6ff;
-  color: #1769d3;
-}
-
 .director-request-status--approved {
   border-color: #a7ead0;
   background: #ecfbf4;

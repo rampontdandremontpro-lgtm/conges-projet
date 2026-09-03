@@ -387,132 +387,124 @@
 .admin-users-actions button.is-password:hover { background: #f2efff; color: #5642ae; }
 .admin-users-confirm__icon.is-password { background: #f2efff; color: #6553b5; }
 
-/* Réinitialisation du mot de passe : modale compacte alignée sur les drawers Utilisateurs. */
+/* Réinitialisation du mot de passe : présentation alignée sur les drawers Utilisateurs. */
 .admin-users-password-reset {
-  width: min(560px, calc(100vw - 32px));
-  max-width: 560px;
+  width: min(620px, calc(100vw - 32px));
+  max-width: 620px;
   max-height: calc(100vh - var(--header-height) - 32px);
   padding: 0;
   overflow-x: hidden;
   overflow-y: auto;
-  border-radius: 18px;
-  background: #fff;
+  border-radius: 20px;
   text-align: left;
 }
 
 .admin-users-password-reset__header {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 38px;
   align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 18px 20px 16px;
-  border-bottom: 1px solid #dfe8f3;
-  background: linear-gradient(135deg, #fff 0%, #f7fbff 100%);
-}
-
-.admin-users-password-reset__heading {
-  min-width: 0;
+  gap: 14px;
+  padding: 20px 22px 18px;
+  border-bottom: 1px solid #e3ebf4;
+  background: linear-gradient(135deg, #ffffff 0%, #f8fbff 100%);
 }
 
 .admin-users-password-reset__heading > span {
   display: block;
-  margin-bottom: 4px;
-  color: #7d94b0;
+  color: #879ab2;
   font-size: 9px;
   font-weight: 900;
-  letter-spacing: .07em;
+  letter-spacing: .08em;
 }
 
 .admin-users-password-reset__titleline {
   display: flex;
-  min-width: 0;
   align-items: center;
   gap: 8px;
+  margin-top: 4px;
 }
 
 .admin-users-password-reset__titleline h3 {
   margin: 0;
-  color: #0b315d;
+  color: #10365f;
   font-size: 19px;
   font-weight: 900;
-  line-height: 1.2;
+  line-height: 1.25;
   text-align: left;
 }
 
-/* Le bouton d'information reprend le composant partagé utilisé ailleurs dans l'application.
-   Les règles ci-dessous neutralisent seulement le min-width générique de la modale. */
-.admin-users-password-reset__info-wrap {
-  display: inline-flex;
-  flex: 0 0 auto;
-}
-
-.admin-users-confirm .admin-users-password-reset__info-wrap .statistic-info-button__trigger {
-  width: 23px;
-  min-width: 23px;
-  height: 23px;
-  min-height: 23px;
-  padding: 0;
-  border-radius: 50%;
-  box-shadow: none;
-}
-
-.admin-users-confirm .admin-users-password-reset__info-wrap .statistic-info-button__popover-head button {
-  width: 22px;
-  min-width: 22px;
-  height: 22px;
-  min-height: 22px;
-  padding: 0;
-}
-
-.admin-users-confirm button.admin-users-password-reset__close {
+.admin-users-password-reset__info {
   display: grid;
-  width: 34px;
-  min-width: 34px;
-  height: 34px;
-  min-height: 34px;
-  flex: 0 0 34px;
+  width: 24px;
+  height: 24px;
+  flex: 0 0 24px;
   place-items: center;
-  padding: 0 0 2px;
-  border: 1px solid #d9e4f1;
-  border-radius: 10px;
-  background: #fff;
-  color: #7590ad;
-  font: inherit;
-  font-size: 21px;
-  font-weight: 500;
-  line-height: 1;
-  box-shadow: none;
+  padding: 0;
+  border: 1px solid #cfdbe9 !important;
+  border-radius: 50% !important;
+  background: #f4f7fb !important;
+  color: #5c7694 !important;
   cursor: pointer;
 }
 
-.admin-users-confirm button.admin-users-password-reset__close:hover {
-  border-color: #bdd3ec;
-  background: #f6faff;
-  color: #1e65bf;
+.admin-users-password-reset__info:hover,
+.admin-users-password-reset__info[aria-expanded='true'] {
+  border-color: #a8c4e5 !important;
+  background: #edf5ff !important;
+  color: #1f68c5 !important;
+}
+
+.admin-users-password-reset__close {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  padding: 0;
+  border: 1px solid #d9e4f1 !important;
+  border-radius: 10px !important;
+  background: #fff !important;
+  color: #7590ad !important;
+  cursor: pointer;
+}
+
+.admin-users-password-reset__close svg {
+  transform: rotate(45deg);
+}
+
+.admin-users-password-reset__close:hover {
+  border-color: #bdd3ec !important;
+  background: #f6faff !important;
+  color: #1e65bf !important;
 }
 
 .admin-users-password-reset__user {
   display: grid;
-  grid-template-columns: 52px minmax(0, 1fr);
+  grid-template-columns: 54px minmax(0, 1fr);
   align-items: center;
-  gap: 13px;
-  margin: 16px 18px 0;
-  padding: 13px 14px;
+  gap: 14px;
+  margin: 18px 22px 0;
+  padding: 14px 15px;
   border: 1px solid #dce7f2;
   border-radius: 14px;
   background: #f8fbfe;
   transition: background .16s ease, border-color .16s ease;
 }
 
+.admin-users-password-reset__user.is-expanded {
+  align-items: start;
+  border-color: #cdddec;
+  background: #f6faff;
+}
+
 .admin-users-password-reset__avatar {
   display: grid;
-  width: 52px;
-  height: 52px;
-  flex: 0 0 52px;
+  width: 54px;
+  height: 54px;
+  flex: 0 0 54px;
   place-items: center;
   overflow: hidden;
   border: 1px solid #cddded;
-  border-radius: 13px;
+  border-radius: 14px;
   background: #eaf3fe;
   color: #1d5f9e;
   font-size: 13px;
@@ -530,7 +522,6 @@
   color: #123961;
   font-size: 14px;
   font-weight: 900;
-  line-height: 1.25;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -541,16 +532,26 @@
   margin-top: 3px;
   color: #7c92ad;
   font-size: 10.8px;
-  line-height: 1.35;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.admin-users-password-reset__identity p {
+  margin: 10px 0 0;
+  padding-top: 10px;
+  border-top: 1px solid #e1e9f2;
+  color: #627c98;
+  font-size: 11px;
+  font-weight: 550;
+  line-height: 1.5;
+  text-align: left;
 }
 
 .admin-users-password-reset__fields {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 13px;
-  padding: 16px 18px 7px;
+  gap: 14px;
+  padding: 18px 22px 8px;
 }
 
 .admin-users-password-reset__fields .admin-users-password-field {
@@ -559,23 +560,23 @@
 }
 
 .admin-users-password-reset__fields .admin-users-password-field > span {
-  color: #355b83;
-  font-size: 11.3px;
-  font-weight: 850;
+  color: #24476f;
+  font-size: 11.5px;
+  font-weight: 800;
 }
 
 .admin-users-password-reset__fields input {
+  min-height: 46px;
   width: 100%;
-  min-height: 44px;
-  padding: 0 45px 0 13px;
-  border: 1px solid #d8e4f1;
+  padding: 0 46px 0 13px;
+  border: 1px solid #d7e3f0;
   border-radius: 10px;
   background: #f9fbfe;
-  color: #173f6a;
+  color: #173d68;
   font: inherit;
-  font-size: 12.5px;
+  font-size: 13px;
   font-weight: 700;
-  outline: 0;
+  outline: none;
 }
 
 .admin-users-password-reset__fields input:focus {
@@ -584,17 +585,9 @@
   box-shadow: 0 0 0 3px rgba(36,117,239,.09);
 }
 
-.admin-users-password-reset .admin-users-password-input button {
-  width: 32px;
-  min-width: 32px;
-  height: 32px;
-  min-height: 32px;
-  padding: 0;
-}
-
 .admin-users-password-reset__fields small {
   color: #8498b1;
-  font-size: 9.7px;
+  font-size: 9.8px;
   font-weight: 550;
 }
 
@@ -602,13 +595,13 @@
   display: flex;
   align-items: flex-start;
   gap: 8px;
-  margin: 4px 18px 12px;
+  margin: 4px 22px 14px;
   padding: 10px 12px;
   border: 1px solid #f0ccd1;
   border-radius: 11px;
   background: #fff4f5;
   color: #b64451;
-  font-size: 11.2px;
+  font-size: 11.5px;
   font-weight: 750;
   line-height: 1.4;
 }
@@ -617,8 +610,8 @@
   display: flex;
   justify-content: flex-end;
   gap: 9px;
-  margin-top: 5px;
-  padding: 14px 18px 18px;
+  margin-top: 4px;
+  padding: 15px 22px 20px;
   border-top: 1px solid #e9eef5;
 }
 
@@ -639,20 +632,16 @@
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  border-color: #7241cd;
-  background: #7241cd;
+  border-color: #2475ef;
+  background: #2475ef;
   color: #fff;
-  box-shadow: 0 7px 16px rgba(114,65,205,.20);
 }
 
 .admin-users-password-reset__actions button.is-password:hover {
-  border-color: #6336b7;
-  background: #6336b7;
+  background: #1d68d7;
 }
 
 @media (max-width: 620px) {
-  .admin-users-password-reset__header { padding-inline: 16px; }
-  .admin-users-password-reset__titleline h3 { font-size: 17px; }
   .admin-users-password-reset__user { grid-template-columns: 48px minmax(0,1fr); margin-inline: 16px; }
   .admin-users-password-reset__avatar { width: 48px; height: 48px; }
   .admin-users-password-reset__fields { padding-inline: 16px; }
@@ -661,3 +650,9 @@
   .admin-users-password-reset__identity > span { white-space: normal; overflow-wrap: anywhere; }
 }
 
+.admin-users-password-reset__info,
+.admin-users-password-reset__close,
+.admin-users-password-reset .admin-users-password-input button {
+  min-width: 0;
+  min-height: 0;
+}

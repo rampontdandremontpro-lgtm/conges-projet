@@ -7,7 +7,6 @@ import { formatRelativeReferencePeriod } from '@/utils/referencePeriods'
 import { buildRequestRightsSituation } from '@/utils/requestRightsSituation'
 import { evaluateNotice } from '@/utils/leaveNotice'
 import { calculateDeductedDaysPreview } from '@/utils/leaveDuration'
-import { buildReferencePeriodBadge, buildSelectionPeriodBadge } from '@/utils/requestPeriodBadges'
 
 const DEROGATION_LABELS = {
   EN_ATTENTE_RH: 'En attente',
@@ -86,13 +85,15 @@ export function RecapCard({
     selectedReferencePeriod,
   })
 
-  const halfDayLabel = buildSelectionPeriodBadge({
-    startDate,
-    endDate,
-    startPeriod,
-    endPeriod,
-  })
-  const referencePeriodBadge = buildReferencePeriodBadge(isAnticipatedLeave)
+  const startLabel = startPeriod === 'MATIN' ? 'matin' : 'après-midi'
+  const endLabel = endPeriod === 'MATIN' ? 'matin' : 'après-midi'
+  const halfDayLabel = startDate === endDate
+    ? startPeriod === 'MATIN' && endPeriod === 'APRES_MIDI'
+      ? 'journée entière'
+      : startLabel
+    : startPeriod === 'MATIN' && endPeriod === 'APRES_MIDI'
+      ? null
+      : `${startLabel} → ${endLabel}`
 
   const derogationNeeded =
     !preparationMode &&
@@ -247,7 +248,7 @@ export function RecapCard({
             <section className="nr-recap__block nr-recap__rights-block">
               <div className="nr-recap__rights-titleline">
                 <h4 className="nr-recap__subtitle">Situation de vos congés</h4>
-                <span className={`nr-anticipated-badge${isAnticipatedLeave ? '' : ' nr-anticipated-badge--current'}`}>{referencePeriodBadge}</span>
+                {isAnticipatedLeave && <span className="nr-anticipated-badge">Période N+1</span>}
               </div>
               {isAnticipatedLeave && (
                 <div className="nr-anticipated-panel" role="note">

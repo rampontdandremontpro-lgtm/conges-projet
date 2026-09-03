@@ -2,7 +2,6 @@ import { ProfileAvatar } from '@/components/ui/ProfileAvatar'
 import { useMemo } from 'react'
 
 import { Icon } from '@/components/ui/Icon'
-import { memberMatchesPresenceSituation } from '@/utils/globalPresenceSituation'
 import {
   buildMonthDays,
   formatMonthLabel,
@@ -35,6 +34,18 @@ function getMemberDay(day, memberId) {
   return day?.members?.find((member) => Number(member.id) === Number(memberId)) ?? null
 }
 
+function memberMatchesFilter(member, daysByDate, monthDays, filter) {
+  if (filter === 'all') return true
+
+  const statuses = monthDays.flatMap((date) => {
+    const memberDay = getMemberDay(daysByDate.get(date), member.id)
+    return memberDay ? [memberDay.morningStatus, memberDay.afternoonStatus] : []
+  })
+
+  if (filter === 'PRESENT') return statuses.includes('PRESENT')
+  return statuses.includes(filter)
+}
+
 function statusClass(status) {
   if (status === 'EN_VACANCES') return 'is-leave'
   if (status === 'ABSENT') return 'is-absence'
@@ -58,8 +69,8 @@ export function ManagerPresenceCalendar({ data, month, filter, onMonthChange, cu
   }, [data?.holidays])
   const todayKey = getCurrentDateKey()
   const members = useMemo(
-    () => (data?.members ?? []).filter((member) => memberMatchesPresenceSituation(member, data?.days ?? [], filter)),
-    [data?.days, data?.members, filter],
+    () => (data?.members ?? []).filter((member) => memberMatchesFilter(member, daysByDate, monthDays, filter)),
+    [data?.members, daysByDate, filter, monthDays],
   )
   const total = data?.totalMembers ?? data?.members?.length ?? 0
   const threshold = data?.service?.minimumPresence ?? null
