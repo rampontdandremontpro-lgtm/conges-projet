@@ -741,26 +741,38 @@ export function DetailDrawer({
           {declaration.status === 'JUSTIFICATIF_EN_ATTENTE' && (
             <div className="rh-absence-detail-notice rh-absence-detail-notice--orange">
               <Icon name="clock" size={17} />
-              <span>Le collaborateur doit encore fournir le justificatif demandé.</span>
+              <span>Un justificatif est attendu pour cette absence.</span>
             </div>
           )}
           {declaration.status === 'JUSTIFICATIF_REJETE' && (
             <div className="rh-absence-detail-notice rh-absence-detail-notice--orange">
               <Icon name="clock" size={17} />
-              <span>Le justificatif a été refusé. Un nouveau justificatif est attendu.</span>
+              <span>Le justificatif précédent a été refusé. Un nouveau document est nécessaire.</span>
             </div>
           )}
 
           {(declaration.status === 'JUSTIFICATIF_EN_ATTENTE' || declaration.status === 'JUSTIFICATIF_REJETE') && (
-            <div className="rh-absence-detail-notice rh-absence-detail-notice--orange">
-              <Icon name="file" size={17} />
-              <span>Ajouter un justificatif :</span>
-              <input type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" onChange={(event) => setReplacementFile(event.target.files?.[0] ?? null)} />
+            <section className="rh-absence-document-upload-card">
+              <div className="rh-absence-document-upload-title">
+                <Icon name="file" size={17} />
+                <strong>Ajouter un justificatif</strong>
+              </div>
+              <p>Aucun document transmis pour le moment.</p>
+              <label className="rh-absence-file-picker">
+                Choisir un fichier
+                <input type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" onChange={(event) => setReplacementFile(event.target.files?.[0] ?? null)} />
+              </label>
+              {replacementFile && <span className="rh-absence-file-name">{replacementFile.name}</span>}
               <button type="button" className="rh-absence-button rh-absence-button--primary" disabled={!replacementFile || documentBusy} onClick={handleAddReplacementDocument}>Envoyer</button>
-            </div>
+            </section>
           )}
 
           <div className="rh-absence-detail-actions">
+            {['JUSTIFICATIF_EN_ATTENTE', 'A_VERIFIER_PAR_RH', 'JUSTIFICATIF_REJETE', 'ENREGISTREE'].includes(declaration.status) && (
+              <button type="button" className="rh-absence-button rh-absence-button--secondary" onClick={() => onFeedback?.('info', 'Modification de l’absence à ouvrir.')}>
+                Modifier l’absence
+              </button>
+            )}
             {declaration.status === 'A_VERIFIER_PAR_RH' && (
               <button
                 type="button"
