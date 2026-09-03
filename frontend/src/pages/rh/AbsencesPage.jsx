@@ -39,7 +39,7 @@ const STATUS_META = {
   JUSTIFICATIF_EN_ATTENTE: { label: 'Justificatif attendu', tone: 'waiting' },
   A_VERIFIER_PAR_RH: { label: 'À vérifier', tone: 'pending' },
   // Compatibilité avec les anciennes données : un justificatif rejeté signifie désormais qu’un nouveau justificatif est attendu.
-  JUSTIFICATIF_REJETE: { label: 'Justificatif attendu', tone: 'waiting' },
+  JUSTIFICATIF_REJETE: { label: 'Nouveau justificatif attendu', tone: 'waiting' },
   JUSTIFICATIF_ATTENDU: { label: 'Nouveau justificatif attendu', tone: 'waiting' },
   ENREGISTREE: { label: 'Autorisée', tone: 'approved' },
   ANNULEE: { label: 'Annulée', tone: 'cancelled' },
@@ -747,7 +747,7 @@ export function DetailDrawer({
                 <Icon name="check" size={16} /> Autoriser l’absence
               </button>
             )}
-            {declaration.status === 'ENREGISTREE' && (
+            {['ENREGISTREE', 'JUSTIFICATIF_ATTENDU', 'JUSTIFICATIF_REJETE'].includes(declaration.status) && (
               <button type="button" className="rh-absence-button rh-absence-button--danger" disabled={busy} onClick={() => onCancel(declaration)}>
                 Annuler l’absence
               </button>

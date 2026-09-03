@@ -178,7 +178,7 @@ const VALUE_STATUS_LABELS = {
   ANNULEE_APRES_VALIDATION: 'Annulée après validation',
   ENREGISTREE: 'Enregistrée',
   JUSTIFICATIF_EN_ATTENTE: 'Justificatif attendu',
-  JUSTIFICATIF_REJETE: 'Justificatif attendu',
+  JUSTIFICATIF_REJETE: 'Nouveau justificatif attendu',
   JUSTIFICATIF_ATTENDU: 'Nouveau justificatif attendu',
   A_VERIFIER_PAR_RH: 'À vérifier par la RH',
   DECLAREE: 'Déclarée',
