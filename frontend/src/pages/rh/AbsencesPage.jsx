@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 
 import { DocumentPreviewModal } from '@/components/collab/documents/DocumentPreviewModal'
+import { RhLeaveAbsenceDeclarationDrawer } from '@/components/rh/RhLeaveAbsenceDeclarationDrawer'
 import { Icon } from '@/components/ui/Icon'
 import { PaginationBar } from '@/components/ui/PaginationBar'
 import { PageContainer } from '@/components/ui/PageContainer'
@@ -22,9 +23,8 @@ import {
   rejectRhAbsenceDocument,
   submitRhAbsence,
   uploadRhAbsenceDocument,
-  updateRhAbsence,
 } from '@/services/rh/rhAbsences'
-import { triggerBlobDownload } from '@/services/documents'
+import { replaceMyDocument, triggerBlobDownload } from '@/services/documents'
 import { formatDateNumericFR, formatDays, todayISO } from '@/utils/format'
 
 import '@/styles/collab/documents/index.css'
@@ -406,6 +406,7 @@ export function DetailDrawer({
   onRegister,
   onCancel,
   onDeleteDraft,
+  onEdit,
   onDeclarationChanged,
   onFeedback,
 }) {
@@ -413,10 +414,8 @@ export function DetailDrawer({
   const isOwnRhDraft = declaration.status === 'BROUILLON' && declaration.createdBy?.role === 'RH'
   const [documentsState, setDocumentsState] = useState({ loading: true, error: '', items: [] })
   const [documentBusy, setDocumentBusy] = useState(false)
-  const [editing, setEditing] = useState(false)
-  const [editForm, setEditForm] = useState({ startDate: declaration.startDate ?? '', endDate: declaration.endDate ?? '' })
-  const [editBusy, setEditBusy] = useState(false)
   const [replacementFile, setReplacementFile] = useState(null)
+  const [replacingDocumentId, setReplacingDocumentId] = useState(null)
   const [rejectingDocumentId, setRejectingDocumentId] = useState(null)
   const [rejectionReason, setRejectionReason] = useState('')
   const [preview, setPreview] = useState({
@@ -523,21 +522,20 @@ export function DetailDrawer({
     )
   }
 
-  const handleUpdateAbsence = async () => {
-    if (editBusy) return
-    setEditBusy(true)
+  const handleReplaceDocument = async (document) => {
+    if (!replacementFile || documentBusy) return
+    setDocumentBusy(true)
     try {
-      const updated = await updateRhAbsence(declaration.id, {
-        startDate: editForm.startDate,
-        endDate: editForm.endDate,
-      })
-      onDeclarationChanged?.(updated)
-      setEditing(false)
-      onFeedback?.('success', 'Absence modifiée.')
+      await replaceMyDocument(document.id, replacementFile)
+      setReplacementFile(null)
+      setReplacingDocumentId(null)
+      await loadDocuments()
+      await refreshDeclaration()
+      onFeedback?.('success', 'Justificatif remplacé.')
     } catch (error) {
       onFeedback?.('error', errorMessage(error))
     } finally {
-      setEditBusy(false)
+      setDocumentBusy(false)
     }
   }
 
@@ -658,16 +656,43 @@ export function DetailDrawer({
                 </div>
               ) : activeDocuments.length === 0 ? (
                 <div className="rh-absence-documents__state">
-                  <Icon name="clock" size={16} />
                   <span>Aucun justificatif n’a encore été fourni.</span>
                   {(declaration.status === 'JUSTIFICATIF_EN_ATTENTE' || declaration.status === 'JUSTIFICATIF_REJETE') && (
-                    <div className="rh-absence-inline-upload">
-                      <label className="rh-absence-file-picker">
-                        Choisir un fichier
-                        <input type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" onChange={(event) => setReplacementFile(event.target.files?.[0] ?? null)} />
-                      </label>
-                      {replacementFile && <span className="rh-absence-file-name">{replacementFile.name}</span>}
-                      <button type="button" className="rh-absence-button rh-absence-button--primary" disabled={!replacementFile || documentBusy} onClick={handleAddReplacementDocument}>Envoyer</button>
+                    <div className="rh-absence-add-document">
+                      {!replacementFile ? (
+                        <label className="rh-absence-button rh-absence-button--add">
+                          <Icon name="plus" size={15} /> Ajouter un justificatif
+                          <input
+                            type="file"
+                            className="rh-absence-file-input"
+                            accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+                            onChange={(event) => {
+                              const file = event.target.files?.[0] ?? null
+                              setReplacementFile(file)
+                              if (!file) event.target.value = ''
+                            }}
+                          />
+                        </label>
+                      ) : (
+                        <div className="rh-absence-add-document__selected">
+                          <span className="rh-absence-add-document__name"><Icon name="file" size={15} /> {replacementFile.name}</span>
+                          <button
+                            type="button"
+                            className="rh-absence-button rh-absence-button--secondary"
+                            onClick={() => { setReplacementFile(null) }}
+                          >
+                            Annuler
+                          </button>
+                          <button
+                            type="button"
+                            className="rh-absence-button rh-absence-button--primary"
+                            disabled={documentBusy}
+                            onClick={handleAddReplacementDocument}
+                          >
+                            Envoyer
+                          </button>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -703,6 +728,40 @@ export function DetailDrawer({
                           <button type="button" className="rh-absence-button rh-absence-button--secondary" onClick={() => openPreview(document)}>
                             <Icon name="eye" size={15} /> Voir le justificatif
                           </button>
+
+                          {document.status === 'REJETE' && (replacingDocumentId === document.id ? (
+                            <div className="rh-absence-document-replace">
+                              {replacementFile ? (
+                                <>
+                                  <span className="rh-absence-add-document__name"><Icon name="file" size={15} /> {replacementFile.name}</span>
+                                  <button type="button" className="rh-absence-button rh-absence-button--secondary" onClick={() => { setReplacementFile(null); setReplacingDocumentId(null) }}>Annuler</button>
+                                  <button type="button" className="rh-absence-button rh-absence-button--primary" disabled={documentBusy} onClick={() => handleReplaceDocument(document)}>Envoyer</button>
+                                </>
+                              ) : (
+                                <label className="rh-absence-button rh-absence-button--secondary">
+                                  <Icon name="file" size={15} /> Choisir un nouveau justificatif
+                                  <input
+                                    type="file"
+                                    className="rh-absence-file-input"
+                                    accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+                                    onChange={(event) => {
+                                      const file = event.target.files?.[0] ?? null
+                                      setReplacementFile(file)
+                                      if (!file) event.target.value = ''
+                                    }}
+                                  />
+                                </label>
+                              )}
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              className="rh-absence-button rh-absence-button--secondary"
+                              onClick={() => { setReplacingDocumentId(document.id); setReplacementFile(null) }}
+                            >
+                              Remplacer le justificatif
+                            </button>
+                          ))}
 
                           {declaration.status === 'A_VERIFIER_PAR_RH' && document.status === 'EN_ATTENTE' && (
                             <>
@@ -787,7 +846,7 @@ export function DetailDrawer({
 
           <div className="rh-absence-detail-actions">
             {['JUSTIFICATIF_EN_ATTENTE', 'A_VERIFIER_PAR_RH', 'JUSTIFICATIF_REJETE', 'ENREGISTREE'].includes(declaration.status) && (
-              <button type="button" className="rh-absence-button rh-absence-button--secondary" onClick={() => setEditing(true)}>
+              <button type="button" className="rh-absence-button rh-absence-button--secondary" onClick={() => onEdit?.(declaration)}>
                 Modifier l’absence
               </button>
             )}
@@ -817,26 +876,6 @@ export function DetailDrawer({
         </aside>
       </div>
 
-      {editing && (
-        <div className="rh-absence-edit-overlay">
-          <div className="rh-absence-edit-modal">
-            <h3>Modifier l’absence</h3>
-            <label>
-              Début
-              <input type="date" value={editForm.startDate?.slice(0,10) || ''} onChange={(e)=>setEditForm({...editForm,startDate:e.target.value})} />
-            </label>
-            <label>
-              Fin
-              <input type="date" value={editForm.endDate?.slice(0,10) || ''} onChange={(e)=>setEditForm({...editForm,endDate:e.target.value})} />
-            </label>
-            <div>
-              <button type="button" className="rh-absence-button rh-absence-button--secondary" onClick={()=>setEditing(false)}>Annuler</button>
-              <button type="button" className="rh-absence-button rh-absence-button--primary" disabled={editBusy} onClick={handleUpdateAbsence}>{editBusy ? 'Enregistrement…' : 'Enregistrer'}</button>
-            </div>
-          </div>
-        </div>
-      )}
-
       <DocumentPreviewModal
         document={preview.document}
         blobUrl={preview.blobUrl}
@@ -858,6 +897,7 @@ export function RhAbsencesPage() {
   const [page, setPage] = useState(1)
   const [createOpen, setCreateOpen] = useState(false)
   const [selected, setSelected] = useState(null)
+  const [editingAbsence, setEditingAbsence] = useState(null)
   const [busy, setBusy] = useState(false)
   const [feedback, setFeedback] = useState(null)
 
@@ -1089,8 +1129,19 @@ export function RhAbsencesPage() {
           onRegister={handleRegister}
           onCancel={handleCancel}
           onDeleteDraft={handleDeleteDraft}
+          onEdit={(declaration) => setEditingAbsence(declaration)}
           onDeclarationChanged={handleDeclarationChanged}
           onFeedback={showFeedback}
+        />
+      )}
+      {editingAbsence && (
+        <RhLeaveAbsenceDeclarationDrawer
+          employees={state.employees}
+          leaveTypes={[]}
+          absenceTypes={state.types}
+          editingDeclaration={editingAbsence}
+          onClose={() => setEditingAbsence(null)}
+          onSaved={async (message) => { setEditingAbsence(null); setSelected(null); showFeedback('success', message); await load() }}
         />
       )}
     </PageContainer>

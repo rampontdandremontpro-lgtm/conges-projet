@@ -6,6 +6,7 @@ import {
   createRhAbsenceDraft,
   registerRhAbsence,
   submitRhAbsence,
+  updateRhAbsence,
   uploadRhAbsenceDocument,
 } from '@/services/rh/rhAbsences'
 import { createRhDirectLeave } from '@/services/rh/rhLeavesAndAbsences'
@@ -64,27 +65,57 @@ function selectedTypeToken(category, id) {
   return `${category}:${id}`
 }
 
+function buildInitialForm(employees, editingDeclaration) {
+  if (!editingDeclaration) {
+    return {
+      employeeId: employees[0]?.id ? String(employees[0].id) : '',
+      typeToken: '',
+      startDate: null,
+      endDate: null,
+      startPeriod: 'MATIN',
+      endPeriod: 'APRES_MIDI',
+      mode: 'days',
+      halfDayPeriod: 'MATIN',
+      durationHours: '',
+      comment: '',
+      file: null,
+    }
+  }
+
+  const declaration = editingDeclaration
+  const hours = declaration.durationHours
+  const mode = hours !== null && hours !== undefined
+    ? 'hours'
+    : declaration.startPeriod && declaration.startPeriod === declaration.endPeriod
+      ? 'half-day'
+      : 'days'
+
+  return {
+    employeeId: declaration.employeeId != null ? String(declaration.employeeId) : '',
+    typeToken: selectedTypeToken('ABSENCE', declaration.leaveTypeId ?? declaration.leaveType?.id ?? ''),
+    startDate: declaration.startDate ?? null,
+    endDate: declaration.endDate ?? null,
+    startPeriod: declaration.startPeriod ?? 'MATIN',
+    endPeriod: declaration.endPeriod ?? 'APRES_MIDI',
+    mode,
+    halfDayPeriod: declaration.startPeriod ?? 'MATIN',
+    durationHours: hours !== null && hours !== undefined ? String(hours) : '',
+    comment: declaration.comment ?? '',
+    file: null,
+  }
+}
+
 export function RhLeaveAbsenceDeclarationDrawer({
   employees,
   leaveTypes,
   absenceTypes,
+  editingDeclaration,
   onClose,
   onSaved,
 }) {
-  const [form, setForm] = useState({
-    employeeId: employees[0]?.id ? String(employees[0].id) : '',
-    typeToken: '',
-    startDate: null,
-    endDate: null,
-    startPeriod: 'MATIN',
-    endPeriod: 'APRES_MIDI',
-    mode: 'days',
-    halfDayPeriod: 'MATIN',
-    durationHours: '',
-    comment: '',
-    file: null,
-  })
-  const [month, setMonth] = useState(currentMonth)
+  const isEditing = Boolean(editingDeclaration)
+  const [form, setForm] = useState(() => buildInitialForm(employees, editingDeclaration))
+  const [month, setMonth] = useState(() => (editingDeclaration?.startDate ? monthFromIso(editingDeclaration.startDate) : currentMonth()))
   const [holidays, setHolidays] = useState([])
   const [loadedHolidayYears, setLoadedHolidayYears] = useState(() => new Set())
   const [saving, setSaving] = useState(false)
@@ -211,7 +242,7 @@ export function RhLeaveAbsenceDeclarationDrawer({
       const hours = Number(form.durationHours)
       if (!Number.isFinite(hours) || hours <= 0) return 'Indiquez une durée en heures.'
     }
-    if (isAbsence && selectedType.documentRequired && !selectedType.documentCanBeAddedLater && !form.file) {
+    if (!isEditing && isAbsence && selectedType.documentRequired && !selectedType.documentCanBeAddedLater && !form.file) {
       return 'Un justificatif est obligatoire pour ce type d’absence.'
     }
     return null
@@ -229,6 +260,27 @@ export function RhLeaveAbsenceDeclarationDrawer({
     setSaving(true)
     setError('')
     try {
+      if (isEditing) {
+        const payload = {
+          leaveTypeId: Number(selectedType.id),
+          startDate: form.startDate,
+          endDate: form.mode === 'days' ? form.endDate : form.startDate,
+          comment: form.comment.trim() || undefined,
+        }
+        if (form.mode === 'hours') {
+          payload.durationHours = Number(form.durationHours)
+        } else if (form.mode === 'half-day') {
+          payload.startPeriod = form.halfDayPeriod
+          payload.endPeriod = form.halfDayPeriod
+        } else {
+          payload.startPeriod = 'MATIN'
+          payload.endPeriod = 'APRES_MIDI'
+        }
+        await updateRhAbsence(editingDeclaration.id, payload)
+        onSaved(`L’absence de ${fullName(selectedEmployee)} a été modifiée.`)
+        return
+      }
+
       if (isLeave) {
         await createRhDirectLeave({
           employeeId: Number(form.employeeId),
@@ -289,7 +341,7 @@ export function RhLeaveAbsenceDeclarationDrawer({
         <header className="rh-declaration-head">
           <div>
             <span>GESTION RH</span>
-            <h2 id="rh-declaration-title">Déclarer congés/absences</h2>
+            <h2 id="rh-declaration-title">{isEditing ? 'Modifier l’absence' : 'Déclarer congés/absences'}</h2>
           </div>
           <button type="button" onClick={onClose} aria-label="Fermer">×</button>
         </header>
@@ -300,14 +352,14 @@ export function RhLeaveAbsenceDeclarationDrawer({
           <div className="rh-declaration-top-grid">
             <label>
               <span>Collaborateur</span>
-              <select value={form.employeeId} onChange={(event) => setForm((current) => ({ ...current, employeeId: event.target.value }))}>
+              <select value={form.employeeId} disabled={isEditing} onChange={(event) => setForm((current) => ({ ...current, employeeId: event.target.value }))}>
                 <option value="">Sélectionner un collaborateur</option>
                 {employees.filter((employee) => !isLeave || employee.role === 'COLLABORATEUR').map((employee) => <option key={employee.id} value={employee.id}>{fullName(employee)} — {employee.service?.name ?? 'Sans service'}</option>)}
               </select>
             </label>
             <label>
               <span>Type</span>
-              <select value={form.typeToken} onChange={(event) => changeType(event.target.value)}>
+              <select value={form.typeToken} disabled={isEditing} onChange={(event) => changeType(event.target.value)}>
                 <option value="">Sélectionner un type</option>
                 <optgroup label="Congés">
                   {leaveTypes.filter((type) => !isReservedDirectorLeaveType(type)).map((type) => <option key={`leave-${type.id}`} value={selectedTypeToken('CONGE', type.id)}>{type.name}</option>)}
@@ -399,7 +451,7 @@ export function RhLeaveAbsenceDeclarationDrawer({
                 <textarea rows="3" maxLength={1000} value={form.comment} placeholder="Informations complémentaires…" onChange={(event) => setForm((current) => ({ ...current, comment: event.target.value }))} />
               </label>
 
-              {selectedType.documentRequired && (
+              {selectedType.documentRequired && !isEditing && (
                 <label className="rh-declaration-upload">
                   <input type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" onChange={handleFile} />
                   <span><Icon name="file" size={18} /></span>
@@ -414,7 +466,7 @@ export function RhLeaveAbsenceDeclarationDrawer({
               <button type="button" onClick={onClose}>Annuler</button>
               <button type="submit" className="is-primary" disabled={saving || !form.startDate}>
                 <Icon name="check" size={17} />
-                {saving ? 'Validation…' : isLeave ? 'Valider le congé' : 'Valider l’absence'}
+                {saving ? 'Validation…' : isEditing ? 'Enregistrer les modifications' : isLeave ? 'Valider le congé' : 'Valider l’absence'}
               </button>
             </footer>
           )}

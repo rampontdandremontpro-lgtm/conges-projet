@@ -45,6 +45,7 @@ export function RhLeavesAndAbsencesPage() {
   const [page, setPage] = useState(1)
   const [declarationOpen, setDeclarationOpen] = useState(false)
   const [selectedAbsence, setSelectedAbsence] = useState(null)
+  const [editingAbsence, setEditingAbsence] = useState(null)
   const [busy, setBusy] = useState(false)
   const [feedback, setFeedback] = useState(null)
 
@@ -263,7 +264,17 @@ export function RhLeavesAndAbsencesPage() {
           onSaved={handleDeclarationSaved}
         />
       )}
-      {selectedAbsence && <DetailDrawer declaration={selectedAbsence} busy={busy} onClose={() => setSelectedAbsence(null)} onRegister={handleRegister} onCancel={handleCancel} onDeleteDraft={handleDeleteDraft} onDeclarationChanged={async (declaration) => { setSelectedAbsence(declaration); await load({ silent: true }) }} onFeedback={showFeedback} />}
+      {selectedAbsence && <DetailDrawer declaration={selectedAbsence} busy={busy} onClose={() => setSelectedAbsence(null)} onRegister={handleRegister} onCancel={handleCancel} onDeleteDraft={handleDeleteDraft} onEdit={(decl) => setEditingAbsence(decl)} onDeclarationChanged={async (declaration) => { setSelectedAbsence(declaration); await load({ silent: true }) }} onFeedback={showFeedback} />}
+      {editingAbsence && (
+        <RhLeaveAbsenceDeclarationDrawer
+          employees={state.employees}
+          leaveTypes={state.leaveTypes}
+          absenceTypes={state.absenceTypes}
+          editingDeclaration={editingAbsence}
+          onClose={() => setEditingAbsence(null)}
+          onSaved={async (message) => { setEditingAbsence(null); setSelectedAbsence(null); showFeedback('success', message); await load() }}
+        />
+      )}
     </PageContainer>
   )
 }

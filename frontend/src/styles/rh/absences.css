@@ -652,6 +652,62 @@
   margin-top: 9px;
 }
 
+.rh-absence-button--add {
+  border: 1px solid #c6d9f2;
+  background: #eef4ff;
+  color: #1769dd;
+  cursor: pointer;
+}
+
+.rh-absence-button--add:hover {
+  background: #e2edff;
+}
+
+.rh-absence-file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.rh-absence-add-document,
+.rh-absence-document-replace {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  justify-content: center;
+}
+
+.rh-absence-add-document__selected {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.rh-absence-add-document__name {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 260px;
+  overflow: hidden;
+  color: #47668c;
+  font-size: 11.8px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rh-absence-document-replace {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px dashed #c6d9f2;
+  border-radius: 11px;
+  background: #f8fbff;
+}
+
 @media (min-width: 1280px) {
   .rh-absences-table {
     min-width: 0;
