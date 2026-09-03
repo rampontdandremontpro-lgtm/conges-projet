@@ -91,3 +91,9 @@ export async function rejectRhAbsenceDocument(documentId, reason) {
   })
   return data
 }
+
+
+export async function updateRhAbsence(id, payload) {
+  const { data } = await apiClient.patch(`/absence-declarations/${id}`, payload)
+  return data
+}
