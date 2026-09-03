@@ -16,7 +16,6 @@ import {
 } from '@/services/absenceDeclarations'
 import { calculateDeductedDaysPreview } from '@/utils/leaveDuration'
 import { changeLeaveBoundaryPeriod, selectLeaveDate } from '@/utils/leaveDateSelection'
-import { selectDirectorHoursDate } from '@/utils/directorHoursSelection'
 import { isReservedDirectorLeaveType } from '@/utils/filterOptions'
 import { formatDateFR, formatDays, todayISO } from '@/utils/format'
 import { currentMonth, errorMessage, nextMonthOf, prevMonthOf } from '@/utils/newRequest'
@@ -241,7 +240,13 @@ export function DirectorAvailabilityPage() {
 
   const handlePick = (iso) => {
     if (hoursOnly) {
-      setSelection((current) => selectDirectorHoursDate(current, iso))
+      setSelection((current) => ({
+        ...current,
+        startDate: iso,
+        endDate: iso,
+        startPeriod: 'MATIN',
+        endPeriod: 'APRES_MIDI',
+      }))
       return
     }
 

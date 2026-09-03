@@ -189,18 +189,9 @@ export class DocumentsService {
     ].includes(declaration.status);
 
     if (becomesReadyForReview) {
-      if (
-        authenticatedUser.role === UserRole.RH
-      ) {
-        await this.absenceDeclarationsService.markDocumentProvidedByRh(
-          absenceDeclarationId,
-          authenticatedUser.id,
-        );
-      } else {
-        await this.absenceDeclarationsService.markDocumentReadyForReview(
-          absenceDeclarationId,
-        );
-      }
+      await this.absenceDeclarationsService.markDocumentReadyForReview(
+        absenceDeclarationId,
+      );
     }
 
     await this.notificationsService.createForActiveRoles(

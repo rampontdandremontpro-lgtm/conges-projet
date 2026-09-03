@@ -313,7 +313,6 @@ function PasswordResetModal({ user, onCancel, onSuccess }) {
   const [visible, setVisible] = useState(false)
   const [busy, setBusy] = useState(false)
   const [feedback, setFeedback] = useState('')
-  const [infoOpen, setInfoOpen] = useState(false)
 
   const submit = async (event) => {
     event.preventDefault()
@@ -341,34 +340,20 @@ function PasswordResetModal({ user, onCancel, onSuccess }) {
     <div className="admin-users-confirm-overlay" role="presentation" onMouseDown={onCancel}>
       <form className="admin-users-confirm admin-users-password-reset" role="dialog" aria-modal="true" aria-labelledby="admin-users-password-reset-title" onSubmit={submit} onMouseDown={(event) => event.stopPropagation()}>
         <div className="admin-users-password-reset__header">
-          <div className="admin-users-password-reset__heading">
-            <span>SÉCURITÉ DU COMPTE</span>
-            <div className="admin-users-password-reset__titleline">
-              <h3 id="admin-users-password-reset-title">Réinitialiser le mot de passe</h3>
-              <button
-                type="button"
-                className="admin-users-password-reset__info"
-                aria-label="Informations sur la réinitialisation du mot de passe"
-                aria-expanded={infoOpen}
-                onClick={() => setInfoOpen((current) => !current)}
-              >
-                <Icon name="info" size={15} />
-              </button>
-            </div>
-          </div>
-          <button type="button" className="admin-users-password-reset__close" onClick={onCancel} aria-label="Fermer">
-            <Icon name="plus" size={18} />
-          </button>
+          <span className="admin-users-confirm__icon is-password"><Icon name="shield" size={22} /></span>
+          <div><span>SÉCURITÉ DU COMPTE</span><h3 id="admin-users-password-reset-title">Réinitialiser le mot de passe</h3></div>
+          <button type="button" className="admin-users-password-reset__close" onClick={onCancel} aria-label="Fermer">×</button>
         </div>
 
-        <div className={`admin-users-password-reset__user${infoOpen ? ' is-expanded' : ''}`}>
-          <ProfileAvatar user={user} className="admin-users-password-reset__avatar" />
-          <div className="admin-users-password-reset__identity">
-            <strong>{fullName(user)}</strong>
-            <span>{ROLE_LABELS[user.role] ?? user.role} · {user.email}</span>
-            {infoOpen && (
-              <p>Le mot de passe créé ici est temporaire. L’utilisateur devra obligatoirement le remplacer lors de sa prochaine connexion.</p>
-            )}
+        <div className="admin-users-password-reset__context">
+          <div className="admin-users-password-reset__user">
+            <ProfileAvatar user={user} className="admin-users-password-reset__avatar" />
+            <div><strong>{fullName(user)}</strong><span>{ROLE_LABELS[user.role] ?? user.role} · {user.email}</span></div>
+          </div>
+
+          <div className="admin-users-password-reset__notice">
+            <Icon name="info" size={17} />
+            <p>Le mot de passe créé ici est temporaire. L’utilisateur devra le remplacer à sa prochaine connexion.</p>
           </div>
         </div>
 

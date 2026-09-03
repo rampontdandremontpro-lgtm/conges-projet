@@ -386,273 +386,35 @@
 .admin-users-actions button.is-password { color: #6b5bbd; }
 .admin-users-actions button.is-password:hover { background: #f2efff; color: #5642ae; }
 .admin-users-confirm__icon.is-password { background: #f2efff; color: #6553b5; }
+.admin-users-password-reset { text-align: left; }
+.admin-users-password-reset h3,
+.admin-users-password-reset > p { text-align: center; }
+.admin-users-password-reset__actions { display: flex; justify-content: center; gap: 9px; margin-top: 18px; }
+.admin-users-password-reset__actions button.is-password { border-color: #6553b5; background: #6553b5; color: #fff; }
 
-/* Réinitialisation du mot de passe : présentation alignée sur les drawers Utilisateurs. */
-.admin-users-password-reset {
-  width: min(620px, calc(100vw - 32px));
-  max-width: 620px;
-  max-height: calc(100vh - var(--header-height) - 32px);
-  padding: 0;
-  overflow-x: hidden;
-  overflow-y: auto;
-  border-radius: 20px;
-  text-align: left;
-}
-
-.admin-users-password-reset__header {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 38px;
-  align-items: center;
-  gap: 14px;
-  padding: 20px 22px 18px;
-  border-bottom: 1px solid #e3ebf4;
-  background: linear-gradient(135deg, #ffffff 0%, #f8fbff 100%);
-}
-
-.admin-users-password-reset__heading > span {
-  display: block;
-  color: #879ab2;
-  font-size: 9px;
-  font-weight: 900;
-  letter-spacing: .08em;
-}
-
-.admin-users-password-reset__titleline {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 4px;
-}
-
-.admin-users-password-reset__titleline h3 {
-  margin: 0;
-  color: #10365f;
-  font-size: 19px;
-  font-weight: 900;
-  line-height: 1.25;
-  text-align: left;
-}
-
-.admin-users-password-reset__info {
-  display: grid;
-  width: 24px;
-  height: 24px;
-  flex: 0 0 24px;
-  place-items: center;
-  padding: 0;
-  border: 1px solid #cfdbe9 !important;
-  border-radius: 50% !important;
-  background: #f4f7fb !important;
-  color: #5c7694 !important;
-  cursor: pointer;
-}
-
-.admin-users-password-reset__info:hover,
-.admin-users-password-reset__info[aria-expanded='true'] {
-  border-color: #a8c4e5 !important;
-  background: #edf5ff !important;
-  color: #1f68c5 !important;
-}
-
-.admin-users-password-reset__close {
-  display: grid;
-  width: 36px;
-  height: 36px;
-  place-items: center;
-  padding: 0;
-  border: 1px solid #d9e4f1 !important;
-  border-radius: 10px !important;
-  background: #fff !important;
-  color: #7590ad !important;
-  cursor: pointer;
-}
-
-.admin-users-password-reset__close svg {
-  transform: rotate(45deg);
-}
-
-.admin-users-password-reset__close:hover {
-  border-color: #bdd3ec !important;
-  background: #f6faff !important;
-  color: #1e65bf !important;
-}
-
-.admin-users-password-reset__user {
-  display: grid;
-  grid-template-columns: 54px minmax(0, 1fr);
-  align-items: center;
-  gap: 14px;
-  margin: 18px 22px 0;
-  padding: 14px 15px;
-  border: 1px solid #dce7f2;
-  border-radius: 14px;
-  background: #f8fbfe;
-  transition: background .16s ease, border-color .16s ease;
-}
-
-.admin-users-password-reset__user.is-expanded {
-  align-items: start;
-  border-color: #cdddec;
-  background: #f6faff;
-}
-
-.admin-users-password-reset__avatar {
-  display: grid;
-  width: 54px;
-  height: 54px;
-  flex: 0 0 54px;
-  place-items: center;
-  overflow: hidden;
-  border: 1px solid #cddded;
-  border-radius: 14px;
-  background: #eaf3fe;
-  color: #1d5f9e;
-  font-size: 13px;
-  font-weight: 900;
-  letter-spacing: .02em;
-}
-
-.admin-users-password-reset__identity {
-  min-width: 0;
-}
-
-.admin-users-password-reset__identity strong {
-  display: block;
-  overflow: hidden;
-  color: #123961;
-  font-size: 14px;
-  font-weight: 900;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.admin-users-password-reset__identity > span {
-  display: block;
-  overflow: hidden;
-  margin-top: 3px;
-  color: #7c92ad;
-  font-size: 10.8px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.admin-users-password-reset__identity p {
-  margin: 10px 0 0;
-  padding-top: 10px;
-  border-top: 1px solid #e1e9f2;
-  color: #627c98;
-  font-size: 11px;
-  font-weight: 550;
-  line-height: 1.5;
-  text-align: left;
-}
-
-.admin-users-password-reset__fields {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 14px;
-  padding: 18px 22px 8px;
-}
-
-.admin-users-password-reset__fields .admin-users-password-field {
-  gap: 7px;
-  margin: 0;
-}
-
-.admin-users-password-reset__fields .admin-users-password-field > span {
-  color: #24476f;
-  font-size: 11.5px;
-  font-weight: 800;
-}
-
-.admin-users-password-reset__fields input {
-  min-height: 46px;
-  width: 100%;
-  padding: 0 46px 0 13px;
-  border: 1px solid #d7e3f0;
-  border-radius: 10px;
-  background: #f9fbfe;
-  color: #173d68;
-  font: inherit;
-  font-size: 13px;
-  font-weight: 700;
-  outline: none;
-}
-
-.admin-users-password-reset__fields input:focus {
-  border-color: #80b0f5;
-  background: #fff;
-  box-shadow: 0 0 0 3px rgba(36,117,239,.09);
-}
-
-.admin-users-password-reset__fields small {
-  color: #8498b1;
-  font-size: 9.8px;
-  font-weight: 550;
-}
-
-.admin-users-password-reset__feedback {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  margin: 4px 22px 14px;
-  padding: 10px 12px;
-  border: 1px solid #f0ccd1;
-  border-radius: 11px;
-  background: #fff4f5;
-  color: #b64451;
-  font-size: 11.5px;
-  font-weight: 750;
-  line-height: 1.4;
-}
-
-.admin-users-password-reset__actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 9px;
-  margin-top: 4px;
-  padding: 15px 22px 20px;
-  border-top: 1px solid #e9eef5;
-}
-
-.admin-users-password-reset__actions button {
-  min-height: 41px;
-  padding: 0 15px;
-  border: 1px solid #d8e2ee;
-  border-radius: 10px;
-  background: #fff;
-  color: #55718f;
-  font: inherit;
-  font-size: 11.5px;
-  font-weight: 850;
-  cursor: pointer;
-}
-
-.admin-users-password-reset__actions button.is-password {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  border-color: #2475ef;
-  background: #2475ef;
-  color: #fff;
-}
-
-.admin-users-password-reset__actions button.is-password:hover {
-  background: #1d68d7;
-}
-
-@media (max-width: 620px) {
-  .admin-users-password-reset__user { grid-template-columns: 48px minmax(0,1fr); margin-inline: 16px; }
-  .admin-users-password-reset__avatar { width: 48px; height: 48px; }
-  .admin-users-password-reset__fields { padding-inline: 16px; }
-  .admin-users-password-reset__actions { display: grid; grid-template-columns: 1fr; padding-inline: 16px; }
-  .admin-users-password-reset__actions button { width: 100%; }
-  .admin-users-password-reset__identity > span { white-space: normal; overflow-wrap: anywhere; }
-}
-
-.admin-users-password-reset__info,
-.admin-users-password-reset__close,
-.admin-users-password-reset .admin-users-password-input button {
-  min-width: 0;
-  min-height: 0;
-}
+/* Réinitialisation du mot de passe : modal dédiée, plus lisible et cohérente avec Utilisateurs. */
+.admin-users-password-reset { width:min(720px,calc(100vw - 28px)); max-width:720px; max-height:calc(100vh - var(--header-height) - 30px); padding:0; overflow-x:hidden; overflow-y:auto; border-radius:20px; text-align:left; }
+.admin-users-password-reset__header { display:grid; grid-template-columns:46px 1fr 36px; align-items:center; gap:12px; padding:20px 22px; border-bottom:1px solid #e3ebf4; background:#fbfdff; }
+.admin-users-password-reset__header .admin-users-confirm__icon { margin:0; }
+.admin-users-password-reset__header > div > span { color:#879ab2; font-size:9px; font-weight:900; letter-spacing:.08em; }
+.admin-users-password-reset__header h3 { margin:3px 0 0; color:#10365f; font-size:19px; text-align:left; }
+.admin-users-password-reset__close { display:grid; width:36px; height:36px; place-items:center; border:0 !important; border-radius:10px; background:#f0f4f9 !important; color:#7388a1 !important; font-size:22px; cursor:pointer; }
+.admin-users-password-reset__context { display:grid; grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr); gap:12px; padding:18px 22px 0; }
+.admin-users-password-reset__user { display:flex; align-items:center; gap:13px; margin:0; padding:13px 14px; border:1px solid #dce7f2; border-radius:14px; background:#f8fbfe; }
+.admin-users-password-reset__avatar { width:44px; height:44px; flex:0 0 44px; border:1px solid #d7e3f0; border-radius:12px; background:#edf4fc; color:#315f91; }
+.admin-users-password-reset__user > div { min-width:0; }
+.admin-users-password-reset__user strong { display:block; overflow:hidden; color:#123961; font-size:13.5px; font-weight:900; text-overflow:ellipsis; white-space:nowrap; }
+.admin-users-password-reset__user span { display:block; overflow:hidden; margin-top:3px; color:#7c92ad; font-size:10.5px; text-overflow:ellipsis; white-space:nowrap; }
+.admin-users-password-reset__notice { display:flex; align-items:flex-start; gap:9px; margin:0; padding:11px 12px; border:1px solid #ddd5fa; border-radius:12px; background:#f7f4ff; color:#66559f; }
+.admin-users-password-reset__notice p { margin:0; font-size:11px; line-height:1.45; text-align:left; }
+.admin-users-password-reset__fields { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; padding:18px 22px 6px; }
+.admin-users-password-reset__fields .admin-users-password-field { margin:0 0 12px; }
+.admin-users-password-reset__fields input { min-height:44px; border:1px solid #d7e3f0; border-radius:11px; background:#fff; color:#173d68; font:inherit; font-size:13px; outline:none; }
+.admin-users-password-reset__fields input:focus { border-color:#8b7ee2; box-shadow:0 0 0 4px rgba(101,83,181,.09); }
+.admin-users-password-reset__fields small { color:#8a9db5; font-size:9.8px; font-weight:600; }
+.admin-users-password-reset__feedback { display:flex; align-items:flex-start; gap:8px; margin:2px 22px 14px; padding:10px 12px; border:1px solid #f0ccd1; border-radius:11px; background:#fff4f5; color:#b64451; font-size:11.5px; font-weight:750; line-height:1.4; }
+.admin-users-password-reset__feedback svg { flex:0 0 auto; margin-top:1px; }
+.admin-users-password-reset__actions { justify-content:flex-end; margin-top:4px; padding:15px 22px 20px; border-top:1px solid #e9eef5; }
+.admin-users-password-reset__actions button { min-height:41px; padding:0 15px; border:1px solid #d8e2ee; border-radius:10px; background:#fff; color:#55718f; font:inherit; font-size:11.5px; font-weight:850; cursor:pointer; }
+.admin-users-password-reset__actions button.is-password { display:inline-flex; align-items:center; gap:7px; padding:0 17px; }
+@media(max-width:680px){.admin-users-password-reset__context,.admin-users-password-reset__fields{grid-template-columns:1fr}.admin-users-password-reset__user span{white-space:normal}.admin-users-password-reset__actions{display:grid;grid-template-columns:1fr}.admin-users-password-reset__actions button{width:100%}}

@@ -40,7 +40,6 @@ const STATUS_META = {
   A_VERIFIER_PAR_RH: { label: 'À vérifier', tone: 'pending' },
   // Compatibilité avec les anciennes données : un justificatif rejeté signifie désormais qu’un nouveau justificatif est attendu.
   JUSTIFICATIF_REJETE: { label: 'Nouveau justificatif attendu', tone: 'waiting' },
-  JUSTIFICATIF_ATTENDU: { label: 'Nouveau justificatif attendu', tone: 'waiting' },
   ENREGISTREE: { label: 'Autorisée', tone: 'approved' },
   ANNULEE: { label: 'Annulée', tone: 'cancelled' },
 }
@@ -74,7 +73,7 @@ function statusMeta(status) {
 function statusMatches(status, filter) {
   if (filter === 'all') return true
   if (filter === 'pending') return ['A_VERIFIER_PAR_RH', 'DECLAREE'].includes(status)
-  if (filter === 'waiting') return ['JUSTIFICATIF_EN_ATTENTE', 'JUSTIFICATIF_REJETE', 'JUSTIFICATIF_ATTENDU'].includes(status)
+  if (filter === 'waiting') return ['JUSTIFICATIF_EN_ATTENTE', 'JUSTIFICATIF_REJETE'].includes(status)
   if (filter === 'approved') return status === 'ENREGISTREE'
   if (filter === 'cancelled') return status === 'ANNULEE'
   return true
@@ -413,6 +412,7 @@ export function DetailDrawer({
   const isOwnRhDraft = declaration.status === 'BROUILLON' && declaration.createdBy?.role === 'RH'
   const [documentsState, setDocumentsState] = useState({ loading: true, error: '', items: [] })
   const [documentBusy, setDocumentBusy] = useState(false)
+  const [replacementFile, setReplacementFile] = useState(null)
   const [rejectingDocumentId, setRejectingDocumentId] = useState(null)
   const [rejectionReason, setRejectionReason] = useState('')
   const [preview, setPreview] = useState({
@@ -517,6 +517,22 @@ export function DetailDrawer({
       preview.blob,
       preview.document.originalName || `justificatif-${preview.document.id}`,
     )
+  }
+
+  const handleAddReplacementDocument = async () => {
+    if (!replacementFile || documentBusy) return
+    setDocumentBusy(true)
+    try {
+      await uploadRhAbsenceDocument(declaration.id, replacementFile)
+      setReplacementFile(null)
+      await loadDocuments()
+      await refreshDeclaration()
+      onFeedback?.('success', 'Nouveau justificatif transmis.')
+    } catch (error) {
+      onFeedback?.('error', errorMessage(error))
+    } finally {
+      setDocumentBusy(false)
+    }
   }
 
   const handleAcceptDocument = async (document) => {
@@ -728,10 +744,19 @@ export function DetailDrawer({
               <span>Le collaborateur doit encore fournir le justificatif demandé.</span>
             </div>
           )}
-          {['JUSTIFICATIF_REJETE', 'JUSTIFICATIF_ATTENDU'].includes(declaration.status) && (
+          {declaration.status === 'JUSTIFICATIF_REJETE' && (
             <div className="rh-absence-detail-notice rh-absence-detail-notice--orange">
               <Icon name="clock" size={17} />
-              <span>Le justificatif a été refusé avec un motif. Un nouveau justificatif peut être transmis ; l’absence reste gérée par la RH.</span>
+              <span>Le justificatif a été refusé. Un nouveau justificatif est attendu.</span>
+            </div>
+          )}
+
+          {(declaration.status === 'JUSTIFICATIF_EN_ATTENTE' || declaration.status === 'JUSTIFICATIF_REJETE') && (
+            <div className="rh-absence-detail-notice rh-absence-detail-notice--orange">
+              <Icon name="file" size={17} />
+              <span>Ajouter un justificatif :</span>
+              <input type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" onChange={(event) => setReplacementFile(event.target.files?.[0] ?? null)} />
+              <button type="button" className="rh-absence-button rh-absence-button--primary" disabled={!replacementFile || documentBusy} onClick={handleAddReplacementDocument}>Envoyer</button>
             </div>
           )}
 
@@ -747,7 +772,7 @@ export function DetailDrawer({
                 <Icon name="check" size={16} /> Autoriser l’absence
               </button>
             )}
-            {['ENREGISTREE', 'JUSTIFICATIF_ATTENDU', 'JUSTIFICATIF_REJETE'].includes(declaration.status) && (
+            {['ENREGISTREE', 'JUSTIFICATIF_REJETE'].includes(declaration.status) && (
               <button type="button" className="rh-absence-button rh-absence-button--danger" disabled={busy} onClick={() => onCancel(declaration)}>
                 Annuler l’absence
               </button>

@@ -14,7 +14,6 @@ const ABSENCE_STATUS = {
   DECLAREE: { label: 'Déclarée', tone: 'pending' },
   JUSTIFICATIF_EN_ATTENTE: { label: 'Justificatif attendu', tone: 'waiting' },
   JUSTIFICATIF_REJETE: { label: 'Nouveau justificatif attendu', tone: 'waiting' },
-  JUSTIFICATIF_ATTENDU: { label: 'Nouveau justificatif attendu', tone: 'waiting' },
   A_VERIFIER_PAR_RH: { label: 'À vérifier', tone: 'pending' },
   ENREGISTREE: { label: 'Autorisée', tone: 'approved' },
   ANNULEE: { label: 'Annulée', tone: 'cancelled' },

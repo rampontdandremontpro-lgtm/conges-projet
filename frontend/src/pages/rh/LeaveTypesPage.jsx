@@ -520,7 +520,7 @@ export function RhLeaveTypesPage() {
                             <strong>{type.name}</strong>
                             {directorOnly && (
                               <span className="rh-leave-types-director-info" onClick={(event) => event.stopPropagation()} onKeyDown={(event) => event.stopPropagation()}>
-                                <StatisticInfoButton title="Type réservé au Directeur" ariaLabel="Informations sur le type Congé" portal>
+                                <StatisticInfoButton title="Type réservé au Directeur" ariaLabel="Informations sur le type Congé">
                                   <p>Ce type représente uniquement l’indisponibilité du Directeur. Il n’est pas proposé pour les demandes de congé des collaborateurs.</p>
                                 </StatisticInfoButton>
                               </span>

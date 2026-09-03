@@ -1767,9 +1767,9 @@ export class DocumentPdfService {
   private drawExactPendingFooterBase(
     document: PDFKit.PDFDocument,
   ): void {
-    this.drawExactFooterWaves(document, 18);
+    this.drawExactFooterWaves(document);
 
-    const lineY = this.pdfTemplateY(document, 1248);
+    const lineY = this.pdfTemplateY(document, 1281);
     document
       .moveTo(this.pdfTemplateX(document, 49), lineY)
       .lineTo(this.pdfTemplateX(document, 1006), lineY)
@@ -1795,10 +1795,10 @@ export class DocumentPdfService {
       (this.pdfTemplateWidthPx - referencePillWidthPx) / 2;
 
     document
-      .moveTo(this.pdfTemplateX(document, 180), this.pdfTemplateY(document, 1335))
+      .moveTo(this.pdfTemplateX(document, 180), this.pdfTemplateY(document, 1378))
       .lineTo(
         this.pdfTemplateX(document, referencePillXPx),
-        this.pdfTemplateY(document, 1335),
+        this.pdfTemplateY(document, 1378),
       )
       .lineWidth(this.pdfTemplateY(document, 1.4))
       .strokeColor('#154FA6')
@@ -1809,9 +1809,9 @@ export class DocumentPdfService {
           document,
           referencePillXPx + referencePillWidthPx,
         ),
-        this.pdfTemplateY(document, 1335),
+        this.pdfTemplateY(document, 1378),
       )
-      .lineTo(this.pdfTemplateX(document, 875), this.pdfTemplateY(document, 1335))
+      .lineTo(this.pdfTemplateX(document, 875), this.pdfTemplateY(document, 1378))
       .lineWidth(this.pdfTemplateY(document, 1.4))
       .strokeColor('#154FA6')
       .stroke();
@@ -1819,7 +1819,7 @@ export class DocumentPdfService {
     document
       .roundedRect(
         this.pdfTemplateX(document, referencePillXPx),
-        this.pdfTemplateY(document, 1314),
+        this.pdfTemplateY(document, 1357),
         this.pdfTemplateX(document, referencePillWidthPx),
         this.pdfTemplateY(document, 42),
         this.pdfTemplateY(document, 7),
@@ -1831,7 +1831,7 @@ export class DocumentPdfService {
       'DOCUMENT PROVISOIRE – NE CONSTITUE PAS UNE AUTORISATION D’ABSENCE',
       {
         xPx: 255,
-        yPx: 1368,
+        yPx: 1388,
         widthPx: 550,
         fontSizePx: 12.5,
         font: 'Helvetica-Bold',
@@ -1900,21 +1900,19 @@ export class DocumentPdfService {
 
   private drawExactFooterWaves(
     document: PDFKit.PDFDocument,
-    yOffsetPx = 0,
   ): void {
     const width = document.page.width;
     const height = document.page.height;
-    const y = (value: number) => this.pdfTemplateY(document, value + yOffsetPx);
 
     document
-      .moveTo(0, y(1388))
+      .moveTo(0, this.pdfTemplateY(document, 1388))
       .bezierCurveTo(
         width * 0.25,
-        y(1420),
+        this.pdfTemplateY(document, 1420),
         width * 0.62,
-        y(1440),
+        this.pdfTemplateY(document, 1440),
         width,
-        y(1393),
+        this.pdfTemplateY(document, 1393),
       )
       .lineTo(width, height)
       .lineTo(0, height)
@@ -1922,14 +1920,14 @@ export class DocumentPdfService {
       .fill('#DCEBFA');
 
     document
-      .moveTo(0, y(1417))
+      .moveTo(0, this.pdfTemplateY(document, 1417))
       .bezierCurveTo(
         width * 0.26,
-        y(1453),
+        this.pdfTemplateY(document, 1453),
         width * 0.62,
-        y(1458),
+        this.pdfTemplateY(document, 1458),
         width,
-        y(1411),
+        this.pdfTemplateY(document, 1411),
       )
       .lineTo(width, height)
       .lineTo(0, height)
@@ -1937,14 +1935,14 @@ export class DocumentPdfService {
       .fill('#285CC2');
 
     document
-      .moveTo(0, y(1443))
+      .moveTo(0, this.pdfTemplateY(document, 1443))
       .bezierCurveTo(
         width * 0.30,
-        y(1470),
+        this.pdfTemplateY(document, 1470),
         width * 0.60,
-        y(1478),
+        this.pdfTemplateY(document, 1478),
         width,
-        y(1438),
+        this.pdfTemplateY(document, 1438),
       )
       .lineTo(width, height)
       .lineTo(0, height)
@@ -1952,14 +1950,14 @@ export class DocumentPdfService {
       .fill('#0B347C');
 
     document
-      .moveTo(width * 0.78, y(1427))
+      .moveTo(width * 0.78, this.pdfTemplateY(document, 1427))
       .bezierCurveTo(
         width * 0.87,
-        y(1421),
+        this.pdfTemplateY(document, 1421),
         width * 0.95,
-        y(1409),
+        this.pdfTemplateY(document, 1409),
         width,
-        y(1397),
+        this.pdfTemplateY(document, 1397),
       )
       .lineWidth(this.pdfTemplateY(document, 4))
       .strokeColor('#F97316')
@@ -2460,7 +2458,7 @@ export class DocumentPdfService {
     const dateWidth = document.widthOfString(dateText);
     const totalWidth = prefixWidth + dateWidth;
     const textX = centerX - totalWidth / 2 + this.pdfTemplateX(document, 18);
-    const textY = this.pdfTemplateY(document, 1282);
+    const textY = this.pdfTemplateY(document, 1318);
 
     document
       .font('Helvetica')
@@ -2483,7 +2481,7 @@ export class DocumentPdfService {
 
     this.drawExactPdfTextCenteredInBox(document, input.referenceNumber, {
       xPx: referencePillXPx,
-      yPx: 1314,
+      yPx: 1357,
       widthPx: referencePillWidthPx,
       heightPx: 42,
       fontSizePx: 14,
@@ -2499,7 +2497,7 @@ export class DocumentPdfService {
       'Sous réserve du solde inscrit sur votre bulletin de paie.',
       {
         xPx: 330,
-        yPx: 1387,
+        yPx: 1408,
         widthPx: 395,
         fontSizePx: 13,
         font: 'Helvetica-Bold',
@@ -2513,7 +2511,7 @@ export class DocumentPdfService {
     document: PDFKit.PDFDocument,
   ): void {
     const x = this.pdfTemplateX(document, 330);
-    const y = this.pdfTemplateY(document, 1274);
+    const y = this.pdfTemplateY(document, 1307);
     const width = this.pdfTemplateX(document, 23);
     const height = this.pdfTemplateY(document, 31);
 
@@ -2529,7 +2527,7 @@ export class DocumentPdfService {
       .strokeColor('#154FA6')
       .stroke();
 
-    [1284, 1291, 1298].forEach((linePx) => {
+    [1317, 1324, 1331].forEach((linePx) => {
       document
         .moveTo(this.pdfTemplateX(document, 336), this.pdfTemplateY(document, linePx))
         .lineTo(this.pdfTemplateX(document, 348), this.pdfTemplateY(document, linePx))
