@@ -8,6 +8,17 @@
   padding: 22px 26px 34px;
 }
 
+/* Le DetailDrawer est aussi monté depuis la page unifiée Congés & Absences,
+   qui ne porte pas la classe .rh-absences-page. On déclare donc les variables
+   directement sur le drawer pour que les boutons et textes restent visibles. */
+.rh-absence-drawer-backdrop,
+.rh-absence-drawer {
+  --rh-absence-blue: #1c72f2;
+  --rh-absence-navy: #0e315b;
+  --rh-absence-orange: #ff7218;
+  --rh-absence-muted: #7f95b3;
+}
+
 .rh-absences-feedback {
   display: flex;
   min-height: 46px;

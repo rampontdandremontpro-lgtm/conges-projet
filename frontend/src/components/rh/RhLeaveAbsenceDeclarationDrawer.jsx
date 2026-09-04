@@ -188,7 +188,12 @@ export function RhLeaveAbsenceDeclarationDrawer({
     setForm((previous) => changeLeaveBoundaryPeriod(previous, change))
   }
 
-  const handleAbsencePick = (iso) => {
+  const handleAbsencePick = (iso, context) => {
+    if (isEditing && form.mode === 'days' && context?.mode === 'start') {
+      setForm((current) => ({ ...current, startDate: iso, endDate: iso }))
+      return
+    }
+
     if (form.mode !== 'days') {
       setForm((current) => ({ ...current, startDate: iso, endDate: iso }))
       return
@@ -426,6 +431,7 @@ export function RhLeaveAbsenceDeclarationDrawer({
                   allowsHalfDays={false}
                   blockNonDeductibleDates={false}
                   singleSelection={form.mode !== 'days'}
+                  restartSelectionOnSelectedRange={isEditing && form.mode === 'days'}
                 />
               </div>
 

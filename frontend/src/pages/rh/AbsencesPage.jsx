@@ -853,12 +853,11 @@ export function DetailDrawer({
                 Modifier l’absence
               </button>
             )}
-            {declaration.status === 'A_VERIFIER_PAR_RH' && (
+            {declaration.status === 'A_VERIFIER_PAR_RH' && canAuthorize && (
               <button
                 type="button"
                 className="rh-absence-button rh-absence-button--primary"
-                disabled={busy || !canAuthorize}
-                title={!canAuthorize && documentRequired ? 'Validez d’abord le justificatif.' : undefined}
+                disabled={busy}
                 onClick={() => onRegister(declaration)}
               >
                 <Icon name="check" size={16} /> Autoriser l’absence

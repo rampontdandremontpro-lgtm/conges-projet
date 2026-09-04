@@ -129,6 +129,7 @@ export function LeaveCalendar({
   onBoundaryPeriodChange,
   blockNonDeductibleDates = true,
   singleSelection = false,
+  restartSelectionOnSelectedRange = false,
 }) {
   const { startDate, endDate, startPeriod, endPeriod } = selection ?? {}
   const [selectionEmojis, setSelectionEmojis] = useState({ startEmoji: '😊', endEmoji: '😔' })
@@ -220,6 +221,18 @@ export function LeaveCalendar({
     if (singleSelection) {
       onPick(iso)
       setPhase('idle')
+      setHovering(null)
+      setPeriodPopoverAnchor(null)
+      setPeriodPopoverMode(null)
+      return
+    }
+
+    // En mode édition, une ancienne sélection est affichée mais le calendrier
+    // est en phase "idle". Le premier clic, où qu'il soit, redémarre une
+    // nouvelle sélection à partir de ce jour au lieu de rester finalisé.
+    if (restartSelectionOnSelectedRange && phase === 'idle') {
+      onPick(iso, { mode: 'start' })
+      setPhase('selecting')
       setHovering(null)
       setPeriodPopoverAnchor(null)
       setPeriodPopoverMode(null)
