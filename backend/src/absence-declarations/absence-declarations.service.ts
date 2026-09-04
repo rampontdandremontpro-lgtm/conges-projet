@@ -228,15 +228,34 @@ export class AbsenceDeclarationsService {
       authenticatedUser,
     );
 
-    this.ensureDraft(declaration);
+    if (declaration.status === AbsenceDeclarationStatus.BROUILLON) {
+      if (
+        authenticatedUser.role !== UserRole.RH &&
+        declaration.createdById !== authenticatedUser.id
+      ) {
+        throw new ForbiddenException(
+          'Seule la personne ayant créé le brouillon peut le modifier.',
+        );
+      }
+    } else {
+      if (authenticatedUser.role !== UserRole.RH) {
+        throw new ForbiddenException(
+          'Seule la RH peut modifier une absence déjà transmise.',
+        );
+      }
 
-    if (
-      authenticatedUser.role !== UserRole.RH &&
-      declaration.createdById !== authenticatedUser.id
-    ) {
-      throw new ForbiddenException(
-        'Seule la personne ayant créé le brouillon peut le modifier.',
-      );
+      if (
+        ![
+          AbsenceDeclarationStatus.JUSTIFICATIF_EN_ATTENTE,
+          AbsenceDeclarationStatus.A_VERIFIER_PAR_RH,
+          AbsenceDeclarationStatus.JUSTIFICATIF_REJETE,
+          AbsenceDeclarationStatus.ENREGISTREE,
+        ].includes(declaration.status)
+      ) {
+        throw new BadRequestException(
+          'Cette absence ne peut pas être modifiée dans son statut actuel.',
+        );
+      }
     }
 
     const leaveType =
@@ -251,13 +270,41 @@ export class AbsenceDeclarationsService {
 
     const startDate = dto.startDate ?? declaration.startDate;
     const endDate = dto.endDate ?? declaration.endDate;
-    const startPeriod =
-      dto.startPeriod ?? declaration.startPeriod;
-    const endPeriod = dto.endPeriod ?? declaration.endPeriod;
-    const durationHours =
-      dto.durationHours !== undefined
-        ? dto.durationHours
-        : declaration.durationHours ?? undefined;
+
+    const usesHours = dto.durationHours !== undefined;
+    const usesPeriods =
+      dto.startPeriod !== undefined || dto.endPeriod !== undefined;
+
+    let startPeriod: DayPeriod | null;
+    let endPeriod: DayPeriod | null;
+    let durationHours: number | undefined;
+
+    if (usesHours) {
+      startPeriod = null;
+      endPeriod = null;
+      durationHours = dto.durationHours;
+    } else if (usesPeriods) {
+      startPeriod =
+        dto.startPeriod ??
+        declaration.startPeriod ??
+        DayPeriod.MATIN;
+      endPeriod =
+        dto.endPeriod ??
+        declaration.endPeriod ??
+        DayPeriod.APRES_MIDI;
+      durationHours = undefined;
+    } else if (
+      declaration.durationHours !== null &&
+      declaration.durationHours !== undefined
+    ) {
+      startPeriod = null;
+      endPeriod = null;
+      durationHours = declaration.durationHours;
+    } else {
+      startPeriod = declaration.startPeriod;
+      endPeriod = declaration.endPeriod;
+      durationHours = undefined;
+    }
 
     const duration = this.validateAndCalculateDuration({
       leaveType,
@@ -289,6 +336,14 @@ export class AbsenceDeclarationsService {
     }
 
     await this.absenceDeclarationRepository.save(declaration);
+
+    if (
+      declaration.status === AbsenceDeclarationStatus.ENREGISTREE
+    ) {
+      await this.presenceService.refreshUserStatus(
+        declaration.employeeId,
+      );
+    }
 
     return this.findAccessibleOne(id, authenticatedUser);
   }

@@ -264,7 +264,7 @@ export function RhLeavesAndAbsencesPage() {
           onSaved={handleDeclarationSaved}
         />
       )}
-      {selectedAbsence && <DetailDrawer declaration={selectedAbsence} busy={busy} onClose={() => setSelectedAbsence(null)} onRegister={handleRegister} onCancel={handleCancel} onDeleteDraft={handleDeleteDraft} onEdit={(decl) => setEditingAbsence(decl)} onDeclarationChanged={async (declaration) => { setSelectedAbsence(declaration); await load({ silent: true }) }} onFeedback={showFeedback} />}
+      {selectedAbsence && !editingAbsence && <DetailDrawer declaration={selectedAbsence} busy={busy} onClose={() => setSelectedAbsence(null)} onRegister={handleRegister} onCancel={handleCancel} onDeleteDraft={handleDeleteDraft} onEdit={(decl) => { setSelectedAbsence(null); setEditingAbsence(decl) }} onDeclarationChanged={async (declaration) => { setSelectedAbsence(declaration); await load({ silent: true }) }} onFeedback={showFeedback} />}
       {editingAbsence && (
         <RhLeaveAbsenceDeclarationDrawer
           employees={state.employees}

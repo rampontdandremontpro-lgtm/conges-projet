@@ -249,7 +249,8 @@
 .rh-absence-detail-notice { display: flex; align-items: flex-start; gap: 8px; margin-top: 14px; padding: 11px 12px; border-radius: 12px; font-size: 11.8px; line-height: 1.45; }
 .rh-absence-detail-notice--blue { background: #eef6ff; color: #3d689b; }
 .rh-absence-detail-notice--orange { background: #fff7e9; color: #9a6517; }
-.rh-absence-detail-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 9px; margin-top: 18px; padding-top: 17px; border-top: 1px solid #edf2f7; }
+.rh-absence-detail-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 10px; margin-top: 18px; padding-top: 17px; border-top: 1px solid #edf2f7; }
+.rh-absence-detail-actions > .rh-absence-button { flex: 0 0 auto; margin: 0; }
 
 @media (max-width: 900px) {
   .page-container.rh-absences-page { padding: 16px; }
@@ -488,6 +489,21 @@
   border-color: #f2cbd2;
   background: #fff7f8;
   color: #b33e51;
+}
+
+.rh-absence-documents__empty {
+  display: flex;
+  min-height: 132px;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  border: 1px dashed #cfdeef;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.rh-absence-documents__empty .rh-absence-add-document {
+  margin-top: 0;
 }
 
 .rh-absence-documents__state button {

@@ -655,9 +655,8 @@ export function DetailDrawer({
                   <button type="button" onClick={loadDocuments}>Réessayer</button>
                 </div>
               ) : activeDocuments.length === 0 ? (
-                <div className="rh-absence-documents__state">
-                  <span>Aucun justificatif n’a encore été fourni.</span>
-                  {(declaration.status === 'JUSTIFICATIF_EN_ATTENTE' || declaration.status === 'JUSTIFICATIF_REJETE') && (
+                (declaration.status === 'JUSTIFICATIF_EN_ATTENTE' || declaration.status === 'JUSTIFICATIF_REJETE') ? (
+                  <div className="rh-absence-documents__empty">
                     <div className="rh-absence-add-document">
                       {!replacementFile ? (
                         <label className="rh-absence-button rh-absence-button--add">
@@ -694,8 +693,12 @@ export function DetailDrawer({
                         </div>
                       )}
                     </div>
-                  )}
-                </div>
+                  </div>
+                ) : (
+                  <div className="rh-absence-documents__state">
+                    <span>Aucun justificatif n’a encore été fourni.</span>
+                  </div>
+                )
               ) : (
                 <div className="rh-absence-documents__list">
                   {activeDocuments.map((document) => {
@@ -1121,7 +1124,7 @@ export function RhAbsencesPage() {
           onSaved={handleSaved}
         />
       )}
-      {selected && (
+      {selected && !editingAbsence && (
         <DetailDrawer
           declaration={selected}
           busy={busy}
@@ -1129,7 +1132,7 @@ export function RhAbsencesPage() {
           onRegister={handleRegister}
           onCancel={handleCancel}
           onDeleteDraft={handleDeleteDraft}
-          onEdit={(declaration) => setEditingAbsence(declaration)}
+          onEdit={(declaration) => { setSelected(null); setEditingAbsence(declaration) }}
           onDeclarationChanged={handleDeclarationChanged}
           onFeedback={showFeedback}
         />

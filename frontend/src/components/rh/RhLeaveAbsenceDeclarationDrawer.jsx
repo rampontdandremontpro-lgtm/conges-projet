@@ -265,7 +265,7 @@ export function RhLeaveAbsenceDeclarationDrawer({
           leaveTypeId: Number(selectedType.id),
           startDate: form.startDate,
           endDate: form.mode === 'days' ? form.endDate : form.startDate,
-          comment: form.comment.trim() || undefined,
+          comment: form.comment.trim(),
         }
         if (form.mode === 'hours') {
           payload.durationHours = Number(form.durationHours)
@@ -299,7 +299,7 @@ export function RhLeaveAbsenceDeclarationDrawer({
         leaveTypeId: Number(selectedType.id),
         startDate: form.startDate,
         endDate: form.mode === 'days' ? form.endDate : form.startDate,
-        comment: form.comment.trim() || undefined,
+        comment: form.comment.trim(),
       }
       if (form.mode === 'hours') {
         payload.durationHours = Number(form.durationHours)

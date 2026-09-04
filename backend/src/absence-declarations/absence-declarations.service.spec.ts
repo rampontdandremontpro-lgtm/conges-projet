@@ -12,10 +12,12 @@ import {
   LeaveTypeCategory,
 } from '../leave-types/leave-type.entity';
 import { LeaveTypesService } from '../leave-types/leave-types.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { PresenceService } from '../presence/presence.service';
 import { UsersService } from '../users/users.service';
 import {
   AbsenceDeclaration,
+  AbsenceDeclarationStatus,
 } from './absence-declaration.entity';
 import { AbsenceDeclarationsService } from './absence-declarations.service';
 
@@ -44,6 +46,7 @@ describe('AbsenceDeclarationsService — un seul mode (jours / heures)', () => {
   };
   let usersService: { findOne: jest.Mock };
   let leaveTypesService: { findOne: jest.Mock };
+  let presenceService: { refreshUserStatus: jest.Mock };
   let serviceAny: {
     resolveEmployee: jest.Mock;
     ensureNoPersonalOverlap: jest.Mock;
@@ -56,6 +59,7 @@ describe('AbsenceDeclarationsService — un seul mode (jours / heures)', () => {
     absenceRepository = { create: jest.fn(), save: jest.fn() };
     usersService = { findOne: jest.fn() };
     leaveTypesService = { findOne: jest.fn() };
+    presenceService = { refreshUserStatus: jest.fn() };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -74,7 +78,8 @@ describe('AbsenceDeclarationsService — un seul mode (jours / heures)', () => {
         },
         { provide: UsersService, useValue: usersService },
         { provide: LeaveTypesService, useValue: leaveTypesService },
-        { provide: PresenceService, useValue: {} },
+        { provide: NotificationsService, useValue: {} },
+        { provide: PresenceService, useValue: presenceService },
       ],
     }).compile();
 
@@ -183,7 +188,7 @@ describe('AbsenceDeclarationsService — un seul mode (jours / heures)', () => {
       endPeriod: DayPeriod.MATIN,
       durationDays: 0.5,
       durationHours: null,
-      status: 'BROUILLON',
+      status: AbsenceDeclarationStatus.BROUILLON,
     } as never;
 
     it('PATCH durationHours + startPeriod explicites → HTTP 400', async () => {
@@ -199,7 +204,7 @@ describe('AbsenceDeclarationsService — un seul mode (jours / heures)', () => {
       );
     });
 
-    it('DEMI-JOURNÉE → HEURES : PATCH { durationHours } sans période → mode heures (périodes réinitialisées par le calcul)', async () => {
+    it('DEMI-JOURNÉE → HEURES : PATCH { durationHours } sans période → mode heures (périodes réinitialisées)', async () => {
       serviceAny.findAccessibleOne.mockResolvedValue(storedHalfDay);
 
       const saved = await service.updateDraft(
@@ -214,19 +219,48 @@ describe('AbsenceDeclarationsService — un seul mode (jours / heures)', () => {
       expect(saved.durationDays).toBeNull();
     });
 
-    it('HEURES → DEMI-JOURNÉE : PATCH périodes sans heures → reste en heures (contrat partiel, pas de convention de remise à zéro)', async () => {
+    it('HEURES → JOURS : PATCH périodes seules → mode jours (durationHours remis à null)', async () => {
       serviceAny.findAccessibleOne.mockResolvedValue({
-          id: 42,
-          createdById: 1,
-          leaveType,
-          startDate: '2026-01-05',
-          endDate: '2026-01-05',
-          startPeriod: null,
-          endPeriod: null,
-          durationDays: null,
-          durationHours: 4,
-          status: 'BROUILLON',
-        } as never);
+        id: 42,
+        createdById: 1,
+        leaveType,
+        startDate: '2026-01-05',
+        endDate: '2026-01-05',
+        startPeriod: null,
+        endPeriod: null,
+        durationDays: null,
+        durationHours: 4,
+        status: AbsenceDeclarationStatus.BROUILLON,
+      } as never);
+
+      const saved = await service.updateDraft(
+        42,
+        collaboratorUser as never,
+        {
+          startPeriod: DayPeriod.MATIN,
+          endPeriod: DayPeriod.APRES_MIDI,
+        } as never,
+      );
+
+      expect(saved.startPeriod).toBe(DayPeriod.MATIN);
+      expect(saved.endPeriod).toBe(DayPeriod.APRES_MIDI);
+      expect(saved.durationHours).toBeNull();
+      expect(saved.durationDays).toBe(1);
+    });
+
+    it('JOURS → DEMI-JOURNÉE : PATCH périodes identiques → demi-journée', async () => {
+      serviceAny.findAccessibleOne.mockResolvedValue({
+        id: 42,
+        createdById: 1,
+        leaveType,
+        startDate: '2026-01-05',
+        endDate: '2026-01-05',
+        startPeriod: DayPeriod.MATIN,
+        endPeriod: DayPeriod.APRES_MIDI,
+        durationDays: 1,
+        durationHours: null,
+        status: AbsenceDeclarationStatus.BROUILLON,
+      } as never);
 
       const saved = await service.updateDraft(
         42,
@@ -237,9 +271,81 @@ describe('AbsenceDeclarationsService — un seul mode (jours / heures)', () => {
         } as never,
       );
 
-      expect(saved.startPeriod).toBeNull();
-      expect(saved.endPeriod).toBeNull();
-      expect(saved.durationHours).toBe(4);
+      expect(saved.startPeriod).toBe(DayPeriod.MATIN);
+      expect(saved.endPeriod).toBe(DayPeriod.MATIN);
+      expect(saved.durationHours).toBeNull();
+      expect(saved.durationDays).toBe(0.5);
+    });
+  });
+
+  describe('mise à jour (PATCH) — commentaire supprimable', () => {
+    it('un commentaire vide remplace bien le commentaire existant', async () => {
+      serviceAny.findAccessibleOne.mockResolvedValue({
+        id: 42,
+        createdById: 1,
+        leaveType,
+        startDate: '2026-01-05',
+        endDate: '2026-01-05',
+        startPeriod: DayPeriod.MATIN,
+        endPeriod: DayPeriod.APRES_MIDI,
+        durationDays: 1,
+        durationHours: null,
+        status: AbsenceDeclarationStatus.BROUILLON,
+        comment: 'Rendez-vous médical',
+      } as never);
+
+      const saved = await service.updateDraft(
+        42,
+        collaboratorUser as never,
+        { comment: '' } as never,
+      );
+
+      expect(saved.comment).toBeNull();
+    });
+  });
+
+  describe('mise à jour (PATCH) — statuts RH modifiables', () => {
+    it.each([
+      AbsenceDeclarationStatus.JUSTIFICATIF_EN_ATTENTE,
+      AbsenceDeclarationStatus.A_VERIFIER_PAR_RH,
+      AbsenceDeclarationStatus.JUSTIFICATIF_REJETE,
+      AbsenceDeclarationStatus.ENREGISTREE,
+    ])('%s → la RH peut modifier une absence déjà transmise', async (status) => {
+      serviceAny.findAccessibleOne.mockResolvedValue({
+        id: 42,
+        createdById: 1,
+        employeeId: 5,
+        leaveType,
+        startDate: '2026-01-05',
+        endDate: '2026-01-05',
+        startPeriod: DayPeriod.MATIN,
+        endPeriod: DayPeriod.APRES_MIDI,
+        durationDays: 1,
+        durationHours: null,
+        status,
+      } as never);
+
+      const saved = await service.updateDraft(
+        42,
+        rhUser as never,
+        {
+          startDate: '2026-02-10',
+          endDate: '2026-02-10',
+          startPeriod: DayPeriod.MATIN,
+          endPeriod: DayPeriod.MATIN,
+        } as never,
+      );
+
+      expect(saved.startDate).toBe('2026-02-10');
+      expect(saved.endDate).toBe('2026-02-10');
+      expect(saved.durationHours).toBeNull();
+      expect(saved.durationDays).toBe(0.5);
+
+      if (status === AbsenceDeclarationStatus.ENREGISTREE) {
+        expect(presenceService.refreshUserStatus).toHaveBeenCalledWith(5);
+      } else {
+        expect(presenceService.refreshUserStatus).not.toHaveBeenCalled();
+      }
     });
   });
 });
