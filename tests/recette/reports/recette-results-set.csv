@@ -1,0 +1,8 @@
+﻿ID;Priorité;Module;Scénario;Type de test;Statut;Résultat obtenu;Date;Durée;Preuve;Erreur;Commentaire
+SET-001;P2;SET;RH consulte MODIFICATION_DEADLINE_DAYS;B - API;Conforme;Valeur lue : 7;2026-09-22T15:40:25.304Z;20 ms;;;
+SET-002;P2;SET;RH modifie MODIFICATION_DEADLINE_DAYS;B - API;Conforme;Valeur modifiée à 15.;2026-09-22T15:40:25.370Z;66 ms;;;
+SET-003;P2;SET;Le paramètre modifié est relu;B - API;Conforme;Valeur relue : 15;2026-09-22T15:40:25.410Z;40 ms;;;
+SET-004;P2;SET;RH restaure MODIFICATION_DEADLINE_DAYS;B - API;Conforme;Valeur restaurée à 7.;2026-09-22T15:40:25.444Z;33 ms;;;
+SET-005;P2;SET;Lecture de la période saisonnière;C - Mixte UI + API;Conforme;UI start=2026-05-01, end=2026-10-31.;2026-09-22T15:40:27.609Z;242 ms;;;
+SET-006;P2;SET;RH modifie temporairement la période saisonnière;C - Mixte UI + API;Conforme;Période modifiée : 06-01 → 09-30.;2026-09-22T15:40:28.260Z;650 ms;;;
+SET-007;P2;SET;RH restaure la période saisonnière;C - Mixte UI + API;Conforme;Période restaurée : 05-01 → 10-31.;2026-09-22T15:40:28.447Z;187 ms;;;

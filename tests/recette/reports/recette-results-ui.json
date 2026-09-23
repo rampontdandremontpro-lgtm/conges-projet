@@ -1,0 +1,58 @@
+[
+  {
+    "id": "AUTH-002",
+    "priority": "P1",
+    "module": "AUTH",
+    "scenario": "Connexion refusée avec un mauvais mot de passe",
+    "type": "A - Playwright",
+    "status": "Conforme",
+    "result": "Message d’erreur explicite affiché, pas de connexion.",
+    "date": "2026-09-22T14:02:34.086Z",
+    "duration": "2952 ms",
+    "proof": "CAP-AUTH-002.png",
+    "error": "",
+    "comment": ""
+  },
+  {
+    "id": "AUTH-003",
+    "priority": "P1",
+    "module": "AUTH",
+    "scenario": "Demande de définition de mot de passe pour un compte connu",
+    "type": "A - Playwright",
+    "status": "Conforme",
+    "result": "Écran de confirmation affiché pour un compte connu.",
+    "date": "2026-09-22T14:02:36.247Z",
+    "duration": "1859 ms",
+    "proof": "CAP-AUTH-003.png",
+    "error": "",
+    "comment": ""
+  },
+  {
+    "id": "AUTH-004",
+    "priority": "P1",
+    "module": "AUTH",
+    "scenario": "Demande de définition de mot de passe pour un compte inconnu",
+    "type": "A - Playwright",
+    "status": "Conforme",
+    "result": "Écran de confirmation générique affiché pour un compte inconnu.",
+    "date": "2026-09-22T14:02:38.402Z",
+    "duration": "1836 ms",
+    "proof": "CAP-AUTH-004.png",
+    "error": "",
+    "comment": ""
+  },
+  {
+    "id": "AUTH-005",
+    "priority": "P1",
+    "module": "AUTH",
+    "scenario": "La récupération de mot de passe ne révèle pas l’existence du compte",
+    "type": "C - Mixte API + Playwright",
+    "status": "Conforme",
+    "result": "Écran générique affiché pour un compte inconnu (volet UI).",
+    "date": "2026-09-22T14:02:40.753Z",
+    "duration": "2000 ms",
+    "proof": "CAP-AUTH-005.png",
+    "error": "",
+    "comment": "Volet API exécuté par npm run test:recette:api."
+  }
+]

@@ -1,0 +1,112 @@
+[
+  [
+    "ANO-001",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    ""
+  ],
+  [
+    "ANO-002",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    ""
+  ],
+  [
+    "ANO-003",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    ""
+  ],
+  [
+    "ANO-004",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    ""
+  ],
+  [
+    "ANO-005",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    ""
+  ],
+  [
+    "ANO-006",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    ""
+  ],
+  [
+    "ANO-007",
+    "ADM-021",
+    "Impossible de réactiver une fermeture GMES depuis l'interface",
+    "Bloquante",
+    "Ouverte",
+    "D.RAMPONT",
+    "Description : Après désactivation/suppression d'une fermeture GMES, l'interface Jours fériés / fermetures ne propose aucune action permettant de la réactiver. Résultat attendu : La RH / l'administrateur doit pouvoir réactiver la fermeture conformément au scénario ADM-021. Résultat obtenu : Aucune action de réactivation n'est disponible dans l'UI.",
+    ""
+  ],
+  [
+    "ANO-008",
+    "ABS-001 ; ABS-004",
+    "Le collaborateur ne peut pas créer ni soumettre une déclaration d'absence",
+    "Bloquante",
+    "Ouverte",
+    "D.RAMPONT",
+    "Description : Le collaborateur ne peut pas créer ni soumettre sa propre déclaration d'absence. Attendu : le collaborateur crée sa propre déclaration (POST /absence-declarations, HTTP 201) puis la soumet (POST /absence-declarations/:id/submit, HTTP 200). Obtenu : aucune UI collaborateur de création ; POST create = 403 ; POST submit = 403 ; la déclaration reste BROUILLON. Cause technique constatée : restrictions @Roles du controller (RH/DIRECTEUR) incompatibles avec le flux prévu par le cahier, full-functional-test.mjs et le service métier. Impact : bloque ABS-001 et ABS-004, et empêche la validation complète de ABS-002 et ABS-003.",
+    ""
+  ],
+  [
+    "ANO-009",
+    "ABS-012 ; ABS-013",
+    "Le remplacement d'un justificatif rejeté par le collaborateur n'archive pas l'ancien document",
+    "Bloquante",
+    "Ouverte",
+    "D.RAMPONT",
+    "Description : Attendu : le collaborateur remplace le justificatif rejeté ; l'ancien justificatif est archivé ; le nouveau devient le justificatif actif à contrôler. Obtenu : le bouton « Ajouter un justificatif » appelle POST /documents/absence/:id ; un nouveau document EN_ATTENTE est créé ; l'ancien reste REJETE et actif. Cause technique constatée : RequestDetailPage utilise uploadAbsenceJustificatif au lieu du mécanisme PATCH /documents/:id/replace qui existe côté backend. Impact : ABS-012 et ABS-013 ; ABS-015 bloqué (l'ancien REJETE actif empêche l'enregistrement définitif, car registerByRh exige que tous les justificatifs actifs soient ACCEPTE).",
+    ""
+  ],
+  [
+    "ANO-011",
+    "CAN-002",
+    "Le collaborateur ne peut pas annuler une demande de congé avant décision",
+    "Bloquante",
+    "Ouverte",
+    "D.RAMPONT",
+    "Description : Attendu : un collaborateur annule sa demande EN_ATTENTE_VALIDATION depuis l'UI (bouton « Annuler la demande » → POST /leave-requests/:id/cancel → 200, statut ANNULEE). Obtenu : l'UI déclenche bien POST /leave-requests/:id/cancel mais le backend renvoie HTTP 409 « La réservation active du solde ne correspond pas au nombre de jours de la demande. » et le statut reste EN_ATTENTE_VALIDATION. Cause technique constatée : depuis l'évolution des compteurs, la soumission ne réserve plus de jours (leave-requests.service.ts submit), mais cancelBeforeDecision exige encore releasedDays === deductedDays (releasePaidLeaveReservationForRequest renvoie 0 en l'absence de réservation). Impact : CAN-002 Non conforme.",
+    ""
+  ],
+  [
+    "ANO-010",
+    "ABS-017",
+    "Le collaborateur ne peut pas annuler son brouillon d'absence",
+    "Majeure",
+    "Ouverte",
+    "D.RAMPONT",
+    "Description : Attendu : un collaborateur possédant un brouillon d'absence peut lancer et confirmer son annulation. Obtenu : un brouillon valide appartenant à COL-C est visible dans Mes demandes, mais aucune action Annuler/Supprimer n'est disponible. L'appel POST /absence-declarations/:id/cancel avec le token du propriétaire retourne HTTP 403 et le statut reste BROUILLON. Cause technique constatée : la route cancel est limitée à RH/DIRECTEUR ; cancelAbsenceDeclaration existe dans le service frontend collaborateur mais n'est utilisé par aucune interface ; MyRequestCard pour une absence BROUILLON propose uniquement l'ouverture du détail. Impact : ABS-017 Non conforme.",
+    ""
+  ]
+]

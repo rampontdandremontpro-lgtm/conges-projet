@@ -1,0 +1,6 @@
+﻿ID;Priorité;Module;Scénario;Type de test;Statut;Résultat obtenu;Date;Durée;Preuve;Erreur;Commentaire
+AUTH-001;P2;AUTH;Racine de l’API disponible;B - API;Conforme;HTTP 200 — Hello World!;2026-09-22T14:02:26.135Z;37 ms;;;
+AUTH-005;P1;AUTH;La récupération de mot de passe ne révèle pas l’existence du compte;C - Mixte API + Playwright;Conforme;Réponses API connues/inconnues strictement identiques (volet API).;2026-09-22T14:02:26.192Z;57 ms;;;Volet UI exécuté par npm run test:recette:ui.
+AUTH-006;P2;AUTH;Lecture du profil authentifié pour chaque rôle;B - API;Conforme;ADMIN: HTTP 200 | DIRECTEUR: HTTP 200 | COLLABORATEUR: HTTP 200 | RESPONSABLE_SERVICE: HTTP 200 | RH: HTTP 200;2026-09-22T14:02:26.284Z;91 ms;;;
+AUTH-007;P1;AUTH;/auth/me sans jeton;B - API;Conforme;HTTP 401;2026-09-22T14:02:26.299Z;15 ms;;;
+AUTH-008;P1;AUTH;Accès à une route protégée sans jeton;B - API;Conforme;HTTP 401;2026-09-22T14:02:26.312Z;12 ms;;;

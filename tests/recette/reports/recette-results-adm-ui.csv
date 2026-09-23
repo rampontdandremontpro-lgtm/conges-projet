@@ -1,0 +1,18 @@
+﻿ID;Priorité;Module;Scénario;Type de test;Statut;Résultat obtenu;Date;Durée;Preuve;Erreur;Commentaire
+ADM-001;P2;ADM;Admin crée un service;C - Mixte UI + API;Conforme;Service créé depuis l’UI, drawer view affiché puis fermé (id=16).;2026-09-22T15:34:41.077Z;1876 ms;;;
+ADM-002;P2;ADM;Admin modifie le service;C - Mixte UI + API;Conforme;Service modifié depuis l’UI (SRV-UI-MOD-1790091275952).;2026-09-22T15:34:42.515Z;1438 ms;;;
+ADM-003;P2;ADM;Admin désactive le service;C - Mixte UI + API;Conforme;Service désactivé depuis l’UI (isActive=false).;2026-09-22T15:34:42.792Z;277 ms;;;
+ADM-004;P2;ADM;Admin réactive le service;C - Mixte UI + API;Conforme;Service réactivé depuis l’UI (isActive=true).;2026-09-22T15:34:42.985Z;192 ms;;;
+ADM-005;P2;ADM;Admin crée un utilisateur;C - Mixte UI + API;Conforme;Utilisateur créé depuis l’UI (id=21).;2026-09-22T15:34:44.916Z;1931 ms;;;
+ADM-009;P2;ADM;RH consulte l’utilisateur créé;C - Mixte UI + API;Conforme;Utilisateur visible dans l’UI et consultable via API.;2026-09-22T15:34:45.108Z;192 ms;;;
+ADM-010;P2;ADM;Admin modifie l’utilisateur;C - Mixte UI + API;Conforme;Utilisateur modifié depuis l’UI (prenom=RecetteMod).;2026-09-22T15:34:46.428Z;1320 ms;;;
+ADM-011;P2;ADM;Admin désactive l’utilisateur;C - Mixte UI + API;Conforme;Utilisateur désactivé depuis l’UI (isActive=false).;2026-09-22T15:34:47.036Z;608 ms;;;
+ADM-012;P2;ADM;Admin réactive l’utilisateur;C - Mixte UI + API;Conforme;Utilisateur réactivé depuis l’UI (avant=false, après=true).;2026-09-22T15:34:47.732Z;696 ms;;;
+ADM-014;P1;ADM;RH crée un type de congé;C - Mixte UI + API;Conforme;Type créé depuis l’UI (id=20).;2026-09-22T15:34:49.002Z;1270 ms;;;
+ADM-015;P1;ADM;Admin modifie le type de congé;C - Mixte UI + API;Conforme;Type modifié depuis l’UI (Type-UI-MOD-1790091275952).;2026-09-22T15:34:49.820Z;818 ms;;;
+ADM-016;P1;ADM;RH désactive le type de congé;C - Mixte UI + API;Conforme;Type désactivé depuis l’UI (isActive=false).;2026-09-22T15:34:50.149Z;329 ms;;;
+ADM-017;P1;ADM;RH réactive le type de congé;C - Mixte UI + API;Conforme;Type réactivé depuis l’UI (isActive=true).;2026-09-22T15:34:51.009Z;860 ms;;;
+ADM-018;P1;ADM;RH crée une fermeture GMES;C - Mixte UI + API;Conforme;Fermeture créée depuis l’UI (id=2).;2026-09-22T15:34:52.571Z;1497 ms;;;
+ADM-019;P1;ADM;RH modifie la fermeture;C - Mixte UI + API;Conforme;Fermeture modifiée depuis l’UI (Fermeture-UI-MOD-1790091275952).;2026-09-22T15:34:53.016Z;445 ms;;;
+ADM-020;P1;ADM;RH désactive la fermeture;C - Mixte UI + API;Conforme;Fermeture désactivée depuis l’UI (isActive=false).;2026-09-22T15:34:53.343Z;327 ms;;;
+ADM-021;P1;ADM;RH réactive la fermeture;C - Mixte UI + API;Non conforme;Aucune action de réactivation de fermeture disponible dans l’UI.;2026-09-22T15:34:53.343Z;0 ms;;Fonctionnalité UI manquante : réactivation de fermeture GMES.;ANO-007

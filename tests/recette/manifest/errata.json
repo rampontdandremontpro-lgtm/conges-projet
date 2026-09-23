@@ -1,0 +1,116 @@
+[
+  {
+    "ids": [
+      "SET-001",
+      "SET-002",
+      "SET-003",
+      "SET-004"
+    ],
+    "type": "Erreur de procédure dans le cahier de recette",
+    "constat": "La procédure mentionne Paramétrage / Période estivale, mais MODIFICATION_DEADLINE_DAYS n'est pas exposé dans l'UI.",
+    "justification": "Le paramètre est une règle backend et les tests fonctionnels existants du projet le valident par GET/PATCH /settings/MODIFICATION_DEADLINE_DAYS.",
+    "impact_produit": "Aucun",
+    "impact_recette": "Les scénarios SET-001 à SET-004 sont exécutés en B - API.",
+    "action_finale": "Corriger la procédure dans le cahier de recette final."
+  },
+  {
+    "ids": [
+      "BAL-004"
+    ],
+    "type": "Erreur de procédure dans le cahier de recette",
+    "constat": "Le cahier demande un parcours Soldes collaborateurs / Mon solde pour une acquisition manuelle, mais aucune action UI d'acquisition manuelle n'existe dans le frontend.",
+    "justification": "L'opération métier existe via POST /leave-balances/:id/accrual.",
+    "impact_produit": "Aucun besoin UI indépendant confirmé.",
+    "impact_recette": "BAL-004 exécuté en B - API.",
+    "action_finale": "Corriger la procédure du cahier final."
+  },
+  {
+    "ids": [
+      "BAL-007",
+      "BAL-008"
+    ],
+    "type": "Erreur de procédure dans le cahier de recette",
+    "constat": "Le cahier demande un parcours Soldes collaborateurs / Mon solde pour lancer l'acquisition mensuelle, mais aucune action UI d'acquisition mensuelle n'existe dans le frontend.",
+    "justification": "L'opération métier existe via POST /leave-balances/accrual/run et l'idempotence est contrôlée par le backend.",
+    "impact_produit": "Aucun besoin UI indépendant confirmé.",
+    "impact_recette": "BAL-007 et BAL-008 exécutés en B - API.",
+    "action_finale": "Corriger la procédure du cahier final."
+  },
+  {
+    "ids": [
+      "LEA-008"
+    ],
+    "type": "Erreur de libellé / attendu dans le cahier de recette",
+    "constat": "Le titre « Responsable refuse la demande en chevauchement » est contredit par l'attendu générique « L'action est refusée proprement, aucun état métier n'est modifié » (texte copié depuis les scénarios de refus d'accès).",
+    "justification": "Le service refuseRequest (leave-requests.service.ts) ne bloque jamais un refus sur un chevauchement : le chevauchement n'est qu'une alerte informative (overlapCount) affichée au Responsable. Le Responsable DOIT pouvoir refuser la demande ; le refus aboutit à statut REFUSEE avec motif persisté.",
+    "impact_produit": "Aucun",
+    "impact_recette": "LEA-008 testé en vrai refus Responsable UI avec motif ; statut REFUSEE attendu (et non « refus de l'action »).",
+    "action_finale": "Corriger l'attendu du cahier final : le refus Responsable réussit et la demande passe en REFUSEE avec motif."
+  },
+  {
+    "ids": [
+      "CAN-007"
+    ],
+    "type": "Erreur de rôle dans le cahier de recette",
+    "constat": "Le manifest indique rôle=RH « reprend une demande avant le délai avec urgence motivée », mais le produit (commit 3c49db7) réserve la reprise urgente avant délai au DIRECTEUR : resolveManagerFirstAccess renvoie 403 pour la RH et l'option emergencyTakeover n'atteint que la branche DIRECTEUR.",
+    "justification": "full-functional-test.mjs reflète l'ancien flux RH+urgence ; la règle actuelle est DIRECTEUR uniquement.",
+    "impact_produit": "Aucun",
+    "impact_recette": "CAN-007 testé : RH 403, puis DIRECTEUR + emergencyTakeover → 200, isUrgent=true, finalDecider=Directeur.",
+    "action_finale": "Corriger rôle RH → DIRECTEUR dans le cahier final."
+  },
+  {
+    "ids": [
+      "CAN-009"
+    ],
+    "type": "Erreur de flux dans le cahier de recette",
+    "constat": "Le manifest prévoit que le collaborateur donne manuellement son consentement à l'annulation après validation, mais le flux actuel gère le consentement côté RH : requestCancellationAfterValidation fixe employeeCancellationConsent=true et POST cancellation-consent renvoie 403 pour le collaborateur.",
+    "justification": "respondToCancellation renvoie 403 « la gestion d'une annulation relève de la RH » ; aucune UI de consentement collaborateur n'existe.",
+    "impact_produit": "Aucun",
+    "impact_recette": "CAN-009 testé : UI sans action + 403 backend, consentement déjà true après initiation RH.",
+    "action_finale": "Corriger le flux de consentement dans le cahier final."
+  },
+  {
+    "ids": [
+      "CAN-001"
+    ],
+    "type": "Erreur de libellé / attendu dans le cahier de recette",
+    "constat": "L'attendu générique « L'action est refusée proprement, aucun état métier n'est modifié » contredit le titre « Une modification avant décision invalide la signature et repasse en brouillon ».",
+    "justification": "Le service updateLeaveRequest (PATCH /leave-requests/:id) et full-functional-test.mjs établissent qu'une demande EN_ATTENTE_VALIDATION modifiée avant décision repasse en BROUILLON et que la signature est invalidée (employeeSignatureType/Data/SignedAt = null, finalDecider = null).",
+    "impact_produit": "Aucun",
+    "impact_recette": "CAN-001 testé en vraie modification UI : statut BROUILLON attendu (et non « action refusée »).",
+    "action_finale": "Corriger l'attendu du cahier final."
+  },
+  {
+    "ids": [
+      "CAN-003"
+    ],
+    "type": "Erreur de rôle dans le cahier de recette",
+    "constat": "Le manifest indique rôle=Collaborateur « demander l'annulation après validation », mais le produit (commit 498ecfe) réserve l'initiation de l'annulation après validation à la RH : requestCancellationAfterValidation renvoie 403 pour un non-RH et l'UI collaborateur affiche la demande validée en lecture seule.",
+    "justification": "full-functional-test.mjs reflète l'ancien flux collaborateur ; la règle produit actuelle est RH-only.",
+    "impact_produit": "Aucun",
+    "impact_recette": "CAN-003 testé : UI collaborateur lecture seule + 403 backend, puis initiation réelle par la RH (200).",
+    "action_finale": "Corriger rôle Collaborateur → RH et la procédure dans le cahier final."
+  },
+  {
+    "ids": [
+      "CAN-005"
+    ],
+    "type": "Erreur de procédure dans le cahier de recette",
+    "constat": "Le cahier demande une finalisation d'annulation via UI RH, mais aucune UI n'appelle POST /leave-requests/:id/cancellation-complete.",
+    "justification": "L'opération métier existe via POST /leave-requests/:id/cancellation-complete (rôle RH).",
+    "impact_produit": "Aucun besoin UI indépendant confirmé.",
+    "impact_recette": "CAN-005 exécuté en B - API pour la finalisation, avec CAP UI de la demande finalisée.",
+    "action_finale": "Corriger la procédure du cahier final."
+  },
+  {
+    "ids": [
+      "ABS-003"
+    ],
+    "type": "Erreur de rôle et de précondition dans le cahier de recette",
+    "constat": "Le manifest indique rôle=RH et précondition « compte RH actif » pour ABS-003, alors que le titre « Type réservé à la RH refusé au collaborateur », full-functional-test.mjs (acteur COLLABORATEUR) et validateLeaveType (règle appliquée aux non-RH/DIRECTEUR) établissent que l'acteur est un COLLABORATEUR.",
+    "justification": "Le scénario doit être joué par un collaborateur, pas par la RH.",
+    "impact_produit": "Aucun.",
+    "impact_recette": "ABS-003 corrigé en rôle COLLABORATEUR ; le scénario reste « Type réservé à la RH refusé au collaborateur » et sera retesté après correction de ANO-008.",
+    "action_finale": "Corriger rôle RH → COLLABORATEUR et la précondition dans le cahier final."
+  }
+]

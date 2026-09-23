@@ -1,0 +1,5 @@
+﻿ID;Priorité;Module;Scénario;Type de test;Statut;Résultat obtenu;Date;Durée;Preuve;Erreur;Commentaire
+AUTH-002;P1;AUTH;Connexion refusée avec un mauvais mot de passe;A - Playwright;Conforme;Message d’erreur explicite affiché, pas de connexion.;2026-09-22T14:02:34.086Z;2952 ms;CAP-AUTH-002.png;;
+AUTH-003;P1;AUTH;Demande de définition de mot de passe pour un compte connu;A - Playwright;Conforme;Écran de confirmation affiché pour un compte connu.;2026-09-22T14:02:36.247Z;1859 ms;CAP-AUTH-003.png;;
+AUTH-004;P1;AUTH;Demande de définition de mot de passe pour un compte inconnu;A - Playwright;Conforme;Écran de confirmation générique affiché pour un compte inconnu.;2026-09-22T14:02:38.402Z;1836 ms;CAP-AUTH-004.png;;
+AUTH-005;P1;AUTH;La récupération de mot de passe ne révèle pas l’existence du compte;C - Mixte API + Playwright;Conforme;Écran générique affiché pour un compte inconnu (volet UI).;2026-09-22T14:02:40.753Z;2000 ms;CAP-AUTH-005.png;;Volet API exécuté par npm run test:recette:api.

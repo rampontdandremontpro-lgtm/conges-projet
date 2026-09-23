@@ -570,7 +570,9 @@
 .rh-balances-import-modal header > button { border:0; background:transparent; font-size:26px; cursor:pointer; }
 .rh-balances-import-body { padding:20px 22px; }
 .rh-balances-import-file { display:flex; align-items:center; gap:10px; padding:16px; border:1px dashed #9ab6d8; border-radius:12px; background:#f7fbff; cursor:pointer; font-weight:750; color:#315476; }
-.rh-balances-import-file input { margin-left:auto; max-width:260px; }
+.rh-balances-import-file-input { display:none; }
+.rh-balances-import-file__name { margin-left:auto; max-width:260px; overflow:hidden; color:#4a6c90; font-size:12px; font-weight:700; text-overflow:ellipsis; white-space:nowrap; }
+.rh-balances-import-file__status { margin:10px 0 0; color:#7a91ac; font-size:12px; font-weight:650; }
 .rh-balances-import-status, .rh-balances-import-error { margin-top:12px; padding:10px 12px; border-radius:10px; }
 .rh-balances-import-status { background:#f1f7ff; color:#315476; }
 .rh-balances-import-error { display:flex; gap:7px; background:#fff2f0; color:#a72d22; }

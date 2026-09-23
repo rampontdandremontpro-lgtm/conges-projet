@@ -444,6 +444,7 @@ export function RhBalancesPage() {
   const [feedback, setFeedback] = useState('')
   const [importOpen, setImportOpen] = useState(false)
   const [importState, setImportState] = useState({ busy: false, rows: [], preview: null, error: '' })
+  const [importFileName, setImportFileName] = useState('')
 
   const load = useCallback(async ({ silent = false } = {}) => {
     if (!silent) setState((current) => ({ ...current, loading: true, error: false }))
@@ -622,6 +623,7 @@ export function RhBalancesPage() {
       await confirmRhBalanceImport(periodFilter, importState.rows)
       setImportOpen(false)
       setImportState({ busy: false, rows: [], preview: null, error: '' })
+      setImportFileName('')
       setFeedback(`Import terminé pour la période ${formatReferencePeriod(periodFilter)}.`)
       await load({ silent: true })
     } catch (error) {
@@ -641,7 +643,7 @@ export function RhBalancesPage() {
           <button type="button" className="rh-balances-top-action" onClick={downloadImportTemplate}>
             <Icon name="download" size={17} /> Télécharger un modèle
           </button>
-          <button type="button" className="rh-balances-top-action" onClick={() => { setImportOpen(true); setImportState({ busy: false, rows: [], preview: null, error: '' }) }}>
+          <button type="button" className="rh-balances-top-action" onClick={() => { setImportOpen(true); setImportState({ busy: false, rows: [], preview: null, error: '' }); setImportFileName('') }}>
             <Icon name="upload" size={17} /> Importer
           </button>
         </div>
@@ -760,11 +762,24 @@ export function RhBalancesPage() {
             <header><div><h2>Importer les soldes</h2><p>Période sélectionnée : <strong>{formatReferencePeriod(periodFilter)}</strong></p></div><button type="button" onClick={() => setImportOpen(false)} disabled={importState.busy}>×</button></header>
             <div className="rh-balances-import-body">
               <p>Utilisez le modèle CSV. Le solde doit respecter <strong>Acquis − Pris</strong> et peut être négatif.</p>
-              <label className="rh-balances-import-file">
+              <input
+                id="balances-import-file"
+                className="rh-balances-import-file-input"
+                type="file"
+                accept=".csv,text/csv"
+                onChange={(event) => {
+                  const file = event.target.files?.[0]
+                  if (file) setImportFileName(file.name)
+                  parseImportFile(file)
+                }}
+                disabled={importState.busy}
+              />
+              <label htmlFor="balances-import-file" className="rh-balances-import-file">
                 <Icon name="upload" size={20} />
-                <span>Choisir le fichier CSV</span>
-                <input type="file" accept=".csv,text/csv" onChange={(event) => parseImportFile(event.target.files?.[0])} disabled={importState.busy} />
+                <span>{importFileName ? 'Changer le fichier CSV' : 'Choisir le fichier CSV'}</span>
+                {importFileName && <small className="rh-balances-import-file__name">{importFileName}</small>}
               </label>
+              <p className="rh-balances-import-file__status">{importFileName || 'Aucun fichier sélectionné'}</p>
               {importState.busy && <div className="rh-balances-import-status">Contrôle du fichier…</div>}
               {importState.error && <div className="rh-balances-import-error"><Icon name="alert" size={16} /> {importState.error}</div>}
               {importState.preview && (

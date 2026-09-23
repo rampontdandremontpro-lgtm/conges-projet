@@ -1,0 +1,72 @@
+[
+  {
+    "id": "AUTH-001",
+    "priority": "P2",
+    "module": "AUTH",
+    "scenario": "Racine de l’API disponible",
+    "type": "B - API",
+    "status": "Conforme",
+    "result": "HTTP 200 — Hello World!",
+    "date": "2026-09-22T14:02:26.135Z",
+    "duration": "37 ms",
+    "proof": "",
+    "error": "",
+    "comment": ""
+  },
+  {
+    "id": "AUTH-005",
+    "priority": "P1",
+    "module": "AUTH",
+    "scenario": "La récupération de mot de passe ne révèle pas l’existence du compte",
+    "type": "C - Mixte API + Playwright",
+    "status": "Conforme",
+    "result": "Réponses API connues/inconnues strictement identiques (volet API).",
+    "date": "2026-09-22T14:02:26.192Z",
+    "duration": "57 ms",
+    "proof": "",
+    "error": "",
+    "comment": "Volet UI exécuté par npm run test:recette:ui."
+  },
+  {
+    "id": "AUTH-006",
+    "priority": "P2",
+    "module": "AUTH",
+    "scenario": "Lecture du profil authentifié pour chaque rôle",
+    "type": "B - API",
+    "status": "Conforme",
+    "result": "ADMIN: HTTP 200 | DIRECTEUR: HTTP 200 | COLLABORATEUR: HTTP 200 | RESPONSABLE_SERVICE: HTTP 200 | RH: HTTP 200",
+    "date": "2026-09-22T14:02:26.284Z",
+    "duration": "91 ms",
+    "proof": "",
+    "error": "",
+    "comment": ""
+  },
+  {
+    "id": "AUTH-007",
+    "priority": "P1",
+    "module": "AUTH",
+    "scenario": "/auth/me sans jeton",
+    "type": "B - API",
+    "status": "Conforme",
+    "result": "HTTP 401",
+    "date": "2026-09-22T14:02:26.299Z",
+    "duration": "15 ms",
+    "proof": "",
+    "error": "",
+    "comment": ""
+  },
+  {
+    "id": "AUTH-008",
+    "priority": "P1",
+    "module": "AUTH",
+    "scenario": "Accès à une route protégée sans jeton",
+    "type": "B - API",
+    "status": "Conforme",
+    "result": "HTTP 401",
+    "date": "2026-09-22T14:02:26.312Z",
+    "duration": "12 ms",
+    "proof": "",
+    "error": "",
+    "comment": ""
+  }
+]

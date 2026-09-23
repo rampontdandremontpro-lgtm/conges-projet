@@ -1,0 +1,26 @@
+{
+  "name": "g-conges-absences-recette",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Campagne de recette automatisée G Congés & Absences",
+  "scripts": {
+    "test:recette": "node tests/recette/run-all.mjs",
+    "test:recette:p1": "node tests/recette/run-all.mjs --priority P1",
+    "test:recette:p2": "node tests/recette/run-all.mjs --priority P2",
+    "test:recette:ui": "node tests/recette/run-ui.mjs",
+    "test:recette:api": "node tests/recette/run-api.mjs",
+    "test:recette:report": "node tests/recette/scripts/generate-report.mjs",
+    "test:recette:auth": "node tests/recette/modules/auth/run-auth.mjs",
+    "test:recette:reset": "node tests/recette/seeds/reset-recette.mjs",
+    "test:recette:classify": "node tests/recette/scripts/classify.mjs"
+  },
+  "devDependencies": {
+    "playwright": "^1.63.0"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "jsonwebtoken": "^9.0.3",
+    "mysql2": "^3.24.4"
+  }
+}

@@ -1,0 +1,1429 @@
+[
+ {
+  "tbl": 0,
+  "heading": "",
+  "rows": 1,
+  "first": [
+   "CAHIER DE RECETTE - DÉMATÉRIALISATION DES CONGÉS DES ABSENCES"
+  ],
+  "ids": []
+ },
+ {
+  "tbl": 1,
+  "heading": "Informations du document",
+  "rows": 7,
+  "first": [
+   "Nom du projet",
+   "Dématérialisation et gestion des Congés et des Absences"
+  ],
+  "ids": []
+ },
+ {
+  "tbl": 2,
+  "heading": "Historique des versions",
+  "rows": 3,
+  "first": [
+   "Version",
+   "Date",
+   "Auteur",
+   "Modification",
+   "Validation"
+  ],
+  "ids": []
+ },
+ {
+  "tbl": 3,
+  "heading": "Environnement de recette à renseigner",
+  "rows": 10,
+  "first": [
+   "URL frontend",
+   "http://localhost:5173/"
+  ],
+  "ids": []
+ },
+ {
+  "tbl": 4,
+  "heading": "Jeu de données recommandé",
+  "rows": 11,
+  "first": [
+   "ADMIN-TEST",
+   "Compte Administrateur actif pour services, utilisateurs, paramètres et journaux."
+  ],
+  "ids": []
+ },
+ {
+  "tbl": 5,
+  "heading": "Légende et règles d’exécution",
+  "rows": 6,
+  "first": [
+   "Statut",
+   "Signification"
+  ],
+  "ids": []
+ },
+ {
+  "tbl": 6,
+  "heading": "Synthèse des scénarios",
+  "rows": 24,
+  "first": [
+   "Module",
+   "Priorité P1",
+   "Priorité P2",
+   "Nombre de tests"
+  ],
+  "ids": []
+ },
+ {
+  "tbl": 7,
+  "heading": "Vérifier la connexion, la récupération de mot de passe, l’identité courante, les protections de routes et l’isolation entre rôles.",
+  "rows": 9,
+  "first": [
+   "ID",
+   "Prio.",
+   "Scénario",
+   "Rôle",
+   "Préconditions et procédure",
+   "Résultat attendu",
+   "Preuve",
+   "Résultat / statut"
+  ],
+  "ids": [
+   "AUTH-001",
+   "AUTH-002",
+   "AUTH-003",
+   "AUTH-004",
+   "AUTH-005",
+   "AUTH-006",
+   "AUTH-007",
+   "AUTH-008"
+  ]
+ },
+ {
+  "tbl": 8,
+  "heading": "Vérifier les opérations d’administration et de paramétrage qui structurent les comptes, services, types de congés/absences et calendriers.",
+  "rows": 26,
+  "first": [
+   "ID",
+   "Prio.",
+   "Scénario",
+   "Rôle",
+   "Préconditions et procédure",
+   "Résultat attendu",
+   "Preuve",
+   "Résultat / statut"
+  ],
+  "ids": [
+   "ADM-001",
+   "ADM-002",
+   "ADM-003",
+   "ADM-004",
+   "ADM-005",
+   "ADM-006",
+   "ADM-007",
+   "ADM-008",
+   "ADM-009",
+   "ADM-010",
+   "ADM-011",
+   "ADM-012",
+   "ADM-013",
+   "ADM-014",
+   "ADM-015",
+   "ADM-016",
+   "ADM-017",
+   "ADM-018",
+   "ADM-019",
+   "ADM-020",
+   "ADM-021",
+   "ADM-022",
+   "ADM-023",
+   "ADM-024",
+   "ADM-025"
+  ]
+ },
+ {
+  "tbl": 9,
+  "heading": "Vérifier que les paramètres modifiables sont réellement relus par les règles métier et qu’ils peuvent être restaurés.",
+  "rows": 8,
+  "first": [
+   "ID",
+   "Prio.",
+   "Scénario",
+   "Rôle",
+   "Préconditions et procédure",
+   "Résultat attendu",
+   "Preuve",
+   "Résultat / statut"
+  ],
+  "ids": [
+   "SET-001",
+   "SET-002",
+   "SET-003",
+   "SET-004",
+   "SET-005",
+   "SET-006",
+   "SET-007"
+  ]
+ },
+ {
+  "tbl": 10,
+  "heading": "Vérifier les compteurs N-1/N/N+1, les mouvements, projections, acquisitions mensuelles, corrections et prorata",
+  "rows": 11,
+  "first": [
+   "ID",
+   "Prio.",
+   "Scénario",
+   "Rôle",
+   "Préconditions et procédure",
+   "Résultat attendu",
+   "Preuve",
+   "Résultat / statut"
+  ],
+  "ids": [
+   "BAL-001",
+   "BAL-002",
+   "BAL-003",
+   "BAL-004",
+   "BAL-005",
+   "BAL-006",
+   "BAL-007",
+   "BAL-008",
+   "BAL-009",
+   "BAL-010"
+  ]
+ },
+ {
+  "tbl": 11,
+  "heading": "Vérifier la déclaration d’absences, les justificatifs, leur contrôle RH, leur remplacement et l’isolation des documents.",
+  "rows": 18,
+  "first": [
+   "ID",
+   "Prio.",
+   "Scénario",
+   "Rôle",
+   "Préconditions et procédure",
+   "Résultat attendu",
+   "Preuve",
+   "Résultat / statut"
+  ],
+  "ids": [
+   "ABS-001",
+   "ABS-002",
+   "ABS-003",
+   "ABS-004",
+   "ABS-005",
+   "ABS-006",
+   "ABS-007",
+   "ABS-008",
+   "ABS-009",
+   "ABS-010",
+   "ABS-011",
+   "ABS-012",
+   "ABS-013",
+   "ABS-014",
+   "ABS-015",
+   "ABS-016",
+   "ABS-017"
+  ]
+ },
+ {
+  "tbl": 12,
+  "heading": "Vérifier la création et la décision des demandes de congé, les alertes de chevauchement et la règle de présence minimale.",
+  "rows": 12,
+  "first": [
+   "ID",
+   "Prio.",
+   "Scénario",
+   "Rôle",
+   "Préconditions et procédure",
+   "Résultat attendu",
+   "Preuve",
+   "Résultat / statut"
+  ],
+  "ids": [
+   "LEA-001",
+   "LEA-002",
+   "LEA-003",
+   "LEA-004",
+   "LEA-005",
+   "LEA-006",
+   "LEA-007",
+   "LEA-008",
+   "LEA-009",
+   "LEA-010",
+   "LEA-011"
+  ]
+ },
+ {
+  "tbl": 13,
+  "heading": "Vérifier les différents circuits d’annulation, le consentement éventuel, le recrédit des soldes et les documents associés.",
+  "rows": 11,
+  "first": [
+   "ID",
+   "Prio.",
+   "Scénario",
+   "Rôle",
+   "Préconditions et procédure",
+   "Résultat attendu",
+   "Preuve",
+   "Résultat / statut"
+  ],
+  "ids": [
+   "CAN-001",
+   "CAN-002",
+   "CAN-003",
+   "CAN-004",
+   "CAN-005",
+   "CAN-006",
+   "CAN-007",
+   "CAN-008",
+   "CAN-009",
+   "CAN-010"
+  ]
+ },
+ {
+  "tbl": 14,
+  "heading": "Vérifier la création, la soumission, la décision, la consommation et l’expiration des dérogations.",
+  "rows": 8,
+  "first": [
+   "ID",
+   "Prio.",
+   "Scénario",
+   "Rôle",
+   "Préconditions et procédure",
+   "Résultat attendu",
+   "Preuve",
+   "Résultat / statut"
+  ],
+  "ids": [
+   "DER-001",
+   "DER-002",
+   "DER-003",
+   "DER-004",
+   "DER-005",
+   "DER-006",
+   "DER-007"
+  ]
+ },
+ {
+  "tbl": 15,
+  "heading": "Vérifier les tâches automatiques, les rappels, l’expiration des demandes et la gestion des notifications internes.",
+  "rows": 10,
+  "first": [
+   "ID",
+   "Prio.",
+   "Scénario",
+   "Rôle",
+   "Préconditions et procédure",
+   "Résultat attendu",
+   "Preuve",
+   "Résultat / statut"
+  ],
+  "ids": [
+   "NOT-001",
+   "NOT-002",
+   "NOT-003",
+   "NOT-004",
+   "NOT-005",
+   "NOT-006",
+   "NOT-007",
+   "NOT-008",
+   "NOT-009"
+  ]
+ },
+ {
+  "tbl": 16,
+  "heading": "Vérifier la création d’un congé ou d’une absence par la RH pour un collaborateur, les responsabilités de signature et les restrictions associées.",
+  "rows": 50,
+  "first": [
+   "ID",
+   "Prio.",
+   "Scénario",
+   "Rôle",
+   "Préconditions et procédure",
+   "Résultat attendu",
+   "Preuve",
+   "Résultat / statut"
+  ],
+  "ids": [
+   "RHC-001",
+   "RHC-002",
+   "RHC-003",
+   "RHC-004",
+   "RHC-005",
+   "RHC-006",
+   "RHC-007",
+   "RHC-008",
+   "RHC-009",
+   "RHC-010",
+   "RHC-011",
+   "RHC-012",
+   "RHC-013",
+   "RHC-014",
+   "RHC-015",
+   "RHC-016",
+   "RHC-017",
+   "RHC-018",
+   "RHC-019",
+   "RHC-020",
+   "RHC-021",
+   "RHC-022",
+   "RHC-023",
+   "RHC-024",
+   "RHC-025",
+   "RHC-026",
+   "RHC-027",
+   "RHC-028",
+   "RHC-029",
+   "RHC-030",
+   "RHC-031",
+   "RHC-032",
+   "RHC-033",
+   "RHC-034",
+   "RHC-035",
+   "RHC-036",
+   "RHC-037",
+   "RHC-038",
+   "RHC-039",
+   "RHC-040",
+   "RHC-041",
+   "RHC-042",
+   "RHC-043",
+   "RHC-044",
+   "RHC-045",
+   "RHC-046",
+   "RHC-047",
+   "RHC-048",
+   "RHC-049"
+  ]
+ },
+ {
+  "tbl": 17,
+  "heading": "Vérifier le circuit spécifique du Directeur, l’enregistrement direct des congés et les contrôles de solde, dates, fermetures et présence.",
+  "rows": 27,
+  "first": [
+   "ID",
+   "Prio.",
+   "Scénario",
+   "Rôle",
+   "Préconditions et procédure",
+   "Résultat attendu",
+   "Preuve",
+   "Résultat / statut"
+  ],
+  "ids": [
+   "DIR-001",
+   "DIR-002",
+   "DIR-003",
+   "DIR-004",
+   "DIR-005",
+   "DIR-006",
+   "DIR-007",
+   "DIR-008",
+   "DIR-009",
+   "DIR-010",
+   "DIR-011",
+   "DIR-012",
+   "DIR-013",
+   "DIR-014",
+   "DIR-015",
+   "DIR-016",
+   "DIR-017",
+   "DIR-018",
+   "DIR-019",
+   "DIR-020",
+   "DIR-021",
+   "DIR-022",
+   "DIR-023",
+   "DIR-024",
+   "DIR-025",
+   "DIR-026"
+  ]
+ },
+ {
+  "tbl": 18,
+  "heading": "Vérifier le calcul PRESENT/EN_VACANCES/ABSENT et le relais de validation en fonction de la disponibilité du Responsable.",
+  "rows": 30,
+  "first": [
+   "ID",
+   "Prio.",
+   "Scénario",
+   "Rôle",
+   "Préconditions et procédure",
+   "Résultat attendu",
+   "Preuve",
+   "Résultat / statut"
+  ],
+  "ids": [
+   "PRE-001",
+   "PRE-002",
+   "PRE-003",
+   "PRE-004",
+   "PRE-005",
+   "PRE-006",
+   "PRE-007",
+   "PRE-008",
+   "PRE-009",
+   "PRE-010",
+   "PRE-011",
+   "PRE-012",
+   "PRE-013",
+   "PRE-014",
+   "PRE-015",
+   "PRE-016",
+   "PRE-017",
+   "PRE-018",
+   "PRE-019",
+   "PRE-020",
+   "PRE-021",
+   "PRE-022",
+   "PRE-023",
+   "PRE-024",
+   "PRE-027",
+   "PRE-028",
+   "PRE-029",
+   "PRE-030",
+   "PRE-031"
+  ]
+ },
+ {
+  "tbl": 19,
+  "heading": "Vérifier les périodes MATIN/APRES_MIDI, les saisies en heures et les effets sur présence, validation et notifications.",
+  "rows": 63,
+  "first": [
+   "ID",
+   "Prio.",
+   "Scénario",
+   "Rôle",
+   "Préconditions et procédure",
+   "Résultat attendu",
+   "Preuve",
+   "Résultat / statut"
+  ],
+  "ids": [
+   "HALF-001",
+   "HALF-002",
+   "HALF-003",
+   "HALF-004",
+   "HALF-005",
+   "HALF-006",
+   "HALF-007",
+   "HALF-008",
+   "HALF-009",
+   "HALF-010",
+   "HALF-011",
+   "HALF-012",
+   "HALF-013",
+   "HALF-014",
+   "HALF-015",
+   "HALF-016",
+   "HALF-017",
+   "HALF-018",
+   "HALF-019",
+   "HALF-020",
+   "HALF-021",
+   "HALF-022",
+   "HALF-023",
+   "HALF-024",
+   "HALF-025",
+   "HALF-026",
+   "HALF-027",
+   "HALF-028",
+   "HALF-029",
+   "HALF-030",
+   "HALF-031",
+   "HALF-032",
+   "HALF-033",
+   "HALF-034",
+   "HALF-035",
+   "HALF-036",
+   "HALF-037",
+   "HALF-038",
+   "HALF-039",
+   "HALF-040",
+   "HALF-041",
+   "HALF-042",
+   "HALF-043",
+   "HALF-044",
+   "HALF-045",
+   "HALF-046",
+   "HALF-047",
+   "HALF-048",
+   "HALF-049",
+   "HALF-050",
+   "HALF-051",
+   "HALF-052",
+   "HALF-053",
+   "HALF-054",
+   "HALF-055",
+   "HALF-056",
+   "HALF-057",
+   "HALF-058",
+   "HALF-059",
+   "HALF-060",
+   "HALF-061",
+   "HALF-062"
+  ]
+ },
+ {
+  "tbl": 20,
+  "heading": "Vérifier les exports RH, les statistiques agrégées Directeur et les opérations de clôture/report des compteurs.",
+  "rows": 14,
+  "first": [
+   "ID",
+   "Prio.",
+   "Scénario",
+   "Rôle",
+   "Préconditions et procédure",
+   "Résultat attendu",
+   "Preuve",
+   "Résultat / statut"
+  ],
+  "ids": [
+   "EXP-001",
+   "EXP-002",
+   "EXP-003",
+   "EXP-004",
+   "EXP-005",
+   "EXP-006",
+   "EXP-007",
+   "EXP-008",
+   "EXP-009",
+   "EXP-010",
+   "EXP-011",
+   "EXP-012",
+   "EXP-013"
+  ]
+ },
+ {
+  "tbl": 21,
+  "heading": "Vérifier la consultation des journaux, le masquage des données sensibles, les identifiants métier d’audit et la conformité de la base.",
+  "rows": 12,
+  "first": [
+   "ID",
+   "Prio.",
+   "Scénario",
+   "Rôle",
+   "Préconditions et procédure",
+   "Résultat attendu",
+   "Preuve",
+   "Résultat / statut"
+  ],
+  "ids": [
+   "AUD-001",
+   "AUD-002",
+   "AUD-003",
+   "AUD-004",
+   "AUD-005",
+   "AUD-006",
+   "AUD-007",
+   "AUD-008",
+   "AUD-009",
+   "AUD-010",
+   "AUD-011"
+  ]
+ },
+ {
+  "tbl": 22,
+  "heading": "Vérifier les paliers de rappel de fin de période, le récapitulatif RH, le rattrapage et l’idempotence.",
+  "rows": 23,
+  "first": [
+   "ID",
+   "Prio.",
+   "Scénario",
+   "Rôle",
+   "Préconditions et procédure",
+   "Résultat attendu",
+   "Preuve",
+   "Résultat / statut"
+  ],
+  "ids": [
+   "E4-001",
+   "E4-002",
+   "E4-003",
+   "E4-004",
+   "E4-005",
+   "E4-006",
+   "E4-007",
+   "E4-008",
+   "E4-009",
+   "E4-010",
+   "E4-011",
+   "E4-012",
+   "E4-013",
+   "E4-014",
+   "E4-015",
+   "E4-016",
+   "E4-017",
+   "E4-018",
+   "E4-019",
+   "E4-020",
+   "E4-021",
+   "E4-022"
+  ]
+ },
+ {
+  "tbl": 23,
+  "heading": "Vérifier que l’acquisition mensuelle et les mouvements sont rattachés à la période de référence configurée.",
+  "rows": 8,
+  "first": [
+   "ID",
+   "Prio.",
+   "Scénario",
+   "Rôle",
+   "Préconditions et procédure",
+   "Résultat attendu",
+   "Preuve",
+   "Résultat / statut"
+  ],
+  "ids": [
+   "REF-001",
+   "REF-002",
+   "REF-003",
+   "REF-004",
+   "REF-005",
+   "REF-006",
+   "REF-007"
+  ]
+ },
+ {
+  "tbl": 24,
+  "heading": "Vérifier la configuration des secours, les remplacements temporaires et la résolution dynamique du valideur effectif.",
+  "rows": 76,
+  "first": [
+   "ID",
+   "Prio.",
+   "Scénario",
+   "Rôle",
+   "Préconditions et procédure",
+   "Résultat attendu",
+   "Preuve",
+   "Résultat / statut"
+  ],
+  "ids": [
+   "VAL-001",
+   "VAL-002",
+   "VAL-003",
+   "VAL-004",
+   "VAL-005",
+   "VAL-006",
+   "VAL-007",
+   "VAL-008",
+   "VAL-009",
+   "VAL-010",
+   "VAL-011",
+   "VAL-012",
+   "VAL-013",
+   "VAL-014",
+   "VAL-015",
+   "VAL-016",
+   "VAL-017",
+   "VAL-018",
+   "VAL-019",
+   "VAL-020",
+   "VAL-021",
+   "VAL-022",
+   "VAL-023",
+   "VAL-024",
+   "VAL-025",
+   "VAL-026",
+   "VAL-027",
+   "VAL-028",
+   "VAL-029",
+   "VAL-030",
+   "VAL-031",
+   "VAL-032",
+   "VAL-033",
+   "VAL-034",
+   "VAL-035",
+   "VAL-036",
+   "VAL-037",
+   "VAL-038",
+   "VAL-039",
+   "VAL-040",
+   "VAL-041",
+   "VAL-042",
+   "VAL-043",
+   "VAL-044",
+   "VAL-045",
+   "VAL-046",
+   "VAL-047",
+   "VAL-048",
+   "VAL-049",
+   "VAL-050",
+   "VAL-051",
+   "VAL-052",
+   "VAL-053",
+   "VAL-054",
+   "VAL-055",
+   "VAL-056",
+   "VAL-057",
+   "VAL-058",
+   "VAL-059",
+   "VAL-060",
+   "VAL-061",
+   "VAL-062",
+   "VAL-063",
+   "VAL-064",
+   "VAL-065",
+   "VAL-066",
+   "VAL-067",
+   "VAL-068",
+   "VAL-069",
+   "VAL-070",
+   "VAL-071",
+   "VAL-072",
+   "VAL-073",
+   "VAL-074",
+   "VAL-075"
+  ]
+ },
+ {
+  "tbl": 25,
+  "heading": "Vérifier les parcours visuels critiques, les drawers, le calendrier, les boutons, les filtres et l’adaptation aux résolutions de recette.",
+  "rows": 21,
+  "first": [
+   "ID",
+   "Prio.",
+   "Scénario",
+   "Rôle",
+   "Préconditions et procédure",
+   "Résultat attendu",
+   "Preuve",
+   "Résultat / statut"
+  ],
+  "ids": [
+   "UI-001",
+   "UI-002",
+   "UI-003",
+   "UI-004",
+   "UI-005",
+   "UI-006",
+   "UI-007",
+   "UI-008",
+   "UI-009",
+   "UI-010",
+   "UI-011",
+   "UI-012",
+   "UI-013",
+   "UI-014",
+   "UI-015",
+   "UI-016",
+   "UI-017",
+   "UI-018",
+   "UI-019",
+   "UI-020"
+  ]
+ },
+ {
+  "tbl": 26,
+  "heading": "Créer une ligne par anomalie constatée. L’identifiant doit être repris dans le commentaire du scénario concerné.",
+  "rows": 7,
+  "first": [
+   "ID",
+   "Test lié",
+   "Résumé",
+   "Sévérité",
+   "Statut",
+   "Responsable",
+   "Date cible",
+   "Retest"
+  ],
+  "ids": [
+   "ANO-001",
+   "ANO-002",
+   "ANO-003",
+   "ANO-004",
+   "ANO-005",
+   "ANO-006"
+  ]
+ },
+ {
+  "tbl": 27,
+  "heading": "Niveaux de sévérité",
+  "rows": 4,
+  "first": [
+   "Bloquante",
+   "Empêche l’utilisation d’une fonction essentielle ou la poursuite de la recette."
+  ],
+  "ids": []
+ },
+ {
+  "tbl": 28,
+  "heading": "Synthèse et décision de recette",
+  "rows": 9,
+  "first": [
+   "Nombre total de scénarios",
+   "420"
+  ],
+  "ids": []
+ },
+ {
+  "tbl": 29,
+  "heading": "Recette à exécuter sur 420 scénarios. Les valeurs de synthèse seront renseignées après exécution, correction des anomalies éventuelles et retests.",
+  "rows": 4,
+  "first": [
+   "Rôle",
+   "Nom / signature",
+   "Date"
+  ],
+  "ids": []
+ },
+ {
+  "tbl": 30,
+  "heading": "Les captures suivantes constituent le minimum recommandé pour démontrer les parcours critiques. Les informations sensibles, jetons, mots de passe et secrets doivent être masqués avant insertion.",
+  "rows": 1,
+  "first": [
+   "CAP-AUTH-002 - Connexion refusée avec un mauvais mot de passe"
+  ],
+  "ids": []
+ },
+ {
+  "tbl": 31,
+  "heading": "Les captures suivantes constituent le minimum recommandé pour démontrer les parcours critiques. Les informations sensibles, jetons, mots de passe et secrets doivent être masqués avant insertion.",
+  "rows": 1,
+  "first": [
+   "CAP-AUTH-003 - Demande de définition de mot de passe pour un compte connu"
+  ],
+  "ids": []
+ },
+ {
+  "tbl": 32,
+  "heading": "Les captures suivantes constituent le minimum recommandé pour démontrer les parcours critiques. Les informations sensibles, jetons, mots de passe et secrets doivent être masqués avant insertion.",
+  "rows": 1,
+  "first": [
+   "CAP-AUTH-004 - Demande de définition de mot de passe pour un compte inconnu"
+  ],
+  "ids": []
+ },
+ {
+  "tbl": 33,
+  "heading": "Les captures suivantes constituent le minimum recommandé pour démontrer les parcours critiques. Les informations sensibles, jetons, mots de passe et secrets doivent être masqués avant insertion.",
+  "rows": 1,
+  "first": [
+   "CAP-AUTH-005 - La récupération de mot de passe ne révèle pas l’existence du compte"
+  ],
+  "ids": []
+ },
+ {
+  "tbl": 34,
+  "heading": "Les captures suivantes constituent le minimum recommandé pour démontrer les parcours critiques. Les informations sensibles, jetons, mots de passe et secrets doivent être masqués avant insertion.",
+  "rows": 1,
+  "first": [
+   "CAP-ADM-006 - Le nouvel utilisateur définit son mot de passe"
+  ],
+  "ids": []
+ },
+ {
+  "tbl": 35,
+  "heading": "Les captures suivantes constituent le minimum recommandé pour démontrer les parcours critiques. Les informations sensibles, jetons, mots de passe et secrets doivent être masqués avant insertion.",
+  "rows": 1,
+  "first": [
+   "CAP-ADM-007 - Le nouvel utilisateur se connecte avec son mot de passe"
+  ],
+  "ids": []
+ },
+ {
+  "tbl": 36,
+  "heading": "Les captures suivantes constituent le minimum recommandé pour démontrer les parcours critiques. Les informations sensibles, jetons, mots de passe et secrets doivent être masqués avant insertion.",
+  "rows": 1,
+  "first": [
+   "CAP-ADM-008 - Le lien de définition du mot de passe est à usage unique"
+  ],
+  "ids": []
+ },
+ {
+  "tbl": 37,
+  "heading": "Les captures suivantes constituent le minimum recommandé pour démontrer les parcours critiques. Les informations sensibles, jetons, mots de passe et secrets doivent être masqués avant insertion.",
+  "rows": 1,
+  "first": [
+   "CAP-ADM-013 - RH ne peut pas activer le dépôt différé sans justificatif obligatoire"
+  ],
+  "ids": []
+ },
+ {
+  "tbl": 38,
+  "heading": "Les captures suivantes constituent le minimum recommandé pour démontrer les parcours critiques. Les informations sensibles, jetons, mots de passe et secrets doivent être masqués avant insertion.",
+  "rows": 1,
+  "first": [
+   "CAP-BAL-001 - Collaborateur consulte ses propres soldes"
+  ],
+  "ids": []
+ },
+ {
+  "tbl": 39,
+  "heading": "Les captures suivantes constituent le minimum recommandé pour démontrer les parcours critiques. Les informations sensibles, jetons, mots de passe et secrets doivent être masqués avant insertion.",
+  "rows": 1,
+  "first": [
+   "CAP-BAL-002 - RH consulte le solde d’un collaborateur"
+  ],
+  "ids": []
+ },
+ {
+  "tbl": 40,
+  "heading": "Les captures suivantes constituent le minimum recommandé pour démontrer les parcours critiques. Les informations sensibles, jetons, mots de passe et secrets doivent être masqués avant insertion.",
+  "rows": 1,
+  "first": [
+   "CAP-ABS-001 - Collaborateur B crée une déclaration d’absence"
+  ],
+  "ids": []
+ },
+ {
+  "tbl": 41,
+  "heading": "Les captures suivantes constituent le minimum recommandé pour démontrer les parcours critiques. Les informations sensibles, jetons, mots de passe et secrets doivent être masqués avant insertion.",
+  "rows": 1,
+  "first": [
+   "CAP-ABS-004 - Collaborateur B soumet sa déclaration"
+  ],
+  "ids": []
+ },
+ {
+  "tbl": 42,
+  "heading": "Les captures suivantes constituent le minimum recommandé pour démontrer les parcours critiques. Les informations sensibles, jetons, mots de passe et secrets doivent être masqués avant insertion.",
+  "rows": 1,
+  "first": [
+   "CAP-ABS-006 - Collaborateur ajoute un justificatif PDF valide"
+  ],
+  "ids": []
+ },
+ {
+  "tbl": 43,
+  "heading": "Les captures suivantes constituent le minimum recommandé pour démontrer les parcours critiques. Les informations sensibles, jetons, mots de passe et secrets doivent être masqués avant insertion.",
+  "rows": 1,
+  "first": [
+   "CAP-ABS-007 - Autre collaborateur ne consulte pas le justificatif"
+  ],
+  "ids": []
+ },
+ {
+  "tbl": 44,
+  "heading": "Les captures suivantes constituent le minimum recommandé pour démontrer les parcours critiques. Les informations sensibles, jetons, mots de passe et secrets doivent être masqués avant insertion.",
+  "rows": 1,
+  "first": [
+   "CAP-ABS-008 - RH consulte les justificatifs à contrôler"
+  ],
+  "ids": []
+ },
+ {
+  "tbl": 45,
+  "heading": "Les captures suivantes constituent le minimum recommandé pour démontrer les parcours critiques. Les informations sensibles, jetons, mots de passe et secrets doivent être masqués avant insertion.",
+  "rows": 1,
+  "first": [
+   "CAP-ABS-009 - Directeur ne télécharge pas le justificatif"
+  ],
+  "ids": []
+ },
+ {
+  "tbl": 46,
+  "heading": "Les captures suivantes constituent le minimum recommandé pour démontrer les parcours critiques. Les informations sensibles, jetons, mots de passe et secrets doivent être masqués avant insertion.",
+  "rows": 1,
+  "first": [
+   "CAP-ABS-010 - RH télécharge le justificatif"
+  ],
+  "ids": []
+ },
+ {
+  "tbl": 47,
+  "heading": "Les captures suivantes constituent le minimum recommandé pour démontrer les parcours critiques. Les informations sensibles, jetons, mots de passe et secrets doivent être masqués avant insertion.",
+  "rows": 1,
+  "first": [
+   "CAP-ABS-011 - RH rejette le justificatif avec un motif"
+  ],
+  "ids": []
+ },
+ {
+  "tbl": 48,
+  "heading": "Les captures suivantes constituent le minimum recommandé pour démontrer les parcours critiques. Les informations sensibles, jetons, mots de passe et secrets doivent être masqués avant insertion.",
+  "rows": 1,
+  "first": [
+   "CAP-ABS-012 - Collaborateur remplace le justificatif rejeté"
+  ],
+  "ids": []
+ },
+ {
+  "tbl": 49,
+  "heading": "Les captures suivantes constituent le minimum recommandé pour démontrer les parcours critiques. Les informations sensibles, jetons, mots de passe et secrets doivent être masqués avant insertion.",
+  "rows": 1,
+  "first": [
+   "CAP-ABS-013 - L’ancien justificatif archivé n’est plus traitable"
+  ],
+  "ids": []
+ },
+ {
+  "tbl": 50,
+  "heading": "Les captures suivantes constituent le minimum recommandé pour démontrer les parcours critiques. Les informations sensibles, jetons, mots de passe et secrets doivent être masqués avant insertion.",
+  "rows": 1,
+  "first": [
+   "CAP-ABS-014 - RH accepte le justificatif de remplacement"
+  ],
+  "ids": []
+ },
+ {
+  "tbl": 51,
+  "heading": "Les captures suivantes constituent le minimum recommandé pour démontrer les parcours critiques. Les informations sensibles, jetons, mots de passe et secrets doivent être masqués avant insertion.",
+  "rows": 1,
+  "first": [
+   "CAP-ABS-017 - Collaborateur annule son brouillon d’absence"
+  ],
+  "ids": []
+ },
+ {
+  "tbl": 52,
+  "heading": "Les captures suivantes constituent le minimum recommandé pour démontrer les parcours critiques. Les informations sensibles, jetons, mots de passe et secrets doivent être masqués avant insertion.",
+  "rows": 1,
+  "first": [
+   "CAP-LEA-005 - Responsable valide avec justification obligatoire"
+  ],
+  "ids": []
+ },
+ {
+  "tbl": 53,
+  "heading": "Les captures suivantes constituent le minimum recommandé pour démontrer les parcours critiques. Les informations sensibles, jetons, mots de passe et secrets doivent être masqués avant insertion.",
+  "rows": 1,
+  "first": [
+   "CAP-LEA-006 - Collaborateur télécharge le PDF de validation"
+  ],
+  "ids": []
+ },
+ {
+  "tbl": 54,
+  "heading": "Les captures suivantes constituent le minimum recommandé pour démontrer les parcours critiques. Les informations sensibles, jetons, mots de passe et secrets doivent être masqués avant insertion.",
+  "rows": 1,
+  "first": [
+   "CAP-CAN-001 - Une modification avant décision invalide la signature et repasse en brouillon"
+  ],
+  "ids": []
+ },
+ {
+  "tbl": 55,
+  "heading": "Les captures suivantes constituent le minimum recommandé pour démontrer les parcours critiques. Les informations sensibles, jetons, mots de passe et secrets doivent être masqués avant insertion.",
+  "rows": 1,
+  "first": [
+   "CAP-CAN-002 - Collaborateur annule une demande avant décision"
+  ],
+  "ids": []
+ },
+ {
+  "tbl": 56,
+  "heading": "Les captures suivantes constituent le minimum recommandé pour démontrer les parcours critiques. Les informations sensibles, jetons, mots de passe et secrets doivent être masqués avant insertion.",
+  "rows": 1,
+  "first": [
+   "CAP-CAN-003 - Collaborateur demande l’annulation après validation"
+  ],
+  "ids": []
+ },
+ {
+  "tbl": 57,
+  "heading": "Les captures suivantes constituent le minimum recommandé pour démontrer les parcours critiques. Les informations sensibles, jetons, mots de passe et secrets doivent être masqués avant insertion.",
+  "rows": 1,
+  "first": [
+   "CAP-CAN-004 - Responsable ne finalise pas l’annulation"
+  ],
+  "ids": []
+ },
+ {
+  "tbl": 58,
+  "heading": "Les captures suivantes constituent le minimum recommandé pour démontrer les parcours critiques. Les informations sensibles, jetons, mots de passe et secrets doivent être masqués avant insertion.",
+  "rows": 1,
+  "first": [
+   "CAP-CAN-005 - RH finalise l’annulation et recrédite le solde"
+  ],
+  "ids": []
+ },
+ {
+  "tbl": 59,
+  "heading": "Les captures suivantes constituent le minimum recommandé pour démontrer les parcours critiques. Les informations sensibles, jetons, mots de passe et secrets doivent être masqués avant insertion.",
+  "rows": 1,
+  "first": [
+   "CAP-CAN-006 - Collaborateur télécharge le PDF d’annulation"
+  ],
+  "ids": []
+ },
+ {
+  "tbl": 60,
+  "heading": "Les captures suivantes constituent le minimum recommandé pour démontrer les parcours critiques. Les informations sensibles, jetons, mots de passe et secrets doivent être masqués avant insertion.",
+  "rows": 1,
+  "first": [
+   "CAP-CAN-008 - RH initie une annulation après validation"
+  ],
+  "ids": []
+ },
+ {
+  "tbl": 61,
+  "heading": "Les captures suivantes constituent le minimum recommandé pour démontrer les parcours critiques. Les informations sensibles, jetons, mots de passe et secrets doivent être masqués avant insertion.",
+  "rows": 1,
+  "first": [
+   "CAP-CAN-009 - Collaborateur donne son consentement à l’annulation"
+  ],
+  "ids": []
+ },
+ {
+  "tbl": 62,
+  "heading": "Les captures suivantes constituent le minimum recommandé pour démontrer les parcours critiques. Les informations sensibles, jetons, mots de passe et secrets doivent être masqués avant insertion.",
+  "rows": 1,
+  "first": [
+   "CAP-CAN-010 - RH finalise l’annulation avec consentement"
+  ],
+  "ids": []
+ },
+ {
+  "tbl": 63,
+  "heading": "Les captures suivantes constituent le minimum recommandé pour démontrer les parcours critiques. Les informations sensibles, jetons, mots de passe et secrets doivent être masqués avant insertion.",
+  "rows": 1,
+  "first": [
+   "CAP-DER-003 - Collaborateur soumet la dérogation"
+  ],
+  "ids": []
+ },
+ {
+  "tbl": 64,
+  "heading": "Les captures suivantes constituent le minimum recommandé pour démontrer les parcours critiques. Les informations sensibles, jetons, mots de passe et secrets doivent être masqués avant insertion.",
+  "rows": 1,
+  "first": [
+   "CAP-DER-007 - Collaborateur annule la demande dérogatoire avant décision"
+  ],
+  "ids": []
+ },
+ {
+  "tbl": 65,
+  "heading": "Les captures suivantes constituent le minimum recommandé pour démontrer les parcours critiques. Les informations sensibles, jetons, mots de passe et secrets doivent être masqués avant insertion.",
+  "rows": 1,
+  "first": [
+   "CAP-NOT-002 - La demande arrivée à échéance passe à EXPIREE_NON_VALIDEE"
+  ],
+  "ids": []
+ },
+ {
+  "tbl": 66,
+  "heading": "Les captures suivantes constituent le minimum recommandé pour démontrer les parcours critiques. Les informations sensibles, jetons, mots de passe et secrets doivent être masqués avant insertion.",
+  "rows": 1,
+  "first": [
+   "CAP-RHC-022 - La RH créatrice ne soumet pas la demande du collaborateur"
+  ],
+  "ids": []
+ },
+ {
+  "tbl": 67,
+  "heading": "Les captures suivantes constituent le minimum recommandé pour démontrer les parcours critiques. Les informations sensibles, jetons, mots de passe et secrets doivent être masqués avant insertion.",
+  "rows": 1,
+  "first": [
+   "CAP-RHC-024 - La seconde RH définit son mot de passe"
+  ],
+  "ids": []
+ },
+ {
+  "tbl": 68,
+  "heading": "Les captures suivantes constituent le minimum recommandé pour démontrer les parcours critiques. Les informations sensibles, jetons, mots de passe et secrets doivent être masqués avant insertion.",
+  "rows": 1,
+  "first": [
+   "CAP-RHC-026 - Une autre RH ne soumet pas la demande du collaborateur"
+  ],
+  "ids": []
+ },
+ {
+  "tbl": 69,
+  "heading": "Les captures suivantes constituent le minimum recommandé pour démontrer les parcours critiques. Les informations sensibles, jetons, mots de passe et secrets doivent être masqués avant insertion.",
+  "rows": 1,
+  "first": [
+   "CAP-RHC-027 - Le collaborateur propriétaire soumet avec sa propre signature"
+  ],
+  "ids": []
+ },
+ {
+  "tbl": 70,
+  "heading": "Les captures suivantes constituent le minimum recommandé pour démontrer les parcours critiques. Les informations sensibles, jetons, mots de passe et secrets doivent être masqués avant insertion.",
+  "rows": 1,
+  "first": [
+   "CAP-RHC-031 - La RH ne peut pas annuler avant décision à la place du collaborateur"
+  ],
+  "ids": []
+ },
+ {
+  "tbl": 71,
+  "heading": "Les captures suivantes constituent le minimum recommandé pour démontrer les parcours critiques. Les informations sensibles, jetons, mots de passe et secrets doivent être masqués avant insertion.",
+  "rows": 1,
+  "first": [
+   "CAP-RHC-032 - Le collaborateur propriétaire annule sa demande"
+  ],
+  "ids": []
+ },
+ {
+  "tbl": 72,
+  "heading": "Les captures suivantes constituent le minimum recommandé pour démontrer les parcours critiques. Les informations sensibles, jetons, mots de passe et secrets doivent être masqués avant insertion.",
+  "rows": 1,
+  "first": [
+   "CAP-DIR-001 - Un collaborateur ne peut pas utiliser la route Directeur"
+  ],
+  "ids": []
+ },
+ {
+  "tbl": 73,
+  "heading": "Les captures suivantes constituent le minimum recommandé pour démontrer les parcours critiques. Les informations sensibles, jetons, mots de passe et secrets doivent être masqués avant insertion.",
+  "rows": 1,
+  "first": [
+   "CAP-DIR-002 - Un Responsable ne peut pas utiliser la route Directeur"
+  ],
+  "ids": []
+ },
+ {
+  "tbl": 74,
+  "heading": "Les captures suivantes constituent le minimum recommandé pour démontrer les parcours critiques. Les informations sensibles, jetons, mots de passe et secrets doivent être masqués avant insertion.",
+  "rows": 1,
+  "first": [
+   "CAP-DIR-015 - Le statut de présence du Directeur passe à EN_VACANCES"
+  ],
+  "ids": []
+ },
+ {
+  "tbl": 75,
+  "heading": "Les captures suivantes constituent le minimum recommandé pour démontrer les parcours critiques. Les informations sensibles, jetons, mots de passe et secrets doivent être masqués avant insertion.",
+  "rows": 1,
+  "first": [
+   "CAP-DIR-016 - Présence du Directeur au jour courant"
+  ],
+  "ids": []
+ },
+ {
+  "tbl": 76,
+  "heading": "Les captures suivantes constituent le minimum recommandé pour démontrer les parcours critiques. Les informations sensibles, jetons, mots de passe et secrets doivent être masqués avant insertion.",
+  "rows": 1,
+  "first": [
+   "CAP-PRE-001 - Présence calculée et relais du Responsable"
+  ],
+  "ids": []
+ },
+ {
+  "tbl": 77,
+  "heading": "Les captures suivantes constituent le minimum recommandé pour démontrer les parcours critiques. Les informations sensibles, jetons, mots de passe et secrets doivent être masqués avant insertion.",
+  "rows": 1,
+  "first": [
+   "CAP-PRE-002 - Le Responsable valide le congé futur du collaborateur"
+  ],
+  "ids": []
+ },
+ {
+  "tbl": 78,
+  "heading": "Les captures suivantes constituent le minimum recommandé pour démontrer les parcours critiques. Les informations sensibles, jetons, mots de passe et secrets doivent être masqués avant insertion.",
+  "rows": 1,
+  "first": [
+   "CAP-PRE-005 - La RH soumet l’absence enregistrée"
+  ],
+  "ids": []
+ },
+ {
+  "tbl": 79,
+  "heading": "Les captures suivantes constituent le minimum recommandé pour démontrer les parcours critiques. Les informations sensibles, jetons, mots de passe et secrets doivent être masqués avant insertion.",
+  "rows": 1,
+  "first": [
+   "CAP-PRE-007 - La RH annule l’absence enregistrée"
+  ],
+  "ids": []
+ },
+ {
+  "tbl": 80,
+  "heading": "Les captures suivantes constituent le minimum recommandé pour démontrer les parcours critiques. Les informations sensibles, jetons, mots de passe et secrets doivent être masqués avant insertion.",
+  "rows": 1,
+  "first": [
+   "CAP-PRE-008 - L’annulation d’une absence ramène le statut à PRESENT"
+  ],
+  "ids": []
+ },
+ {
+  "tbl": 81,
+  "heading": "Les captures suivantes constituent le minimum recommandé pour démontrer les parcours critiques. Les informations sensibles, jetons, mots de passe et secrets doivent être masqués avant insertion.",
+  "rows": 1,
+  "first": [
+   "CAP-PRE-009 - RH crée une absence autorisée demi-journée"
+  ],
+  "ids": []
+ },
+ {
+  "tbl": 82,
+  "heading": "Les captures suivantes constituent le minimum recommandé pour démontrer les parcours critiques. Les informations sensibles, jetons, mots de passe et secrets doivent être masqués avant insertion.",
+  "rows": 1,
+  "first": [
+   "CAP-PRE-010 - La RH soumet l’absence demi-journée"
+  ],
+  "ids": []
+ },
+ {
+  "tbl": 83,
+  "heading": "Les captures suivantes constituent le minimum recommandé pour démontrer les parcours critiques. Les informations sensibles, jetons, mots de passe et secrets doivent être masqués avant insertion.",
+  "rows": 1,
+  "first": [
+   "CAP-PRE-011 - Une absence demi-journée (MATIN) rend ABSENT sur le slot courant MATIN"
+  ],
+  "ids": []
+ },
+ {
+  "tbl": 84,
+  "heading": "Les captures suivantes constituent le minimum recommandé pour démontrer les parcours critiques. Les informations sensibles, jetons, mots de passe et secrets doivent être masqués avant insertion.",
+  "rows": 1,
+  "first": [
+   "CAP-PRE-013 - Une absence demi-journée (MATIN) laisse PRESENT sur le slot APRES_MIDI"
+  ],
+  "ids": []
+ },
+ {
+  "tbl": 85,
+  "heading": "Les captures suivantes constituent le minimum recommandé pour démontrer les parcours critiques. Les informations sensibles, jetons, mots de passe et secrets doivent être masqués avant insertion.",
+  "rows": 1,
+  "first": [
+   "CAP-PRE-015 - La RH annule l’absence demi-journée"
+  ],
+  "ids": []
+ },
+ {
+  "tbl": 86,
+  "heading": "Les captures suivantes constituent le minimum recommandé pour démontrer les parcours critiques. Les informations sensibles, jetons, mots de passe et secrets doivent être masqués avant insertion.",
+  "rows": 1,
+  "first": [
+   "CAP-PRE-017 - La RH soumet l’absence du Responsable"
+  ],
+  "ids": []
+ },
+ {
+  "tbl": 87,
+  "heading": "Les captures suivantes constituent le minimum recommandé pour démontrer les parcours critiques. Les informations sensibles, jetons, mots de passe et secrets doivent être masqués avant insertion.",
+  "rows": 1,
+  "first": [
+   "CAP-PRE-020 - La RH annule l’absence du Responsable"
+  ],
+  "ids": []
+ },
+ {
+  "tbl": 88,
+  "heading": "Les captures suivantes constituent le minimum recommandé pour démontrer les parcours critiques. Les informations sensibles, jetons, mots de passe et secrets doivent être masqués avant insertion.",
+  "rows": 1,
+  "first": [
+   "CAP-PRE-021 - RH crée une absence demi-journée pour le Responsable"
+  ],
+  "ids": []
+ },
+ {
+  "tbl": 89,
+  "heading": "Les captures suivantes constituent le minimum recommandé pour démontrer les parcours critiques. Les informations sensibles, jetons, mots de passe et secrets doivent être masqués avant insertion.",
+  "rows": 1,
+  "first": [
+   "CAP-PRE-022 - La RH soumet l’absence demi-journée du Responsable"
+  ],
+  "ids": []
+ },
+ {
+  "tbl": 90,
+  "heading": "Les captures suivantes constituent le minimum recommandé pour démontrer les parcours critiques. Les informations sensibles, jetons, mots de passe et secrets doivent être masqués avant insertion.",
+  "rows": 1,
+  "first": [
+   "CAP-PRE-007 - La RH annule l’absence enregistrée"
+  ],
+  "ids": []
+ },
+ {
+  "tbl": 91,
+  "heading": "Les captures suivantes constituent le minimum recommandé pour démontrer les parcours critiques. Les informations sensibles, jetons, mots de passe et secrets doivent être masqués avant insertion.",
+  "rows": 1,
+  "first": [
+   "CAP-PRE-007 - La RH annule l’absence enregistrée"
+  ],
+  "ids": []
+ }
+]

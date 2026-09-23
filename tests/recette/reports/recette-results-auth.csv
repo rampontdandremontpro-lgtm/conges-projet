@@ -1,0 +1,9 @@
+﻿ID;Priorité;Module;Scénario;Type de test;Statut;Résultat obtenu;Date;Durée;Preuve;Erreur;Commentaire
+AUTH-001;P2;AUTH;Racine de l’API disponible;B - API;Conforme;HTTP 200 — Hello World!;2026-09-23T12:36:01.549Z;36 ms;;;
+AUTH-002;P1;AUTH;Connexion refusée avec un mauvais mot de passe;A - Playwright;Conforme;Message d’erreur explicite affiché, pas de connexion.;2026-09-23T12:36:06.258Z;4709 ms;CAP-AUTH-002.png;;
+AUTH-003;P1;AUTH;Demande de définition de mot de passe pour un compte connu;A - Playwright;Conforme;Écran de confirmation affiché pour un compte connu.;2026-09-23T12:36:10.222Z;2196 ms;CAP-AUTH-003.png;;
+AUTH-004;P1;AUTH;Demande de définition de mot de passe pour un compte inconnu;A - Playwright;Conforme;Écran de confirmation générique affiché pour un compte inconnu.;2026-09-23T12:36:13.103Z;2228 ms;CAP-AUTH-004.png;;
+AUTH-005;P1;AUTH;La récupération de mot de passe ne révèle pas l’existence du compte;C - Mixte API + Playwright;Conforme;Les réponses API pour compte connu/inconnu sont strictement identiques.;2026-09-23T12:36:15.519Z;2198 ms;CAP-AUTH-005.png;;
+AUTH-006;P2;AUTH;Lecture du profil authentifié pour chaque rôle;B - API;Conforme;ADMIN: login 200, me 200 | RH: login 200, me 200 | DIRECTEUR: login 200, me 200 | RESPONSABLE_SERVICE: login 200, me 200 | COLLABORATEUR: login 200, me 200 | COLLABORATEUR: login 200, me 200 | COLLABORATEUR: login 200, me 200 | COLLABORATEUR: login 200, me 200;2026-09-23T12:36:18.815Z;3296 ms;;;
+AUTH-007;P1;AUTH;/auth/me sans jeton;B - API;Conforme;HTTP 401;2026-09-23T12:36:18.835Z;20 ms;;;
+AUTH-008;P1;AUTH;Accès à une route protégée sans jeton;B - API;Conforme;HTTP 401;2026-09-23T12:36:18.850Z;15 ms;;;

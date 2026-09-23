@@ -1,0 +1,13 @@
+{
+  "description": "Comptes de recette de la base isolée gestion_conges_gmes_test. Les mots de passe ci-dessous sont des mots de passe de recette uniquement.",
+  "accounts": [
+    { "id": 13, "email": "admin.recette@gmes.fr", "role": "ADMIN", "nom": "ADMIN-TEST", "prenom": "Recette", "password": "RecetteGMES@2026!" },
+    { "id": 14, "email": "rh.recette@gmes.fr", "role": "RH", "nom": "RH-TEST", "prenom": "Recette", "password": "RecetteGMES@2026!" },
+    { "id": 15, "email": "directeur.recette@gmes.fr", "role": "DIRECTEUR", "nom": "DIR-TEST", "prenom": "Recette", "password": "RecetteGMES@2026!" },
+    { "id": 16, "email": "responsable.recette@gmes.fr", "role": "RESPONSABLE_SERVICE", "nom": "RESP-TEST", "prenom": "Recette", "password": "RecetteGMES@2026!" },
+    { "id": 17, "email": "col-a.recette@gmes.fr", "role": "COLLABORATEUR", "nom": "COL-A", "prenom": "Recette", "password": "RecetteGMES@2026!" },
+    { "id": 18, "email": "col-b.recette@gmes.fr", "role": "COLLABORATEUR", "nom": "COL-B", "prenom": "Recette", "password": "RecetteGMES@2026!" },
+    { "id": 19, "email": "col-c.recette@gmes.fr", "role": "COLLABORATEUR", "nom": "COL-C", "prenom": "Recette", "password": "RecetteGMES@2026!" },
+    { "id": 20, "email": "col-prorata.recette@gmes.fr", "role": "COLLABORATEUR", "nom": "COL-PRORATA", "prenom": "Recette", "password": "RecetteGMES@2026!" }
+  ]
+}

@@ -1,0 +1,14 @@
+node_modules/
+
+# Artefacts de tests volumineux et temporaires
+tests/recette/reports/*.html
+tests/recette/reports/*.tmp
+tests/recette/test-results/
+tests/recette/playwright-report/
+tests/recette/.cache/
+*.trace.zip
+
+# On conserve volontairement :
+# - tests/recette/reports/recette-results.json
+# - tests/recette/reports/recette-results.csv
+# - tests/recette/preuves/CAP-*.png
