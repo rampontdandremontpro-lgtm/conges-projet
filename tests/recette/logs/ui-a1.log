@@ -1,0 +1,11 @@
+UI-001 {"leaveRequestId":33,"leaveDrawerOverlays":0,"absenceId":6,"absenceDrawerOpen":1,"absenceDrawerClosed":0,"overlapDetected":false,"ok":true}
+UI-002 {"totalVisible":9,"categoryVisible":5,"categoryWrong":0,"statusVisible":5,"statusWrong":0,"typeVisible":1,"typeWrong":0,"combinedVisible":1,"combinedWrong":0,"resetVisible":9,"ok":true}
+UI-003 {"pageSizeObserved":8,"totalFixtureRows":9,"page1Ids":["ABS UI-A1 A1 UImugvpest","ABS UI-A1 A2 UImugvpest","ABS UI-A1 A3 UImugvpest","ABS UI-A1 A4 UImugvpest","CP UI-A1 L1 UImugvpest","CP UI-A1 L2 UImugvpest","CP UI-A1 L3 UImugvpest","CP UI-A1 L4 UImugvpest"],"page2Ids":["CP UI-A1 L5 UImugvpest"],"newIdsOnPage2":["CP UI-A1 L5 UImugvpest"],"backToPage1":true,"filteredCount":1,"filteredCurrentPage":"n/a","paginationValidAfterFilter":true,"ok":true}
+UI-004 {"absenceId":6,"beforeDetailCount":1,"beforeEditCount":0,"afterDetailCount":0,"afterEditCount":1,"visibleDrawerCount":1,"overlapDetected":false,"ok":true}
+UI-005 {"employeeActual":"18","employeeExpected":"18","typeActual":"ABSENCE:21","typeExpected":"ABSENCE:21","formatActual":"Jours","startActual":"2026-10-13","startExpected":"2026-10-13","endActual":"2026-10-14","endExpected":"2026-10-14","commentActual":"COMMENT UI005 UImugvpest","commentExpected":"COMMENT UI005 UImugvpest","saveButtonVisible":true,"prefillMismatch":[],"ok":true}
+UI-A1 5 {"Conforme":5}
+UI-001 Conforme | congé id=33 (page détail, overlays=0), absence id=6 (drawer ouvert=1, fermé=0), overlapDet
+UI-002 Conforme | total=9, catégorie=5(wrong=0), statut=5(wrong=0), type=1(wrong=0), combinaison=1(wrong=0),
+UI-003 Conforme | pageSize=8, total=9, page1=8, page2=1, newOnPage2=1, backToPage1=true, filtered=1, paginat
+UI-004 Conforme | absenceId=6, before detail/edit=1/0, after detail/edit=0/1, visibleDrawerCount=1, overlapD
+UI-005 Conforme | employee=18 (attendu 18), type=ABSENCE:21 (attendu ABSENCE:21), format=Jours, start=2026-1

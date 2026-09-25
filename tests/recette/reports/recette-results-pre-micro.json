@@ -1,0 +1,44 @@
+[
+  {
+    "id": "PRE-018",
+    "priority": "P1",
+    "module": "PRE",
+    "scenario": "La RH reprend la validation via le relais (Responsable ABSENT)",
+    "type": "B - API",
+    "status": "Conforme",
+    "result": "RESP=ABSENT HTTP=200 status=VALIDEE",
+    "date": "2026-09-24T14:44:57.261Z",
+    "duration": "0 ms",
+    "proof": "",
+    "error": "",
+    "comment": "\"\""
+  },
+  {
+    "id": "PRE-019",
+    "priority": "P1",
+    "module": "PRE",
+    "scenario": "Le relais est tracé dans l’audit (REPRISE_PAR_RELAIS)",
+    "type": "B - API",
+    "status": "Non conforme",
+    "result": "traces=0 actor=undefined rh=14",
+    "date": "2026-09-24T14:44:57.419Z",
+    "duration": "0 ms",
+    "proof": "",
+    "error": "",
+    "comment": "ANO-016 : la reprise RH (secours) ne trace pas REPRISE_PAR_RELAIS."
+  },
+  {
+    "id": "PRE-027",
+    "priority": "P2",
+    "module": "PRE",
+    "scenario": "Le relais du Responsable est décidé slot par slot (demi-journée)",
+    "type": "B - API",
+    "status": "Conforme",
+    "result": "MATIN presence=ABSENT relais=200 | APRES_MIDI presence=PRESENT relais=403",
+    "date": "2026-09-24T14:44:58.730Z",
+    "duration": "0 ms",
+    "proof": "",
+    "error": "",
+    "comment": ""
+  }
+]

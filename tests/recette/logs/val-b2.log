@@ -1,0 +1,25 @@
+VAL-044 {"r1":33,"rowCount":1,"decisionAccess":"REMPLACEMENT","ok":true}
+VAL-045 {"r1":33,"rowCount":1,"validateCount":0,"apiHTTP":403,"ok":true}
+VAL-046 {"r1":33,"http":200,"finalDeciderId":21,"workflowStatus":"EN_COURS_TRAITEMENT","second":403,"ok":true}
+VAL-047 {"r2":34,"userIds":[21],"userIds2":[21,21],"replNotif":1,"respNotif":0,"noDup":false,"notifVisible":3,"ok":false}
+VAL-048 {"r2":34,"http":200,"finalDeciderId":21,"ok":true}
+VAL-049 {"r3":35,"submittedAt":"2026-09-17T10:30:35.000Z","takeoverAt":"2026-09-24T10:30:35.000Z","delayExpired":true,"decisionAccess":"REMPLACEMENT","http":200,"ok":true}
+VAL-050 {"r4":36,"submittedAt":"2026-09-17T10:30:35.000Z","takeoverAt":"2026-09-24T10:30:35.000Z","delayExpired":true,"decisionAccess":"SECOURS","http":200,"ok":true}
+VAL-051 {"r5":37,"submittedAt":"2026-09-17T10:30:35.000Z","takeoverAt":"2026-09-24T10:30:35.000Z","delayExpired":true,"decisionAccess":"RELAIS","http":200,"ok":true}
+VAL-052 {"r6":38,"rowCount":1,"validateCount":0,"apiHTTP":403,"ok":true}
+VAL-053 {"r6":38,"http":200,"finalDeciderId":21,"ok":true}
+VAL-054 {"replacementId":4,"rowCount":1,"http":200,"isActiveAfter":false,"ok":true}
+VAL-055 {"r7":39,"activeCount":0,"decisionAccess":"RESPONSABLE_PRINCIPAL","http":200,"ok":true}
+VAL-B2 12 {"Conforme":11,"Non conforme":1}
+VAL-044 Conforme | UI remplaçant : rowCount=1, collaborateur COL-B visible, requestId=33, decisionAccess=REMP
+VAL-045 Conforme | UI Responsable remplacé : visible (rowCount=1) mais action absente (validate=0), readonly=
+VAL-046 Conforme | UI remplaçant valide → POST /leave-requests/33/validate HTTP=200, finalDeciderId=21, workf
+VAL-047 Non conforme | notification remplaçant=1, notification Responsable=0, doublon=true, UI notif remplaçant v
+VAL-048 Conforme | UI remplaçant valide la demande notifiée → HTTP=200, finalDeciderId=21, workflowStatus=EN_
+VAL-049 Conforme | requestId=35, submittedAt=2026-09-17T10:30:35.000Z, takeoverAt=2026-09-24T10:30:35.000Z, d
+VAL-050 Conforme | requestId=36, delayExpired=true, decisionAccess=SECOURS, HTTP=200, finalDeciderId=22
+VAL-051 Conforme | requestId=37, delayExpired=true, decisionAccess=RELAIS, HTTP=200
+VAL-052 Conforme | UI Responsable remplacé : validate=0 (action absente), API validate=403
+VAL-053 Conforme | UI remplaçant traite la demande laissée → HTTP=200, finalDeciderId=21, workflowStatus=EN_C
+VAL-054 Conforme | UI RH désactive → PATCH /api/validator-replacements/4/disable HTTP=200, isActive true→fals
+VAL-055 Conforme | replacement actif B=0, decisionAccess=RESPONSABLE_PRINCIPAL, UI Responsable valide → HTTP=

@@ -1,0 +1,16 @@
+VAL-063 {"actor":"RH","replacementValidatorId":21,"absenceType":"Absence autorisée","absenceId":6,"POST":"/api/absence-declarations","HTTP":201,"initialStatus":"BROUILLON","replacementIsActive":true,"ok":true}
+VAL-064 {"absenceId":6,"UI":"soumission réelle drawer","HTTP":200,"statusAfter":"ENREGISTREE","replacementPresenceAfter":"ABSENT","replacementIsActive":true,"ok":true}
+VAL-062 {"replacementId":4,"replacementValidatorId":21,"role":"RESPONSABLE_SERVICE","eligible":true,"isActive":true,"presence":"ABSENT","firstLevelId":21,"firstLevelEligible":true,"firstLevelPresent":false,"ok":true}
+PRECONDITIONS {"replacementId":4,"replacementIsActive":true,"replacementValidatorId":21,"replacementValidatorRole":"RESPONSABLE_SERVICE","replacementValidatorEligible":true,"replacementPresence":"ABSENT","primaryManagerPresence":"PRESENT","secoursId":22,"secoursActive":true,"directorId":15,"takeoverDelayDays":7,"delayExpired":false,"emergencyTakeover":false}
+VAL-065 {"requestId":33,"manager":16,"replacementPresence":"ABSENT","replacementIsActive":true,"validateButtonCount":0,"decisionAccess":null,"apiHTTP":403,"ok":true}
+VAL-066 {"requestId":34,"secoursId":22,"replacementPresence":"ABSENT","delayExpired":false,"decisionAccess":"SECOURS","POST":"/api/leave-requests/34/validate","HTTP":200,"finalDeciderId":22,"statusAfter":"EN_ATTENTE_VALIDATION","workflowStatus":"EN_COURS_TRAITEMENT","ok":true}
+VAL-067 {"requestId":35,"directorId":15,"replacementPresence":"ABSENT","delayExpired":false,"emergency":false,"decisionAccess":"RELAIS","POST":"/api/leave-requests/35/validate","HTTP":200,"finalDeciderId":15,"statusAfter":"EN_ATTENTE_VALIDATION","workflowStatus":"EN_COURS_TRAITEMENT","ok":true}
+VAL-068 {"absenceId":6,"statusBefore":"ENREGISTREE","presenceBefore":"ABSENT","UI":"annulation réelle","HTTP":200,"statusAfter":"ANNULEE","presenceAfter":"PRESENT","replacementIsActive":true,"historique":true,"ok":true}
+VAL-C2 7 {"Conforme":7}
+VAL-062 Conforme | replacementId=4, replacementValidatorId=21, role=RESPONSABLE_SERVICE, eligible=true, isAct
+VAL-063 Conforme | POST /api/absence-declarations HTTP=201, absenceId=6, employeeId=21, type=16, dates=2026-0
+VAL-064 Conforme | POST /api/absence-declarations/6/submit HTTP=200, statusAfter=ENREGISTREE, presence rempla
+VAL-065 Conforme | requestId=33, rowCount=1, validateButtonCount=0, decisionAccess=absent, API validate=403, 
+VAL-066 Conforme | requestId=34, decisionAccess=SECOURS, POST /leave-requests/34/validate HTTP=200, finalDeci
+VAL-067 Conforme | requestId=35, decisionAccess=RELAIS, POST /leave-requests/35/validate HTTP=200, finalDecid
+VAL-068 Conforme | absenceId=6, statusBefore=ENREGISTREE, presenceBefore=ABSENT, POST /absence-declarations/6

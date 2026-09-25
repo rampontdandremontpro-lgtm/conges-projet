@@ -1,0 +1,13 @@
+UI-015 {"ok":true,"summary":["RH:drawer open=true,footerActions=3","ADMIN:drawer open=true,actions=2","RESPONSABLE:detail open=true,validate=1","DIRECTEUR:detail open=true","COLLABORATEUR:form open=true"]}
+UI-016 {"ok":true,"dashRoles":["COLLABORATEUR:false","RESPONSABLE_SERVICE:false","RH:false","DIRECTEUR:false","ADMIN:false"],"listRoles":["COLLABORATEUR:false","RESPONSABLE_SERVICE:false","RH:false","DIRECTEUR:false","ADMIN:false"],"formOpened":true,"cal":1,"formBtn":0,"formFieldOverflowCount":0,"detailOpened":true,"footerVisible":3,"drawerOverflowCount":0}
+UI-017 {"ok":true,"summary":["COLLABORATEUR:login=ok,notifEntry=1,notifOpened=true,overflow=false","RESPONSABLE_SERVICE:login=ok,notifEntry=1,notifOpened=true,overflow=false","RH:login=ok,notifEntry=1,notifOpened=true,overflow=false","DIRECTEUR:login=ok,notifEntry=1,notifOpened=true,overflow=false","ADMIN:login=ok,notifEntry=1,notifOpened=true,overflow=false"],"collabFormOk":true,"rhDrawerOk":true,"adminDrawerOk":true}
+UI-019 {"ok":true,"focusSummary":["COLLABORATEUR:[A.sidebar__nav-item>A.sidebar__nav-item>A.sidebar__nav-item] focus=true","RESPONSABLE_SERVICE:[A.sidebar__nav-item>A.sidebar__nav-item>A.sidebar__nav-item] focus=true","RH:[A.sidebar__nav-item>A.sidebar__nav-item>A.sidebar__nav-item] focus=true","DIRECTEUR:[A.sidebar__nav-item>A.sidebar__nav-item>A.sidebar__nav-item] focus=true","ADMIN:[A.sidebar__nav-item>A.sidebar__nav-item>A.sidebar__nav-item] focus=true"],"rhClosed":true,"adminClosed":true}
+UI-020 {"ok":true,"res":["COLLABORATEUR:**/api/leave-requests/my:http=500,err=true,auth=true,recovery=true,authAfter=true","RESPONSABLE_SERVICE:**/api/leave-requests/management/all:http=500,err=true,auth=true,recovery=true,authAfter=true","DIRECTEUR:**/api/leave-requests/management/all:http=500,err=true,auth=true,recovery=true,authAfter=true","ADMIN:**/api/users:http=500,err=true,auth=true,recovery=true,authAfter=true"]}
+UI-A3-FINAL 7 {"Conforme":6,"Non conforme":1}
+UI-014 Conforme | COLLABORATEUR@/app/dashboard:overflow=false,cut=0,loaded=true | COLLABORATEUR@/a
+UI-015 Conforme | RH:drawer open=true,footerActions=3 | ADMIN:drawer open=true,actions=2 | RESPONS
+UI-016 Conforme | dash=COLLABORATEUR:false,RESPONSABLE_SERVICE:false,RH:false,DIRECTEUR:false,ADMI
+UI-017 Conforme | notifications: COLLABORATEUR:login=ok,notifEntry=1,notifOpened=true,overflow=fal
+UI-018 Non conforme | DESKTOP: collapseControl=0, collapsed=false | MOBILE: menuOpen=true, navClose=tr
+UI-019 Conforme | focus: COLLABORATEUR:[A.sidebar__nav-item>A.sidebar__nav-item>A.sidebar__nav-ite
+UI-020 Conforme | RH (cycle acquis): loading=true, 500, erreur visible, reprise ok | AUTRES: COLLA

@@ -1,0 +1,50 @@
+﻿ID;Priorité;Module;Scénario;Type de test;Statut;Résultat obtenu;Date;Durée;Preuve;Erreur;Commentaire
+RHC-001;P2;RHC;Identité de la RH lue pour les scénarios E2;B - API;Conforme;id=14 role=RH;2026-09-24T12:27:19.757Z;0 ms;;;
+RHC-002;P2;RHC;Identité du Directeur lue pour les scénarios E1/E2;B - API;Conforme;id=15 role=DIRECTEUR;2026-09-24T12:27:19.757Z;0 ms;;;
+RHC-003;P1;RHC;RH crée un brouillon de congé pour un collaborateur;B - API;Conforme;HTTP=201 employeeId=17;2026-09-24T12:27:19.975Z;0 ms;;;""""""
+RHC-004;P2;RHC;La création par la RH est tracée (createdById = RH);B - API;Conforme;createdById=14 rh=14;2026-09-24T12:27:20.011Z;0 ms;;;
+RHC-005;P1;RHC;L’audit BROUILLON_CREE est attribué à la RH créatrice;B - API;Conforme;actor=14 rh=14;2026-09-24T12:27:20.072Z;0 ms;;;
+RHC-006;P2;RHC;Le collaborateur cible consulte la demande créée par la RH;B - API;Conforme;HTTP=200;2026-09-24T12:27:20.097Z;0 ms;;;
+RHC-007;P2;RHC;Un collaborateur ne crée pas une demande pour un collègue;B - API;Conforme;HTTP=403;2026-09-24T12:27:20.116Z;0 ms;;;
+RHC-008;P2;RHC;Un Responsable ne crée pas une demande pour un collaborateur;B - API;Conforme;HTTP=403;2026-09-24T12:27:20.122Z;0 ms;;;
+RHC-009;P1;RHC;Le Directeur n’utilise pas le mécanisme RH;B - API;Conforme;HTTP=403;2026-09-24T12:27:20.142Z;0 ms;;;
+RHC-010;P2;RHC;Un administrateur ne crée pas de demande métier;B - API;Conforme;HTTP=403;2026-09-24T12:27:20.161Z;0 ms;;;
+RHC-011;P2;RHC;Utilisateur cible inexistant;B - API;Conforme;HTTP=404;2026-09-24T12:27:20.182Z;0 ms;;;
+RHC-012;P2;RHC;Admin crée un utilisateur cible (scénario E2);B - API;Conforme;HTTP=201 id=21;2026-09-24T12:27:20.219Z;0 ms;;;""""""
+RHC-013;P2;RHC;Admin désactive l’utilisateur cible E2;B - API;Conforme;HTTP=200 isActive=false;2026-09-24T12:27:20.257Z;0 ms;;;
+RHC-014;P2;RHC;Utilisateur cible désactivé → erreur;B - API;Conforme;HTTP=403;2026-09-24T12:27:20.274Z;0 ms;;;
+RHC-015;P2;RHC;Admin crée un service inactif pour le scénario E2;B - API;Conforme;HTTP=201;2026-09-24T12:27:20.290Z;0 ms;;;
+RHC-016;P2;RHC;Admin désactive le service du scénario E2;B - API;Conforme;HTTP=200;2026-09-24T12:27:20.440Z;0 ms;;;
+RHC-017;P2;RHC;Utilisateur cible sans service → erreur;B - API;Conforme;HTTP=400;2026-09-24T12:27:20.456Z;0 ms;;;
+RHC-018;P2;RHC;Utilisateur cible dans un service inactif → erreur;B - API;Conforme;HTTP=400;2026-09-24T12:27:20.471Z;0 ms;;;"""Le service du collaborateur est inactif : aucune demande de congé ne peut être créée."""
+RHC-019;P1;RHC;Type réservé à la RH refusé dans une demande de congé;B - API;Conforme;HTTP=403;2026-09-24T12:27:20.493Z;0 ms;;;"""Ce type ne peut pas être demandé directement par un collaborateur."""
+RHC-020;P2;RHC;Le collaborateur cible modifie le brouillon créé par la RH;B - API;Conforme;HTTP=200;2026-09-24T12:27:20.621Z;0 ms;;;
+RHC-021;P2;RHC;La RH modifie le brouillon qu’elle a créé;B - API;Conforme;HTTP=200;2026-09-24T12:27:20.716Z;0 ms;;;
+RHC-022;P1;RHC;La RH créatrice ne soumet pas la demande du collaborateur;C - UI + API;Conforme;HTTP=403;2026-09-24T12:27:23.206Z;0 ms;CAP-RHC-022.png;;
+RHC-023;P2;RHC;Admin crée une seconde RH (scénario E2);B - API;Conforme;HTTP=201 id=22;2026-09-24T12:27:23.231Z;0 ms;;;""""""
+RHC-024;P1;RHC;La seconde RH définit son mot de passe;C - UI + API;Conforme;define-password HTTP=200 login2=200;2026-09-24T12:27:26.204Z;0 ms;CAP-RHC-024.png;;
+RHC-025;P2;RHC;Une autre RH ne modifie pas le brouillon créé par la RH;B - API;Conforme;HTTP=403;2026-09-24T12:27:26.622Z;0 ms;;;
+RHC-026;P1;RHC;Une autre RH ne soumet pas la demande du collaborateur;C - UI + API;Conforme;HTTP=403;2026-09-24T12:27:28.959Z;0 ms;CAP-RHC-026.png;;
+RHC-027;P1;RHC;Le collaborateur propriétaire soumet avec sa propre signature;C - UI + API;Conforme;HTTP=200 statut=EN_ATTENTE_VALIDATION;2026-09-24T12:27:31.736Z;0 ms;CAP-RHC-027.png;;
+RHC-028;P1;RHC;Seule la signature du collaborateur est enregistrée à la soumission;B - API;Conforme;employee=INITIALS/CA validator=null/null;2026-09-24T12:27:31.745Z;0 ms;;;
+RHC-029;P2;RHC;La RH créatrice ne modifie pas la demande soumise;B - API;Conforme;HTTP=403;2026-09-24T12:27:31.812Z;0 ms;;;
+RHC-030;P2;RHC;Une autre RH ne modifie pas la demande soumise;B - API;Conforme;HTTP=403;2026-09-24T12:27:31.859Z;0 ms;;;
+RHC-031;P1;RHC;La RH ne peut pas annuler avant décision à la place du collaborateur;C - UI + API;Conforme;HTTP=403;2026-09-24T12:27:34.292Z;0 ms;CAP-RHC-031.png;;
+RHC-032;P1;RHC;Le collaborateur propriétaire annule sa demande;C - UI + API;Non conforme;HTTP=409;2026-09-24T12:27:36.678Z;0 ms;CAP-RHC-032.png;ANO-011 : annulation avant décision échoue (409 réservation).;
+RHC-033;P2;RHC;La RH crée un second brouillon pour le collaborateur;B - API;Conforme;HTTP=201;2026-09-24T12:27:36.785Z;0 ms;;;
+RHC-034;P2;RHC;Une autre RH ne supprime pas le brouillon créé par la RH;B - API;Conforme;HTTP=403;2026-09-24T12:27:36.812Z;0 ms;;;
+RHC-035;P2;RHC;La RH créatrice supprime son brouillon;B - API;Conforme;HTTP=204;2026-09-24T12:27:36.841Z;0 ms;;;
+RHC-036;P2;RHC;Un collaborateur crée son propre brouillon (contrôle E2);B - API;Conforme;HTTP=201;2026-09-24T12:27:36.968Z;0 ms;;;""""""
+RHC-037;P2;RHC;Une RH ne modifie pas une demande personnelle d’un collaborateur;B - API;Conforme;HTTP=403;2026-09-24T12:27:36.999Z;0 ms;;;
+RHC-038;P2;RHC;Le collaborateur supprime son brouillon personnel;B - API;Conforme;HTTP=204;2026-09-24T12:27:37.031Z;0 ms;;;
+RHC-039;P2;RHC;Admin désactive le service du collaborateur A (scénario E2-4);B - API;Conforme;HTTP=200;2026-09-24T12:27:37.246Z;0 ms;;;
+RHC-040;P2;RHC;Le collaborateur ne crée pas de demande dans un service inactif;B - API;Conforme;HTTP=400;2026-09-24T12:27:37.261Z;0 ms;;;
+RHC-041;P1;RHC;La RH ne crée pas d’absence pour un collaborateur d’un service inactif;B - API;Conforme;HTTP=400;2026-09-24T12:27:37.278Z;0 ms;;;
+RHC-042;P2;RHC;Admin réactive le service du collaborateur A;B - API;Conforme;HTTP=200;2026-09-24T12:27:37.307Z;0 ms;;;
+RHC-043;P2;RHC;Le collaborateur peut à nouveau créer après réactivation du service;B - API;Conforme;HTTP=201;2026-09-24T12:27:37.376Z;0 ms;;;""""""
+RHC-044;P2;RHC;Le collaborateur supprime le brouillon de vérification;B - API;Conforme;brouillon supprimé;2026-09-24T12:27:37.405Z;0 ms;;;
+RHC-045;P1;RHC;La RH ne crée pas d’absence pour un collaborateur d’un service inactif;B - API;Conforme;HTTP=400;2026-09-24T12:27:37.559Z;0 ms;;;
+RHC-046;P2;RHC;Route Directeur avec service inactif;B - API;Conforme;HTTP=400;2026-09-24T12:27:37.686Z;0 ms;;;
+RHC-047;P2;RHC;Admin désactive le service du Directeur (scénario E2-4);B - API;Conforme;service=18 inactif;2026-09-24T12:27:37.686Z;0 ms;;;
+RHC-048;P1;RHC;Le Directeur ne peut pas enregistrer de congé dans un service inactif;B - API;Conforme;HTTP=400;2026-09-24T12:27:37.701Z;0 ms;;;
+RHC-049;P2;RHC;Admin réactive le service du Directeur;B - API;Conforme;HTTP=200;2026-09-24T12:27:37.729Z;0 ms;;;

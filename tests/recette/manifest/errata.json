@@ -112,5 +112,50 @@
     "impact_produit": "Aucun.",
     "impact_recette": "ABS-003 corrigé en rôle COLLABORATEUR ; le scénario reste « Type réservé à la RH refusé au collaborateur » et sera retesté après correction de ANO-008.",
     "action_finale": "Corriger rôle RH → COLLABORATEUR et la précondition dans le cahier final."
+  },
+  {
+    "ids": [
+      "DER-001"
+    ],
+    "type": "Erreur de procédure dans le cahier de recette",
+    "constat": "Le cahier indique « Ouvrir Dérogations » pour créer une dérogation côté collaborateur, mais aucune page Dérogations n'existe côté collaborateur : la création réelle se fait depuis « Nouvelle demande » via la RecapCard (bouton « Demander une dérogation »).",
+    "justification": "La création de dérogation est une action collaborateur réelle exposée dans l'UI Nouvelle demande ; seule la localisation du parcours diffère du cahier.",
+    "impact_produit": "Aucun.",
+    "impact_recette": "DER-001 exécuté en vraie UI Nouvelle demande / RecapCard ; DER-001 reste Conforme.",
+    "action_finale": "Corriger la procédure DER-001 dans le cahier final (parcours « Nouvelle demande » au lieu d'« Ouvrir Dérogations »)."
+  },
+  {
+    "ids": [
+      "DER-005"
+    ],
+    "type": "Erreur de flux dans le cahier de recette",
+    "constat": "Le manifest indique « RH accorde la dérogation », mais le produit (derogations.service.ts decide) prévoit un double niveau : la RH pré-valide (statut technique EN_ATTENTE_RH, workflowStatus EN_ATTENTE_DIRECTEUR) puis le Directeur prononce la décision finale ACCORDEE/REFUSEE.",
+    "justification": "La règle réelle impose une décision finale du Directeur pour obtenir ACCORDEE ; la RH seule ne peut pas accorder définitivement.",
+    "impact_produit": "Aucun.",
+    "impact_recette": "DER-005 testé en vraie validation RH (UI) avec workflow EN_ATTENTE_DIRECTEUR ; la décision finale Directeur est exercée comme précondition de DER-006.",
+    "action_finale": "Corriger le rôle/flux DER-005 dans le cahier final (RH = pré-validation, Directeur = décision finale)."
+  },
+  {
+    "ids": [
+      "VAL-003"
+    ],
+    "type": "Erreur de rôle dans le cahier de recette",
+    "constat": "Titre « RH ajoute le second valideur de secours » mais colonne rôle = Responsable de service. Source indépendante full-functional-test.mjs (ligne 3229) utilise le token RH ; le Responsable testé retourne 403.",
+    "justification": "L'acteur métier réel de l'ajout du second secours est la RH (backend @Roles ADMIN/RH).",
+    "impact_produit": "Aucun.",
+    "impact_recette": "VAL-003 testé avec RH (POST /services/18/validators HTTP 201).",
+    "action_finale": "Corriger la colonne rôle VAL-003 dans le cahier final (Responsable → RH)."
+  },
+  {
+    "ids": [
+      "VAL-059",
+      "VAL-061"
+    ],
+    "type": "Erreur de rôle dans le cahier de recette",
+    "constat": "Titres « RH désigne le Directeur comme remplaçant » (VAL-059) et « RH désactive le remplacement du Directeur » (VAL-061), mais colonne rôle = Directeur. La source indépendante full-functional-test.mjs (E6) exécute ces deux actions avec le token RH.",
+    "justification": "L’acteur métier réel de la désignation et de la désactivation d’un remplacement temporaire est la RH (backend @Roles ADMIN/RH sur /validator-replacements et PATCH disable). Le Directeur est l’objet du remplacement, pas l’acteur de gestion.",
+    "impact_produit": "Aucun.",
+    "impact_recette": "VAL-059 et VAL-061 exécutés en vraie UI RH (Valideurs / Valideurs temporaires) ; tous deux Conformes.",
+    "action_finale": "Corriger la colonne rôle VAL-059 et VAL-061 dans le cahier final (Directeur → RH)."
   }
 ]

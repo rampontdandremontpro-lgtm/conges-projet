@@ -1,0 +1,16 @@
+UI-014 {"ok":true,"summary":["COLLABORATEUR@/app/dashboard:overflow=false,cut=0,loaded=true","COLLABORATEUR@/app/my-requests:overflow=false,cut=0,loaded=true","COLLABORATEUR@/app/new-request:overflow=false,cut=0,loaded=true","RESPONSABLE_SERVICE@/app/dashboard:overflow=false,cut=0,loaded=true","RESPONSABLE_SERVICE@/app/requests:overflow=false,cut=0,loaded=true","RH@/app/dashboard:overflow=false,cut=0,loaded=true","RH@/app/rh-leaves-absences:overflow=false,cut=0,loaded=true","RH@/app/rh-validators:overflow=false,cut=0,loaded=true","DIRECTEUR@/app/dashboard:overflow=false,cut=0,loaded=true","DIRECTEUR@/app/director-all-requests:overflow=false,cut=0,loaded=true","ADMIN@/app/dashboard:overflow=false,cut=0,loaded=true","ADMIN@/app/admin-users:overflow=false,cut=0,loaded=true","ADMIN@/app/admin-services:overflow=false,cut=0,loaded=true"]}
+UI-015 {"ok":true,"summary":["COLLABORATEUR:dash=false,list=false,cut=0","RESPONSABLE_SERVICE:dash=false,list=false,cut=0","RH:dash=false,list=false,cut=0","DIRECTEUR:dash=false,list=false,cut=0","ADMIN:dash=false,list=false,cut=0"]}
+UI-016 {"ok":true,"summary":["COLLABORATEUR:overflow=false,navLinks=5,cut=0","RESPONSABLE_SERVICE:overflow=false,navLinks=6,cut=0","RH:overflow=false,navLinks=16,cut=0","DIRECTEUR:overflow=false,navLinks=10,cut=0","ADMIN:overflow=false,navLinks=11,cut=0"]}
+UI-017 {"ok":true,"summary":["COLLABORATEUR:menu=true,open=true,links=5,closed=true,overflow=false,cut=0","RESPONSABLE_SERVICE:menu=true,open=true,links=6,closed=true,overflow=false,cut=0","RH:menu=true,open=true,links=16,closed=true,overflow=false,cut=0","DIRECTEUR:menu=true,open=true,links=10,closed=true,overflow=false,cut=0","ADMIN:menu=true,open=true,links=11,closed=true,overflow=false,cut=0"]}
+UI-018 {"collapseControlCount":0,"sidebarCollapsedDesktop":false,"mobileOpen":true,"menuClosedAfterNav":true,"orphanOverlay":0,"ok":false}
+UI-019 {"focus1":{"tag":"A","cls":"sidebar__nav-item","outline":"solid/2px","boxShadow":false},"drawerOpen":1,"drawerClosed":0,"focusIndicatorOk":true,"ok":true}
+UI-020 {"loadingVisible":true,"errorText":"Impossible de charger les données.\nRéessayer","stillAuthenticated":true,"stillAuth2":true,"errorVisibleAfter":0,"ok":true}
+UI-A3 7 {"Conforme":6,"Non conforme":1}
+UI-014 Conforme | COLLABORATEUR@/app/dashboard:overflow=false,cut=0,loaded=true | COLLABORATEUR@/app/my-requ
+UI-015 Conforme | COLLABORATEUR:dash=false,list=false,cut=0 | RESPONSABLE_SERVICE:dash=false,list=false,cut=
+UI-016 Conforme | COLLABORATEUR:overflow=false,navLinks=5,cut=0 | RESPONSABLE_SERVICE:overflow=false,navLink
+UI-017 Conforme | COLLABORATEUR:menu=true,open=true,links=5,closed=true,overflow=false,cut=0 | RESPONSABLE_S
+UI-018 Non conforme | DESKTOP: collapseControl=0, collapsed=false | MOBILE: menuOpen=true, navClose=true, orphan
+UI-019 Conforme | focus=A.sidebar__nav-item outline=solid/2px shadow=false, drawer open=1 close=0
+UI-020 Conforme | loading=true, errorHttp=500, errorText="Impossible de charger les données.
+Réessayer", sti

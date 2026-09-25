@@ -1,0 +1,23 @@
+﻿ID;Priorité;Module;Scénario;Type de test;Statut;Résultat obtenu;Date;Durée;Preuve;Erreur;Commentaire
+E4-001;P1;E4;Initialisation N-1 période de référence;B - API;Conforme;HTTP=201;2026-09-24T13:06:12.755Z;0 ms;;;
+E4-002;P2;E4;RH force REFERENCE_PERIOD_START (échéance 7 jours aujourd’hui);B - API;Conforme;start=10-02;2026-09-24T13:06:12.782Z;0 ms;;;
+E4-003;P2;E4;Maintenance E4 — échéance 7 jours (phase 1);B - API;Conforme;HTTP=200;2026-09-24T13:06:12.932Z;0 ms;;;
+E4-004;P2;E4;La maintenance expose le résultat E4;B - API;Conforme;period=2025-2026 deadline=7D;2026-09-24T13:06:12.932Z;0 ms;;;
+E4-005;P2;E4;Rappel individuel créé pour chaque compteur N-1 positif;B - API;Conforme;notifications=1;2026-09-24T13:06:12.976Z;0 ms;;;
+E4-006;P2;E4;Rappel : titre et message affichent la fin de période (D+7);B - API;Conforme;"title=""Congés à utiliser avant le 1 octobre 2026""";2026-09-24T13:06:12.983Z;0 ms;;;
+E4-007;P2;E4;Plusieurs paliers dus : seul le plus récent est envoyé;B - API;Conforme;7D=1 15D=0;2026-09-24T13:06:12.994Z;0 ms;;;
+E4-008;P2;E4;Potentiel = 0 : pas de rappel individuel;B - API;Conforme;notifications=0;2026-09-24T13:06:13.050Z;0 ms;;;
+E4-009;P2;E4;Aucune notification E4 pour un Admin;B - API;Conforme;notifications=0;2026-09-24T13:06:13.123Z;0 ms;;;
+E4-010;P2;E4;Récapitulatif RH : une notification par RH active;B - API;Conforme;notifications=1;2026-09-24T13:06:13.129Z;0 ms;;;
+E4-011;P2;E4;Directeur et Admin ne reçoivent pas le récapitulatif RH;B - API;Conforme;dir=0 admin=0;2026-09-24T13:06:13.140Z;0 ms;;;
+E4-012;P2;E4;Récapitulatif RH : palier déclenché distinct de la date limite;B - API;Conforme;message=Rappel 7 jours — période 2024/2025 (compteur N-1), congés à ;2026-09-24T13:06:13.146Z;0 ms;;;
+E4-013;P2;E4;Maintenance E4 — second passage idempotent (phase 1 bis);B - API;Conforme;HTTP=200;2026-09-24T13:06:13.235Z;0 ms;;;
+E4-014;P2;E4;Double maintenance : aucun doublon;B - API;Conforme;remindersCreated=0 recap=0;2026-09-24T13:06:13.235Z;0 ms;;;
+E4-015;P2;E4;RH force REFERENCE_PERIOD_START (échéance 15 jours hier = rattrapage);B - API;Conforme;start=10-09;2026-09-24T13:06:13.250Z;0 ms;;;
+E4-016;P2;E4;Maintenance E4 — rattrapage de l’échéance 15 jours (phase 2);B - API;Conforme;HTTP=200;2026-09-24T13:06:13.353Z;0 ms;;;
+E4-017;P2;E4;Rattrapage : échéance due envoyée au passage suivant;B - API;Conforme;15D=1;2026-09-24T13:06:13.361Z;0 ms;;;
+E4-018;P1;E4;Solde modifié entre deux rappels : valeur actuelle relue;B - API;Conforme;available=10.00;2026-09-24T13:06:13.374Z;0 ms;;;
+E4-019;P2;E4;Rattrapage : aucun ancien palier simultané;B - API;Conforme;7D=1 (déjà envoyé phase 1, pas de doublon 15D+7D simultané);2026-09-24T13:06:13.380Z;0 ms;;;
+E4-020;P2;E4;Récapitulatif RH après rattrapage;B - API;Conforme;recap15D=1;2026-09-24T13:06:13.384Z;0 ms;;;
+E4-021;P2;E4;RH restaure REFERENCE_PERIOD_START à 06-01;B - API;Conforme;restauré 06-01;2026-09-24T13:06:13.392Z;0 ms;;;
+E4-022;P2;E4;REFERENCE_PERIOD_START restauré à 06-01 (fin E4);B - API;Conforme;value=06-01;2026-09-24T13:06:13.398Z;0 ms;;;

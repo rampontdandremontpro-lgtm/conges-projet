@@ -1,0 +1,12 @@
+﻿ID;Priorité;Module;Scénario;Type de test;Statut;Résultat obtenu;Date;Durée;Preuve;Erreur;Commentaire
+AUD-001;P1;AUD;Admin consulte les journaux d’audit;B - API;Conforme;HTTP=200 lignes=24;2026-09-24T12:57:27.770Z;0 ms;;;
+AUD-002;P1;AUD;Les audits masquent les mots de passe, jetons, signatures et fichiers;B - API;Conforme;fuite=false;2026-09-24T12:57:27.790Z;0 ms;;;
+AUD-003;P1;AUD;Tous les audits métier portent LEAVE_REQUESTS avec un resource_id non nul;B - API;Conforme;audits_sans_id (hors HTTP_ technique)=0;2026-09-24T12:57:27.798Z;0 ms;;;
+AUD-004;P1;AUD;Chaque audit post-brouillon pointe vers une demande existante en base;B - API;Conforme;ids=3;2026-09-24T12:57:27.826Z;0 ms;;;
+AUD-005;P2;AUD;A — BROUILLON_CREE porte un resource_id et un actor_id réels;B - API;Conforme;resourceId=34 actorId=17;2026-09-24T12:57:27.834Z;0 ms;;;
+AUD-006;P1;AUD;B/C/D/F — la même demande trace CREE, SOUMISE, VALIDEE et RELAIS sur une demande;B - API;Conforme;actions=BROUILLON_CREE,DEMANDE_SOUMISE,HTTP_POST,DEMANDE_PREVALIDEE,DEMANDE_VALIDEE;2026-09-24T12:57:27.842Z;0 ms;;;
+AUD-007;P1;AUD;C — DEMANDE_VALIDEE est attribuée au valideur réel;B - API;Conforme;actorId=14;2026-09-24T12:57:27.851Z;0 ms;;;
+AUD-008;P2;AUD;E — CONGE_DIRECTEUR_ENREGISTRE trace la demande du Directeur;B - API;Conforme;audits=1;2026-09-24T12:57:27.862Z;0 ms;;;
+AUD-009;P1;AUD;G — un audit d’absence porte ABSENCE_DECLARATIONS avec un resource_id réel;B - API;Conforme;audits=1;2026-09-24T12:57:27.869Z;0 ms;;;
+AUD-010;P1;AUD;Les audits de dérogation portent DEROGATIONS avec un resource_id réel;B - API;Conforme;audits=1;2026-09-24T12:57:27.881Z;0 ms;;;
+AUD-011;P1;AUD;La base conserve exactement les 15 tables du diagramme;B - API;Conforme;missing=aucune;2026-09-24T12:57:27.888Z;0 ms;;;

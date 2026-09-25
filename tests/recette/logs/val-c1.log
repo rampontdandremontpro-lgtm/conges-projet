@@ -1,0 +1,13 @@
+VAL-056 {"actor":"RH","employee":18,"replacementValidator":14,"replacementId":4,"POST":"/api/validator-replacements","HTTP":201,"isActive":true,"decisionAccess":"REMPLACEMENT","ok":true}
+VAL-057 {"requestId":34,"actor":"RH","decisionAccessBefore":"REMPLACEMENT","validateVisible":1,"POST":"/api/leave-requests/34/validate","HTTP":200,"finalDeciderId":14,"statusAfter":"VALIDEE","ok":true}
+VAL-058 {"replacementId":4,"actor":"RH","rowCount":1,"PATCH":"/api/validator-replacements/4/disable","HTTP":200,"isActiveBefore":true,"isActiveAfter":false,"resourceStillExists":true,"ok":true}
+VAL-059 {"actor":"RH","employee":18,"replacementValidator":15,"replacementId":5,"POST":"/api/validator-replacements","HTTP":201,"ok":true}
+VAL-060 {"requestId":35,"actor":"Directeur","decisionAccessBefore":"REMPLACEMENT","POST":"/api/leave-requests/35/validate","HTTP":200,"finalDeciderId":15,"statusAfter":"EN_ATTENTE_VALIDATION","workflowStatus":"EN_COURS_TRAITEMENT","ok":true}
+VAL-061 {"actor":"RH","replacementId":5,"PATCH":"/api/validator-replacements/5/disable","HTTP":200,"isActiveBefore":true,"isActiveAfter":false,"resourceStillExists":true,"ok":true}
+VAL-C1 6 {"Conforme":6}
+VAL-056 Conforme | POST /api/validator-replacements HTTP=201, replacementId=4, employeeId=18, replacementVali
+VAL-057 Conforme | requestId=34, decisionAccess avant=REMPLACEMENT, validate visible=1, POST /leave-requests/
+VAL-058 Conforme | PATCH /api/validator-replacements/4/disable HTTP=200, isActive true→false, ressource conse
+VAL-059 Conforme | POST /api/validator-replacements HTTP=201, replacementId=5, employeeId=18, replacementVali
+VAL-060 Conforme | requestId=35, decisionAccess avant=REMPLACEMENT, POST /leave-requests/35/validate HTTP=200
+VAL-061 Conforme | PATCH /api/validator-replacements/5/disable HTTP=200, isActive true→false, ressource conse

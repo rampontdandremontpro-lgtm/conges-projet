@@ -1,0 +1,9 @@
+﻿ID;Priorité;Module;Scénario;Type de test;Statut;Résultat obtenu;Date;Durée;Preuve;Erreur;Commentaire
+HALF-018;P1;HALF;PATCH brouillon heures + startPeriod refusé;B - API;Non conforme;HTTP=200 durationHours 4→null;2026-09-24T13:56:26.295Z;0 ms;;;
+HALF-022;P2;HALF;HEURES → DEMI-JOURNÉE : resté en heures;B - API;Conforme;HTTP=400 durationHours 3→3;2026-09-24T13:56:26.442Z;0 ms;;;
+HALF-033;P2;HALF;Responsable absent APRES_MIDI seulement : relais autorisé l’après-midi;C - UI + API;Conforme;presence=ABSENT HTTP=200;2026-09-24T13:56:16.995Z;0 ms;CAP-HALF-033.png;;""""""
+HALF-038;P1;HALF;Absence journée entière : relais autorisé l’après-midi;C - UI + API;Conforme;presence=ABSENT HTTP=200;2026-09-24T13:56:18.421Z;0 ms;;;""""""
+HALF-041;P1;HALF;Le Responsable valide après son retour;C - UI + API;Conforme;HTTP=200;2026-09-24T13:56:21.571Z;0 ms;CAP-HALF-041.png;;""""""
+HALF-055;P2;HALF;Délai de relais expiré : relais autorisé le matin;B - API;Conforme;HTTP=200;2026-09-24T13:56:22.292Z;0 ms;;;""""""
+HALF-056;P2;HALF;Délai de relais expiré : relais autorisé l’après-midi;B - API;Conforme;HTTP=200;2026-09-24T13:56:22.993Z;0 ms;;;""""""
+HALF-061;P1;HALF;Le Responsable valide la demande de présence minimale;C - UI + API;Conforme;presence=ABSENT HTTP=200;2026-09-24T13:56:26.072Z;0 ms;CAP-HALF-061.png;;""""""

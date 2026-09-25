@@ -1,0 +1,16 @@
+SOURCE ORDER {"VAL-069":"users.is_active=0 remplaçant → soumettre R69 → Responsable valide","VAL-070":"R70 soumise (remplaçant inactif) → secours refusé","VAL-071":"Responsable valide R70 (même requestId)","VAL-072":"users.role=COLLABORATEUR remplaçant → soumettre R72 → Responsable valide","VAL-073":"RH désactive le remplacement collaborateur A","VAL-074":"soumettre R74 → Responsable valide","VAL-075":"audit : SERVICE_BACKUP_VALIDATOR_ASSIGNED / _DISABLED / _ENABLED / VALIDATOR_REPLACEMENT_CREATED / _DISABLED"}
+VAL-069 {"replacementId":4,"replacementIsActive":true,"remplacantUserActive":false,"managerPresence":"PRESENT","requestId":33,"decisionAccess":"RESPONSABLE_PRINCIPAL","UI":"droit repris","HTTP":200,"ok":true}
+VAL-070 {"replacementId":4,"replacementIsActive":true,"managerPresence":"PRESENT","secoursId":22,"requestId":34,"UIProtection":true,"decisionAccess":null,"apiHTTP":403,"message":"Cette demande relève du Responsable principal du service.","ok":true}
+VAL-071 {"requestId":34,"sourceRequestReused":true,"decisionAccess":"RESPONSABLE_PRINCIPAL","HTTP":200,"finalDeciderId":16,"statusAfter":"EN_ATTENTE_VALIDATION","ok":true}
+VAL-072 {"replacementId":4,"replacementIsActive":true,"roleBefore":"RESPONSABLE_SERVICE","roleAfter":"COLLABORATEUR","eligibleBefore":true,"eligibleAfter":false,"requestId":35,"decisionAccessAfter":"RESPONSABLE_PRINCIPAL","validateVisible":1,"ok":true}
+VAL-073 {"replacementId":4,"UI":"désactivation réelle","PATCH":"/api/validator-replacements/4/disable","HTTP":200,"isActiveBefore":true,"isActiveAfter":false,"ok":true}
+VAL-074 {"replacementId":4,"requestId":36,"decisionAccess":"RESPONSABLE_PRINCIPAL","POST":"/api/leave-requests/36/validate","HTTP":200,"finalDeciderId":16,"statusAfter":"EN_ATTENTE_VALIDATION","ok":true}
+VAL-075 {"auditInfo":{"SERVICE_BACKUP_VALIDATOR_ASSIGNED":{"actor":13,"resourceType":"SERVICES","resourceId":16,"sensitiveData":false},"SERVICE_BACKUP_VALIDATOR_DISABLED":{"actor":13,"resourceType":"SERVICES","resourceId":16,"sensitiveData":false},"SERVICE_BACKUP_VALIDATOR_ENABLED":{"actor":13,"resourceType":"SERVICES","resourceId":16,"sensitiveData":false},"VALIDATOR_REPLACEMENT_CREATED":{"actor":14,"resourceType":"VALIDATOR_REPLACEMENTS","resourceId":4,"sensitiveData":false},"VALIDATOR_REPLACEMENT_DISABLED":{"actor":14,"resourceType":"VALIDATOR_REPLACEMENTS","resourceId":4,"sensitiveData":false}},"allOk":true}
+VAL-C3 7 {"Conforme":7}
+VAL-069 Conforme | replacementId=4, replacement.isActive=true, remplaçant inactif, requestId=33, decisionAcce
+VAL-070 Conforme | requestId=34, decisionAccess=absent, UI validate=0, API validate=403, message="Cette deman
+VAL-071 Conforme | requestId=34 (réutilisée après refus secours), decisionAccess=RESPONSABLE_PRINCIPAL, POST 
+VAL-072 Conforme | replacementId=4, replacement.isActive=true, roleBefore=RESPONSABLE_SERVICE, roleAfter=COLL
+VAL-073 Conforme | PATCH /api/validator-replacements/4/disable HTTP=200, isActive true→false, historique=true
+VAL-074 Conforme | replacementId=4, requestId=36, decisionAccess=RESPONSABLE_PRINCIPAL, POST /leave-requests/
+VAL-075 Conforme | 5 actions présentes : SERVICE_BACKUP_VALIDATOR_ASSIGNED / SERVICE_BACKUP_VALIDATOR_DISABLE

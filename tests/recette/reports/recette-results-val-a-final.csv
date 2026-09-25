@@ -1,0 +1,24 @@
+﻿ID;Priorité;Module;Scénario;Type de test;Statut;Résultat obtenu;Date;Durée;Preuve;Erreur;Commentaire
+VAL-001;P1;VAL;ADMIN consulte les valideurs du service;C - UI + API;Conforme;HTTP=200;2026-09-24T15:18:52.095Z;0 ms;CAP-VAL-001.png;;
+VAL-002;P1;VAL;ADMIN ajoute le premier valideur de secours;C - UI + API;Conforme;HTTP=201;2026-09-24T15:18:55.580Z;0 ms;CAP-VAL-002.png;;
+VAL-003;P1;VAL;RH ajoute le second valideur de secours;C - UI + API;Conforme;HTTP=201;2026-09-24T15:18:58.190Z;0 ms;CAP-VAL-003.png;;
+VAL-004;P1;VAL;Un Collaborateur ne gère pas les valideurs de secours;C - UI + API;Conforme;HTTP=403;2026-09-24T15:19:00.759Z;0 ms;CAP-VAL-004.png;;
+VAL-005;P1;VAL;Le Responsable principal ne peut pas être son propre secours;C - UI + API;Conforme;HTTP=400;2026-09-24T15:19:03.427Z;0 ms;CAP-VAL-005.png;;
+VAL-006;P1;VAL;Un Collaborateur ne peut pas être secours;C - UI + API;Conforme;HTTP=400;2026-09-24T15:19:05.972Z;0 ms;CAP-VAL-006.png;;
+VAL-007;P1;VAL;Secours refusé hors circuit Responsable puis relais;C - UI + API;Conforme;HTTP=400;2026-09-24T15:19:08.457Z;0 ms;CAP-VAL-007.png;;"""Les valideurs de secours ne sont disponibles que pour les services avec validation par Responsable puis relais."""
+VAL-008;P1;VAL;Un secours actif ne peut pas être doublonné;C - UI + API;Conforme;HTTP=409 2→2;2026-09-24T15:19:10.843Z;0 ms;CAP-VAL-008.png;;
+VAL-009;P1;VAL;ADMIN désactive le secours 1;C - UI + API;Conforme;HTTP=200;2026-09-24T15:19:13.248Z;0 ms;CAP-VAL-009.png;;
+VAL-010;P1;VAL;ADMIN réactive le secours 1;C - UI + API;Non conforme;HTTP=200;2026-09-24T15:19:15.687Z;0 ms;CAP-VAL-010.png;ANO-018 : bouton Réactiver désactivé (validator.isActive absent de la réponse API).;
+VAL-011;P1;VAL;La liste des valideurs expose les deux secours;C - UI + API;Non conforme;backupValidators=[14,15];2026-09-24T15:19:18.072Z;0 ms;CAP-VAL-011.png;ANO-018 : les secours actifs sont affichés Inopérant (validator.isActive absent).;
+VAL-012;P1;VAL;Secours refusé quand le Responsable est présent;C - UI + API;Conforme;HTTP=403;2026-09-24T15:19:21.219Z;0 ms;CAP-VAL-012.png;;
+VAL-013;P1;VAL;Le Responsable principal valide la demande;C - UI + API;Conforme;HTTP=200;2026-09-24T15:19:21.545Z;0 ms;CAP-VAL-013.png;;
+VAL-014;P1;VAL;L’urgence seule n’ouvre pas le secours;C - UI + API;Conforme;HTTP=403;2026-09-24T15:19:21.872Z;0 ms;CAP-VAL-014.png;;
+VAL-015;P2;VAL;Le Responsable traite la demande;B - API;Conforme;HTTP=200;2026-09-24T15:19:22.180Z;0 ms;;;
+VAL-016;P1;VAL;Relais par présence du Responsable;C - UI + API;Conforme;RESP=ABSENT HTTP=200;2026-09-24T15:19:23.193Z;0 ms;CAP-VAL-016.png;;
+VAL-017;P1;VAL;RH crée une absence autorisée pour le Responsable;B - API;Conforme;absence créée;2026-09-24T15:19:23.641Z;0 ms;;;
+VAL-018;P1;VAL;La RH soumet l’absence du Responsable;C - UI + API;Conforme;absence soumise;2026-09-24T15:19:23.641Z;0 ms;CAP-VAL-018.png;;
+VAL-019;P1;VAL;Le secours valide quand le Responsable est absent;C - UI + API;Conforme;HTTP=200;2026-09-24T15:19:26.432Z;0 ms;CAP-VAL-019.png;;
+VAL-020;P1;VAL;Le second secours est bloqué sur une demande déjà décidée;C - UI + API;Conforme;"UI secours1 RH → 200 ; secours2 Directeur UI bloqué (validate=0) ; API 409 ; statut VALIDEE inchangé";2026-09-24T17:15:06.569Z;0 ms;CAP-VAL-020.png;;
+VAL-021;P1;VAL;Le premier secours décide, le second ne peut plus;C - UI + API;Conforme;"UI secours1 RH → 200 ; secours2 Directeur UI bloqué (validate=0) ; API 409 ; aucune mutation";2026-09-24T17:15:06.569Z;0 ms;CAP-VAL-021.png;;
+VAL-022;P1;VAL;La deuxième décision sur la même demande est refusée;B - API;Conforme;"seconde décision même demande → HTTP 409 ; aucune mutation (preuve API corroboration VAL-021)";2026-09-24T17:15:06.569Z;0 ms;;;
+VAL-023;P1;VAL;La RH annule l’absence du Responsable;C - UI + API;Conforme;"UI RH annulation absence → /cancel HTTP 200 ; statut ANNULEE ; presence PRESENT";2026-09-24T17:15:06.569Z;0 ms;CAP-VAL-023.png;;

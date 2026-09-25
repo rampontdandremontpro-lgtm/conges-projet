@@ -1,0 +1,9 @@
+﻿ID;Priorité;Module;Scénario;Type de test;Statut;Résultat obtenu;Date;Durée;Preuve;Erreur;Commentaire
+HALF-033;P2;HALF;Responsable absent APRES_MIDI seulement : relais autorisé l’après-midi;B - API;Non conforme;HTTP=400;2026-09-24T13:43:37.534Z;0 ms;CAP-HALF-033.png;;
+HALF-038;P1;HALF;Absence journée entière : relais autorisé l’après-midi;B - API;Non conforme;HTTP=400;2026-09-24T13:43:37.605Z;0 ms;;;
+HALF-041;P1;HALF;Le Responsable valide après son retour;B - API;Non conforme;HTTP=400;2026-09-24T13:43:49.461Z;0 ms;CAP-HALF-041.png;;
+HALF-055;P2;HALF;Délai de relais expiré : relais autorisé le matin;B - API;Non conforme;HTTP=400;2026-09-24T13:43:49.854Z;0 ms;;;
+HALF-056;P2;HALF;Délai de relais expiré : relais autorisé l’après-midi;B - API;Non conforme;HTTP=400;2026-09-24T13:43:49.949Z;0 ms;;;
+HALF-059;P2;HALF;Responsable consulte les alertes par slot;A - UI;Conforme;UI=true;2026-09-24T13:43:52.325Z;0 ms;CAP-HALF-059.png;;
+HALF-060;P1;HALF;Présence minimale : une absence MATIN ne pénalise que le slot MATIN;B - API;Conforme;presence=ABSENT;2026-09-24T13:43:55.486Z;0 ms;CAP-HALF-060.png;;
+HALF-061;P1;HALF;Le Responsable valide la demande de présence minimale;B - API;Non conforme;HTTP=400;2026-09-24T13:44:07.276Z;0 ms;CAP-HALF-061.png;;

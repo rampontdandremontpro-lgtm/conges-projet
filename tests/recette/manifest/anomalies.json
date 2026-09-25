@@ -91,7 +91,7 @@
   ],
   [
     "ANO-011",
-    "CAN-002",
+    "CAN-002 ; RHC-032",
     "Le collaborateur ne peut pas annuler une demande de congé avant décision",
     "Bloquante",
     "Ouverte",
@@ -107,6 +107,106 @@
     "Ouverte",
     "D.RAMPONT",
     "Description : Attendu : un collaborateur possédant un brouillon d'absence peut lancer et confirmer son annulation. Obtenu : un brouillon valide appartenant à COL-C est visible dans Mes demandes, mais aucune action Annuler/Supprimer n'est disponible. L'appel POST /absence-declarations/:id/cancel avec le token du propriétaire retourne HTTP 403 et le statut reste BROUILLON. Cause technique constatée : la route cancel est limitée à RH/DIRECTEUR ; cancelAbsenceDeclaration existe dans le service frontend collaborateur mais n'est utilisé par aucune interface ; MyRequestCard pour une absence BROUILLON propose uniquement l'ouverture du détail. Impact : ABS-017 Non conforme.",
+    ""
+  ],
+  [
+    "ANO-012",
+    "DER-002 ; DER-003 ; DER-007",
+    "Le collaborateur ne peut pas gérer complètement ses dérogations depuis l'interface",
+    "Majeure",
+    "Ouverte",
+    "D.RAMPONT",
+    "Description : Le backend autorise le propriétaire à modifier le motif (PATCH /derogations/:id), soumettre la dérogation (POST /derogations/:id/submit) et la supprimer avant décision (DELETE /derogations/:id), mais aucune action correspondante n'est exposée dans l'interface collaborateur. Impact : les opérations prévues par le parcours utilisateur ne sont réalisables que par appel API.",
+    ""
+  ],
+  [
+    "ANO-013",
+    "DIR-006 ; DIR-007 ; DIR-013",
+    "La route Directeur n'effectue ni contrôle ni débit de solde",
+    "Majeure",
+    "Ouverte",
+    "D.RAMPONT",
+    "Description : Attendu : POST /leave-requests/director refuse un solde insuffisant (400), la transaction est cohérente (aucune demande sans solde) et le solde N-1 du Directeur est débité d'un jour. Obtenu : la demande est créée (HTTP 201) même avec un solde N-1 à 0, aucune vérification de solde n'est effectuée et le solde N-1 reste inchangé après enregistrement. Cause technique constatée : createDirectorRequest (leave-requests.service.ts) enregistre directement la demande VALIDEE avec balanceProcessingStatus DEFINITIF sans appeler applyPaidLeaveForRequest ni contrôler le solde. Impact : DIR-006, DIR-007 et DIR-013 Non conformes.",
+    ""
+  ],
+  [
+    "ANO-014",
+    "EXP-003",
+    "Le Directeur peut télécharger un export nominatif",
+    "Majeure",
+    "Ouverte",
+    "D.RAMPONT",
+    "Description : Attendu : le Directeur ne doit pas télécharger un export nominatif des demandes de congés. Obtenu : GET /exports/leave-requests?format=csv avec un jeton Directeur retourne HTTP 200 et un CSV contenant les noms, emails et services des collaborateurs. Cause technique constatée : le contrôleur ExportsController autorise RH et DIRECTEUR sur toutes les routes d'export nominatif, et ExportsService.exportLeaveRequests n'applique aucune restriction de rôle Directeur. Impact : EXP-003 Non conforme.",
+    ""
+  ],
+  [
+    "ANO-015",
+    "HALF-018",
+    "Mélange heures/demi-journée mal rejeté sur les brouillons d'absence",
+    "Majeure",
+    "Ouverte",
+    "D.RAMPONT",
+    "Description : Attendu : sur un brouillon d'absence en heures, ajouter startPeriod doit être refusé (400) et durationHours conservé. Obtenu : PATCH brouillon heures + startPeriod retourne HTTP 200 et durationHours passe de 4 à null (mélange de modes accepté avec perte de la valeur). Cause technique constatée : la validation de mode (ensureSingleMode) n'est pas appliquée sur la mise à jour, ou le mode est basculé sans conservation de la valeur précédente. Impact : HALF-018 Non conforme. Note : HALF-022 retesté indépendamment (brouillon B séparé) reste Conforme — durationHours conservé.",
+    ""
+  ],
+  [
+    "ANO-016",
+    "PRE-019",
+    "La reprise RH (secours) ne trace pas REPRISE_PAR_RELAIS",
+    "Majeure",
+    "Ouverte",
+    "D.RAMPONT",
+    "Description : Attendu : la reprise de validation par la RH lorsque le Responsable est absent doit être tracée dans l'audit avec l'action REPRISE_PAR_RELAIS (spec full-functional-test.mjs). Obtenu : la RH (backup validator) valide avec succès (HTTP 200, VALIDEE) mais aucun audit REPRISE_PAR_RELAIS n'est enregistré (traces=0). Cause technique constatée : saveDecisionAccessHistory n'enregistre REPRISE_PAR_RELAIS que pour access.kind RELAIS (Directeur) ; la reprise RH backup produit access.kind SECOURS, non audité. Impact : PRE-019 Non conforme.",
+    ""
+  ],
+  [
+    "ANO-017",
+    "EXP-006 ; EXP-008 ; EXP-009 ; EXP-011 ; EXP-012",
+    "Interface RH de clôture/report de période absente",
+    "Majeure",
+    "Ouverte",
+    "D.RAMPONT",
+    "Description : Attendu : la RH doit pouvoir, depuis Soldes collaborateurs / clôture de période, prévisualiser la clôture, accorder un report exceptionnel et clôturer la période. Obtenu : aucune UI frontend n'appelle GET /leave-balances/period/:referencePeriod/preview, POST /leave-balances/period/carryover ni POST /leave-balances/period/close (aucun service rhBalances ne les expose). Les endpoints backend existent mais la procédure utilisateur n'est pas réalisable en UI. Impact : EXP-006, EXP-008, EXP-009, EXP-011 et EXP-012 Non conformes (EXP-010 reste Conforme : négatif Directeur, pas de bouton = protection).",
+    ""
+  ],
+  [
+    "ANO-018",
+    "VAL-010 ; VAL-011",
+    "Le bouton Réactiver un valideur de secours est désactivé",
+    "Majeure",
+    "Ouverte",
+    "D.RAMPONT",
+    "Description : Attendu : depuis l’UI ADMIN, réactiver un secours désactivé (VAL-010) et la liste Valideurs doit afficher les secours actifs (VAL-011). Obtenu : le bouton Réactiver est désactivé (VAL-010) et les secours actifs sont affichés « Inopérant » au lieu de « Actif » (VAL-011). Cause technique constatée : ValidatorsPage lit user?.isActive sur validator (id/nom/prenom/email/role uniquement dans getServiceValidators) ; validator.isActive absent => disabled=true pour Réactiver et operational=false => badge Inopérant. Impact : VAL-010 et VAL-011 Non conformes.",
+    ""
+  ],
+  [
+    "ANO-019",
+    "VAL-047",
+    "Doublon de notification de soumission lors du re-passage maintenance (remplaçant)",
+    "Majeure",
+    "Ouverte",
+    "D.RAMPONT",
+    "Description : Attendu : pour une demande du collaborateur B avec remplacement actif, la notification LEAVE_REQUEST_SUBMITTED doit être créée uniquement pour le remplaçant, sans doublon lors d’un second passage (maintenance). Obtenu : au premier passage (soumission) 1 notification pour le remplaçant (user 21) et 0 pour le Responsable remplacé ; après POST /leave-requests/maintenance/run, un second enregistrement LEAVE_REQUEST_SUBMITTED est créé pour le même remplaçant (2 au total). Cause probable : le contrôle anti-doublon alreadyExistsSince utilise createdAt >= submittedAt. Sur la reproduction, la notification initiale porte un createdAt antérieur d’une seconde au submittedAt, ce qui empêche sa détection lors de la réévaluation. La raison exacte de cet écart temporel reste à confirmer. Impact : VAL-047 Non conforme.",
+    ""
+  ],
+  [
+    "ANO-020",
+    "UI-013",
+    "Le retour utilisateur après validation/refus d’un justificatif est rendu derrière le backdrop du drawer et n’est pas clairement visible.",
+    "Mineure",
+    "Ouverte",
+    "D.RAMPONT",
+    "Description : Attendu : chaque action (Valider / Refuser un justificatif) affiche un retour clair visible. Obtenu : l'action métier réussit (HTTP 200), le statut du document est mis à jour (Validé / Refusé), et le message .rh-events-feedback est présent dans le DOM. Mais le message de retour est rendu sous le drawer / overlay. Au centre géométrique du feedback, elementFromPoint retourne un élément du contenu superposé et non le feedback, pour la validation (topElement=P) comme pour le refus (topElement=DIV). backdropVisible=true, backdropZIndex=100, feedbackZIndex=auto. Le retour existe dans le DOM mais n'est pas au premier plan. Impact : UI-013 Non conforme. Sévérité Mineure car l'action réussit et le statut du document reste clairement visible dans le drawer.",
+    ""
+  ],
+  [
+    "ANO-021",
+    "UI-018",
+    "Aucun contrôle de réduction de la sidebar sur desktop",
+    "Mineure",
+    "Ouverte",
+    "D.RAMPONT",
+    "Description : Attendu : sur desktop (1366 ou 1920), la sidebar doit pouvoir être réduite via l'UI, les icônes restant visibles et le contenu se repositionnant. Obtenu : aucun contrôle de réduction n'est rendu (collapseControlCount=0) ; l'état réduit (app-shell--collapsed) n'est déclenché automatiquement qu'en tablette 768-1024 (media query). La navigation mobile, elle, fonctionne (menu ouvert/fermé, navigation, fermeture après navigation, aucun overlay orphelin). Impact : UI-018 Non conforme. Sévérité Mineure car la navigation reste utilisable.",
     ""
   ]
 ]

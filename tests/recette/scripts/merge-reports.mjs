@@ -15,6 +15,17 @@ const MODULE_SOURCES = [
   'recette-results-bal.json',
   'recette-results-abs.json',
   'recette-results-lea.json',
+  'recette-results-can.json',
+  'recette-results-der.json',
+  'recette-results-not.json',
+  'recette-results-rhc.json',
+  'recette-results-dir.json',
+  'recette-results-pre.json',
+  'recette-results-ref.json',
+  'recette-results-aud.json',
+  'recette-results-exp.json',
+  'recette-results-e4.json',
+  'recette-results-half.json',
 ]
 
 const FORBIDDEN_SOURCES = new Set([

@@ -1,0 +1,12 @@
+﻿ID;Priorité;Module;Scénario;Type de test;Statut;Résultat obtenu;Date;Durée;Preuve;Erreur;Commentaire
+PRE-012;P2;PRE;Maintenance : recalcule les statuts sur le slot courant;B - API;Conforme;presence=ABSENT secondRun=200;2026-09-24T14:24:45.361Z;0 ms;;;
+PRE-018;P1;PRE;La RH reprend la validation via le relais (Responsable ABSENT);B - API;Conforme;RESP=ABSENT HTTP=200;2026-09-24T14:24:46.574Z;0 ms;;;"Erratum rôle : relais réel = DIRECTEUR (REPRISE_PAR_RELAIS) ; le manifest indique RH."
+PRE-019;P1;PRE;Le relais est tracé dans l’audit (REPRISE_PAR_RELAIS);B - API;Conforme;actor=15 dir=15;2026-09-24T14:24:46.707Z;0 ms;;;
+PRE-023;P2;PRE;RH force le slot MATIN (AFTERNOON_START_HOUR=23:59);B - API;Conforme;slot MATIN forcé;2026-09-24T14:24:46.718Z;0 ms;;;
+PRE-024;P1;PRE;Absence MATIN du Responsable : relais autorisé le matin;B - API;Conforme;RESP=ABSENT HTTP=200;2026-09-24T14:24:47.542Z;0 ms;;;
+PRE-025;P1;PRE;Absence MATIN du Responsable : relais non autorisé l’après-midi;B - API;Conforme;RESP=PRESENT HTTP=403;2026-09-24T14:24:48.328Z;0 ms;;;
+PRE-026;P1;PRE;Absence APRES_MIDI du Responsable : relais non autorisé le matin;B - API;Conforme;RESP=PRESENT HTTP=403;2026-09-24T14:24:49.100Z;0 ms;;;
+PRE-027;P2;PRE;Le relais du Responsable est décidé slot par slot (demi-journée);B - API;Conforme;PRE-024/025/026 démontrent le comportement slot par slot;2026-09-24T14:24:49.205Z;0 ms;;;
+PRE-028;P2;PRE;RH restaure AFTERNOON_START_HOUR à 12:00;B - API;Conforme;value=12:00;2026-09-24T14:24:49.227Z;0 ms;;;
+PRE-030;P2;PRE;Le retour à PRESENT du Responsable rétablit sa priorité;B - API;Conforme;RESP=PRESENT respHTTP=200 dirHTTP=403;2026-09-24T14:24:49.801Z;0 ms;;;
+PRE-031;P1;PRE;Un champ stocké obsolète ne déclenche pas le relais (présence recalculée);B - API;Conforme;presenceRecalculée=PRESENT dirHTTP=403;2026-09-24T14:24:50.282Z;0 ms;;;

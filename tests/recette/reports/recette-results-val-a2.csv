@@ -1,0 +1,13 @@
+﻿ID;Priorité;Module;Scénario;Type de test;Statut;Résultat obtenu;Date;Durée;Preuve;Erreur;Commentaire
+VAL-012;P1;VAL;Secours refusé quand le Responsable est présent;C - UI + API;Conforme;HTTP=403;2026-09-24T15:19:21.219Z;0 ms;CAP-VAL-012.png;;
+VAL-013;P1;VAL;Le Responsable principal valide la demande;C - UI + API;Conforme;HTTP=200;2026-09-24T15:19:21.545Z;0 ms;CAP-VAL-013.png;;
+VAL-014;P1;VAL;L’urgence seule n’ouvre pas le secours;C - UI + API;Conforme;HTTP=403;2026-09-24T15:19:21.872Z;0 ms;CAP-VAL-014.png;;
+VAL-015;P2;VAL;Le Responsable traite la demande;B - API;Conforme;HTTP=200;2026-09-24T15:19:22.180Z;0 ms;;;
+VAL-016;P1;VAL;Relais par présence du Responsable;C - UI + API;Conforme;"UI réelle secours RH → HTTP 200 ; decisionAccess=SECOURS ; rowCount=1 ; presence=ABSENT";2026-09-24T17:07:14.281Z;0 ms;CAP-VAL-016.png;;
+VAL-017;P1;VAL;RH crée une absence autorisée pour le Responsable;B - API;Conforme;"UI réelle RH création absence (drawer) → HTTP 201 ; absenceId=6 ; acteur=RH";2026-09-24T17:07:14.281Z;0 ms;;;
+VAL-018;P1;VAL;La RH soumet l’absence du Responsable;C - UI + API;Conforme;"UI réelle RH soumission absence → /submit HTTP 200 ; presenceAfter=ABSENT";2026-09-24T17:07:14.281Z;0 ms;CAP-VAL-018.png;;
+VAL-019;P1;VAL;Le secours valide quand le Responsable est absent;C - UI + API;Conforme;"UI réelle secours RH → HTTP 200 ; decisionAccess=SECOURS ; rowCount=1 ; presence=ABSENT";2026-09-24T17:07:14.281Z;0 ms;CAP-VAL-019.png;;
+VAL-020;P1;VAL;Le second secours est bloqué sur une demande déjà décidée;C - UI + API;Conforme;"UI secours1 RH → 200 ; secours2 Directeur UI bloqué (validate=0) ; API 409 ; statut VALIDEE inchangé";2026-09-24T17:15:06.569Z;0 ms;CAP-VAL-020.png;;
+VAL-021;P1;VAL;Le premier secours décide, le second ne peut plus;C - UI + API;Conforme;"UI secours1 RH → 200 ; secours2 Directeur UI bloqué (validate=0) ; API 409 ; aucune mutation";2026-09-24T17:15:06.569Z;0 ms;CAP-VAL-021.png;;
+VAL-022;P1;VAL;La deuxième décision sur la même demande est refusée;B - API;Conforme;"seconde décision même demande → HTTP 409 ; aucune mutation (preuve API corroboration VAL-021)";2026-09-24T17:15:06.569Z;0 ms;;;
+VAL-023;P1;VAL;La RH annule l’absence du Responsable;C - UI + API;Conforme;"UI RH annulation absence → /cancel HTTP 200 ; statut ANNULEE ; presence PRESENT";2026-09-24T17:15:06.569Z;0 ms;CAP-VAL-023.png;;

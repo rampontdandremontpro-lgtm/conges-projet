@@ -1,0 +1,27 @@
+﻿ID;Priorité;Module;Scénario;Type de test;Statut;Résultat obtenu;Date;Durée;Preuve;Erreur;Commentaire
+DIR-001;P1;DIR;Un collaborateur ne peut pas utiliser la route Directeur;C - UI + API;Conforme;HTTP=403;2026-09-24T12:36:50.724Z;0 ms;CAP-DIR-001.png;;
+DIR-002;P1;DIR;Un Responsable ne peut pas utiliser la route Directeur;C - UI + API;Conforme;HTTP=403;2026-09-24T12:36:52.830Z;0 ms;CAP-DIR-002.png;;
+DIR-003;P1;DIR;Une RH ne peut pas utiliser la route Directeur;B - API;Conforme;HTTP=403;2026-09-24T12:36:52.843Z;0 ms;;;
+DIR-004;P1;DIR;Un administrateur ne peut pas utiliser la route Directeur;B - API;Conforme;HTTP=403;2026-09-24T12:36:52.861Z;0 ms;;;
+DIR-005;P1;DIR;RH réduit le solde du Directeur pour le scénario de solde insuffisant;B - API;Conforme;HTTP=201 available=0;2026-09-24T12:36:52.970Z;0 ms;;;
+DIR-006;P1;DIR;Solde insuffisant du Directeur → 400;B - API;Non conforme;HTTP=201;2026-09-24T12:36:53.267Z;0 ms;;ANO-013 : la route Directeur n’effectue aucun contrôle de solde.;
+DIR-007;P1;DIR;La transaction du Directeur est cohérente : aucune demande sans solde;B - API;Non conforme;demande créée sans solde=true;2026-09-24T12:36:53.267Z;0 ms;;;
+DIR-008;P1;DIR;RH restaure le solde du Directeur;B - API;Conforme;HTTP=201 available=30;2026-09-24T12:36:53.347Z;0 ms;;;
+DIR-009;P1;DIR;Directeur enregistre un congé payé sans circuit de validation;B - API;Conforme;HTTP=201 statut=VALIDEE;2026-09-24T12:36:53.575Z;0 ms;;;""""""
+DIR-010;P1;DIR;Aucune signature en base pour la demande Directeur;B - API;Conforme;employee=null validator=null;2026-09-24T12:36:53.603Z;0 ms;;;
+DIR-011;P1;DIR;L’audit trace l’enregistrement Directeur sans passage par le circuit;B - API;Conforme;audits=1;2026-09-24T12:36:53.616Z;0 ms;;;
+DIR-012;P2;DIR;La notification interne confirme l’enregistrement Directeur;B - API;Conforme;notifications=1;2026-09-24T12:36:53.627Z;0 ms;;;
+DIR-013;P1;DIR;Le solde N-1 du Directeur est déduit d’un jour;B - API;Non conforme;avant=30 après=30 delta=0;2026-09-24T12:36:53.680Z;0 ms;;ANO-013 : la route Directeur ne débite pas le solde.;
+DIR-014;P1;DIR;Directeur enregistre un congé le jour même;B - API;Conforme;HTTP=201;2026-09-24T12:36:53.770Z;0 ms;;;
+DIR-015;P1;DIR;Le statut de présence du Directeur passe à EN_VACANCES;C - UI + API;Conforme;presence=EN_VACANCES;2026-09-24T12:36:56.140Z;0 ms;CAP-DIR-015.png;;
+DIR-016;P1;DIR;Présence du Directeur au jour courant;A - UI;Conforme;capture présence Directeur;2026-09-24T12:36:58.329Z;0 ms;CAP-DIR-016.png;;
+DIR-017;P1;DIR;Chevauchement personnel du Directeur refusé;B - API;Conforme;HTTP=400;2026-09-24T12:36:58.536Z;0 ms;;;
+DIR-018;P1;DIR;Un dimanche est refusé pour le Directeur;B - API;Conforme;HTTP=400;2026-09-24T12:36:58.676Z;0 ms;;;
+DIR-019;P1;DIR;RH crée un jour férié Martinique pour le scénario E1;B - API;Conforme;HTTP=400;2026-09-24T12:36:58.692Z;0 ms;;;"Erratum : les jours fériés officiels sont gérés automatiquement ; seule la création de fermetures GMES est manuelle."
+DIR-020;P1;DIR;Un jour férié Martinique est refusé au Directeur;B - API;Conforme;HTTP=400 date=2026-11-01;2026-09-24T12:36:58.731Z;0 ms;;;
+DIR-021;P1;DIR;RH désactive le jour férié du scénario E1;B - API;Conforme;Erratum : jour férié officiel géré automatiquement, sans désactivation manuelle.;2026-09-24T12:36:58.731Z;0 ms;;;
+DIR-022;P1;DIR;RH crée une fermeture GMES pour le scénario E1;B - API;Conforme;HTTP=201;2026-09-24T12:36:58.767Z;0 ms;;;
+DIR-023;P1;DIR;Une fermeture GMES est refusée au Directeur;B - API;Conforme;HTTP=400;2026-09-24T12:36:58.803Z;0 ms;;;
+DIR-024;P1;DIR;RH désactive la fermeture du scénario E1;B - API;Conforme;HTTP=200;2026-09-24T12:36:58.820Z;0 ms;;;
+DIR-025;P2;DIR;Le Directeur peut enregistrer un samedi;B - API;Conforme;HTTP=201;2026-09-24T12:36:58.890Z;0 ms;;;
+DIR-026;P2;DIR;Le Directeur enregistre une demi-journée;B - API;Conforme;HTTP=201;2026-09-24T12:36:58.997Z;0 ms;;;

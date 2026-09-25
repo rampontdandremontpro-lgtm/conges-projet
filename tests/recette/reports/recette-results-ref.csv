@@ -1,0 +1,8 @@
+﻿ID;Priorité;Module;Scénario;Type de test;Statut;Résultat obtenu;Date;Durée;Preuve;Erreur;Commentaire
+REF-001;P2;REF;RH force REFERENCE_PERIOD_START à 04-15;B - API;Conforme;PATCH /settings/REFERENCE_PERIOD_START settingValue=04-15 HTTP=200;2026-09-24T12:55:45.471Z;0 ms;;;action RH réelle via API (setting seedé en fixture)
+REF-002;P2;REF;acquisition contrôlée d’avril année de référence;B - API;Conforme;HTTP=201;2026-09-24T12:55:45.663Z;0 ms;;;
+REF-003;P2;REF;le run expose la période attendue (30/04);B - API;Conforme;effectiveDate=2026-04-30 referencePeriod=2026-2027;2026-09-24T12:55:45.663Z;0 ms;;;
+REF-004;P2;REF;compteur N et mouvement rattachés à la période attendue;B - API;Conforme;acquiredDays=2.5;2026-09-24T12:55:45.696Z;0 ms;;;
+REF-005;P2;REF;aucun rattachement à l’ancienne période;B - API;Conforme;oldPeriod=absent;2026-09-24T12:55:45.715Z;0 ms;;;
+REF-006;P2;REF;RH restaure REFERENCE_PERIOD_START à 06-01;B - API;Conforme;PATCH /settings/REFERENCE_PERIOD_START settingValue=06-01 HTTP=200;2026-09-24T12:55:45.722Z;0 ms;;;action RH réelle via API
+REF-007;P2;REF;REFERENCE_PERIOD_START restauré à 06-01 (fin REF-1);B - API;Conforme;value=06-01;2026-09-24T12:55:45.728Z;0 ms;;;

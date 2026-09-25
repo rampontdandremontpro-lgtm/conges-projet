@@ -1,0 +1,18 @@
+UI-006 {"oldRange":{"start":"2026-10-13","end":"2026-10-15"},"newStart":"2026-10-19","hover1":"2026-10-20","previewH1":{"start":"2026-10-19","end":"2026-10-20"},"hover2":"2026-10-21","previewH2":{"start":"2026-10-19","end":"2026-10-21"},"finalRange":{"start":"2026-10-19","end":"2026-10-21"},"previewFollowsMouse":true}
+UI-007 {"oldRange":{"start":"2026-10-13","end":"2026-10-15"},"clickedInsideOldRange":"2026-10-14","selectionStartAfterClick":"2026-10-14","hoverDate":"2026-10-20","previewDates":{"start":"2026-10-14","end":"2026-10-20"},"finalRange":{"start":"2026-10-14","end":"2026-10-20"},"newSelectionStarted":true}
+UI-008 {"absenceId":7,"status":"JUSTIFICATIF_EN_ATTENTE","activeDocumentCount":0,"addButtonCount":1,"otherActionCount":0,"buttonCenterX":1020.5406799316406,"cardCenterX":1020.5406799316406,"deltaX":0,"centered":true}
+UI-009 {"absenceId":7,"filename":"justificatif-abs-recette.pdf","filenameVisible":true,"sendVisible":1,"cancelVisible":1}
+UI-010 {"absenceId":8,"documentStatus":"EN_ATTENTE","buttons":["Modifier l’absence","Fermer"],"modifyVisible":1,"authorizeVisible":0,"closeVisible":1}
+UI-013-VALIDATION {"absenceId":8,"documentId":7,"HTTP":200,"statusAfter":"Validé","feedback":"Justificatif validé. Vous pouvez maintenant autoriser l’absence."}
+UI-011 {"absenceId":8,"documentStatus":"ACCEPTE","buttons":["Modifier l’absence","Autoriser l’absence","Fermer"],"modifyVisible":1,"authorizeVisible":1,"closeVisible":1}
+UI-013-REFUS {"absenceId":9,"documentId":8,"HTTP":200,"statusAfter":"Refusé","reason":"REFUS UI013 UI2mugwajo2","feedback":"Justificatif refusé. Un nouveau justificatif est maintenant attendu."}
+UI-012 {"absenceId":9,"documentId":8,"rejectedVisible":true,"reason":"Motif du refus : REFUS UI013 UI2mugwajo2","viewVisible":1,"replaceVisible":1}
+UI-A2 8 {"Conforme":8}
+UI-006 Conforme | oldRange=2026-10-13→2026-10-15, newStart=2026-10-19, hover1=2026-10-20 preview=2
+UI-007 Conforme | oldRange=2026-10-13→2026-10-15, clickedInsideOldRange=2026-10-14, selectionStart
+UI-008 Conforme | absenceId=7, status=JUSTIFICATIF_EN_ATTENTE, activeDocumentCount=0, addButtonCou
+UI-009 Conforme | absenceId=7, filename=justificatif-abs-recette.pdf, filenameVisible=true, Envoye
+UI-010 Conforme | absenceId=8, documentStatus=EN_ATTENTE, buttons=["Modifier l’absence","Fermer"],
+UI-011 Conforme | absenceId=8, documentStatus=ACCEPTE, buttons=["Modifier l’absence","Autoriser l’
+UI-012 Conforme | absenceId=9, documentId=8, status=Refusé, reason="Motif du refus : REFUS UI013 U
+UI-013 Conforme | VALIDATION: HTTP=200 before=EN_ATTENTE after=Validé feedback="Justificatif valid

@@ -1,0 +1,14 @@
+﻿ID;Priorité;Module;Scénario;Type de test;Statut;Résultat obtenu;Date;Durée;Preuve;Erreur;Commentaire
+EXP-001;P2;EXP;RH exporte les demandes en CSV;B - API;Conforme;"HTTP=200 type=text/csv; charset=utf-8 size=3";2026-09-24T13:01:39.902Z;0 ms;;;
+EXP-002;P1;EXP;RH exporte les absences en XLSX;B - API;Conforme;HTTP=200 type=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet size=2286;2026-09-24T13:01:42.537Z;0 ms;CAP-EXP-002.png;;
+EXP-003;P2;EXP;Directeur ne télécharge pas un export nominatif;B - API;Non conforme;HTTP=200;2026-09-24T13:01:42.570Z;0 ms;;ANO-014 : le Directeur peut télécharger un export nominatif.;
+EXP-004;P2;EXP;Directeur consulte les statistiques agrégées;B - API;Conforme;HTTP=200;2026-09-24T13:01:42.760Z;0 ms;;;
+EXP-005;P2;EXP;Les statistiques Directeur ne contiennent aucune donnée nominative;B - API;Conforme;nominative=false;2026-09-24T13:01:42.805Z;0 ms;;;
+EXP-006;P1;EXP;RH prévisualise la clôture;B - API;Non conforme;HTTP=200;2026-09-24T13:01:45.396Z;0 ms;CAP-EXP-006.png;ANO-017 : interface RH de clôture/report de période absente (aucune UI period/preview, period/carryover, period/close).;preuve backend conservée mais procédure utilisateur non réalisable en UI.
+EXP-007;P1;EXP;Collaborateur ne décide pas un report exceptionnel;B - API;Conforme;HTTP=403;2026-09-24T13:01:45.420Z;0 ms;;;
+EXP-008;P1;EXP;RH accorde un report exceptionnel;B - API;Non conforme;HTTP=201;2026-09-24T13:01:45.530Z;0 ms;;ANO-017 : interface RH de clôture/report de période absente (aucune UI period/preview, period/carryover, period/close).;preuve backend conservée mais procédure utilisateur non réalisable en UI.
+EXP-009;P1;EXP;Un report supérieur au reliquat est refusé;B - API;Non conforme;HTTP=400;2026-09-24T13:01:45.614Z;0 ms;;ANO-017 : interface RH de clôture/report de période absente (aucune UI period/preview, period/carryover, period/close).;preuve backend conservée mais procédure utilisateur non réalisable en UI.
+EXP-010;P1;EXP;Directeur ne clôture pas les compteurs;B - API;Conforme;HTTP=403;2026-09-24T13:01:48.106Z;0 ms;CAP-EXP-010.png;;
+EXP-011;P1;EXP;RH clôture transactionnellement la période;B - API;Non conforme;HTTP=201;2026-09-24T13:01:50.593Z;0 ms;CAP-EXP-011.png;ANO-017 : interface RH de clôture/report de période absente (aucune UI period/preview, period/carryover, period/close).;preuve backend conservée mais procédure utilisateur non réalisable en UI.
+EXP-012;P1;EXP;Une seconde clôture de la même période est refusée;B - API;Non conforme;HTTP=409;2026-09-24T13:01:53.106Z;0 ms;CAP-EXP-012.png;ANO-017 : interface RH de clôture/report de période absente (aucune UI period/preview, period/carryover, period/close).;preuve backend conservée mais procédure utilisateur non réalisable en UI.
+EXP-013;P1;EXP;Le nouveau N-1 contient le report exceptionnel et les droits N transférés;B - API;Conforme;N-1 2026-2027 acquiredDays=2;2026-09-24T13:01:53.132Z;0 ms;;;

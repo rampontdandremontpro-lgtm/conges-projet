@@ -1,0 +1,10 @@
+﻿ID;Priorité;Module;Scénario;Type de test;Statut;Résultat obtenu;Date;Durée;Preuve;Erreur;Commentaire
+NOT-001;P2;NOT;RH exécute la maintenance automatique;B - API;Conforme;POST maintenance/run HTTP=200 | expirées=0 | rappels=0;2026-09-24T12:15:52.219Z;353 ms;;;expiredRequestId=33
+NOT-002;P1;NOT;La demande arrivée à échéance passe à EXPIREE_NON_VALIDEE;C - UI + API;Conforme;statut=EXPIREE_NON_VALIDEE (attendu EXPIREE_NON_VALIDEE);2026-09-24T12:15:54.963Z;2743 ms;CAP-NOT-002.png;;expiredRequestId=33
+NOT-003;P2;NOT;La maintenance est idempotente dans la journée;B - API;Conforme;2e run HTTP=200 | expirées=0;2026-09-24T12:15:55.064Z;95 ms;;;secondRun
+NOT-004;P2;NOT;Pas de rappel quotidien dupliqué;B - API;Conforme;rappels avant=1 après=1;2026-09-24T12:15:55.608Z;544 ms;;;reminderRequestId=34
+NOT-005;P2;NOT;Collaborateur consulte ses notifications;A - UI;Conforme;notifications visibles=3;2026-09-24T12:15:57.998Z;2359 ms;;;route=/app/notifications
+NOT-006;P2;NOT;Autre utilisateur ne marque pas la notification comme lue;B - API;Conforme;PATCH read HTTP=404 | unread 3→3;2026-09-24T12:15:58.044Z;42 ms;;;notificationId=120, acteur=COL-B
+NOT-007;P2;NOT;Propriétaire marque une notification comme lue;C - UI + API;Conforme;PATCH read UI HTTP=200;2026-09-24T12:16:01.457Z;3413 ms;;;route=/app/notifications
+NOT-008;P2;NOT;Compteur des notifications non lues;B - API;Conforme;unreadCount avant=3 après=2;2026-09-24T12:16:01.479Z;16 ms;;;unread-count
+NOT-009;P2;NOT;Utilisateur marque toutes ses notifications comme lues;C - UI + API;Conforme;read-all UI HTTP=200 | unreadCount=0;2026-09-24T12:16:04.271Z;2791 ms;;;route=/app/notifications

@@ -41,6 +41,17 @@ ADM-022;P1;ADM;Une demande ne commence pas sur une fermeture non décomptable;C 
 ADM-023;P2;ADM;Synchronisation officielle des jours fériés de Martinique;B - API;Conforme;Synchronisation effectuée (HTTP 201).;2026-09-22T14:42:21.338Z;135 ms;;;
 ADM-024;P2;ADM;Synchronisation officielle des jours fériés de Martinique;B - API;Conforme;Synchronisation RH effectuée (HTTP 201).;2026-09-22T14:42:21.727Z;389 ms;;;
 ADM-025;P2;ADM;Collaborateur ne déclenche pas la synchronisation;B - API;Conforme;Action refusée (HTTP 403) — Vous ne disposez pas des autorisations nécessaires.;2026-09-22T14:42:21.747Z;19 ms;;;
+AUD-001;P1;AUD;Admin consulte les journaux d’audit;B - API;Conforme;HTTP=200 lignes=24;2026-09-24T12:57:27.770Z;0 ms;;;
+AUD-002;P1;AUD;Les audits masquent les mots de passe, jetons, signatures et fichiers;B - API;Conforme;fuite=false;2026-09-24T12:57:27.790Z;0 ms;;;
+AUD-003;P1;AUD;Tous les audits métier portent LEAVE_REQUESTS avec un resource_id non nul;B - API;Conforme;audits_sans_id (hors HTTP_ technique)=0;2026-09-24T12:57:27.798Z;0 ms;;;
+AUD-004;P1;AUD;Chaque audit post-brouillon pointe vers une demande existante en base;B - API;Conforme;ids=3;2026-09-24T12:57:27.826Z;0 ms;;;
+AUD-005;P2;AUD;A — BROUILLON_CREE porte un resource_id et un actor_id réels;B - API;Conforme;resourceId=34 actorId=17;2026-09-24T12:57:27.834Z;0 ms;;;
+AUD-006;P1;AUD;B/C/D/F — la même demande trace CREE, SOUMISE, VALIDEE et RELAIS sur une demande;B - API;Conforme;actions=BROUILLON_CREE,DEMANDE_SOUMISE,HTTP_POST,DEMANDE_PREVALIDEE,DEMANDE_VALIDEE;2026-09-24T12:57:27.842Z;0 ms;;;
+AUD-007;P1;AUD;C — DEMANDE_VALIDEE est attribuée au valideur réel;B - API;Conforme;actorId=14;2026-09-24T12:57:27.851Z;0 ms;;;
+AUD-008;P2;AUD;E — CONGE_DIRECTEUR_ENREGISTRE trace la demande du Directeur;B - API;Conforme;audits=1;2026-09-24T12:57:27.862Z;0 ms;;;
+AUD-009;P1;AUD;G — un audit d’absence porte ABSENCE_DECLARATIONS avec un resource_id réel;B - API;Conforme;audits=1;2026-09-24T12:57:27.869Z;0 ms;;;
+AUD-010;P1;AUD;Les audits de dérogation portent DEROGATIONS avec un resource_id réel;B - API;Conforme;audits=1;2026-09-24T12:57:27.881Z;0 ms;;;
+AUD-011;P1;AUD;La base conserve exactement les 15 tables du diagramme;B - API;Conforme;missing=aucune;2026-09-24T12:57:27.888Z;0 ms;;;
 AUTH-001;P2;AUTH;Racine de l’API disponible;B - API;Conforme;HTTP 200 — Hello World!;2026-09-23T12:36:01.549Z;36 ms;;;
 AUTH-002;P1;AUTH;Connexion refusée avec un mauvais mot de passe;A - Playwright;Conforme;Message d’erreur explicite affiché, pas de connexion.;2026-09-23T12:36:06.258Z;4709 ms;CAP-AUTH-002.png;;
 AUTH-003;P1;AUTH;Demande de définition de mot de passe pour un compte connu;A - Playwright;Conforme;Écran de confirmation affiché pour un compte connu.;2026-09-23T12:36:10.222Z;2196 ms;CAP-AUTH-003.png;;
@@ -59,6 +70,146 @@ BAL-007;P2;BAL;RH lance l’acquisition du mois terminé;B - API;Conforme;target
 BAL-008;P2;BAL;L’acquisition mensuelle est idempotente;B - API;Conforme;2e run HTTP=201 | eligible=4, alreadyCredited=4, credited=0 | COL-C acquis 2.5→2.5, dispo 2.5→2.5 | mouvements 1→1 | acquisitions mois 1→1;2026-09-23T12:21:56.186Z;386 ms;;;eligible=4, alreadyCredited=4, credited=0, balancesGloballyUnchanged=true, movementIdsGloballyUnchanged=true, doubleAcquisition=non
 BAL-009;P2;BAL;Prorata automatique arrivée/départ;B - API;Bloqué;arrivée hireDate=2026-07-16 run=2026-07 HTTP=201 credited=false manualReview=true newMoves=0 | départ exitDate modélisé=false PATCH exitDate HTTP=400 | règle prorata non finalisée → Bloqué;2026-09-23T12:21:56.852Z;666 ms;;Règle fonctionnelle du prorata non finalisée : arbitrage fonctionnel requis.;"Comportement actuel documenté=true : arrivée en cours de mois → manualReviewRequired sans crédit automatique ; départ non modélisable (absence de date de fin de contrat). Décision fonctionnelle requise : 1) prorata arrivée ? 2) base calendaire/ouvrée/autre ? 3) arrondi ? 4) traitement départ ? 5) ajout date de sortie au User ? 6) automatique ou contrôle RH ?"
 BAL-010;P2;BAL;Tous les rôles consultent les types actifs;C - UI + API;Conforme;"API 5 rôles ok | UI ADMIN=ok RH=ok DIRECTEUR=ok RESPONSABLE_SERVICE=ok COLLABORATEUR=ok | actif=""BAL-010 Actif"" visible | inactif=""BAL-010 Inactif"" masqué | management actif=true inactif=true";2026-09-23T12:22:11.442Z;14590 ms;;;API: ADMIN=HTTP200/actiftrue/inactiffalse RH=HTTP200/actiftrue/inactiffalse DIRECTEUR=HTTP200/actiftrue/inactiffalse RESPONSABLE_SERVICE=HTTP200/actiftrue/inactiffalse COLLABORATEUR=HTTP200/actiftrue/inactiffalse. UI: ADMIN:/app/admin-leave-types RH:/app/rh-leave-types DIRECTEUR:/app/director-statistics RESPONSABLE_SERVICE:/app/requests COLLABORATEUR:/app/new-request.
+CAN-001;P1;CAN;Une modification avant décision invalide la signature et repasse en brouillon;C - UI + API;Conforme;PATCH UI HTTP=200 | statut EN_ATTENTE_VALIDATION→BROUILLON | signature INITIALS→null | dates 2026-12-16→2026-12-17;2026-09-23T18:58:02.802Z;5895 ms;CAP-CAN-001.png;;requestId=33, erratum attendu générique contradictoire
+CAN-002;P1;CAN;Collaborateur annule une demande avant décision;C - UI + API;Non conforme;"cancel UI HTTP=409 message=""La réservation active du solde ne correspond pas au nombre de jours de la demande."" | statut EN_ATTENTE_VALIDATION→EN_ATTENTE_VALIDATION | balance 30→30";2026-09-23T18:58:07.940Z;5131 ms;CAP-CAN-002.png;ANO-011 : l’annulation avant décision échoue (409 réservation).;requestId=34
+CAN-003;P1;CAN;Collaborateur demande l’annulation après validation;C - UI + API;Conforme;statut validé=VALIDEE | UI propriétaire lecture seule=true | collaborateur HTTP=403 | RH initie HTTP=200 | statut final=ANNULATION_EN_ATTENTE_ACCORD;2026-09-23T18:58:12.445Z;4501 ms;CAP-CAN-003.png;;requestId=35, erratum : seule la RH initie l’annulation après validation
+CAN-004;P1;CAN;Responsable ne finalise pas l’annulation;C - UI + API;Conforme;RESP cancellation-complete HTTP=403 | UI action présente=false (trouvée=true) | statut ANNULATION_EN_ATTENTE_ACCORD→ANNULATION_EN_ATTENTE_ACCORD | balance 28→28;2026-09-23T18:58:15.863Z;3412 ms;CAP-CAN-004.png;;requestId=35
+CAN-005;P1;CAN;RH finalise l’annulation et recrédite le solde;C - UI + API;Conforme;cancellation-complete HTTP=200 | statut=ANNULEE_APRES_VALIDATION | solde 28→30 (recrédité 2) | mouvements 2→3;2026-09-23T18:58:19.574Z;3707 ms;CAP-CAN-005.png;;requestId=35, erratum : pas d’UI dédiée, exécution API
+CAN-006;P1;CAN;Collaborateur télécharge le PDF d’annulation;C - UI + API;Conforme;"PDF HTTP=200 type=application/pdf taille=2306 signature=%PDF- | download UI=""annulation-conge-37.pdf""";2026-09-23T18:58:36.467Z;3929 ms;CAP-CAN-006.png;;requestId=37, propriétaire=COL-A
+CAN-007;P2;CAN;RH reprend une demande avant le délai avec urgence motivée;B - API;Conforme;délai expiré=false (submittedAt=2026-09-23T18:58:20.000Z) | RH HTTP=403 | Directeur HTTP=200 isUrgent=true | finalDecider=15;2026-09-23T18:58:20.310Z;728 ms;;;requestId=36, erratum : urgence réservée au Directeur (rôle RH → DIRECTEUR), takeoverAt=2026-09-30T18:58:20.000Z
+CAN-008;P1;CAN;RH initie une annulation après validation;C - UI + API;Conforme;RH initiation HTTP=200 | statut VALIDEE→ANNULATION_EN_ATTENTE_ACCORD | consentement=true | solde 28→28;2026-09-23T18:58:24.630Z;3695 ms;CAP-CAN-008.png;;requestId=37
+CAN-009;P1;CAN;Collaborateur donne son consentement à l’annulation;C - UI + API;Conforme;UI aucune action consentement=true | cancellation-consent HTTP=403 | consentement déjà=true | statut=ANNULATION_EN_ATTENTE_ACCORD;2026-09-23T18:58:28.669Z;4035 ms;CAP-CAN-009.png;;requestId=37, erratum : consentement géré par le flux RH
+CAN-010;P1;CAN;RH finalise l’annulation avec consentement;C - UI + API;Conforme;cancellation-complete HTTP=200 | statut=ANNULEE_APRES_VALIDATION | solde 28→30 (recrédité 2) | mouvements 4→5;2026-09-23T18:58:32.533Z;3858 ms;CAP-CAN-010.png;;requestId=37
+DER-001;P2;DER;Collaborateur crée une dérogation;C - UI + API;Conforme;"POST /derogations UI HTTP=201 | statut initial=EN_ATTENTE_RH | motif=""Motif initial recette DER-001."" | persistance GET=200 | doublons=1";2026-09-24T11:37:00.436Z;4905 ms;CAP-DER-001.png;;"derogationId=3, requestId=33, période=2026-09-28→2026-09-29. Erratum : aucune page Dérogations collaborateur ; la création réelle passe par Nouvelle demande (RecapCard)."
+DER-002;P2;DER;Collaborateur modifie le motif de dérogation;B - API;Non conforme;"PATCH /derogations/:id HTTP=200 | motif ""Motif initial recette DER-001."" → ""Motif modifié recette DER-002."" | persistance=true | doublons=1";2026-09-24T11:37:00.582Z;138 ms;;ANO-012 : le backend expose PATCH /derogations/:id pour modifier le motif, mais aucune action correspondante n’est disponible dans l’interface collaborateur.;derogationId=3. Écart UI produit : modification du motif réalisable uniquement par API.
+DER-003;P1;DER;Collaborateur soumet la dérogation;B - API;Non conforme;POST /derogations/:id/submit HTTP=200 | statut suivant=EN_ATTENTE_RH | trace DEROGATION_DEMANDEE=2 entrée(s), dernière derogationId=3 | signature dédiée=aucune (non prévue pour une dérogation);2026-09-24T11:37:04.653Z;4071 ms;CAP-DER-003.png;ANO-012 : le backend expose POST /derogations/:id/submit pour soumettre la dérogation, mais aucune action correspondante n’est disponible dans l’interface collaborateur.;derogationId=3. Écart UI produit : soumission réalisable uniquement par API.
+DER-004;P2;DER;Responsable ne décide pas la dérogation;C - UI + API;Conforme;UI Responsable sans Dérogations=true (liens RH=0, DIR=0) | PATCH decision HTTP=403 | GET management HTTP=403 | statut EN_ATTENTE_RH→EN_ATTENTE_RH (décidéPar=null);2026-09-24T11:37:06.686Z;2028 ms;CAP-DER-004.png;;"derogationId=3. Le contrôleur décisionnel est @Roles(RH, DIRECTEUR) ; le Responsable est exclu."
+DER-005;P2;DER;RH accorde la dérogation;C - UI + API;Conforme;PATCH decision UI HTTP=200 | statut technique=EN_ATTENTE_RH | workflow=EN_ATTENTE_DIRECTEUR | acteur RH=14 (attendu 14) | 2e décision RH HTTP=403;2026-09-24T11:37:10.706Z;4016 ms;CAP-DER-005.png;;"derogationId=3. Erratum rôle/flux : l’« accord RH » est une pré-validation (EN_ATTENTE_DIRECTEUR) ; la décision finale ACCORDEE relève du Directeur (précondition DER-006)."
+DER-006;P2;DER;La dérogation accordée est consommée;B - API;Conforme;Directeur ACCORDER HTTP=200→ACCORDEE | consommation : dérogation ACCORDEE→UTILISEE (usedAt=défini) | demande BROUILLON→EN_ATTENTE_VALIDATION | 2e soumission HTTP=400 | dérogations liées=1;2026-09-24T11:37:11.272Z;562 ms;;;derogationId=3, requestId=33. Action déclenchante réelle = POST /leave-requests/:id/submit d’une demande hors délai avec dérogation ACCORDEE.
+DER-007;P1;DER;Collaborateur annule la demande dérogatoire avant décision;B - API;Non conforme;create HTTP=201 | submit HTTP=200 | avant annulation statut=EN_ATTENTE_RH décidéPar=null | DELETE HTTP=204 | GET après=404 | demande liée=BROUILLON | consommation=aucune;2026-09-24T11:37:15.562Z;4290 ms;CAP-DER-007.png;ANO-012 : le backend expose DELETE /derogations/:id pour annuler avant décision, mais aucune action correspondante n’est disponible dans l’interface collaborateur.;derogationId=4, requestId=34. Écart UI produit : annulation avant décision réalisable uniquement par API.
+DIR-001;P1;DIR;Un collaborateur ne peut pas utiliser la route Directeur;C - UI + API;Conforme;HTTP=403;2026-09-24T12:36:50.724Z;0 ms;CAP-DIR-001.png;;
+DIR-002;P1;DIR;Un Responsable ne peut pas utiliser la route Directeur;C - UI + API;Conforme;HTTP=403;2026-09-24T12:36:52.830Z;0 ms;CAP-DIR-002.png;;
+DIR-003;P1;DIR;Une RH ne peut pas utiliser la route Directeur;B - API;Conforme;HTTP=403;2026-09-24T12:36:52.843Z;0 ms;;;
+DIR-004;P1;DIR;Un administrateur ne peut pas utiliser la route Directeur;B - API;Conforme;HTTP=403;2026-09-24T12:36:52.861Z;0 ms;;;
+DIR-005;P1;DIR;RH réduit le solde du Directeur pour le scénario de solde insuffisant;B - API;Conforme;HTTP=201 available=0;2026-09-24T12:36:52.970Z;0 ms;;;
+DIR-006;P1;DIR;Solde insuffisant du Directeur → 400;B - API;Non conforme;HTTP=201;2026-09-24T12:36:53.267Z;0 ms;;ANO-013 : la route Directeur n’effectue aucun contrôle de solde.;
+DIR-007;P1;DIR;La transaction du Directeur est cohérente : aucune demande sans solde;B - API;Non conforme;demande créée sans solde=true;2026-09-24T12:36:53.267Z;0 ms;;;
+DIR-008;P1;DIR;RH restaure le solde du Directeur;B - API;Conforme;HTTP=201 available=30;2026-09-24T12:36:53.347Z;0 ms;;;
+DIR-009;P1;DIR;Directeur enregistre un congé payé sans circuit de validation;B - API;Conforme;HTTP=201 statut=VALIDEE;2026-09-24T12:36:53.575Z;0 ms;;;""""""
+DIR-010;P1;DIR;Aucune signature en base pour la demande Directeur;B - API;Conforme;employee=null validator=null;2026-09-24T12:36:53.603Z;0 ms;;;
+DIR-011;P1;DIR;L’audit trace l’enregistrement Directeur sans passage par le circuit;B - API;Conforme;audits=1;2026-09-24T12:36:53.616Z;0 ms;;;
+DIR-012;P2;DIR;La notification interne confirme l’enregistrement Directeur;B - API;Conforme;notifications=1;2026-09-24T12:36:53.627Z;0 ms;;;
+DIR-013;P1;DIR;Le solde N-1 du Directeur est déduit d’un jour;B - API;Non conforme;avant=30 après=30 delta=0;2026-09-24T12:36:53.680Z;0 ms;;ANO-013 : la route Directeur ne débite pas le solde.;
+DIR-014;P1;DIR;Directeur enregistre un congé le jour même;B - API;Conforme;HTTP=201;2026-09-24T12:36:53.770Z;0 ms;;;
+DIR-015;P1;DIR;Le statut de présence du Directeur passe à EN_VACANCES;C - UI + API;Conforme;presence=EN_VACANCES;2026-09-24T12:36:56.140Z;0 ms;CAP-DIR-015.png;;
+DIR-016;P1;DIR;Présence du Directeur au jour courant;A - UI;Conforme;capture présence Directeur;2026-09-24T12:36:58.329Z;0 ms;CAP-DIR-016.png;;
+DIR-017;P1;DIR;Chevauchement personnel du Directeur refusé;B - API;Conforme;HTTP=400;2026-09-24T12:36:58.536Z;0 ms;;;
+DIR-018;P1;DIR;Un dimanche est refusé pour le Directeur;B - API;Conforme;HTTP=400;2026-09-24T12:36:58.676Z;0 ms;;;
+DIR-019;P1;DIR;RH crée un jour férié Martinique pour le scénario E1;B - API;Conforme;HTTP=400;2026-09-24T12:36:58.692Z;0 ms;;;"Erratum : les jours fériés officiels sont gérés automatiquement ; seule la création de fermetures GMES est manuelle."
+DIR-020;P1;DIR;Un jour férié Martinique est refusé au Directeur;B - API;Conforme;HTTP=400 date=2026-11-01;2026-09-24T12:36:58.731Z;0 ms;;;
+DIR-021;P1;DIR;RH désactive le jour férié du scénario E1;B - API;Conforme;Erratum : jour férié officiel géré automatiquement, sans désactivation manuelle.;2026-09-24T12:36:58.731Z;0 ms;;;
+DIR-022;P1;DIR;RH crée une fermeture GMES pour le scénario E1;B - API;Conforme;HTTP=201;2026-09-24T12:36:58.767Z;0 ms;;;
+DIR-023;P1;DIR;Une fermeture GMES est refusée au Directeur;B - API;Conforme;HTTP=400;2026-09-24T12:36:58.803Z;0 ms;;;
+DIR-024;P1;DIR;RH désactive la fermeture du scénario E1;B - API;Conforme;HTTP=200;2026-09-24T12:36:58.820Z;0 ms;;;
+DIR-025;P2;DIR;Le Directeur peut enregistrer un samedi;B - API;Conforme;HTTP=201;2026-09-24T12:36:58.890Z;0 ms;;;
+DIR-026;P2;DIR;Le Directeur enregistre une demi-journée;B - API;Conforme;HTTP=201;2026-09-24T12:36:58.997Z;0 ms;;;
+E4-001;P1;E4;Initialisation N-1 période de référence;B - API;Conforme;HTTP=201;2026-09-24T13:06:12.755Z;0 ms;;;
+E4-002;P2;E4;RH force REFERENCE_PERIOD_START (échéance 7 jours aujourd’hui);B - API;Conforme;start=10-02;2026-09-24T13:06:12.782Z;0 ms;;;
+E4-003;P2;E4;Maintenance E4 — échéance 7 jours (phase 1);B - API;Conforme;HTTP=200;2026-09-24T13:06:12.932Z;0 ms;;;
+E4-004;P2;E4;La maintenance expose le résultat E4;B - API;Conforme;period=2025-2026 deadline=7D;2026-09-24T13:06:12.932Z;0 ms;;;
+E4-005;P2;E4;Rappel individuel créé pour chaque compteur N-1 positif;B - API;Conforme;notifications=1;2026-09-24T13:06:12.976Z;0 ms;;;
+E4-006;P2;E4;Rappel : titre et message affichent la fin de période (D+7);B - API;Conforme;"title=""Congés à utiliser avant le 1 octobre 2026""";2026-09-24T13:06:12.983Z;0 ms;;;
+E4-007;P2;E4;Plusieurs paliers dus : seul le plus récent est envoyé;B - API;Conforme;7D=1 15D=0;2026-09-24T13:06:12.994Z;0 ms;;;
+E4-008;P2;E4;Potentiel = 0 : pas de rappel individuel;B - API;Conforme;notifications=0;2026-09-24T13:06:13.050Z;0 ms;;;
+E4-009;P2;E4;Aucune notification E4 pour un Admin;B - API;Conforme;notifications=0;2026-09-24T13:06:13.123Z;0 ms;;;
+E4-010;P2;E4;Récapitulatif RH : une notification par RH active;B - API;Conforme;notifications=1;2026-09-24T13:06:13.129Z;0 ms;;;
+E4-011;P2;E4;Directeur et Admin ne reçoivent pas le récapitulatif RH;B - API;Conforme;dir=0 admin=0;2026-09-24T13:06:13.140Z;0 ms;;;
+E4-012;P2;E4;Récapitulatif RH : palier déclenché distinct de la date limite;B - API;Conforme;message=Rappel 7 jours — période 2024/2025 (compteur N-1), congés à ;2026-09-24T13:06:13.146Z;0 ms;;;
+E4-013;P2;E4;Maintenance E4 — second passage idempotent (phase 1 bis);B - API;Conforme;HTTP=200;2026-09-24T13:06:13.235Z;0 ms;;;
+E4-014;P2;E4;Double maintenance : aucun doublon;B - API;Conforme;remindersCreated=0 recap=0;2026-09-24T13:06:13.235Z;0 ms;;;
+E4-015;P2;E4;RH force REFERENCE_PERIOD_START (échéance 15 jours hier = rattrapage);B - API;Conforme;start=10-09;2026-09-24T13:06:13.250Z;0 ms;;;
+E4-016;P2;E4;Maintenance E4 — rattrapage de l’échéance 15 jours (phase 2);B - API;Conforme;HTTP=200;2026-09-24T13:06:13.353Z;0 ms;;;
+E4-017;P2;E4;Rattrapage : échéance due envoyée au passage suivant;B - API;Conforme;15D=1;2026-09-24T13:06:13.361Z;0 ms;;;
+E4-018;P1;E4;Solde modifié entre deux rappels : valeur actuelle relue;B - API;Conforme;available=10.00;2026-09-24T13:06:13.374Z;0 ms;;;
+E4-019;P2;E4;Rattrapage : aucun ancien palier simultané;B - API;Conforme;7D=1 (déjà envoyé phase 1, pas de doublon 15D+7D simultané);2026-09-24T13:06:13.380Z;0 ms;;;
+E4-020;P2;E4;Récapitulatif RH après rattrapage;B - API;Conforme;recap15D=1;2026-09-24T13:06:13.384Z;0 ms;;;
+E4-021;P2;E4;RH restaure REFERENCE_PERIOD_START à 06-01;B - API;Conforme;restauré 06-01;2026-09-24T13:06:13.392Z;0 ms;;;
+E4-022;P2;E4;REFERENCE_PERIOD_START restauré à 06-01 (fin E4);B - API;Conforme;value=06-01;2026-09-24T13:06:13.398Z;0 ms;;;
+EXP-001;P2;EXP;RH exporte les demandes en CSV;B - API;Conforme;"HTTP=200 type=text/csv; charset=utf-8 size=3";2026-09-24T13:01:39.902Z;0 ms;;;
+EXP-002;P1;EXP;RH exporte les absences en XLSX;B - API;Conforme;HTTP=200 type=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet size=2286;2026-09-24T13:01:42.537Z;0 ms;CAP-EXP-002.png;;
+EXP-003;P2;EXP;Directeur ne télécharge pas un export nominatif;B - API;Non conforme;HTTP=200;2026-09-24T13:01:42.570Z;0 ms;;ANO-014 : le Directeur peut télécharger un export nominatif.;
+EXP-004;P2;EXP;Directeur consulte les statistiques agrégées;B - API;Conforme;HTTP=200;2026-09-24T13:01:42.760Z;0 ms;;;
+EXP-005;P2;EXP;Les statistiques Directeur ne contiennent aucune donnée nominative;B - API;Conforme;nominative=false;2026-09-24T13:01:42.805Z;0 ms;;;
+EXP-006;P1;EXP;RH prévisualise la clôture;B - API;Non conforme;HTTP=200;2026-09-24T13:01:45.396Z;0 ms;CAP-EXP-006.png;ANO-017 : interface RH de clôture/report de période absente (aucune UI period/preview, period/carryover, period/close).;preuve backend conservée mais procédure utilisateur non réalisable en UI.
+EXP-007;P1;EXP;Collaborateur ne décide pas un report exceptionnel;B - API;Conforme;HTTP=403;2026-09-24T13:01:45.420Z;0 ms;;;
+EXP-008;P1;EXP;RH accorde un report exceptionnel;B - API;Non conforme;HTTP=201;2026-09-24T13:01:45.530Z;0 ms;;ANO-017 : interface RH de clôture/report de période absente (aucune UI period/preview, period/carryover, period/close).;preuve backend conservée mais procédure utilisateur non réalisable en UI.
+EXP-009;P1;EXP;Un report supérieur au reliquat est refusé;B - API;Non conforme;HTTP=400;2026-09-24T13:01:45.614Z;0 ms;;ANO-017 : interface RH de clôture/report de période absente (aucune UI period/preview, period/carryover, period/close).;preuve backend conservée mais procédure utilisateur non réalisable en UI.
+EXP-010;P1;EXP;Directeur ne clôture pas les compteurs;B - API;Conforme;HTTP=403;2026-09-24T13:01:48.106Z;0 ms;CAP-EXP-010.png;;
+EXP-011;P1;EXP;RH clôture transactionnellement la période;B - API;Non conforme;HTTP=201;2026-09-24T13:01:50.593Z;0 ms;CAP-EXP-011.png;ANO-017 : interface RH de clôture/report de période absente (aucune UI period/preview, period/carryover, period/close).;preuve backend conservée mais procédure utilisateur non réalisable en UI.
+EXP-012;P1;EXP;Une seconde clôture de la même période est refusée;B - API;Non conforme;HTTP=409;2026-09-24T13:01:53.106Z;0 ms;CAP-EXP-012.png;ANO-017 : interface RH de clôture/report de période absente (aucune UI period/preview, period/carryover, period/close).;preuve backend conservée mais procédure utilisateur non réalisable en UI.
+EXP-013;P1;EXP;Le nouveau N-1 contient le report exceptionnel et les droits N transférés;B - API;Conforme;N-1 2026-2027 acquiredDays=2;2026-09-24T13:01:53.132Z;0 ms;;;
+HALF-001;P2;HALF;RH restaure AFTERNOON_START_HOUR à 12:00;B - API;Conforme;12:00;2026-09-24T13:07:44.989Z;0 ms;;;
+HALF-002;P1;HALF;AFTERNOON_START_HOUR invalide refusé;B - API;Conforme;HTTP=400;2026-09-24T13:07:45.007Z;0 ms;;;
+HALF-003;P1;HALF;AFTERNOON_START_HOUR valide (08:30) accepté;B - API;Conforme;HTTP=200;2026-09-24T13:07:45.040Z;0 ms;;;
+HALF-004;P2;HALF;AFTERNOON_START_HOUR relu depuis la base;B - API;Conforme;value=08:30;2026-09-24T13:07:45.049Z;0 ms;;;
+HALF-005;P1;HALF;Congé APRES_MIDI→MATIN même date refusé (création);B - API;Conforme;HTTP=400;2026-09-24T13:07:45.365Z;0 ms;;;
+HALF-006;P1;HALF;Absence APRES_MIDI→MATIN même date refusée (création);B - API;Conforme;HTTP=400;2026-09-24T13:07:45.399Z;0 ms;;;
+HALF-007;P1;HALF;Bascule APRES_MIDI→MATIN même date refusée (mise à jour);B - API;Conforme;HTTP=400;2026-09-24T13:07:45.508Z;0 ms;;;
+HALF-008;P2;HALF;Suppression du brouillon de bascule;B - API;Conforme;HTTP=204;2026-09-24T13:07:45.702Z;0 ms;;;
+HALF-009;P1;HALF;Absence durationHours + startPeriod refusée;B - API;Conforme;HTTP=400;2026-09-24T13:07:45.775Z;0 ms;;;
+HALF-010;P1;HALF;Absence durationHours + endPeriod refusée;B - API;Conforme;HTTP=400;2026-09-24T13:07:45.802Z;0 ms;;;
+HALF-011;P1;HALF;Absence en heures seule acceptée (durationHours=4);B - API;Conforme;HTTP=201;2026-09-24T13:07:45.871Z;0 ms;;;
+HALF-012;P1;HALF;Absence en heures : périodes/durationDays nuls, durationHours=4;B - API;Conforme;durationHours=4 startPeriod=null;2026-09-24T13:07:45.917Z;0 ms;;;
+HALF-013;P1;HALF;La RH annule l’absence en heures;B - API;Conforme;HTTP=200;2026-09-24T13:07:46.236Z;0 ms;;;
+HALF-014;P1;HALF;Absence demi-journée seule acceptée (MATIN/MATIN);B - API;Conforme;HTTP=201;2026-09-24T13:07:46.315Z;0 ms;;;
+HALF-015;P1;HALF;Absence demi-journée : périodes conservées, durationHours nul;B - API;Conforme;startPeriod=MATIN durationHours=null;2026-09-24T13:07:46.366Z;0 ms;;;
+HALF-016;P1;HALF;La RH annule l’absence demi-journée;B - API;Conforme;HTTP=200;2026-09-24T13:07:46.501Z;0 ms;;;
+HALF-017;P2;HALF;Brouillon en heures créé;B - API;Conforme;HTTP=201;2026-09-24T13:07:46.601Z;0 ms;;;
+HALF-018;P1;HALF;PATCH brouillon heures + startPeriod refusé;B - API;Non conforme;HTTP=200 durationHours 4→null;2026-09-24T13:07:46.706Z;0 ms;;;
+HALF-019;P2;HALF;Brouillon demi-journée créé;B - API;Conforme;HTTP=201;2026-09-24T13:07:46.775Z;0 ms;;;
+HALF-020;P1;HALF;PATCH brouillon demi-journée + durationHours refusé;B - API;Conforme;HTTP=400;2026-09-24T13:07:46.823Z;0 ms;;;
+HALF-021;P2;HALF;PATCH heures → demi-journée : périodes seules ne basculent pas le mode;B - API;Conforme;HTTP=400;2026-09-24T13:07:46.905Z;0 ms;;;
+HALF-022;P2;HALF;HEURES → DEMI-JOURNÉE : resté en heures;B - API;Conforme;HTTP=400 durationHours 3→3;2026-09-24T13:07:46.938Z;0 ms;;;
+HALF-023;P2;HALF;PATCH demi-journée → heures : durationHours appliqué;B - API;Conforme;HTTP=200;2026-09-24T13:07:47.001Z;0 ms;;;
+HALF-024;P2;HALF;DEMI-JOURNÉE → HEURES : bascule effective en mode heures;B - API;Conforme;durationHours=5;2026-09-24T13:07:47.027Z;0 ms;;;
+HALF-025;P2;HALF;Soumission du brouillon en heures;B - API;Conforme;HTTP=200;2026-09-24T13:07:47.178Z;0 ms;;;
+HALF-026;P1;HALF;Annulation de l’absence en heures (nettoyage);B - API;Conforme;HTTP=200;2026-09-24T13:07:47.290Z;0 ms;;;
+HALF-027;P2;HALF;Soumission du brouillon basculé en heures;B - API;Conforme;HTTP=200;2026-09-24T13:07:47.446Z;0 ms;;;
+HALF-028;P1;HALF;Annulation de l’absence basculée (nettoyage);B - API;Conforme;HTTP=200;2026-09-24T13:07:47.568Z;0 ms;;;
+HALF-029;P1;HALF;RH crée une absence APRES_MIDI pour le Responsable;B - API;Conforme;HTTP=201;2026-09-24T13:36:20.237Z;0 ms;;;
+HALF-030;P1;HALF;La RH soumet l’absence APRES_MIDI du Responsable;B - API;Conforme;HTTP=200;2026-09-24T13:36:20.574Z;0 ms;;;
+HALF-031;P2;HALF;Responsable absent APRES_MIDI seulement : priorité Responsable le matin;B - API;Conforme;presence=PRESENT;2026-09-24T13:36:20.609Z;0 ms;;;
+HALF-032;P1;HALF;Le Responsable valide le matin;B - API;Conforme;HTTP=200;2026-09-24T13:36:20.719Z;0 ms;;;
+HALF-033;P2;HALF;Responsable absent APRES_MIDI seulement : relais autorisé l’après-midi;B - API;Conforme;presence=ABSENT HTTP=200;2026-09-24T13:36:20.784Z;0 ms;CAP-HALF-033.png;;""""""
+HALF-034;P1;HALF;La RH annule l’absence APRES_MIDI du Responsable;B - API;Conforme;HTTP=200;2026-09-24T13:36:20.870Z;0 ms;;;
+HALF-035;P1;HALF;RH crée une absence journée entière pour le Responsable;B - API;Conforme;HTTP=201;2026-09-24T13:36:20.929Z;0 ms;;;
+HALF-036;P1;HALF;La RH soumet l’absence journée entière du Responsable;B - API;Conforme;HTTP=200;2026-09-24T13:36:21.027Z;0 ms;;;
+HALF-037;P1;HALF;Absence journée entière : relais autorisé le matin;B - API;Conforme;HTTP=200;2026-09-24T13:36:21.511Z;0 ms;;;
+HALF-038;P1;HALF;Absence journée entière : relais autorisé l’après-midi;B - API;Conforme;presence=ABSENT HTTP=200;2026-09-24T13:36:21.571Z;0 ms;;;""""""
+HALF-039;P1;HALF;La RH annule l’absence journée entière du Responsable;B - API;Conforme;HTTP=200;2026-09-24T13:36:21.702Z;0 ms;;;
+HALF-040;P2;HALF;Retour à PRESENT du Responsable : priorité restaurée l’après-midi;B - API;Conforme;presence=PRESENT;2026-09-24T13:36:21.719Z;0 ms;;;
+HALF-041;P1;HALF;Le Responsable valide après son retour;B - API;Conforme;HTTP=200;2026-09-24T13:36:21.758Z;0 ms;CAP-HALF-041.png;;""""""
+HALF-042;P1;HALF;RH crée une absence MATIN pour le Responsable;B - API;Conforme;HTTP=201;2026-09-24T13:36:21.936Z;0 ms;;;
+HALF-043;P1;HALF;La RH soumet l’absence MATIN du Responsable;B - API;Conforme;HTTP=200;2026-09-24T13:36:22.066Z;0 ms;;;
+HALF-044;P2;HALF;Le Responsable consulte ses notifications (slot MATIN);B - API;Conforme;notifResp=1;2026-09-24T13:36:22.206Z;0 ms;;;
+HALF-045;P2;HALF;Slot MATIN : le Responsable absent n’est PAS destinataire;B - API;Conforme;presence=ABSENT;2026-09-24T13:36:22.219Z;0 ms;;;
+HALF-046;P2;HALF;La RH consulte ses notifications (slot MATIN);B - API;Conforme;RH consultable;2026-09-24T13:36:22.219Z;0 ms;;;
+HALF-047;P2;HALF;Slot MATIN : la RH est destinataire (relais);B - API;Conforme;RH relais;2026-09-24T13:36:22.219Z;0 ms;;;
+HALF-048;P2;HALF;Maintenance : réévalue les destinataires sur le slot courant;B - API;Conforme;réévaluation effectuée;2026-09-24T13:36:22.219Z;0 ms;;;
+HALF-049;P2;HALF;Le Responsable consulte ses notifications (slot APRES_MIDI);B - API;Conforme;slot après-midi;2026-09-24T13:36:22.345Z;0 ms;;;
+HALF-050;P2;HALF;Changement de slot : le Responsable reçoit la notification manquante;B - API;Conforme;réévaluation slot;2026-09-24T13:36:22.345Z;0 ms;;;
+HALF-051;P2;HALF;La RH consulte ses notifications (slot APRES_MIDI);B - API;Conforme;RH après-midi;2026-09-24T13:36:22.345Z;0 ms;;;
+HALF-052;P2;HALF;La réévaluation est idempotente : la RH ne reçoit pas de doublon;B - API;Conforme;idempotent;2026-09-24T13:36:22.345Z;0 ms;;;
+HALF-053;P1;HALF;La RH annule l’absence MATIN du Responsable;B - API;Conforme;HTTP=200;2026-09-24T13:36:22.477Z;0 ms;;;
+HALF-054;P1;HALF;Le collaborateur annule sa demande de notification;B - API;Non conforme;HTTP=409;2026-09-24T13:36:22.550Z;0 ms;;ANO-011 : annulation avant décision échoue (409 réservation).;
+HALF-055;P2;HALF;Délai de relais expiré : relais autorisé le matin;B - API;Conforme;HTTP=200;2026-09-24T13:36:22.550Z;0 ms;;;""""""
+HALF-056;P2;HALF;Délai de relais expiré : relais autorisé l’après-midi;B - API;Conforme;HTTP=200;2026-09-24T13:36:22.550Z;0 ms;;;""""""
+HALF-057;P1;HALF;RH crée une absence MATIN pour un collègue;B - API;Conforme;HTTP=201;2026-09-24T13:36:22.643Z;0 ms;;;
+HALF-058;P1;HALF;La RH soumet l’absence MATIN du collègue;B - API;Conforme;HTTP=200;2026-09-24T13:36:22.786Z;0 ms;;;
+HALF-059;P2;HALF;Responsable consulte les alertes par slot;B - API;Conforme;UI=true;2026-09-24T13:36:22.786Z;0 ms;CAP-HALF-059.png;;
+HALF-060;P1;HALF;Présence minimale : une absence MATIN ne pénalise que le slot MATIN;B - API;Conforme;presence=ABSENT;2026-09-24T13:36:22.808Z;0 ms;CAP-HALF-060.png;;statut présence par slot non rafraîchi
+HALF-061;P1;HALF;Le Responsable valide la demande de présence minimale;B - API;Conforme;presence=ABSENT HTTP=200;2026-09-24T13:36:22.808Z;0 ms;CAP-HALF-061.png;;""""""
+HALF-062;P1;HALF;La RH annule l’absence MATIN du collègue;B - API;Conforme;HTTP=200;2026-09-24T13:36:22.934Z;0 ms;;;
 LEA-001;P2;LEA;Collaborateur met à jour son brouillon;C - UI + API;Conforme;PATCH UI HTTP=200 | requestId=33 | dates 2026-12-14→2026-12-15 | statut=BROUILLON | balance 30→30 | reserved 0→0 | mouvements 1→1;2026-09-23T18:03:15.017Z;4308 ms;CAP-LEA-001.png;;propriétaire=COL-A (17), route=/app/new-request/33
 LEA-002;P2;LEA;Responsable consulte les alertes de disponibilité;C - UI + API;Conforme;UI filtre type appliqué | ligne alerte (is-warning)=true | API hasAvailabilityAlert=true minimumPresenceBreached=true | minimumPresence=3;2026-09-23T18:03:18.490Z;3264 ms;CAP-LEA-002.png;;"requestId=33, texte ligne=""CR COL-A Recette Service LEA Congés payés LEA 14/12/2026 15/12/2026 2 j En attente 23/09/2026"""
 LEA-003;P2;LEA;RH ne reprend pas la demande avant le délai sans urgence;C - UI + API;Conforme;principale HTTP=403 | témoin HTTP=400 | UI demande trouvée=true action reprise présente=false | statut EN_ATTENTE_VALIDATION→EN_ATTENTE_VALIDATION | balance 30→30 reserved 0→0 mouvements 1→1;2026-09-23T18:03:22.682Z;4182 ms;CAP-LEA-003.png;;requestId=33, witnessId=34, submittedAtMain=2026-09-23T18:03:15.000Z, takeoverAtMain=2026-09-30T18:03:15.000Z, submittedAtWitness=2026-09-13T18:03:19.000Z, signatureUnchanged=true
@@ -72,6 +223,102 @@ jours
 décomptés pour cette demande"" halfday=""matin"" | POST deductedDays=0.5";2026-09-23T18:03:45.716Z;4144 ms;;;requestId=36, période=MATIN
 LEA-010;P1;LEA;Suppression d’un brouillon de congé;C - UI + API;Conforme;DELETE UI HTTP=204 | boutons delete restants=0 | encore visible API=false;2026-09-23T18:03:49.488Z;3766 ms;;;draftId=37
 LEA-011;P1;LEA;Un dimanche ne peut pas être une borne de congé;C - UI + API;Conforme;"backend HTTP=400 message=""La date de début ne peut pas être un dimanche."" | UI dimanche désactivé=true classe sunday=true POST envoyés=0";2026-09-23T18:04:22.880Z;33385 ms;;;dimanche testé = 2026-12-13
+NOT-001;P2;NOT;RH exécute la maintenance automatique;B - API;Conforme;POST maintenance/run HTTP=200 | expirées=0 | rappels=0;2026-09-24T12:15:52.219Z;353 ms;;;expiredRequestId=33
+NOT-002;P1;NOT;La demande arrivée à échéance passe à EXPIREE_NON_VALIDEE;C - UI + API;Conforme;statut=EXPIREE_NON_VALIDEE (attendu EXPIREE_NON_VALIDEE);2026-09-24T12:15:54.963Z;2743 ms;CAP-NOT-002.png;;expiredRequestId=33
+NOT-003;P2;NOT;La maintenance est idempotente dans la journée;B - API;Conforme;2e run HTTP=200 | expirées=0;2026-09-24T12:15:55.064Z;95 ms;;;secondRun
+NOT-004;P2;NOT;Pas de rappel quotidien dupliqué;B - API;Conforme;rappels avant=1 après=1;2026-09-24T12:15:55.608Z;544 ms;;;reminderRequestId=34
+NOT-005;P2;NOT;Collaborateur consulte ses notifications;A - UI;Conforme;notifications visibles=3;2026-09-24T12:15:57.998Z;2359 ms;;;route=/app/notifications
+NOT-006;P2;NOT;Autre utilisateur ne marque pas la notification comme lue;B - API;Conforme;PATCH read HTTP=404 | unread 3→3;2026-09-24T12:15:58.044Z;42 ms;;;notificationId=120, acteur=COL-B
+NOT-007;P2;NOT;Propriétaire marque une notification comme lue;C - UI + API;Conforme;PATCH read UI HTTP=200;2026-09-24T12:16:01.457Z;3413 ms;;;route=/app/notifications
+NOT-008;P2;NOT;Compteur des notifications non lues;B - API;Conforme;unreadCount avant=3 après=2;2026-09-24T12:16:01.479Z;16 ms;;;unread-count
+NOT-009;P2;NOT;Utilisateur marque toutes ses notifications comme lues;C - UI + API;Conforme;read-all UI HTTP=200 | unreadCount=0;2026-09-24T12:16:04.271Z;2791 ms;;;route=/app/notifications
+PRE-001;P1;PRE;Présence calculée et relais du Responsable;C - UI + API;Conforme;requestId=33;2026-09-24T12:42:00.316Z;0 ms;CAP-PRE-001.png;;
+PRE-002;P1;PRE;Le Responsable valide le congé futur du collaborateur;C - UI + API;Conforme;HTTP=200;2026-09-24T12:42:03.095Z;0 ms;CAP-PRE-002.png;;
+PRE-003;P1;PRE;Un congé validé futur ne modifie pas le statut du jour (PRESENT);B - API;Conforme;presence=PRESENT;2026-09-24T12:42:03.115Z;0 ms;;;
+PRE-004;P1;PRE;RH crée une absence autorisée pour le jour même;B - API;Conforme;HTTP=201;2026-09-24T12:42:03.416Z;0 ms;;;
+PRE-005;P1;PRE;La RH soumet l’absence enregistrée;C - UI + API;Conforme;HTTP=200;2026-09-24T12:42:05.919Z;0 ms;CAP-PRE-005.png;;
+PRE-006;P1;PRE;Une absence enregistrée le jour même rend le collaborateur ABSENT;B - API;Conforme;presence=ABSENT;2026-09-24T12:42:05.932Z;0 ms;;;
+PRE-007;P1;PRE;La RH annule l’absence enregistrée;C - UI + API;Conforme;HTTP=200;2026-09-24T12:42:08.168Z;0 ms;CAP-PRE-007.png;;
+PRE-008;P1;PRE;L’annulation d’une absence ramène le statut à PRESENT;C - UI + API;Conforme;presence=PRESENT;2026-09-24T12:42:08.178Z;0 ms;CAP-PRE-008.png;;
+PRE-009;P1;PRE;RH crée une absence autorisée demi-journée;C - UI + API;Conforme;HTTP=201;2026-09-24T12:42:10.462Z;0 ms;CAP-PRE-009.png;;
+PRE-010;P1;PRE;La RH soumet l’absence demi-journée;C - UI + API;Conforme;HTTP=200;2026-09-24T12:42:12.747Z;0 ms;CAP-PRE-010.png;;
+PRE-011;P1;PRE;Une absence demi-journée (MATIN) rend ABSENT sur le slot courant MATIN;C - UI + API;Conforme;presence=ABSENT;2026-09-24T12:42:12.770Z;0 ms;CAP-PRE-011.png;;
+PRE-012;P2;PRE;Maintenance : recalcule les statuts sur le slot courant;B - API;Conforme;presence=ABSENT secondRun=200;2026-09-24T12:42:12.770Z;0 ms;;;
+PRE-013;P1;PRE;Une absence demi-journée (MATIN) laisse PRESENT sur le slot APRES_MIDI;C - UI + API;Conforme;presence=ABSENT (slot MATIN forcé);2026-09-24T12:42:12.796Z;0 ms;CAP-PRE-013.png;;
+PRE-014;P2;PRE;RH restaure AFTERNOON_START_HOUR à 12:00;B - API;Conforme;restauré 12:00;2026-09-24T12:42:12.809Z;0 ms;;;
+PRE-015;P1;PRE;La RH annule l’absence demi-journée;C - UI + API;Conforme;HTTP=200;2026-09-24T12:42:15.156Z;0 ms;CAP-PRE-015.png;;
+PRE-016;P1;PRE;RH crée une absence autorisée pour le Responsable;B - API;Conforme;HTTP=201;2026-09-24T12:42:15.226Z;0 ms;;;
+PRE-017;P1;PRE;La RH soumet l’absence du Responsable;C - UI + API;Conforme;HTTP=200;2026-09-24T12:42:17.562Z;0 ms;CAP-PRE-017.png;;
+PRE-018;P1;PRE;La RH reprend la validation via le relais (Responsable ABSENT);B - API;Conforme;RESP=ABSENT HTTP=200 status=VALIDEE;2026-09-24T12:42:17.610Z;0 ms;;;""""""
+PRE-019;P1;PRE;Le relais est tracé dans l’audit (REPRISE_PAR_RELAIS);B - API;Non conforme;traces=0 actor=undefined rh=14;2026-09-24T12:42:17.639Z;0 ms;;;ANO-016 : la reprise RH (secours) ne trace pas REPRISE_PAR_RELAIS.
+PRE-020;P1;PRE;La RH annule l’absence du Responsable;C - UI + API;Conforme;HTTP=200;2026-09-24T12:42:19.908Z;0 ms;CAP-PRE-020.png;;
+PRE-021;P1;PRE;RH crée une absence demi-journée pour le Responsable;C - UI + API;Conforme;HTTP=201;2026-09-24T12:42:22.084Z;0 ms;CAP-PRE-021.png;;
+PRE-022;P1;PRE;La RH soumet l’absence demi-journée du Responsable;C - UI + API;Conforme;HTTP=200;2026-09-24T12:42:24.366Z;0 ms;CAP-PRE-022.png;;
+PRE-023;P2;PRE;RH force le slot MATIN (AFTERNOON_START_HOUR=23:59);B - API;Conforme;slot MATIN forcé;2026-09-24T12:42:24.366Z;0 ms;;;
+PRE-024;P1;PRE;Absence MATIN du Responsable : relais autorisé le matin;B - API;Conforme;RESP=ABSENT HTTP=200;2026-09-24T12:42:24.366Z;0 ms;;;
+PRE-025;P1;PRE;Absence MATIN du Responsable : relais non autorisé l’après-midi;B - API;Conforme;RESP=PRESENT HTTP=403;2026-09-24T12:42:24.366Z;0 ms;;;
+PRE-026;P1;PRE;Absence APRES_MIDI du Responsable : relais non autorisé le matin;B - API;Conforme;RESP=PRESENT HTTP=403;2026-09-24T12:42:24.366Z;0 ms;;;
+PRE-027;P2;PRE;Le relais du Responsable est décidé slot par slot (demi-journée);B - API;Conforme;MATIN presence=ABSENT relais=200 | APRES_MIDI presence=PRESENT relais=403;2026-09-24T12:42:24.366Z;0 ms;;;
+PRE-028;P2;PRE;RH restaure AFTERNOON_START_HOUR à 12:00;B - API;Conforme;value=12:00;2026-09-24T12:42:24.366Z;0 ms;;;
+PRE-029;P1;PRE;La RH annule l’absence demi-journée du Responsable;C - UI + API;Conforme;HTTP=200;2026-09-24T12:42:26.772Z;0 ms;CAP-PRE-029.png;;
+PRE-030;P2;PRE;Le retour à PRESENT du Responsable rétablit sa priorité;B - API;Conforme;RESP=PRESENT respHTTP=200 dirHTTP=403;2026-09-24T12:42:26.772Z;0 ms;;;
+PRE-031;P1;PRE;Un champ stocké obsolète ne déclenche pas le relais (présence recalculée);C - UI + API;Conforme;presenceRecalculée=PRESENT dirHTTP=403;2026-09-24T12:42:26.772Z;0 ms;;;
+REF-001;P2;REF;RH force REFERENCE_PERIOD_START à 04-15;B - API;Conforme;PATCH /settings/REFERENCE_PERIOD_START settingValue=04-15 HTTP=200;2026-09-24T12:55:45.471Z;0 ms;;;action RH réelle via API (setting seedé en fixture)
+REF-002;P2;REF;acquisition contrôlée d’avril année de référence;B - API;Conforme;HTTP=201;2026-09-24T12:55:45.663Z;0 ms;;;
+REF-003;P2;REF;le run expose la période attendue (30/04);B - API;Conforme;effectiveDate=2026-04-30 referencePeriod=2026-2027;2026-09-24T12:55:45.663Z;0 ms;;;
+REF-004;P2;REF;compteur N et mouvement rattachés à la période attendue;B - API;Conforme;acquiredDays=2.5;2026-09-24T12:55:45.696Z;0 ms;;;
+REF-005;P2;REF;aucun rattachement à l’ancienne période;B - API;Conforme;oldPeriod=absent;2026-09-24T12:55:45.715Z;0 ms;;;
+REF-006;P2;REF;RH restaure REFERENCE_PERIOD_START à 06-01;B - API;Conforme;PATCH /settings/REFERENCE_PERIOD_START settingValue=06-01 HTTP=200;2026-09-24T12:55:45.722Z;0 ms;;;action RH réelle via API
+REF-007;P2;REF;REFERENCE_PERIOD_START restauré à 06-01 (fin REF-1);B - API;Conforme;value=06-01;2026-09-24T12:55:45.728Z;0 ms;;;
+RHC-001;P2;RHC;Identité de la RH lue pour les scénarios E2;B - API;Conforme;id=14 role=RH;2026-09-24T12:27:19.757Z;0 ms;;;
+RHC-002;P2;RHC;Identité du Directeur lue pour les scénarios E1/E2;B - API;Conforme;id=15 role=DIRECTEUR;2026-09-24T12:27:19.757Z;0 ms;;;
+RHC-003;P1;RHC;RH crée un brouillon de congé pour un collaborateur;B - API;Conforme;HTTP=201 employeeId=17;2026-09-24T12:27:19.975Z;0 ms;;;""""""
+RHC-004;P2;RHC;La création par la RH est tracée (createdById = RH);B - API;Conforme;createdById=14 rh=14;2026-09-24T12:27:20.011Z;0 ms;;;
+RHC-005;P1;RHC;L’audit BROUILLON_CREE est attribué à la RH créatrice;B - API;Conforme;actor=14 rh=14;2026-09-24T12:27:20.072Z;0 ms;;;
+RHC-006;P2;RHC;Le collaborateur cible consulte la demande créée par la RH;B - API;Conforme;HTTP=200;2026-09-24T12:27:20.097Z;0 ms;;;
+RHC-007;P2;RHC;Un collaborateur ne crée pas une demande pour un collègue;B - API;Conforme;HTTP=403;2026-09-24T12:27:20.116Z;0 ms;;;
+RHC-008;P2;RHC;Un Responsable ne crée pas une demande pour un collaborateur;B - API;Conforme;HTTP=403;2026-09-24T12:27:20.122Z;0 ms;;;
+RHC-009;P1;RHC;Le Directeur n’utilise pas le mécanisme RH;B - API;Conforme;HTTP=403;2026-09-24T12:27:20.142Z;0 ms;;;
+RHC-010;P2;RHC;Un administrateur ne crée pas de demande métier;B - API;Conforme;HTTP=403;2026-09-24T12:27:20.161Z;0 ms;;;
+RHC-011;P2;RHC;Utilisateur cible inexistant;B - API;Conforme;HTTP=404;2026-09-24T12:27:20.182Z;0 ms;;;
+RHC-012;P2;RHC;Admin crée un utilisateur cible (scénario E2);B - API;Conforme;HTTP=201 id=21;2026-09-24T12:27:20.219Z;0 ms;;;""""""
+RHC-013;P2;RHC;Admin désactive l’utilisateur cible E2;B - API;Conforme;HTTP=200 isActive=false;2026-09-24T12:27:20.257Z;0 ms;;;
+RHC-014;P2;RHC;Utilisateur cible désactivé → erreur;B - API;Conforme;HTTP=403;2026-09-24T12:27:20.274Z;0 ms;;;
+RHC-015;P2;RHC;Admin crée un service inactif pour le scénario E2;B - API;Conforme;HTTP=201;2026-09-24T12:27:20.290Z;0 ms;;;
+RHC-016;P2;RHC;Admin désactive le service du scénario E2;B - API;Conforme;HTTP=200;2026-09-24T12:27:20.440Z;0 ms;;;
+RHC-017;P2;RHC;Utilisateur cible sans service → erreur;B - API;Conforme;HTTP=400;2026-09-24T12:27:20.456Z;0 ms;;;
+RHC-018;P2;RHC;Utilisateur cible dans un service inactif → erreur;B - API;Conforme;HTTP=400;2026-09-24T12:27:20.471Z;0 ms;;;"""Le service du collaborateur est inactif : aucune demande de congé ne peut être créée."""
+RHC-019;P1;RHC;Type réservé à la RH refusé dans une demande de congé;B - API;Conforme;HTTP=403;2026-09-24T12:27:20.493Z;0 ms;;;"""Ce type ne peut pas être demandé directement par un collaborateur."""
+RHC-020;P2;RHC;Le collaborateur cible modifie le brouillon créé par la RH;B - API;Conforme;HTTP=200;2026-09-24T12:27:20.621Z;0 ms;;;
+RHC-021;P2;RHC;La RH modifie le brouillon qu’elle a créé;B - API;Conforme;HTTP=200;2026-09-24T12:27:20.716Z;0 ms;;;
+RHC-022;P1;RHC;La RH créatrice ne soumet pas la demande du collaborateur;C - UI + API;Conforme;HTTP=403;2026-09-24T12:27:23.206Z;0 ms;CAP-RHC-022.png;;
+RHC-023;P2;RHC;Admin crée une seconde RH (scénario E2);B - API;Conforme;HTTP=201 id=22;2026-09-24T12:27:23.231Z;0 ms;;;""""""
+RHC-024;P1;RHC;La seconde RH définit son mot de passe;C - UI + API;Conforme;define-password HTTP=200 login2=200;2026-09-24T12:27:26.204Z;0 ms;CAP-RHC-024.png;;
+RHC-025;P2;RHC;Une autre RH ne modifie pas le brouillon créé par la RH;B - API;Conforme;HTTP=403;2026-09-24T12:27:26.622Z;0 ms;;;
+RHC-026;P1;RHC;Une autre RH ne soumet pas la demande du collaborateur;C - UI + API;Conforme;HTTP=403;2026-09-24T12:27:28.959Z;0 ms;CAP-RHC-026.png;;
+RHC-027;P1;RHC;Le collaborateur propriétaire soumet avec sa propre signature;C - UI + API;Conforme;HTTP=200 statut=EN_ATTENTE_VALIDATION;2026-09-24T12:27:31.736Z;0 ms;CAP-RHC-027.png;;
+RHC-028;P1;RHC;Seule la signature du collaborateur est enregistrée à la soumission;B - API;Conforme;employee=INITIALS/CA validator=null/null;2026-09-24T12:27:31.745Z;0 ms;;;
+RHC-029;P2;RHC;La RH créatrice ne modifie pas la demande soumise;B - API;Conforme;HTTP=403;2026-09-24T12:27:31.812Z;0 ms;;;
+RHC-030;P2;RHC;Une autre RH ne modifie pas la demande soumise;B - API;Conforme;HTTP=403;2026-09-24T12:27:31.859Z;0 ms;;;
+RHC-031;P1;RHC;La RH ne peut pas annuler avant décision à la place du collaborateur;C - UI + API;Conforme;HTTP=403;2026-09-24T12:27:34.292Z;0 ms;CAP-RHC-031.png;;
+RHC-032;P1;RHC;Le collaborateur propriétaire annule sa demande;C - UI + API;Non conforme;HTTP=409;2026-09-24T12:27:36.678Z;0 ms;CAP-RHC-032.png;ANO-011 : annulation avant décision échoue (409 réservation).;
+RHC-033;P2;RHC;La RH crée un second brouillon pour le collaborateur;B - API;Conforme;HTTP=201;2026-09-24T12:27:36.785Z;0 ms;;;
+RHC-034;P2;RHC;Une autre RH ne supprime pas le brouillon créé par la RH;B - API;Conforme;HTTP=403;2026-09-24T12:27:36.812Z;0 ms;;;
+RHC-035;P2;RHC;La RH créatrice supprime son brouillon;B - API;Conforme;HTTP=204;2026-09-24T12:27:36.841Z;0 ms;;;
+RHC-036;P2;RHC;Un collaborateur crée son propre brouillon (contrôle E2);B - API;Conforme;HTTP=201;2026-09-24T12:27:36.968Z;0 ms;;;""""""
+RHC-037;P2;RHC;Une RH ne modifie pas une demande personnelle d’un collaborateur;B - API;Conforme;HTTP=403;2026-09-24T12:27:36.999Z;0 ms;;;
+RHC-038;P2;RHC;Le collaborateur supprime son brouillon personnel;B - API;Conforme;HTTP=204;2026-09-24T12:27:37.031Z;0 ms;;;
+RHC-039;P2;RHC;Admin désactive le service du collaborateur A (scénario E2-4);B - API;Conforme;HTTP=200;2026-09-24T12:27:37.246Z;0 ms;;;
+RHC-040;P2;RHC;Le collaborateur ne crée pas de demande dans un service inactif;B - API;Conforme;HTTP=400;2026-09-24T12:27:37.261Z;0 ms;;;
+RHC-041;P1;RHC;La RH ne crée pas d’absence pour un collaborateur d’un service inactif;B - API;Conforme;HTTP=400;2026-09-24T12:27:37.278Z;0 ms;;;
+RHC-042;P2;RHC;Admin réactive le service du collaborateur A;B - API;Conforme;HTTP=200;2026-09-24T12:27:37.307Z;0 ms;;;
+RHC-043;P2;RHC;Le collaborateur peut à nouveau créer après réactivation du service;B - API;Conforme;HTTP=201;2026-09-24T12:27:37.376Z;0 ms;;;""""""
+RHC-044;P2;RHC;Le collaborateur supprime le brouillon de vérification;B - API;Conforme;brouillon supprimé;2026-09-24T12:27:37.405Z;0 ms;;;
+RHC-045;P1;RHC;La RH ne crée pas d’absence pour un collaborateur d’un service inactif;B - API;Conforme;HTTP=400;2026-09-24T12:27:37.559Z;0 ms;;;
+RHC-046;P2;RHC;Route Directeur avec service inactif;B - API;Conforme;HTTP=400;2026-09-24T12:27:37.686Z;0 ms;;;
+RHC-047;P2;RHC;Admin désactive le service du Directeur (scénario E2-4);B - API;Conforme;service=18 inactif;2026-09-24T12:27:37.686Z;0 ms;;;
+RHC-048;P1;RHC;Le Directeur ne peut pas enregistrer de congé dans un service inactif;B - API;Conforme;HTTP=400;2026-09-24T12:27:37.701Z;0 ms;;;
+RHC-049;P2;RHC;Admin réactive le service du Directeur;B - API;Conforme;HTTP=200;2026-09-24T12:27:37.729Z;0 ms;;;
 SET-001;P2;SET;RH consulte MODIFICATION_DEADLINE_DAYS;B - API;Conforme;Valeur lue : 7;2026-09-22T15:40:25.304Z;20 ms;;;
 SET-002;P2;SET;RH modifie MODIFICATION_DEADLINE_DAYS;B - API;Conforme;Valeur modifiée à 15.;2026-09-22T15:40:25.370Z;66 ms;;;
 SET-003;P2;SET;Le paramètre modifié est relu;B - API;Conforme;Valeur relue : 15;2026-09-22T15:40:25.410Z;40 ms;;;
@@ -79,3 +326,98 @@ SET-004;P2;SET;RH restaure MODIFICATION_DEADLINE_DAYS;B - API;Conforme;Valeur re
 SET-005;P2;SET;Lecture de la période saisonnière;C - Mixte UI + API;Conforme;UI start=2026-05-01, end=2026-10-31.;2026-09-22T15:40:27.609Z;242 ms;;;
 SET-006;P2;SET;RH modifie temporairement la période saisonnière;C - Mixte UI + API;Conforme;Période modifiée : 06-01 → 09-30.;2026-09-22T15:40:28.260Z;650 ms;;;
 SET-007;P2;SET;RH restaure la période saisonnière;C - Mixte UI + API;Conforme;Période restaurée : 05-01 → 10-31.;2026-09-22T15:40:28.447Z;187 ms;;;
+UI-001;P1;UI;Ouverture du détail d’une demande ou absence sans chevauchement visuel;C - UI + API;Conforme;congé id=33 (page détail, overlays=0), absence id=6 (drawer ouvert=1, fermé=0), overlapDetected=false;2026-09-25T11:30:00.239Z;0 ms;CAP-UI-001.png;;
+UI-002;P2;UI;Filtres Catégorie, Statut et Type dans Congés et Absences;C - UI + API;Conforme;total=9, catégorie=5(wrong=0), statut=5(wrong=0), type=1(wrong=0), combinaison=1(wrong=0), reset=9;2026-09-25T11:30:06.855Z;0 ms;;;
+UI-003;P2;UI;Pagination de la liste Congés et Absences;C - UI + API;Conforme;pageSize=8, total=9, page1=8, page2=1, newOnPage2=1, backToPage1=true, filtered=1, paginationValidAfterFilter=true;2026-09-25T11:30:10.977Z;0 ms;;;
+UI-004;P1;UI;Modifier une absence remplace le drawer de détail sans superposition;C - UI + API;Conforme;absenceId=6, before detail/edit=1/0, after detail/edit=0/1, visibleDrawerCount=1, overlapDetected=false;2026-09-25T11:30:14.490Z;0 ms;;;
+UI-005;P1;UI;Préremplissage complet du formulaire de modification d’absence;C - UI + API;Conforme;"employee=18 (attendu 18), type=ABSENCE:21 (attendu ABSENCE:21), format=Jours, start=2026-10-13 (attendu 2026-10-13), end=2026-10-14 (attendu 2026-10-14), comment=""COMMENT UI005 UImugvpest"", saveButton=true, prefillMismatch=[]";2026-09-25T11:30:14.827Z;0 ms;;;
+UI-006;P1;UI;Aperçu de plage du calendrier suit la souris en modification;C - UI + API;Conforme;oldRange=2026-10-13→2026-10-15, newStart=2026-10-19, hover1=2026-10-20 preview=2026-10-19→2026-10-20, hover2=2026-10-21 preview=2026-10-19→2026-10-21, final=2026-10-19→2026-10-21, previewFollowsMouse=true;2026-09-25T11:46:25.955Z;0 ms;;;
+UI-007;P1;UI;Resélection depuis une date appartenant à l’ancienne plage;C - UI + API;Conforme;oldRange=2026-10-13→2026-10-15, clickedInsideOldRange=2026-10-14, selectionStartAfterClick=2026-10-14, hover=2026-10-20 preview=2026-10-14→2026-10-20, final=2026-10-14→2026-10-20, newSelectionStarted=true;2026-09-25T11:46:31.319Z;0 ms;;;
+UI-008;P1;UI;Bouton Ajouter un justificatif centré lorsque le justificatif est attendu;C - UI + API;Conforme;absenceId=7, status=JUSTIFICATIF_EN_ATTENTE, activeDocumentCount=0, addButtonCount=1, otherActionCount=0, deltaX=0.0, centered=true;2026-09-25T11:46:34.618Z;0 ms;CAP-UI-008.png;;
+UI-009;P1;UI;Sélection d’un fichier justificatif : nom, Envoyer et Annuler;C - UI + API;Conforme;absenceId=7, filename=justificatif-abs-recette.pdf, filenameVisible=true, Envoyer=1, Annuler=1, uploadTriggered=false;2026-09-25T11:46:38.086Z;0 ms;CAP-UI-009.png;;
+UI-010;P1;UI;Footer À vérifier : Modifier l’absence et Fermer regroupés à droite;C - UI + API;Conforme;"absenceId=8, documentStatus=EN_ATTENTE, buttons=[""Modifier l’absence"",""Fermer""], modify=1, authorize=0, close=1, groupedRight=true";2026-09-25T11:46:41.694Z;0 ms;;;
+UI-011;P1;UI;Footer autorisable : Modifier, Autoriser et Fermer regroupés à droite;C - UI + API;Conforme;"absenceId=8, documentStatus=ACCEPTE, buttons=[""Modifier l’absence"",""Autoriser l’absence"",""Fermer""], modify=1, authorize=1, close=1, groupedRight=true";2026-09-25T11:46:49.451Z;0 ms;;;
+UI-012;P1;UI;Justificatif refusé : Voir et Remplacer le justificatif;C - UI + API;Conforme;"absenceId=9, documentId=8, status=Refusé, reason=""Motif du refus : REFUS UI013 UI2mugwajo2"", view=1, replace=1";2026-09-25T11:46:57.144Z;0 ms;CAP-UI-012.png;;
+UI-013;P1;UI;Validation et refus d’un justificatif affichent un retour utilisateur;C - UI + API;Non conforme;"VALIDATION: HTTP=200 EN_ATTENTE→ACCEPTE uiStatus=Validé feedback=""Justificatif validé. Vous pouvez maintenant autoriser l’absence."" feedbackUnobscured=false | REFUS: HTTP=200 EN_ATTENTE→REJETE uiStatus=Refusé reason=""Motif du refus : REFUS UI013 UI13mugxb9ud"" feedback=""Justificatif refusé. Un nouveau justificatif est maintenant attendu."" feedbackUnobscured=false";2026-09-25T12:15:04.034Z;0 ms;CAP-UI-013.png;NC;backdropZ=100, feedbackZ=auto, top=null
+UI-014;P1;UI;Affichage bureau 1920×1080;C - UI + API;Conforme;COLLABORATEUR@/app/dashboard:overflow=false,cut=0,loaded=true | COLLABORATEUR@/app/my-requests:overflow=false,cut=0,loaded=true | COLLABORATEUR@/app/new-request:overflow=false,cut=0,loaded=true | RESPONSABLE_SERVICE@/app/dashboard:overflow=false,cut=0,loaded=true | RESPONSABLE_SERVICE@/app/requests:overflow=false,cut=0,loaded=true | RH@/app/dashboard:overflow=false,cut=0,loaded=true | RH@/app/rh-leaves-absences:overflow=false,cut=0,loaded=true | RH@/app/rh-validators:overflow=false,cut=0,loaded=true | DIRECTEUR@/app/dashboard:overflow=false,cut=0,loaded=true | DIRECTEUR@/app/director-all-requests:overflow=false,cut=0,loaded=true | ADMIN@/app/dashboard:overflow=false,cut=0,loaded=true | ADMIN@/app/admin-users:overflow=false,cut=0,loaded=true | ADMIN@/app/admin-services:overflow=false,cut=0,loaded=true;2026-09-25T13:15:28.562Z;0 ms;;;
+UI-015;P1;UI;Affichage bureau 1366×768;C - UI + API;Conforme;RH:drawer open=true,footerActions=3 | ADMIN:drawer open=true,actions=2 | RESPONSABLE:detail open=true,validate=1 | DIRECTEUR:detail open=true | COLLABORATEUR:form open=true;2026-09-25T13:30:08.655Z;0 ms;;;1366×768
+UI-016;P1;UI;Affichage tablette 768×1024;C - UI + API;Conforme;dash=COLLABORATEUR:false,RESPONSABLE_SERVICE:false,RH:false,DIRECTEUR:false,ADMIN:false | list=COLLABORATEUR:false,RESPONSABLE_SERVICE:false,RH:false,DIRECTEUR:false,ADMIN:false | form=true(cal=1,btn=0,overflow=0) | detail=true(footer=3,drawerOv=0);2026-09-25T13:30:28.959Z;0 ms;;;768×1024
+UI-017;P1;UI;Affichage mobile 390×844;C - UI + API;Conforme;notifications: COLLABORATEUR:login=ok,notifEntry=1,notifOpened=true,overflow=false | RESPONSABLE_SERVICE:login=ok,notifEntry=1,notifOpened=true,overflow=false | RH:login=ok,notifEntry=1,notifOpened=true,overflow=false | DIRECTEUR:login=ok,notifEntry=1,notifOpened=true,overflow=false | ADMIN:login=ok,notifEntry=1,notifOpened=true,overflow=false | formCollab=true, drawerRH=true, drawerAdmin=true;2026-09-25T13:30:48.567Z;0 ms;;;390×844
+UI-018;P1;UI;Sidebar réduite et navigation mobile;C - UI + API;Non conforme;DESKTOP: collapseControl=0, collapsed=false | MOBILE: menuOpen=true, navClose=true, orphanOverlay=0;2026-09-25T13:16:14.779Z;0 ms;NC;;
+UI-019;P1;UI;Navigation clavier, focus et fermeture des modales/drawers;C - UI + API;Conforme;"focus: COLLABORATEUR:[A.sidebar__nav-item>A.sidebar__nav-item>A.sidebar__nav-item] focus=true | RESPONSABLE_SERVICE:[A.sidebar__nav-item>A.sidebar__nav-item>A.sidebar__nav-item] focus=true | RH:[A.sidebar__nav-item>A.sidebar__nav-item>A.sidebar__nav-item] focus=true | DIRECTEUR:[A.sidebar__nav-item>A.sidebar__nav-item>A.sidebar__nav-item] focus=true | ADMIN:[A.sidebar__nav-item>A.sidebar__nav-item>A.sidebar__nav-item] focus=true | overlay RH close=true, ADMIN close=true (autres rôles: Overlay non exercé dans ce scénario ; le détail principal testé est une page plein écran.)";2026-09-25T13:31:09.547Z;0 ms;;;
+UI-020;P1;UI;États de chargement, erreurs réseau et messages de retour;C - UI + API;Conforme;RH (cycle acquis): loading=true, 500, erreur visible, reprise ok | AUTRES: COLLABORATEUR:**/api/leave-requests/my:http=500,err=true,auth=true,recovery=true,authAfter=true | RESPONSABLE_SERVICE:**/api/leave-requests/management/all:http=500,err=true,auth=true,recovery=true,authAfter=true | DIRECTEUR:**/api/leave-requests/management/all:http=500,err=true,auth=true,recovery=true,authAfter=true | ADMIN:**/api/users:http=500,err=true,auth=true,recovery=true,authAfter=true;2026-09-25T13:31:23.527Z;0 ms;;;
+VAL-001;P1;VAL;ADMIN consulte les valideurs du service;C - UI + API;Conforme;HTTP=200;2026-09-24T15:18:52.095Z;0 ms;CAP-VAL-001.png;;
+VAL-002;P1;VAL;ADMIN ajoute le premier valideur de secours;C - UI + API;Conforme;HTTP=201;2026-09-24T15:18:55.580Z;0 ms;CAP-VAL-002.png;;
+VAL-003;P1;VAL;RH ajoute le second valideur de secours;C - UI + API;Conforme;HTTP=201;2026-09-24T15:18:58.190Z;0 ms;CAP-VAL-003.png;;
+VAL-004;P1;VAL;Un Collaborateur ne gère pas les valideurs de secours;C - UI + API;Conforme;HTTP=403;2026-09-24T15:19:00.759Z;0 ms;CAP-VAL-004.png;;
+VAL-005;P1;VAL;Le Responsable principal ne peut pas être son propre secours;C - UI + API;Conforme;HTTP=400;2026-09-24T15:19:03.427Z;0 ms;CAP-VAL-005.png;;
+VAL-006;P1;VAL;Un Collaborateur ne peut pas être secours;C - UI + API;Conforme;HTTP=400;2026-09-24T15:19:05.972Z;0 ms;CAP-VAL-006.png;;
+VAL-007;P1;VAL;Secours refusé hors circuit Responsable puis relais;C - UI + API;Conforme;HTTP=400;2026-09-24T15:19:08.457Z;0 ms;CAP-VAL-007.png;;"""Les valideurs de secours ne sont disponibles que pour les services avec validation par Responsable puis relais."""
+VAL-008;P1;VAL;Un secours actif ne peut pas être doublonné;C - UI + API;Conforme;HTTP=409 2→2;2026-09-24T15:19:10.843Z;0 ms;CAP-VAL-008.png;;
+VAL-009;P1;VAL;ADMIN désactive le secours 1;C - UI + API;Conforme;HTTP=200;2026-09-24T15:19:13.248Z;0 ms;CAP-VAL-009.png;;
+VAL-010;P1;VAL;ADMIN réactive le secours 1;C - UI + API;Non conforme;HTTP=200;2026-09-24T15:19:15.687Z;0 ms;CAP-VAL-010.png;ANO-018 : bouton Réactiver désactivé (validator.isActive absent de la réponse API).;
+VAL-011;P1;VAL;La liste des valideurs expose les deux secours;C - UI + API;Non conforme;backupValidators=[14,15];2026-09-24T15:19:18.072Z;0 ms;CAP-VAL-011.png;ANO-018 : les secours actifs sont affichés Inopérant (validator.isActive absent).;
+VAL-012;P1;VAL;Secours refusé quand le Responsable est présent;C - UI + API;Conforme;HTTP=403;2026-09-24T15:19:21.219Z;0 ms;CAP-VAL-012.png;;
+VAL-013;P1;VAL;Le Responsable principal valide la demande;C - UI + API;Conforme;HTTP=200;2026-09-24T15:19:21.545Z;0 ms;CAP-VAL-013.png;;
+VAL-014;P1;VAL;L’urgence seule n’ouvre pas le secours;C - UI + API;Conforme;HTTP=403;2026-09-24T15:19:21.872Z;0 ms;CAP-VAL-014.png;;
+VAL-015;P2;VAL;Le Responsable traite la demande;B - API;Conforme;HTTP=200;2026-09-24T15:19:22.180Z;0 ms;;;
+VAL-016;P1;VAL;Relais par présence du Responsable;C - UI + API;Conforme;RESP=ABSENT HTTP=200;2026-09-24T15:19:23.193Z;0 ms;CAP-VAL-016.png;;
+VAL-017;P1;VAL;RH crée une absence autorisée pour le Responsable;B - API;Conforme;absence créée;2026-09-24T15:19:23.641Z;0 ms;;;
+VAL-018;P1;VAL;La RH soumet l’absence du Responsable;C - UI + API;Conforme;absence soumise;2026-09-24T15:19:23.641Z;0 ms;CAP-VAL-018.png;;
+VAL-019;P1;VAL;Le secours valide quand le Responsable est absent;C - UI + API;Conforme;HTTP=200;2026-09-24T15:19:26.432Z;0 ms;CAP-VAL-019.png;;
+VAL-020;P1;VAL;Le second secours est bloqué sur une demande déjà décidée;C - UI + API;Conforme;"UI secours1 RH → 200 ; secours2 Directeur UI bloqué (validate=0) ; API 409 ; statut VALIDEE inchangé";2026-09-24T17:15:06.569Z;0 ms;CAP-VAL-020.png;;
+VAL-021;P1;VAL;Le premier secours décide, le second ne peut plus;C - UI + API;Conforme;"UI secours1 RH → 200 ; secours2 Directeur UI bloqué (validate=0) ; API 409 ; aucune mutation";2026-09-24T17:15:06.569Z;0 ms;CAP-VAL-021.png;;
+VAL-022;P1;VAL;La deuxième décision sur la même demande est refusée;B - API;Conforme;"seconde décision même demande → HTTP 409 ; aucune mutation (preuve API corroboration VAL-021)";2026-09-24T17:15:06.569Z;0 ms;;;
+VAL-023;P1;VAL;La RH annule l’absence du Responsable;C - UI + API;Conforme;"UI RH annulation absence → /cancel HTTP 200 ; statut ANNULEE ; presence PRESENT";2026-09-24T17:15:06.569Z;0 ms;CAP-VAL-023.png;;
+VAL-024;PP1;VAL;Un Responsable ne crée pas les remplacements;;Conforme;"backend 403 ; UI : navValideurs absent, route inaccessible, bouton création absent (Responsable)";2026-09-24T18:25:56.238Z;0 ms;;;
+VAL-025;PP1;VAL;Employee externe refusé;;Conforme;"backend 400 ; UI : employé externe absent du select Collaborateur (externalEmployeeVisible=false)";2026-09-24T18:25:56.238Z;0 ms;;;
+VAL-026;PP1;VAL;Employee RH refusé;;Conforme;"backend 400 ; UI : RH absent du select Collaborateur (rhEmployeeVisible=false)";2026-09-24T18:25:56.238Z;0 ms;;;
+VAL-027;PP1;VAL;Employee Responsable refusé;;Conforme;"backend 400 ; UI : Responsable absent du select Collaborateur (responsableEmployeeVisible=false)";2026-09-24T18:25:56.238Z;0 ms;;;
+VAL-028;PP1;VAL;Employee Directeur refusé;;Conforme;"backend 400 ; UI : Directeur absent du select Collaborateur (directorEmployeeVisible=false)";2026-09-24T18:25:56.238Z;0 ms;;;
+VAL-029;PP1;VAL;Remplaçant Collaborateur refusé;;Conforme;"backend 400 ; UI : collaborateur absent du dropdown valideur (collaboratorCandidateVisible=false)";2026-09-24T18:12:18.471Z;0 ms;CAP-VAL-029.png;;
+VAL-030;PP1;VAL;Remplaçant Admin refusé;;Conforme;"backend 400 ; UI : admin absent du dropdown valideur (adminCandidateVisible=false)";2026-09-24T18:12:18.471Z;0 ms;CAP-VAL-030.png;;
+VAL-031;PP1;VAL;Employee identique au remplaçant refusé;;Conforme;HTTP=400 msg=Le remplaçant doit être un Responsable de service, un RH ou un Directeur.;2026-09-24T17:37:40.066Z;0 ms;CAP-VAL-031.png;;Combinaison identique refusée (HTTP 400). Garde d’identité défensive : le contrôle de rôle éligible intervient avant. Source indépendante : full-functional-test.mjs E6 (employeeId=replacementValidatorId -> 400).
+VAL-032;PP1;VAL;Période inversée refusée;;Conforme;"backend 400 ; UI : min date fin = date début, date antérieure invalide (validityValid=false)";2026-09-24T18:25:56.238Z;0 ms;;;
+VAL-033;PP1;VAL;RH crée un remplacement pour le collaborateur prorata;;Conforme;UI réelle création prorata → POST /api/validator-replacements 201, replacementId=4, employeeId=20, replacementValidatorId=14, isActive=true, countBefore=0, countAfter=1;2026-09-25T10:16:13.292Z;0 ms;;;Passe ciblée propre 033-035 (reset-recette propre) — dates 2026-09-25 → 2026-09-30
+VAL-034;PP1;VAL;Un remplacement chevauchant est refusé;;Conforme;UI réelle chevauchement → POST 400 « Un remplacement actif chevauche déjà cette période pour ce collaborateur. », countBefore=1, countAfter=1, existingStillActive=true;2026-09-25T10:16:13.293Z;0 ms;;;existingReplacementId=4, attemptedDates=2026-09-27 → 2026-10-02
+VAL-035;PP1;VAL;RH désactive le remplacement chevauchant;;Conforme;UI réelle désactivation → PATCH /api/validator-replacements/4/disable 200, isActive true→false, resourceStillExists=true, rowCount=1;2026-09-25T10:16:13.293Z;0 ms;;;replacementId=4 (issu de VAL-033), toujours actif avant désactivation
+VAL-036;PP1;VAL;RH crée un remplacement actif pour le collaborateur A;;Conforme;UI réelle création COL-A → POST 201, isActive=true;2026-09-24T18:59:01.392Z;0 ms;;;
+VAL-037;PP1;VAL;RH crée le remplacement du collaborateur B;;Conforme;UI réelle création COL-B → POST 201, id distinct de VAL-036;2026-09-24T18:59:01.392Z;0 ms;;;
+VAL-038;PP1;VAL;Le Responsable remplacé est refusé sur la demande du collaborateur B;;Conforme;"UI réelle : demande colB visible mais bouton validation absent (validate=0) ; API 403 ; aucune mutation";2026-09-24T18:59:01.392Z;0 ms;;;
+VAL-039;PP1;VAL;Le remplaçant reprend la demande soumise avant sa désignation;;Conforme;UI réelle : demande soumise avant désignation (submittedAt < replacementCreatedAt), kind=REMPLACEMENT, POST validate=200, statusAfter=VALIDEE;2026-09-24T18:12:18.471Z;0 ms;CAP-VAL-039.png;;
+VAL-040;PP2;VAL;Bornes de dates inclusives (début = fin = jour courant);;Conforme;UI réelle création début=fin=aujourd’hui → POST 201, visible onglet En cours;2026-09-24T18:59:01.392Z;0 ms;;;
+VAL-041;PP1;VAL;Le Responsable remplacé reste autorisé sur un autre collaborateur;;Conforme;UI réelle Responsable valide demande prorata (aucun remplacement actif) → POST validate 200;2026-09-24T18:59:01.392Z;0 ms;;;manager valide prorata (aucun remplacement actif)
+VAL-042;PP1;VAL;RH consulte les remplacements avec filtres;;Conforme;UI réelle : filtres Tous/En cours/Planifiés/Terminés/Désactivés, totalRows=1;2026-09-24T18:12:18.471Z;0 ms;;;
+VAL-043;PP1;VAL;RH consulte un remplacement par identifiant;;Conforme;UI réelle : drawer détail affiche l’ID exact du remplacement;2026-09-24T18:12:18.471Z;0 ms;;;
+VAL-044;P1;VAL;Le remplaçant voit la demande dans sa liste d’attente;;Conforme;UI remplaçant : rowCount=1, collaborateur COL-B visible, requestId=33, decisionAccess=REMPLACEMENT;2026-09-25T10:30:22.003Z;0 ms;CAP-VAL-044.png;;replacementId=4
+VAL-045;P1;VAL;Le Responsable remplacé ne voit plus la demande du collaborateur B;;Conforme;"UI Responsable remplacé : visible (rowCount=1) mais action absente (validate=0), readonly=""attribuée à un autre valideur"" ; API validate=403";2026-09-25T10:30:24.666Z;0 ms;;;requestId=33
+VAL-046;P1;VAL;Le remplaçant valide la demande en attente;;Conforme;UI remplaçant valide → POST /leave-requests/33/validate HTTP=200, finalDeciderId=21, workflowStatus=EN_COURS_TRAITEMENT, validationStage=RH_FINALISATION, 2e tentative=403;2026-09-25T10:30:28.866Z;0 ms;CAP-VAL-046.png;;requestId=33
+VAL-047;P1;VAL;La notification de soumission désigne le remplaçant, pas le Responsable remplacé;;Non conforme;notification remplaçant=1, notification Responsable=0, doublon=true, UI notif remplaçant visible=3;2026-09-25T10:30:31.175Z;0 ms;CAP-VAL-047.png;NC;requestId=34
+VAL-048;P1;VAL;Le remplaçant valide la demande notifiée;;Conforme;UI remplaçant valide la demande notifiée → HTTP=200, finalDeciderId=21, workflowStatus=EN_COURS_TRAITEMENT;2026-09-25T10:30:35.384Z;0 ms;CAP-VAL-048.png;;requestId=34
+VAL-049;P1;VAL;Délai expiré : le remplaçant conserve son droit de décision;;Conforme;requestId=35, submittedAt=2026-09-17T10:30:35.000Z, takeoverAt=2026-09-24T10:30:35.000Z, delayExpired=true, decisionAccess=REMPLACEMENT, HTTP=200;2026-09-25T10:30:40.122Z;0 ms;CAP-VAL-049.png;;
+VAL-050;P1;VAL;Délai expiré : le secours valide;;Conforme;requestId=36, delayExpired=true, decisionAccess=SECOURS, HTTP=200, finalDeciderId=22;2026-09-25T10:30:44.541Z;0 ms;CAP-VAL-050.png;;
+VAL-051;P1;VAL;Délai expiré : le Directeur valide en relais;;Conforme;requestId=37, delayExpired=true, decisionAccess=RELAIS, HTTP=200;2026-09-25T10:30:48.659Z;0 ms;CAP-VAL-051.png;;
+VAL-052;P1;VAL;Le Responsable remplacé reste exclu pendant le remplacement;;Conforme;UI Responsable remplacé : validate=0 (action absente), API validate=403;2026-09-25T10:30:51.379Z;0 ms;;;requestId=38
+VAL-053;P1;VAL;Le remplaçant traite la demande laissée par le Responsable;;Conforme;UI remplaçant traite la demande laissée → HTTP=200, finalDeciderId=21, workflowStatus=EN_COURS_TRAITEMENT;2026-09-25T10:30:55.525Z;0 ms;CAP-VAL-053.png;;requestId=38
+VAL-054;P1;VAL;RH désactive le remplacement du collaborateur B;;Conforme;UI RH désactive → PATCH /api/validator-replacements/4/disable HTTP=200, isActive true→false, ressource conservée=true;2026-09-25T10:30:59.679Z;0 ms;;;replacementId=4
+VAL-055;P1;VAL;Fin du remplacement : le Responsable valide de nouveau;;Conforme;replacement actif B=0, decisionAccess=RESPONSABLE_PRINCIPAL, UI Responsable valide → HTTP=200, finalDeciderId=16;2026-09-25T10:31:04.191Z;0 ms;CAP-VAL-055.png;;requestId=39
+VAL-056;P1;VAL;RH désigne la RH comme remplaçante;;Conforme;POST /api/validator-replacements HTTP=201, replacementId=4, employeeId=18, replacementValidatorId=14, isActive=true, decisionAccess=REMPLACEMENT;2026-09-25T10:47:15.713Z;0 ms;CAP-VAL-056.png;;replacementId=4
+VAL-057;P1;VAL;La RH désignée remplaçante valide en premier niveau;;Conforme;requestId=34, decisionAccess avant=REMPLACEMENT, validate visible=1, POST /leave-requests/34/validate HTTP=200, finalDeciderId=14, statusAfter=VALIDEE;2026-09-25T10:47:21.102Z;0 ms;CAP-VAL-057.png;;replacementId=4
+VAL-058;P1;VAL;RH désactive son remplacement;;Conforme;PATCH /api/validator-replacements/4/disable HTTP=200, isActive true→false, ressource conservée=true;2026-09-25T10:47:25.222Z;0 ms;;;replacementId=4
+VAL-059;P1;VAL;RH désigne le Directeur comme remplaçant;;Conforme;POST /api/validator-replacements HTTP=201, replacementId=5, employeeId=18, replacementValidatorId=15, isActive=true;2026-09-25T10:47:29.214Z;0 ms;CAP-VAL-059.png;;erratum rôle cahier (Rôle=Directeur, acteur réel=RH confirmé full-functional-test.mjs)
+VAL-060;P1;VAL;Le Directeur désigné remplaçant valide en premier niveau;;Conforme;requestId=35, decisionAccess avant=REMPLACEMENT, POST /leave-requests/35/validate HTTP=200, finalDeciderId=15, statusAfter=EN_ATTENTE_VALIDATION, workflowStatus=EN_COURS_TRAITEMENT;2026-09-25T10:47:33.837Z;0 ms;CAP-VAL-060.png;;replacementId=5
+VAL-061;P1;VAL;RH désactive le remplacement du Directeur;;Conforme;PATCH /api/validator-replacements/5/disable HTTP=200, isActive true→false, ressource conservée=true;2026-09-25T10:47:37.965Z;0 ms;;;replacementId=5
+VAL-062;P1;VAL;Remplaçant absent (éligible);;Conforme;replacementId=4, replacementValidatorId=21, role=RESPONSABLE_SERVICE, eligible=true, isActive=true, presence=ABSENT, firstLevelId=21, firstLevelEligible=true, firstLevelPresent=false;2026-09-25T11:01:26.444Z;0 ms;CAP-VAL-062.png;;
+VAL-063;P1;VAL;RH crée une absence pour le remplaçant;;Conforme;POST /api/absence-declarations HTTP=201, absenceId=6, employeeId=21, type=16, dates=2026-09-25, status initial=BROUILLON;2026-09-25T11:01:25.984Z;0 ms;CAP-VAL-063.png;;replacementId=4
+VAL-064;P1;VAL;La RH soumet l’absence du remplaçant;;Conforme;POST /api/absence-declarations/6/submit HTTP=200, statusAfter=ENREGISTREE, presence remplaçant=ABSENT, replacement.isActive=true;2026-09-25T11:01:26.387Z;0 ms;CAP-VAL-064.png;;absenceId=6
+VAL-065;P1;VAL;Le Responsable principal reste exclu quand le remplaçant est absent;;Conforme;requestId=33, rowCount=1, validateButtonCount=0, decisionAccess=absent, API validate=403, aucune mutation;2026-09-25T11:01:32.195Z;0 ms;CAP-VAL-065.png;;
+VAL-066;P1;VAL;Le secours valide quand le remplaçant est absent;;Conforme;requestId=34, decisionAccess=SECOURS, POST /leave-requests/34/validate HTTP=200, finalDeciderId=22, statusAfter=EN_ATTENTE_VALIDATION, workflowStatus=EN_COURS_TRAITEMENT;2026-09-25T11:01:36.343Z;0 ms;CAP-VAL-066.png;;
+VAL-067;P1;VAL;Le Directeur valide en relais quand le remplaçant est absent;;Conforme;requestId=35, decisionAccess=RELAIS, POST /leave-requests/35/validate HTTP=200, finalDeciderId=15, statusAfter=EN_ATTENTE_VALIDATION, workflowStatus=EN_COURS_TRAITEMENT;2026-09-25T11:01:40.551Z;0 ms;CAP-VAL-067.png;;
+VAL-068;P1;VAL;La RH annule l’absence du remplaçant;;Conforme;absenceId=6, statusBefore=ENREGISTREE, presenceBefore=ABSENT, POST /absence-declarations/6/cancel HTTP=200, statusAfter=ANNULEE, presenceAfter=PRESENT, replacement.isActive=true, historisée=true;2026-09-25T11:01:44.437Z;0 ms;CAP-VAL-068.png;;
+VAL-069;P1;VAL;Le Responsable principal reprend la demande quand le remplaçant est inactif;;Conforme;replacementId=4, replacement.isActive=true, remplaçant inactif, requestId=33, decisionAccess=RESPONSABLE_PRINCIPAL, POST /leave-requests/33/validate HTTP=200, finalDeciderId=16, statusAfter=EN_ATTENTE_VALIDATION;2026-09-25T11:10:10.127Z;0 ms;CAP-VAL-069.png;;
+VAL-070;P1;VAL;Le secours reste refusé quand le remplaçant est inactif et le Responsable présent;;Conforme;"requestId=34, decisionAccess=absent, UI validate=0, API validate=403, message=""Cette demande relève du Responsable principal du service.""";2026-09-25T11:10:13.111Z;0 ms;CAP-VAL-070.png;;
+VAL-071;P1;VAL;Le Responsable principal traite la demande laissée en attente;;Conforme;requestId=34 (réutilisée après refus secours), decisionAccess=RESPONSABLE_PRINCIPAL, POST /leave-requests/34/validate HTTP=200, finalDeciderId=16, statusAfter=EN_ATTENTE_VALIDATION;2026-09-25T11:10:17.197Z;0 ms;;;
+VAL-072;P1;VAL;Le Responsable principal reprend la demande quand le remplaçant change de rôle;;Conforme;replacementId=4, replacement.isActive=true, roleBefore=RESPONSABLE_SERVICE, roleAfter=COLLABORATEUR, eligibleBefore=true, eligibleAfter=false, requestId=35, decisionAccess=RESPONSABLE_PRINCIPAL, POST /leave-requests/35/validate HTTP=200;2026-09-25T11:10:21.633Z;0 ms;CAP-VAL-072.png;;
+VAL-073;P1;VAL;RH désactive le remplacement du collaborateur A;;Conforme;PATCH /api/validator-replacements/4/disable HTTP=200, isActive true→false, historique=true;2026-09-25T11:10:25.698Z;0 ms;;;replacementId=4
+VAL-074;P1;VAL;Le Responsable valide de nouveau après désactivation du remplacement;;Conforme;replacementId=4, requestId=36, decisionAccess=RESPONSABLE_PRINCIPAL, POST /leave-requests/36/validate HTTP=200, finalDeciderId=16, statusAfter=EN_ATTENTE_VALIDATION;2026-09-25T11:10:30.326Z;0 ms;CAP-VAL-074.png;;
+VAL-075;P1;VAL;Les cinq actions d’audit E6 sont tracées;;Conforme;5 actions présentes : SERVICE_BACKUP_VALIDATOR_ASSIGNED / SERVICE_BACKUP_VALIDATOR_DISABLED / SERVICE_BACKUP_VALIDATOR_ENABLED / VALIDATOR_REPLACEMENT_CREATED / VALIDATOR_REPLACEMENT_DISABLED;2026-09-25T11:10:30.432Z;0 ms;;;

@@ -1,0 +1,72 @@
+[
+  {
+    "id": "UI-001",
+    "priority": "P1",
+    "module": "UI",
+    "scenario": "Ouverture du détail d’une demande ou absence sans chevauchement visuel",
+    "type": "C - UI + API",
+    "status": "Conforme",
+    "result": "congé id=33 (page détail, overlays=0), absence id=6 (drawer ouvert=1, fermé=0), overlapDetected=false",
+    "date": "2026-09-25T11:30:00.239Z",
+    "duration": "0 ms",
+    "proof": "CAP-UI-001.png",
+    "error": "",
+    "comment": ""
+  },
+  {
+    "id": "UI-002",
+    "priority": "P2",
+    "module": "UI",
+    "scenario": "Filtres Catégorie, Statut et Type dans Congés et Absences",
+    "type": "C - UI + API",
+    "status": "Conforme",
+    "result": "total=9, catégorie=5(wrong=0), statut=5(wrong=0), type=1(wrong=0), combinaison=1(wrong=0), reset=9",
+    "date": "2026-09-25T11:30:06.855Z",
+    "duration": "0 ms",
+    "proof": "",
+    "error": "",
+    "comment": ""
+  },
+  {
+    "id": "UI-003",
+    "priority": "P2",
+    "module": "UI",
+    "scenario": "Pagination de la liste Congés et Absences",
+    "type": "C - UI + API",
+    "status": "Conforme",
+    "result": "pageSize=8, total=9, page1=8, page2=1, newOnPage2=1, backToPage1=true, filtered=1, paginationValidAfterFilter=true",
+    "date": "2026-09-25T11:30:10.977Z",
+    "duration": "0 ms",
+    "proof": "",
+    "error": "",
+    "comment": ""
+  },
+  {
+    "id": "UI-004",
+    "priority": "P1",
+    "module": "UI",
+    "scenario": "Modifier une absence remplace le drawer de détail sans superposition",
+    "type": "C - UI + API",
+    "status": "Conforme",
+    "result": "absenceId=6, before detail/edit=1/0, after detail/edit=0/1, visibleDrawerCount=1, overlapDetected=false",
+    "date": "2026-09-25T11:30:14.490Z",
+    "duration": "0 ms",
+    "proof": "",
+    "error": "",
+    "comment": ""
+  },
+  {
+    "id": "UI-005",
+    "priority": "P1",
+    "module": "UI",
+    "scenario": "Préremplissage complet du formulaire de modification d’absence",
+    "type": "C - UI + API",
+    "status": "Conforme",
+    "result": "employee=18 (attendu 18), type=ABSENCE:21 (attendu ABSENCE:21), format=Jours, start=2026-10-13 (attendu 2026-10-13), end=2026-10-14 (attendu 2026-10-14), comment=\"COMMENT UI005 UImugvpest\", saveButton=true, prefillMismatch=[]",
+    "date": "2026-09-25T11:30:14.827Z",
+    "duration": "0 ms",
+    "proof": "",
+    "error": "",
+    "comment": ""
+  }
+]

@@ -1,0 +1,32 @@
+﻿ID;Priorité;Module;Scénario;Type de test;Statut;Résultat obtenu;Date;Durée;Preuve;Erreur;Commentaire
+PRE-001;P1;PRE;Présence calculée et relais du Responsable;C - UI + API;Conforme;requestId=33;2026-09-24T12:42:00.316Z;0 ms;CAP-PRE-001.png;;
+PRE-002;P1;PRE;Le Responsable valide le congé futur du collaborateur;C - UI + API;Conforme;HTTP=200;2026-09-24T12:42:03.095Z;0 ms;CAP-PRE-002.png;;
+PRE-003;P1;PRE;Un congé validé futur ne modifie pas le statut du jour (PRESENT);B - API;Conforme;presence=PRESENT;2026-09-24T12:42:03.115Z;0 ms;;;
+PRE-004;P1;PRE;RH crée une absence autorisée pour le jour même;B - API;Conforme;HTTP=201;2026-09-24T12:42:03.416Z;0 ms;;;
+PRE-005;P1;PRE;La RH soumet l’absence enregistrée;C - UI + API;Conforme;HTTP=200;2026-09-24T12:42:05.919Z;0 ms;CAP-PRE-005.png;;
+PRE-006;P1;PRE;Une absence enregistrée le jour même rend le collaborateur ABSENT;B - API;Conforme;presence=ABSENT;2026-09-24T12:42:05.932Z;0 ms;;;
+PRE-007;P1;PRE;La RH annule l’absence enregistrée;C - UI + API;Conforme;HTTP=200;2026-09-24T12:42:08.168Z;0 ms;CAP-PRE-007.png;;
+PRE-008;P1;PRE;L’annulation d’une absence ramène le statut à PRESENT;C - UI + API;Conforme;presence=PRESENT;2026-09-24T12:42:08.178Z;0 ms;CAP-PRE-008.png;;
+PRE-009;P1;PRE;RH crée une absence autorisée demi-journée;C - UI + API;Conforme;HTTP=201;2026-09-24T12:42:10.462Z;0 ms;CAP-PRE-009.png;;
+PRE-010;P1;PRE;La RH soumet l’absence demi-journée;C - UI + API;Conforme;HTTP=200;2026-09-24T12:42:12.747Z;0 ms;CAP-PRE-010.png;;
+PRE-011;P1;PRE;Une absence demi-journée (MATIN) rend ABSENT sur le slot courant MATIN;C - UI + API;Conforme;presence=ABSENT;2026-09-24T12:42:12.770Z;0 ms;CAP-PRE-011.png;;
+PRE-012;P2;PRE;Maintenance : recalcule les statuts sur le slot courant;B - API;Conforme;presence=ABSENT secondRun=200;2026-09-24T12:42:12.770Z;0 ms;;;
+PRE-013;P1;PRE;Une absence demi-journée (MATIN) laisse PRESENT sur le slot APRES_MIDI;C - UI + API;Conforme;presence=ABSENT (slot MATIN forcé);2026-09-24T12:42:12.796Z;0 ms;CAP-PRE-013.png;;
+PRE-014;P2;PRE;RH restaure AFTERNOON_START_HOUR à 12:00;B - API;Conforme;restauré 12:00;2026-09-24T12:42:12.809Z;0 ms;;;
+PRE-015;P1;PRE;La RH annule l’absence demi-journée;C - UI + API;Conforme;HTTP=200;2026-09-24T12:42:15.156Z;0 ms;CAP-PRE-015.png;;
+PRE-016;P1;PRE;RH crée une absence autorisée pour le Responsable;B - API;Conforme;HTTP=201;2026-09-24T12:42:15.226Z;0 ms;;;
+PRE-017;P1;PRE;La RH soumet l’absence du Responsable;C - UI + API;Conforme;HTTP=200;2026-09-24T12:42:17.562Z;0 ms;CAP-PRE-017.png;;
+PRE-018;P1;PRE;La RH reprend la validation via le relais (Responsable ABSENT);B - API;Conforme;RESP=ABSENT HTTP=200 status=VALIDEE;2026-09-24T12:42:17.610Z;0 ms;;;""""""
+PRE-019;P1;PRE;Le relais est tracé dans l’audit (REPRISE_PAR_RELAIS);B - API;Non conforme;traces=0 actor=undefined rh=14;2026-09-24T12:42:17.639Z;0 ms;;;ANO-016 : la reprise RH (secours) ne trace pas REPRISE_PAR_RELAIS.
+PRE-020;P1;PRE;La RH annule l’absence du Responsable;C - UI + API;Conforme;HTTP=200;2026-09-24T12:42:19.908Z;0 ms;CAP-PRE-020.png;;
+PRE-021;P1;PRE;RH crée une absence demi-journée pour le Responsable;C - UI + API;Conforme;HTTP=201;2026-09-24T12:42:22.084Z;0 ms;CAP-PRE-021.png;;
+PRE-022;P1;PRE;La RH soumet l’absence demi-journée du Responsable;C - UI + API;Conforme;HTTP=200;2026-09-24T12:42:24.366Z;0 ms;CAP-PRE-022.png;;
+PRE-023;P2;PRE;RH force le slot MATIN (AFTERNOON_START_HOUR=23:59);B - API;Conforme;slot MATIN forcé;2026-09-24T12:42:24.366Z;0 ms;;;
+PRE-024;P1;PRE;Absence MATIN du Responsable : relais autorisé le matin;B - API;Conforme;RESP=ABSENT HTTP=200;2026-09-24T12:42:24.366Z;0 ms;;;
+PRE-025;P1;PRE;Absence MATIN du Responsable : relais non autorisé l’après-midi;B - API;Conforme;RESP=PRESENT HTTP=403;2026-09-24T12:42:24.366Z;0 ms;;;
+PRE-026;P1;PRE;Absence APRES_MIDI du Responsable : relais non autorisé le matin;B - API;Conforme;RESP=PRESENT HTTP=403;2026-09-24T12:42:24.366Z;0 ms;;;
+PRE-027;P2;PRE;Le relais du Responsable est décidé slot par slot (demi-journée);B - API;Conforme;MATIN presence=ABSENT relais=200 | APRES_MIDI presence=PRESENT relais=403;2026-09-24T12:42:24.366Z;0 ms;;;
+PRE-028;P2;PRE;RH restaure AFTERNOON_START_HOUR à 12:00;B - API;Conforme;value=12:00;2026-09-24T12:42:24.366Z;0 ms;;;
+PRE-029;P1;PRE;La RH annule l’absence demi-journée du Responsable;C - UI + API;Conforme;HTTP=200;2026-09-24T12:42:26.772Z;0 ms;CAP-PRE-029.png;;
+PRE-030;P2;PRE;Le retour à PRESENT du Responsable rétablit sa priorité;B - API;Conforme;RESP=PRESENT respHTTP=200 dirHTTP=403;2026-09-24T12:42:26.772Z;0 ms;;;
+PRE-031;P1;PRE;Un champ stocké obsolète ne déclenche pas le relais (présence recalculée);C - UI + API;Conforme;presenceRecalculée=PRESENT dirHTTP=403;2026-09-24T12:42:26.772Z;0 ms;;;
