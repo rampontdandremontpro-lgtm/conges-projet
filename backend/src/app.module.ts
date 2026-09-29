@@ -14,6 +14,7 @@ import { AddBalanceProcessingStatus20260827230000 } from './database/migrations/
 import { AddMustChangePassword20260828140000 } from './database/migrations/20260828140000-add-must-change-password';
 import { AddAnticipatedLeave20260828180000 } from './database/migrations/20260828180000-add-anticipated-leave';
 import { AddLeaveRequestDurationHours20260901150000 } from './database/migrations/20260901150000-add-leave-request-duration-hours';
+import { AddDerogationSubmittedAt20260929180000 } from './database/migrations/20260929180000-add-derogation-submitted-at';
 import { DocumentsModule } from './documents/documents.module';
 import { ExportsModule } from './exports/exports.module';
 import { HolidaysModule } from './holidays/holidays.module';
@@ -54,6 +55,7 @@ import { ValidatorsModule } from './validators/validators.module';
           AddMustChangePassword20260828140000,
           AddAnticipatedLeave20260828180000,
           AddLeaveRequestDurationHours20260901150000,
+          AddDerogationSubmittedAt20260929180000,
         ],
         migrationsRun: true,
         migrationsTableName: 'typeorm_migrations',

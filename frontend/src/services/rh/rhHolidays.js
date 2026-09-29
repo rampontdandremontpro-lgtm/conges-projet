@@ -39,6 +39,17 @@ export async function disableRhClosure(id) {
   return data
 }
 
+export async function enableRhClosure(id) {
+  const { data } = await apiClient.patch(`/holidays/${id}/enable`, {})
+  notifyChanged()
+  return data
+}
+
+export async function getRhHolidaysForManagement(year) {
+  const { data } = await apiClient.get('/holidays/management', { params: { year } })
+  return Array.isArray(data) ? data : []
+}
+
 
 export async function updateRhHolidayWorkStatus({ date, holidayType, isChomed }) {
   const { data } = await apiClient.patch('/holidays/work-status', {

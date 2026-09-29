@@ -45,6 +45,20 @@ export async function requestDerogation(payload) {
   return data
 }
 
+export async function updateDerogation(id, reason) {
+  const { data } = await apiClient.patch(`/derogations/${id}`, { reason })
+  return data
+}
+
+export async function submitDerogation(id) {
+  const { data } = await apiClient.post(`/derogations/${id}/submit`)
+  return data
+}
+
+export async function deleteDerogation(id) {
+  await apiClient.delete(`/derogations/${id}`)
+}
+
 export async function getMyLeaveBalanceProjection({ startDate, days, excludeRequestId }) {
   const { data } = await apiClient.get('/leave-balances/my/projection', {
     params: { startDate, days, ...(excludeRequestId ? { excludeRequestId } : {}) },

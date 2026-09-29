@@ -8,6 +8,9 @@ tests/recette/playwright-report/
 tests/recette/.cache/
 *.trace.zip
 
+# Instance MySQL/MariaDB isolée de recette (datadir local, ne pas committer)
+tests/recette/.mysql/
+
 # On conserve volontairement :
 # - tests/recette/reports/recette-results.json
 # - tests/recette/reports/recette-results.csv

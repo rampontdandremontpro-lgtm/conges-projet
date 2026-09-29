@@ -175,6 +175,11 @@ export class DocumentsService {
 
     this.ensureAbsenceAcceptsDocuments(declaration);
 
+    // ANO-009 : lorsqu'un collaborateur remplace un justificatif rejeté,
+    // l'ancien document est archivé pour ne plus bloquer l'enregistrement
+    // définitif de l'absence (il ne doit plus être traitable ni actif).
+    await this.archiveRejectedDocuments(absenceDeclarationId);
+
     const document = await this.createDocument({
       file,
       authenticatedUser,
@@ -1007,6 +1012,21 @@ export class DocumentsService {
 
   createReadStream(absolutePath: string) {
     return createReadStream(absolutePath);
+  }
+
+  private async archiveRejectedDocuments(
+    absenceDeclarationId: number,
+  ): Promise<void> {
+    await this.documentRepository.update(
+      {
+        absenceDeclarationId,
+        status: DocumentStatus.REJETE,
+      },
+      {
+        status: DocumentStatus.ARCHIVE,
+        deletedAt: new Date(),
+      },
+    );
   }
 
   private async createDocument(input: {

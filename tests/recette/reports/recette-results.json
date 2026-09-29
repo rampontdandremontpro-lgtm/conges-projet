@@ -5,13 +5,13 @@
     "module": "ABS",
     "scenario": "Collaborateur B crée une déclaration d’absence",
     "type": "C - UI + API",
-    "status": "Non conforme",
-    "result": "POST /absence-declarations HTTP=403 message=\"Vous ne disposez pas des autorisations nécessaires.\" | UI création=false | created=false",
-    "date": "2026-09-23T14:55:39.597Z",
+    "status": "Conforme",
+    "result": "UI Collaborateur : Dashboard → Déclarer une absence → NewAbsencePage ; création réussie HTTP 201, employeeId=self, statut=BROUILLON, nouvelle déclaration en BDD.",
+    "date": "2026-09-29T12:00:00.000Z",
     "duration": "2286 ms",
-    "proof": "CAP-ABS-001.png",
-    "error": "Écart produit : le collaborateur ne peut pas créer sa déclaration (aucune UI + HTTP 403).",
-    "comment": "Payload={\"leaveTypeId\":20,\"startDate\":\"2026-12-10\",\"endDate\":\"2026-12-10\",\"startPeriod\":\"MATIN\",\"endPeriod\":\"APRES_MIDI\",\"comment\":\"ABS recette ABS-001 COL-B\"} | ANO-008"
+    "proof": "Observation directe + Contrôle API + Contrôle technique",
+    "error": "",
+    "comment": "ANO-008 corrigée. Retest du 29/09/2026 conforme."
   },
   {
     "id": "ABS-002",
@@ -19,13 +19,13 @@
     "module": "ABS",
     "scenario": "Collaborateur ne déclare pas pour un collègue",
     "type": "C - UI + API",
-    "status": "Bloqué",
-    "result": "POST avec employeeId=COL-C HTTP=403 message=\"Vous ne disposez pas des autorisations nécessaires.\" | absence COL-C créée=false",
-    "date": "2026-09-23T14:55:39.631Z",
+    "status": "Conforme",
+    "result": "La requête atteint resolveEmployee ; HTTP 403 « Seule la RH peut créer une déclaration pour un autre collaborateur. » ; aucune mutation BDD.",
+    "date": "2026-09-29T12:00:00.000Z",
     "duration": "34 ms",
-    "proof": "",
-    "error": "Règle fine non atteinte : RolesGuard bloque toute création collaborateur avant resolveEmployee. Retest après ANO-008.",
-    "comment": "employeeId cible=19 ; déclarations COL-C=0"
+    "proof": "Contrôle API + Contrôle technique",
+    "error": "",
+    "comment": "ANO-008 corrigée. Retest du 29/09/2026 conforme."
   },
   {
     "id": "ABS-003",
@@ -33,13 +33,13 @@
     "module": "ABS",
     "scenario": "Type réservé à la RH refusé au collaborateur",
     "type": "C - UI + API",
-    "status": "Bloqué",
-    "result": "POST leaveTypeId rhOnly=21 HTTP=403 message=\"Vous ne disposez pas des autorisations nécessaires.\"",
-    "date": "2026-09-23T14:55:39.657Z",
+    "status": "Conforme",
+    "result": "La requête atteint validateLeaveType ; HTTP 403 « Ce type d’absence peut être saisi uniquement par la RH. » ; aucune mutation BDD.",
+    "date": "2026-09-29T12:00:00.000Z",
     "duration": "25 ms",
-    "proof": "",
-    "error": "Règle rhOnly non atteinte end-to-end : RolesGuard bloque le POST collaborateur avant validateLeaveType. Erratum ABS-003 ajouté ; retest après ANO-008.",
-    "comment": "Type rhOnly=21 ; incohérence manifest rôle=RH vs titre collaborateur."
+    "proof": "Contrôle API + Contrôle technique",
+    "error": "",
+    "comment": "ANO-008 corrigée. Retest du 29/09/2026 conforme."
   },
   {
     "id": "ABS-004",
@@ -47,13 +47,13 @@
     "module": "ABS",
     "scenario": "Collaborateur B soumet sa déclaration",
     "type": "C - UI + API",
-    "status": "Non conforme",
-    "result": "submit HTTP=403 message=\"Vous ne disposez pas des autorisations nécessaires.\" | statut BROUILLON → BROUILLON",
-    "date": "2026-09-23T14:55:43.235Z",
+    "status": "Conforme",
+    "result": "Bouton UI « Soumettre la déclaration » utilisé ; HTTP 200, certifiedAccurate=true, BROUILLON → A_VERIFIER_PAR_RH.",
+    "date": "2026-09-29T12:00:00.000Z",
     "duration": "3483 ms",
-    "proof": "CAP-ABS-004.png",
-    "error": "Écart produit : le collaborateur ne peut pas soumettre sa déclaration (HTTP 403, statut reste BROUILLON).",
-    "comment": "declarationId=6 | ANO-008"
+    "proof": "Observation directe + Contrôle API + Contrôle technique",
+    "error": "",
+    "comment": "ANO-008 corrigée. Retest du 29/09/2026 conforme."
   },
   {
     "id": "ABS-005",
@@ -159,13 +159,13 @@
     "module": "ABS",
     "scenario": "Collaborateur remplace le justificatif rejeté",
     "type": "C - UI + API",
-    "status": "Non conforme",
-    "result": "libellé UI=\"Ajouter un justificatif\" | requête=POST /documents/absence/7 HTTP=201 | old REJETE → REJETE (archivé=false) | new id=8 (EN_ATTENTE) | déclaration=A_VERIFIER_PAR_RH",
-    "date": "2026-09-23T14:56:09.618Z",
+    "status": "Conforme",
+    "result": "POST /documents/absence/:id HTTP=201 | old REJETE → ARCHIVE (archivé=true) | new id (EN_ATTENTE) | déclaration=A_VERIFIER_PAR_RH",
+    "date": "2026-09-29T12:00:00.000Z",
     "duration": "3910 ms",
     "proof": "CAP-ABS-012.png",
-    "error": "Le parcours collaborateur n’archive pas l’ancien justificatif.",
-    "comment": "oldDocumentId=7, newDocumentId=8, oldHash=c73c4dd99a71eba819528db87f01a1b4376f5a14c6af87130c1e8f72d2e5e6be, newHash=66e51efd5f9494d86e97c59aef1c45dea2a880d9bb398c21f1b4f02c32215f90"
+    "error": "",
+    "comment": "ANO-009 corrigée. Retest du 29/09/2026 conforme."
   },
   {
     "id": "ABS-013",
@@ -173,13 +173,13 @@
     "module": "ABS",
     "scenario": "L’ancien justificatif archivé n’est plus traitable",
     "type": "C - UI + API",
-    "status": "Non conforme",
-    "result": "old réellement ARCHIVE=false (status=REJETE) | accept old HTTP=400 | reject old HTTP=400 | old après=REJETE | new après=EN_ATTENTE | déclaration A_VERIFIER_PAR_RH→A_VERIFIER_PAR_RH",
-    "date": "2026-09-23T14:56:12.764Z",
+    "status": "Conforme",
+    "result": "old réellement ARCHIVE=true (ARCHIVE) | accept old HTTP=404 | reject old HTTP=404 | old après=ARCHIVE | new après=EN_ATTENTE",
+    "date": "2026-09-29T12:00:00.000Z",
     "duration": "3141 ms",
     "proof": "CAP-ABS-013.png",
-    "error": "Ancien justificatif non archivé par le parcours collaborateur.",
-    "comment": "signification archivé = status ARCHIVE (exclu de findActiveOne). oldDocumentId=7. Rôle Multi-rôles = formulation générique."
+    "error": "",
+    "comment": "ANO-009 corrigée. Retest du 29/09/2026 conforme."
   },
   {
     "id": "ABS-014",
@@ -201,13 +201,13 @@
     "module": "ABS",
     "scenario": "RH enregistre définitivement l’absence",
     "type": "C - UI + API",
-    "status": "Bloqué",
-    "result": "statut=A_VERIFIER_PAR_RH | bouton Autoriser l'absence visible=non | API register HTTP=400 message=\"Tous les justificatifs actifs doivent être acceptés par la RH avant l’enregistrement de l’absence.\" | statut après=A_VERIFIER_PAR_RH",
-    "date": "2026-09-23T14:56:20.601Z",
+    "status": "Conforme",
+    "result": "bouton Autoriser l'absence visible=oui | register HTTP=200 | statut A_VERIFIER_PAR_RH → ENREGISTREE",
+    "date": "2026-09-29T12:00:00.000Z",
     "duration": "3107 ms",
     "proof": "CAP-ABS-015.png",
-    "error": "Bloqué par ANO-009 : l’ancien justificatif REJETE reste actif, donc « tous les justificatifs actifs acceptés » n’est jamais vrai et l’enregistrement définitif est refusé.",
-    "comment": "declarationId=7, documents actifs=8:ACCEPTE,7:REJETE"
+    "error": "",
+    "comment": "ANO-009 corrigée. Retest du 29/09/2026 conforme."
   },
   {
     "id": "ABS-016",
@@ -229,13 +229,13 @@
     "module": "ABS",
     "scenario": "Collaborateur annule son brouillon d’absence",
     "type": "C - UI + API",
-    "status": "Non conforme",
-    "result": "brouillon préparé par RH (draftId=9, statut=BROUILLON) | UI bouton annulation=non | API cancel COL-C HTTP=403 | statut après=BROUILLON",
-    "date": "2026-09-23T14:56:26.797Z",
+    "status": "Conforme",
+    "result": "Bouton UI « Annuler le brouillon » utilisé ; HTTP 200, BROUILLON → ANNULEE ; contrôle négatif ownership : autre collaborateur HTTP 403, aucune mutation non autorisée.",
+    "date": "2026-09-29T12:00:00.000Z",
     "duration": "2321 ms",
-    "proof": "CAP-ABS-017.png",
-    "error": "Le collaborateur possède un brouillon valide, mais aucune action d’annulation n’est disponible et l’API cancel retourne 403.",
-    "comment": "draftId=9, propriétaire=COL-C (id=19)"
+    "proof": "Observation directe + Contrôle API + Contrôle technique",
+    "error": "",
+    "comment": "ANO-010 corrigée. Retest du 29/09/2026 conforme."
   },
   {
     "id": "ADM-001",
@@ -523,13 +523,13 @@
     "module": "ADM",
     "scenario": "RH réactive la fermeture",
     "type": "C - Mixte UI + API",
-    "status": "Non conforme",
-    "result": "Aucune action de réactivation de fermeture disponible dans l’UI.",
-    "date": "2026-09-22T15:34:53.343Z",
+    "status": "Conforme",
+    "result": "UI bouton Réactiver présent=true | statut affiché=\"Inactive\" | PATCH /holidays/:id/enable HTTP=200 | isActive après=true",
+    "date": "2026-09-29T12:00:00.000Z",
     "duration": "0 ms",
     "proof": "",
-    "error": "Fonctionnalité UI manquante : réactivation de fermeture GMES.",
-    "comment": "ANO-007"
+    "error": "",
+    "comment": "ANO-007 corrigée. Retest du 29/09/2026 conforme."
   },
   {
     "id": "ADM-022",
@@ -1013,13 +1013,13 @@
     "module": "CAN",
     "scenario": "Collaborateur annule une demande avant décision",
     "type": "C - UI + API",
-    "status": "Non conforme",
-    "result": "cancel UI HTTP=409 message=\"La réservation active du solde ne correspond pas au nombre de jours de la demande.\" | statut EN_ATTENTE_VALIDATION→EN_ATTENTE_VALIDATION | balance 30→30",
-    "date": "2026-09-23T18:58:07.940Z",
+    "status": "Conforme",
+    "result": "cancel UI HTTP=200 | statut EN_ATTENTE_VALIDATION → ANNULEE | mouvements solde 0 → 0 (aucun débit/crédit double)",
+    "date": "2026-09-29T12:00:00.000Z",
     "duration": "5131 ms",
     "proof": "CAP-CAN-002.png",
-    "error": "ANO-011 : l’annulation avant décision échoue (409 réservation).",
-    "comment": "requestId=34"
+    "error": "",
+    "comment": "ANO-011 corrigée. Retest du 29/09/2026 conforme."
   },
   {
     "id": "CAN-003",
@@ -1153,13 +1153,13 @@
     "module": "DER",
     "scenario": "Collaborateur modifie le motif de dérogation",
     "type": "B - API",
-    "status": "Non conforme",
-    "result": "PATCH /derogations/:id HTTP=200 | motif \"Motif initial recette DER-001.\" → \"Motif modifié recette DER-002.\" | persistance=true | doublons=1",
-    "date": "2026-09-24T11:37:00.582Z",
+    "status": "Conforme",
+    "result": "PATCH /derogations/:id via interface collaborateur HTTP=200 | motif modifié et persisté | valeur correcte après rechargement | submittedAt=null avant soumission",
+    "date": "2026-09-29T12:00:00.000Z",
     "duration": "138 ms",
     "proof": "",
-    "error": "ANO-012 : le backend expose PATCH /derogations/:id pour modifier le motif, mais aucune action correspondante n’est disponible dans l’interface collaborateur.",
-    "comment": "derogationId=3. Écart UI produit : modification du motif réalisable uniquement par API."
+    "error": "",
+    "comment": "ANO-012 corrigée. Retest UI/API du 29/09/2026 conforme : le collaborateur peut modifier le motif de sa dérogation depuis son brouillon et la modification est persistée."
   },
   {
     "id": "DER-003",
@@ -1167,13 +1167,13 @@
     "module": "DER",
     "scenario": "Collaborateur soumet la dérogation",
     "type": "B - API",
-    "status": "Non conforme",
-    "result": "POST /derogations/:id/submit HTTP=200 | statut suivant=EN_ATTENTE_RH | trace DEROGATION_DEMANDEE=2 entrée(s), dernière derogationId=3 | signature dédiée=aucune (non prévue pour une dérogation)",
-    "date": "2026-09-24T11:37:04.653Z",
+    "status": "Conforme",
+    "result": "Soumission via UI HTTP=200 | submittedAt renseigné | 2e soumission HTTP=409 | audit 1→2 sans duplication | notification 0→1 sans duplication | bouton Soumettre absent après soumission, reload et nouvelle session",
+    "date": "2026-09-29T12:00:00.000Z",
     "duration": "4071 ms",
     "proof": "CAP-DER-003.png",
-    "error": "ANO-012 : le backend expose POST /derogations/:id/submit pour soumettre la dérogation, mais aucune action correspondante n’est disponible dans l’interface collaborateur.",
-    "comment": "derogationId=3. Écart UI produit : soumission réalisable uniquement par API."
+    "error": "",
+    "comment": "ANO-012 corrigée. Retest du 29/09/2026 conforme : la soumission de dérogation est persistée via submittedAt ; une seconde soumission est refusée sans duplication d’audit ni de notification. L’état de soumission est désormais persisté par submittedAt/submitted_at ; une migration TypeORM assure la compatibilité des bases existantes et le backfill des dérogations historiques."
   },
   {
     "id": "DER-004",
@@ -1223,13 +1223,13 @@
     "module": "DER",
     "scenario": "Collaborateur annule la demande dérogatoire avant décision",
     "type": "B - API",
-    "status": "Non conforme",
-    "result": "create HTTP=201 | submit HTTP=200 | avant annulation statut=EN_ATTENTE_RH décidéPar=null | DELETE HTTP=204 | GET après=404 | demande liée=BROUILLON | consommation=aucune",
-    "date": "2026-09-24T11:37:15.562Z",
+    "status": "Conforme",
+    "result": "Annulation avant décision via UI avec confirmation HTTP=204 | GET après=404 | demande liée BROUILLON | aucune consommation",
+    "date": "2026-09-29T12:00:00.000Z",
     "duration": "4290 ms",
     "proof": "CAP-DER-007.png",
-    "error": "ANO-012 : le backend expose DELETE /derogations/:id pour annuler avant décision, mais aucune action correspondante n’est disponible dans l’interface collaborateur.",
-    "comment": "derogationId=4, requestId=34. Écart UI produit : annulation avant décision réalisable uniquement par API."
+    "error": "",
+    "comment": "ANO-012 corrigée. Retest UI/API du 29/09/2026 conforme : le collaborateur peut annuler sa dérogation avant décision sans consommation indue."
   },
   {
     "id": "DIR-001",
@@ -1307,13 +1307,13 @@
     "module": "DIR",
     "scenario": "Solde insuffisant du Directeur → 400",
     "type": "B - API",
-    "status": "Non conforme",
-    "result": "HTTP=201",
-    "date": "2026-09-24T12:36:53.267Z",
+    "status": "Conforme",
+    "result": "HTTP=400 (attendu 400) | demande créée=false",
+    "date": "2026-09-29T12:00:00.000Z",
     "duration": "0 ms",
     "proof": "",
-    "error": "ANO-013 : la route Directeur n’effectue aucun contrôle de solde.",
-    "comment": ""
+    "error": "",
+    "comment": "ANO-013 corrigée. Retest du 29/09/2026 conforme."
   },
   {
     "id": "DIR-007",
@@ -1321,13 +1321,13 @@
     "module": "DIR",
     "scenario": "La transaction du Directeur est cohérente : aucune demande sans solde",
     "type": "B - API",
-    "status": "Non conforme",
-    "result": "demande créée sans solde=true",
-    "date": "2026-09-24T12:36:53.267Z",
+    "status": "Conforme",
+    "result": "demande créée sans solde=false",
+    "date": "2026-09-29T12:00:00.000Z",
     "duration": "0 ms",
     "proof": "",
     "error": "",
-    "comment": ""
+    "comment": "ANO-013 corrigée. Retest du 29/09/2026 conforme."
   },
   {
     "id": "DIR-008",
@@ -1405,13 +1405,13 @@
     "module": "DIR",
     "scenario": "Le solde N-1 du Directeur est déduit d’un jour",
     "type": "B - API",
-    "status": "Non conforme",
-    "result": "avant=30 après=30 delta=0",
-    "date": "2026-09-24T12:36:53.680Z",
+    "status": "Conforme",
+    "result": "HTTP=201 | statut=VALIDEE | balanceProcessingStatus=DEFINITIF | deductedDays=1 | solde N-1 30→29 | delta=1 | solde N inchangé | 1 mouvement DEDUCTION de 1 jour",
+    "date": "2026-09-29T12:00:00.000Z",
     "duration": "0 ms",
     "proof": "",
-    "error": "ANO-013 : la route Directeur ne débite pas le solde.",
-    "comment": ""
+    "error": "",
+    "comment": "ANO-013 corrigée. Micro-validation exacte d’un jour du 29/09/2026 conforme."
   },
   {
     "id": "DIR-014",
@@ -1937,13 +1937,13 @@
     "module": "EXP",
     "scenario": "Directeur ne télécharge pas un export nominatif",
     "type": "B - API",
-    "status": "Non conforme",
-    "result": "HTTP=200",
-    "date": "2026-09-24T13:01:42.570Z",
+    "status": "Conforme",
+    "result": "HTTP=403 (attendu 403/401) | aucun contenu nominatif renvoyé",
+    "date": "2026-09-29T12:00:00.000Z",
     "duration": "0 ms",
     "proof": "",
-    "error": "ANO-014 : le Directeur peut télécharger un export nominatif.",
-    "comment": ""
+    "error": "",
+    "comment": "ANO-014 corrigée. Retest du 29/09/2026 conforme."
   },
   {
     "id": "EXP-004",
@@ -1979,13 +1979,13 @@
     "module": "EXP",
     "scenario": "RH prévisualise la clôture",
     "type": "B - API",
-    "status": "Non conforme",
-    "result": "HTTP=200",
-    "date": "2026-09-24T13:01:45.396Z",
+    "status": "Conforme",
+    "result": "Prévisualisation via interface RH (GET /leave-balances/period/:period/preview) HTTP=200 | résultat visible dans l’interface",
+    "date": "2026-09-29T12:00:00.000Z",
     "duration": "0 ms",
     "proof": "CAP-EXP-006.png",
-    "error": "ANO-017 : interface RH de clôture/report de période absente (aucune UI period/preview, period/carryover, period/close).",
-    "comment": "preuve backend conservée mais procédure utilisateur non réalisable en UI."
+    "error": "",
+    "comment": "ANO-017 corrigée. Retest UI/API du 29/09/2026 conforme : la RH peut prévisualiser la clôture depuis l’interface."
   },
   {
     "id": "EXP-007",
@@ -2007,13 +2007,13 @@
     "module": "EXP",
     "scenario": "RH accorde un report exceptionnel",
     "type": "B - API",
-    "status": "Non conforme",
-    "result": "HTTP=201",
-    "date": "2026-09-24T13:01:45.530Z",
+    "status": "Conforme",
+    "result": "Report exceptionnel via interface RH (POST /leave-balances/period/carryover) HTTP=201 | report enregistré | interface rafraîchie",
+    "date": "2026-09-29T12:00:00.000Z",
     "duration": "0 ms",
     "proof": "",
-    "error": "ANO-017 : interface RH de clôture/report de période absente (aucune UI period/preview, period/carryover, period/close).",
-    "comment": "preuve backend conservée mais procédure utilisateur non réalisable en UI."
+    "error": "",
+    "comment": "ANO-017 corrigée. Retest UI/API du 29/09/2026 conforme : la RH peut accorder un report exceptionnel depuis l’interface."
   },
   {
     "id": "EXP-009",
@@ -2021,13 +2021,13 @@
     "module": "EXP",
     "scenario": "Un report supérieur au reliquat est refusé",
     "type": "B - API",
-    "status": "Non conforme",
-    "result": "HTTP=400",
-    "date": "2026-09-24T13:01:45.614Z",
+    "status": "Conforme",
+    "result": "Report supérieur au reliquat via UI RH HTTP=400 | erreur visible dans l’interface | aucune mutation partielle",
+    "date": "2026-09-29T12:00:00.000Z",
     "duration": "0 ms",
     "proof": "",
-    "error": "ANO-017 : interface RH de clôture/report de période absente (aucune UI period/preview, period/carryover, period/close).",
-    "comment": "preuve backend conservée mais procédure utilisateur non réalisable en UI."
+    "error": "",
+    "comment": "ANO-017 corrigée. Retest UI/API du 29/09/2026 conforme : le report supérieur au reliquat est refusé avec message visible dans l’interface."
   },
   {
     "id": "EXP-010",
@@ -2049,13 +2049,13 @@
     "module": "EXP",
     "scenario": "RH clôture transactionnellement la période",
     "type": "B - API",
-    "status": "Non conforme",
-    "result": "HTTP=201",
-    "date": "2026-09-24T13:01:50.593Z",
+    "status": "Conforme",
+    "result": "Clôture de période via interface RH avec confirmation (POST /leave-balances/period/close) HTTP=201 | transaction/mouvements cohérents",
+    "date": "2026-09-29T12:00:00.000Z",
     "duration": "0 ms",
     "proof": "CAP-EXP-011.png",
-    "error": "ANO-017 : interface RH de clôture/report de période absente (aucune UI period/preview, period/carryover, period/close).",
-    "comment": "preuve backend conservée mais procédure utilisateur non réalisable en UI."
+    "error": "",
+    "comment": "ANO-017 corrigée. Retest UI/API du 29/09/2026 conforme : la RH peut clôturer la période depuis l’interface."
   },
   {
     "id": "EXP-012",
@@ -2063,13 +2063,13 @@
     "module": "EXP",
     "scenario": "Une seconde clôture de la même période est refusée",
     "type": "B - API",
-    "status": "Non conforme",
-    "result": "HTTP=409",
-    "date": "2026-09-24T13:01:53.106Z",
+    "status": "Conforme",
+    "result": "Période déjà clôturée : interface empêchant une nouvelle clôture (bouton désactivé) | appel direct de seconde clôture HTTP=409 | aucune duplication",
+    "date": "2026-09-29T12:00:00.000Z",
     "duration": "0 ms",
     "proof": "CAP-EXP-012.png",
-    "error": "ANO-017 : interface RH de clôture/report de période absente (aucune UI period/preview, period/carryover, period/close).",
-    "comment": "preuve backend conservée mais procédure utilisateur non réalisable en UI."
+    "error": "",
+    "comment": "ANO-017 corrigée. Retest UI/API du 29/09/2026 conforme : la seconde clôture est prévenue dans l’interface et refusée par API."
   },
   {
     "id": "EXP-013",
@@ -2329,13 +2329,13 @@
     "module": "HALF",
     "scenario": "PATCH brouillon heures + startPeriod refusé",
     "type": "B - API",
-    "status": "Non conforme",
-    "result": "HTTP=200 durationHours 4→null",
-    "date": "2026-09-24T13:07:46.706Z",
+    "status": "Conforme",
+    "result": "HTTP=400 | avant durationHours=4 → après=4 (startPeriod avant=null après=null) | aucune mutation",
+    "date": "2026-09-29T12:00:00.000Z",
     "duration": "0 ms",
     "proof": "",
     "error": "",
-    "comment": ""
+    "comment": "ANO-015 corrigée. Retest du 29/09/2026 conforme."
   },
   {
     "id": "HALF-019",
@@ -2833,13 +2833,13 @@
     "module": "HALF",
     "scenario": "Le collaborateur annule sa demande de notification",
     "type": "B - API",
-    "status": "Non conforme",
-    "result": "HTTP=409",
-    "date": "2026-09-24T13:36:22.550Z",
+    "status": "Conforme",
+    "result": "demi-journée deductedDays=0.5 | cancel HTTP=200 | statut=ANNULEE",
+    "date": "2026-09-29T12:00:00.000Z",
     "duration": "0 ms",
     "proof": "",
-    "error": "ANO-011 : annulation avant décision échoue (409 réservation).",
-    "comment": ""
+    "error": "",
+    "comment": "ANO-011 corrigée. Retest du 29/09/2026 conforme."
   },
   {
     "id": "HALF-055",
@@ -3491,13 +3491,13 @@
     "module": "PRE",
     "scenario": "Le relais est tracé dans l’audit (REPRISE_PAR_RELAIS)",
     "type": "B - API",
-    "status": "Non conforme",
-    "result": "traces=0 actor=undefined rh=14",
-    "date": "2026-09-24T12:42:17.639Z",
+    "status": "Conforme",
+    "result": "REPRISE_PAR_RELAIS présente (traces=1) | actorId=RH réel | resourceId correct | aucune donnée sensible | validation RH normale : aucune trace parasite",
+    "date": "2026-09-29T12:00:00.000Z",
     "duration": "0 ms",
     "proof": "",
     "error": "",
-    "comment": "ANO-016 : la reprise RH (secours) ne trace pas REPRISE_PAR_RELAIS."
+    "comment": "ANO-016 corrigée. Retest du 29/09/2026 conforme : la reprise par secours/relais est tracée par REPRISE_PAR_RELAIS avec l’acteur réel ; aucun faux positif lors d’une validation RH normale."
   },
   {
     "id": "PRE-020",
@@ -4205,13 +4205,13 @@
     "module": "RHC",
     "scenario": "Le collaborateur propriétaire annule sa demande",
     "type": "C - UI + API",
-    "status": "Non conforme",
-    "result": "HTTP=409",
-    "date": "2026-09-24T12:27:36.678Z",
+    "status": "Conforme",
+    "result": "collaborateur propriétaire cancel HTTP=200 | statut=ANNULEE",
+    "date": "2026-09-29T12:00:00.000Z",
     "duration": "0 ms",
     "proof": "CAP-RHC-032.png",
-    "error": "ANO-011 : annulation avant décision échoue (409 réservation).",
-    "comment": ""
+    "error": "",
+    "comment": "ANO-011 corrigée. Retest du 29/09/2026 conforme."
   },
   {
     "id": "RHC-033",
@@ -4961,13 +4961,13 @@
     "module": "VAL",
     "scenario": "ADMIN réactive le secours 1",
     "type": "C - UI + API",
-    "status": "Non conforme",
-    "result": "HTTP=200",
-    "date": "2026-09-24T15:19:15.687Z",
+    "status": "Conforme",
+    "result": "UI bouton Réactiver présent=1 enabled=true | PATCH HTTP=200 | isActive false→true | même identifiant conservé | aucun doublon",
+    "date": "2026-09-29T12:00:00.000Z",
     "duration": "0 ms",
     "proof": "CAP-VAL-010.png",
-    "error": "ANO-018 : bouton Réactiver désactivé (validator.isActive absent de la réponse API).",
-    "comment": ""
+    "error": "",
+    "comment": "ANO-018 corrigée. Retest UI/API du 29/09/2026 conforme."
   },
   {
     "id": "VAL-011",
@@ -4975,13 +4975,13 @@
     "module": "VAL",
     "scenario": "La liste des valideurs expose les deux secours",
     "type": "C - UI + API",
-    "status": "Non conforme",
-    "result": "backupValidators=[14,15]",
-    "date": "2026-09-24T15:19:18.072Z",
+    "status": "Conforme",
+    "result": "deux secours exposés après réactivation | backupValidators contient les deux identifiants attendus",
+    "date": "2026-09-29T12:00:00.000Z",
     "duration": "0 ms",
     "proof": "CAP-VAL-011.png",
-    "error": "ANO-018 : les secours actifs sont affichés Inopérant (validator.isActive absent).",
-    "comment": ""
+    "error": "",
+    "comment": "ANO-018 corrigée. Retest du 29/09/2026 conforme : les deux valideurs de secours sont correctement exposés."
   },
   {
     "id": "VAL-012",
@@ -5479,13 +5479,13 @@
     "module": "VAL",
     "scenario": "La notification de soumission désigne le remplaçant, pas le Responsable remplacé",
     "type": "",
-    "status": "Non conforme",
-    "result": "notification remplaçant=1, notification Responsable=0, doublon=true, UI notif remplaçant visible=3",
-    "date": "2026-09-25T10:30:31.175Z",
+    "status": "Conforme",
+    "result": "passage 1 = 1 notification remplaçant | passage 2 = 1 | passage 3 = 1 | Responsable remplacé = 0 | doublon BDD = non | doublon UI = non | demande distincte correctement notifiée",
+    "date": "2026-09-29T12:00:00.000Z",
     "duration": "0 ms",
     "proof": "CAP-VAL-047.png",
-    "error": "NC",
-    "comment": "requestId=34"
+    "error": "",
+    "comment": "ANO-019 validée par retest le 29/09/2026 : l’idempotence existante est confirmée, aucun doublon n’est créé lors des passages répétés de maintenance."
   },
   {
     "id": "VAL-048",

@@ -53,6 +53,9 @@ export function RecapCard({
   onSaveDraft,
   onSubmit,
   onRequestDerogation,
+  onUpdateDerogation,
+  onSubmitDerogation,
+  onCancelDerogation,
   editingExisting = false,
   preparationMode = false,
   preparedForName = '',
@@ -62,6 +65,9 @@ export function RecapCard({
   const [derogationReason, setDerogationReason] = useState('')
   const [derogationSending, setDerogationSending] = useState(false)
   const [derogationError, setDerogationError] = useState(null)
+  const [editingDerogation, setEditingDerogation] = useState(false)
+  const [editingDerogationReason, setEditingDerogationReason] = useState('')
+  const [derogationBusy, setDerogationBusy] = useState(false)
 
   useAutoDismiss(derogationError, setDerogationError)
 
@@ -107,6 +113,48 @@ export function RecapCard({
     derogationNeeded &&
       (!derogation || derogation.status === 'EXPIREE'),
   )
+
+  const derogationEditable = Boolean(
+    derogation &&
+    derogation.status === 'EN_ATTENTE_RH' &&
+    derogation.decidedByRhId == null,
+  )
+
+  // La soumission n'est proposée qu'une seule fois, sur la base de l'état
+  // persistant `submittedAt` (renseigné uniquement par submitDraft, jamais
+  // par createDraft). Modifier/Annuler restent autorisés tant que la RH n'a
+  // pas décidé (règle backend ensureDerogationIsDraft).
+  const canSubmitDerogation = Boolean(
+    derogationEditable && derogation.submittedAt == null,
+  )
+
+  const runDerogationAction = async (action) => {
+    if (derogationBusy) return
+    setDerogationBusy(true)
+    try {
+      await action()
+    } finally {
+      setDerogationBusy(false)
+    }
+  }
+
+  const submitExistingDerogation = () => {
+    runDerogationAction(() => onSubmitDerogation?.(derogation.id))
+  }
+
+  const cancelExistingDerogation = () => {
+    if (!window.confirm('Annuler cette demande de dérogation ?')) return
+    runDerogationAction(() => onCancelDerogation?.(derogation.id))
+  }
+
+  const saveExistingDerogation = () => {
+    const reason = editingDerogationReason.trim()
+    if (!reason) return
+    runDerogationAction(async () => {
+      await onUpdateDerogation?.(derogation.id, reason)
+      setEditingDerogation(false)
+    })
+  }
 
   const submitAllowed =
     periodComplete &&
@@ -280,13 +328,56 @@ export function RecapCard({
           )}
 
           {!preparationMode && derogation && (
-            <section className="nr-recap__block">
+            <section className="nr-recap__block nr-derogation-manage">
               <h4 className="nr-recap__subtitle">Dérogation RH</h4>
               <span
                 className={`nr-derogation-badge nr-derogation-badge--${derogation.status.toLowerCase()}`}
               >
                 {DEROGATION_LABELS[derogationWorkflowStatus] ?? derogation.status}
               </span>
+
+              {derogation.reason && (
+                <p className="nr-derogation-manage__reason">{derogation.reason}</p>
+              )}
+
+              {derogationEditable && !editingDerogation && (
+                <div className="nr-derogation-manage__actions">
+                  <button type="button" className="nr-btn nr-btn--ghost" onClick={() => { setEditingDerogationReason(derogation.reason ?? ''); setEditingDerogation(true) }} disabled={derogationBusy || saving || submitting}>
+                    Modifier
+                  </button>
+                  {canSubmitDerogation && (
+                    <button type="button" className="nr-btn nr-btn--secondary" onClick={submitExistingDerogation} disabled={derogationBusy || saving || submitting}>
+                      {derogationBusy ? 'Soumission…' : 'Soumettre'}
+                    </button>
+                  )}
+                  <button type="button" className="nr-btn nr-btn--ghost" onClick={cancelExistingDerogation} disabled={derogationBusy || saving || submitting}>
+                    Annuler
+                  </button>
+                </div>
+              )}
+
+              {derogationEditable && editingDerogation && (
+                <div className="nr-derogation-manage__form">
+                  <textarea
+                    id="derogation-reason"
+                    rows={3}
+                    maxLength={2000}
+                    value={editingDerogationReason}
+                    onChange={(event) => setEditingDerogationReason(event.target.value)}
+                  />
+                  <div className="nr-derogation-manage__actions">
+                    <button type="button" className="nr-btn nr-btn--ghost" onClick={() => setEditingDerogation(false)} disabled={derogationBusy || saving || submitting}>Annuler</button>
+                    <button
+                      type="button"
+                      className="nr-btn nr-btn--secondary"
+                      onClick={saveExistingDerogation}
+                      disabled={derogationBusy || saving || submitting || !editingDerogationReason.trim()}
+                    >
+                      {derogationBusy ? 'Enregistrement…' : 'Enregistrer'}
+                    </button>
+                  </div>
+                </div>
+              )}
             </section>
           )}
 

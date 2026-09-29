@@ -1,0 +1,190 @@
+{
+  "lot": 3,
+  "dateRetest": "29/09/2026",
+  "executed": true,
+  "anomalies": [
+    {
+      "anomalyId": "ANO-013",
+      "severity": "Majeure",
+      "cause": "createDirectorRequest enregistrait le congé du Directeur (VALIDEE/DEFINITIF) sans contrôler la disponibilité du solde ni débiter les compteurs, contrairement au reste de l'application.",
+      "filesModified": [
+        "backend/src/leave-requests/leave-requests.service.ts",
+        "backend/src/leave-balances/leave-balances.service.ts"
+      ],
+      "correction": "Contrôle de disponibilité (N-1 + N) avant création puis imputation via applyPaidLeaveForRequest (N-1 prioritaire puis N), le tout dans la transaction.",
+      "scenarios": [
+        {
+          "id": "DIR-005",
+          "status": "Conforme",
+          "result": "HTTP=200/201 available=0",
+          "http": 200
+        },
+        {
+          "id": "DIR-006",
+          "status": "Conforme",
+          "result": "HTTP=400 (attendu 400) | demande créée=false",
+          "http": 400
+        },
+        {
+          "id": "DIR-007",
+          "status": "Conforme",
+          "result": "demande créée sans solde=false"
+        },
+        {
+          "id": "DIR-008",
+          "status": "Conforme",
+          "result": "HTTP=200/201 available=30"
+        },
+        {
+          "id": "DIR-009",
+          "status": "Conforme",
+          "result": "HTTP=201 statut=VALIDEE",
+          "http": 201
+        },
+        {
+          "id": "DIR-013",
+          "status": "Conforme",
+          "result": "CAS EXACT 1 JOUR (2026-10-19 MATIN→APRES_MIDI) : HTTP=201 VALIDEE | deductedDays=1 | N-1 30→29 delta=1 | N inchangé | 1 mouvement DEDUCTION de 1j",
+          "http": 201,
+          "exactOneDay": true
+        }
+      ],
+      "nonRegressions": [],
+      "dbChecks": [
+        "RETEST EXACT DIR-013 (1 jour, 2026-10-19) : N-1 30→29 (delta=1), deductedDays=1, N 0→0, 1 mouvement DEDUCTION de 1.00j, HTTP=201, statut=VALIDEE, balanceProcessingStatus=DEFINITIF",
+        "SOLDE INSUFFISANT (1 jour, N-1=0/N=0) : HTTP=400, aucune demande créée, aucun mouvement, soldes inchangés (DIR-006/DIR-007 conformes)",
+        "CONCURRENCE (solde total=1, deux créations simultanées de 1 jour) : HTTP=[201,400], 1 demande créée, 1 mouvement DEDUCTION, N-1 1→0, jamais négatif (atomicité validée)",
+        "Contrôle complémentaire (premier retest LOT 3) : demande de 3 jours → N-1 30→27 delta=3=deductedDays, 1 mouvement DEDUCTION de 3.00j"
+      ],
+      "conformiteFinale": true,
+      "conclusion": "ANO-013 corrigée : refus 400 sur solde insuffisant, aucune création parasite, débit exact du solde N-1, transaction cohérente.",
+      "atomicity": {
+        "sufficiencyCheckUnderLock": true,
+        "mechanism": "applyPaidLeaveForRequest verrouille les compteurs N-1/N en pessimistic_write puis vérifie requireSufficientBalance avant imputation, dans la transaction createDirectorRequest",
+        "concurrencyTest": "exécuté : solde=1, 2 créations simultanées → 1×201 + 1×400, solde final 0, jamais négatif"
+      }
+    },
+    {
+      "anomalyId": "ANO-014",
+      "severity": "Majeure",
+      "cause": "ExportsController était ouvert (class-level) à RH et DIRECTEUR : le Directeur pouvait télécharger les exports nominatifs réservés à la RH.",
+      "filesModified": [
+        "backend/src/exports/exports.controller.ts"
+      ],
+      "correction": "Restriction du contrôleur d'exports au rôle RH (contrôle backend). Les statistiques agrégées Directeur restent sur /reports/director/statistics.",
+      "scenarios": [
+        {
+          "id": "EXP-001",
+          "status": "Conforme",
+          "result": "HTTP=200 type=text/csv; charset=utf-8 size=3",
+          "http": 200
+        },
+        {
+          "id": "EXP-002",
+          "status": "Conforme",
+          "result": "HTTP=200 type=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet size=2286",
+          "http": 200
+        },
+        {
+          "id": "EXP-003",
+          "status": "Conforme",
+          "result": "HTTP=403 (attendu 403/401) | contenu=aucun",
+          "http": 403
+        },
+        {
+          "id": "EXP-004",
+          "status": "Conforme",
+          "result": "HTTP=200",
+          "http": 200
+        },
+        {
+          "id": "EXP-005",
+          "status": "Conforme",
+          "result": "HTTP=200 nominative=false",
+          "http": 200
+        }
+      ],
+      "nonRegressions": [],
+      "dbChecks": [
+        "Directeur /exports/leave-requests → HTTP=403, taille=103 (aucun contenu nominatif renvoyé=true)"
+      ],
+      "conformiteFinale": true,
+      "conclusion": "ANO-014 corrigée : export nominatif refusé au Directeur (403), accès RH et statistiques agrégées Directeur préservés."
+    },
+    {
+      "anomalyId": "ANO-015",
+      "severity": "Majeure",
+      "cause": "updateDraft convertissait silencieusement un brouillon en heures vers un mode jours/demi-journées lorsqu'un PATCH ne fournissait que des périodes sans durationHours.",
+      "filesModified": [
+        "backend/src/absence-declarations/absence-declarations.service.ts"
+      ],
+      "correction": "Refus explicite (400) d'un PATCH qui fournit des périodes à un brouillon en mode heures sans durationHours, sans mutation.",
+      "scenarios": [
+        {
+          "id": "HALF-018",
+          "status": "Conforme",
+          "result": "HTTP=400 | avant durationHours=4 → après=4 (startPeriod avant=null après=null)",
+          "http": 400
+        },
+        {
+          "id": "HALF-019",
+          "status": "Conforme",
+          "result": "HTTP=201"
+        },
+        {
+          "id": "HALF-020",
+          "status": "Conforme",
+          "result": "HTTP=400"
+        },
+        {
+          "id": "HALF-021",
+          "status": "Conforme",
+          "result": "HTTP=400, mode heures conservé"
+        }
+      ],
+      "nonRegressions": [],
+      "dbChecks": [
+        "HALF-018 avant={\"durationHours\":4,\"startPeriod\":null,\"endPeriod\":null} après={\"durationHours\":4,\"startPeriod\":null,\"endPeriod\":null} (durationHours conservé=true)"
+      ],
+      "conformiteFinale": true,
+      "conclusion": "ANO-015 corrigée : combinaison heures + périodes refusée (400) sans mutation du brouillon ; transitions valides préservées."
+    }
+  ],
+  "nonRegressionLOT1_LOT2": [
+    {
+      "id": "ABS-001",
+      "status": "Conforme",
+      "result": "HTTP=201 statut=BROUILLON"
+    },
+    {
+      "id": "ABS-004",
+      "status": "Conforme",
+      "result": "HTTP=200 statut=A_VERIFIER_PAR_RH"
+    },
+    {
+      "id": "ABS-017",
+      "status": "Conforme",
+      "result": "HTTP=200"
+    },
+    {
+      "id": "ADM-021",
+      "status": "Conforme",
+      "result": "HTTP=200 isActive=true"
+    },
+    {
+      "id": "ABS-012",
+      "status": "Conforme",
+      "result": "old archivé=true new EN_ATTENTE=true"
+    },
+    {
+      "id": "ABS-015",
+      "status": "Conforme",
+      "result": "register HTTP=200 statut=ENREGISTREE"
+    },
+    {
+      "id": "CAN-002",
+      "status": "Conforme",
+      "result": "HTTP=200"
+    }
+  ]
+}

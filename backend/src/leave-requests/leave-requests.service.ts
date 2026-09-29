@@ -469,6 +469,13 @@ export class LeaveRequestsService {
       ),
     });
 
+    const referencePeriod =
+      leaveType.deductsPaidLeaveBalance && duration.deductedDays > 0
+        ? await this.getReferencePeriodForDate(
+            createLeaveRequestDto.startDate,
+          )
+        : null;
+
     let requestId = 0;
     let requestEmployeeId = employee.id;
 
@@ -526,6 +533,25 @@ export class LeaveRequestsService {
         );
 
       await this.ensureNoPersonalOverlap(manager, savedRequest);
+
+      if (referencePeriod && duration.deductedDays > 0) {
+        const balanceResult =
+          await this.leaveBalancesService.applyPaidLeaveForRequest(
+            manager,
+            {
+              employeeId: employee.id,
+              leaveRequestId: savedRequest.id,
+              actorId: authenticatedUser.id,
+              expectedDays: duration.deductedDays,
+              referencePeriod,
+              requireSufficientBalance: true,
+            },
+          );
+
+        savedRequest.realBalanceAfter =
+          balanceResult.realBalanceAfter;
+        await manager.getRepository(LeaveRequest).save(savedRequest);
+      }
 
       await this.auditService.recordStatusChange(
         {
@@ -2235,8 +2261,9 @@ export class LeaveRequestsService {
           );
 
         if (
+          releasedReservation.releases.length > 0 &&
           releasedReservation.releasedDays !==
-          leaveRequest.deductedDays
+            leaveRequest.deductedDays
         ) {
           throw new ConflictException(
             'La réservation active du solde ne correspond pas au nombre de jours de la demande.',
@@ -2671,7 +2698,11 @@ export class LeaveRequestsService {
     authenticatedUser: AuthenticatedUser,
     access: DecisionAccess,
   ): Promise<void> {
-    if (access.kind !== 'RELAIS' && access.kind !== 'URGENCE') {
+    if (
+      access.kind !== 'RELAIS' &&
+      access.kind !== 'SECOURS' &&
+      access.kind !== 'URGENCE'
+    ) {
       return;
     }
 
@@ -2679,9 +2710,9 @@ export class LeaveRequestsService {
       {
         actorId: authenticatedUser.id,
         action:
-          access.kind === 'RELAIS'
-            ? AuditAction.REPRISE_PAR_RELAIS
-            : AuditAction.INTERVENTION_URGENCE,
+          access.kind === 'URGENCE'
+            ? AuditAction.INTERVENTION_URGENCE
+            : AuditAction.REPRISE_PAR_RELAIS,
         resourceType: 'LEAVE_REQUESTS',
         resourceId: leaveRequest.id,
         oldStatus: LeaveRequestStatus.EN_ATTENTE_VALIDATION,

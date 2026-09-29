@@ -12,10 +12,13 @@ import { RequestReviewModal } from '@/components/collab/new-request/RequestRevie
 import { SignatureModal } from '@/components/collab/new-request/SignatureModal'
 import {
   createLeaveRequest,
+  deleteDerogation,
   getMyDerogations,
   getMyLeaveBalanceProjection,
   requestDerogation,
+  submitDerogation,
   submitLeaveRequest,
+  updateDerogation,
   updateLeaveRequest,
 } from '@/services/leaveRequests'
 import {
@@ -388,6 +391,29 @@ export function NewRequest() {
     }
   }
 
+  const refreshDerogations = async () => {
+    const updated = await getMyDerogations()
+    setDerogations(updated)
+  }
+
+  const handleUpdateDerogation = async (id, reason) => {
+    await updateDerogation(id, reason)
+    await refreshDerogations()
+    showToast('success', 'Motif de dérogation mis à jour.')
+  }
+
+  const handleSubmitDerogation = async (id) => {
+    await submitDerogation(id)
+    await refreshDerogations()
+    showToast('success', 'Dérogation soumise à la RH.')
+  }
+
+  const handleCancelDerogation = async (id) => {
+    await deleteDerogation(id)
+    await refreshDerogations()
+    showToast('success', 'Dérogation annulée.')
+  }
+
   const hasCompleteRange = Boolean(selection.startDate && selection.endDate)
 
   const requestLabel =
@@ -485,6 +511,9 @@ export function NewRequest() {
               onSaveDraft={handleSaveDraft}
               onSubmit={() => setReviewOpen(true)}
               onRequestDerogation={handleRequestDerogation}
+              onUpdateDerogation={handleUpdateDerogation}
+              onSubmitDerogation={handleSubmitDerogation}
+              onCancelDerogation={handleCancelDerogation}
               editingExisting={isEditMode}
               isAnticipatedLeave={isAnticipatedLeave}
             />

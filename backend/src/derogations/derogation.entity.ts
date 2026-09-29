@@ -75,6 +75,9 @@ export class Derogation {
   })
   requestedAt!: Date;
 
+  @Column({ name: 'submitted_at', type: 'datetime', nullable: true })
+  submittedAt!: Date | null;
+
   @Column({ name: 'decided_by_rh_id', type: 'bigint', nullable: true })
   decidedByRhId!: number | null;
 

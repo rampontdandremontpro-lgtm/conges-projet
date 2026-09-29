@@ -1394,6 +1394,7 @@ export class LeaveBalancesService {
       actorId: number | null;
       expectedDays: number;
       referencePeriod: string;
+      requireSufficientBalance?: boolean;
     },
   ): Promise<{
     processedDays: number;
@@ -1451,6 +1452,21 @@ export class LeaveBalancesService {
       data.referencePeriod,
       LeaveBalanceCounterType.N,
     );
+
+    // Le contrôle de disponibilité s'effectue ici, sur les compteurs déjà
+    // verrouillés (pessimistic_write) dans la transaction courante : aucun
+    // écart n'est possible entre la lecture et le débit (atomicité).
+    if (data.requireSufficientBalance) {
+      const available = this.round(
+        nMinus1.availableDays + n.availableDays,
+      );
+
+      if (available < expectedDays) {
+        throw new BadRequestException(
+          'Le solde disponible est insuffisant pour enregistrer ce congé.',
+        );
+      }
+    }
 
     const allocation = allocatePaidLeave(
       expectedDays,

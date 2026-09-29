@@ -682,3 +682,26 @@
   .rh-balances-filters label:nth-child(3),
   .rh-balances-filters label:nth-child(3) select { min-width: 310px; }
 }
+
+/* LOT 5 — clôture de période */
+.rh-period-closure-modal { max-width: 720px; }
+.rh-period-closure-body { display: flex; flex-direction: column; gap: 14px; padding: 16px; }
+.rh-period-closure-controls { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
+.rh-period-closure-controls label { display: flex; flex-direction: column; gap: 6px; font-size: 11px; color: #64748b; }
+.rh-period-closure-controls select { padding: 8px; border: 1px solid #cbd5e1; border-radius: 8px; font: inherit; }
+.rh-period-closure-summary { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 12px; border: 1px solid #e2e8f0; border-radius: 10px; background: #f8fafc; }
+.rh-period-closure-summary strong { display: block; }
+.rh-period-closure-summary span { font-size: 12px; color: #64748b; }
+.rh-period-closure-summary .is-open { color: #0a8a58; font-weight: 700; }
+.rh-period-closure-summary .is-closed { color: #6b7a8c; font-weight: 700; }
+.rh-period-closure-summary .is-blocked { color: #b85b15; font-weight: 700; }
+.rh-period-closure-section h3 { font-size: 13px; margin: 0 0 10px; }
+.rh-period-closure-carryover { border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px; margin-bottom: 10px; }
+.rh-period-closure-carryover__head { display: flex; justify-content: space-between; margin-bottom: 10px; }
+.rh-period-closure-carryover__form { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
+.rh-period-closure-carryover__form label { display: flex; flex-direction: column; gap: 4px; font-size: 11px; color: #64748b; }
+.rh-period-closure-carryover__form input { padding: 8px; border: 1px solid #cbd5e1; border-radius: 8px; font: inherit; }
+.rh-period-closure-actions { display: flex; justify-content: flex-end; margin-top: 10px; }
+.rh-period-closure-confirm { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.rh-period-closure-confirm span { font-size: 12px; color: #64748b; }
+.rh-balances-top-action.is-danger { background: #fee2e2; color: #b91c1c; }

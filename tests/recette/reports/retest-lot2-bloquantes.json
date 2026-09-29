@@ -1,0 +1,147 @@
+{
+  "generatedAt": "2026-09-29T13:15:22.700Z",
+  "dateRetest": "29/09/2026",
+  "executed": true,
+  "anomalies": [
+    {
+      "anomalyId": "ANO-007",
+      "cause": "Le backend disposait déjà de PATCH /holidays/:id/enable, mais l'UI ne chargeait que les fermetures actives et n'exposait aucune action de réactivation.",
+      "filesModified": [
+        "frontend/src/services/rh/rhHolidays.js",
+        "frontend/src/pages/rh/HolidaysPage.jsx",
+        "frontend/src/styles/rh/holidays.css"
+      ],
+      "scenarios": [
+        {
+          "id": "ADM-020",
+          "status": "Conforme",
+          "result": "PATCH /holidays/1/disable HTTP=200 | isActive=false | fermetures pour cette date=1 (aucun doublon)",
+          "http": 200
+        },
+        {
+          "id": "ADM-021",
+          "status": "Conforme",
+          "result": "UI bouton Réactiver présent=true | statut affiché=\"Inactive\" | PATCH /holidays/1/enable HTTP=200 | isActive après=true",
+          "http": 200
+        },
+        {
+          "id": "ADM-022",
+          "status": "Conforme",
+          "result": "POST /leave-requests startDate=2026-09-01 HTTP=400 message=\"La date de début 2026-09-01 correspond à « Fermeture-LOT2-87689771 » et n’est pas décomptable.\"",
+          "http": 400
+        }
+      ],
+      "nonRegression": [],
+      "conclusion": "ANO-007 corrigée : réactivation UI disponible, désactivation préservée, fermeture non décomptable toujours appliquée."
+    },
+    {
+      "anomalyId": "ANO-009",
+      "cause": "uploadForAbsence créait un nouveau justificatif sans archiver l'ancien REJETE ; l'ancien restait actif et bloquait l'enregistrement définitif (registerByRh).",
+      "filesModified": [
+        "backend/src/documents/documents.service.ts"
+      ],
+      "scenarios": [
+        {
+          "id": "ABS-011",
+          "status": "Conforme",
+          "result": "rejet UI HTTP=200 | document EN_ATTENTE → REJETE | motif=\"Justificatif illisible - retest LOT2.\" | déclaration A_VERIFIER_PAR_RH → JUSTIFICATIF_EN_ATTENTE",
+          "http": 200
+        },
+        {
+          "id": "ABS-012",
+          "status": "Conforme",
+          "result": "POST /documents/absence/1 HTTP=201 | old REJETE → ARCHIVE (archivé=true) | new id=2 (EN_ATTENTE) | déclaration=A_VERIFIER_PAR_RH",
+          "http": 201
+        },
+        {
+          "id": "ABS-013",
+          "status": "Conforme",
+          "result": "old réellement ARCHIVE=true (ARCHIVE) | accept old HTTP=404 | reject old HTTP=404 | old après=ARCHIVE | new après=EN_ATTENTE",
+          "http": 404
+        },
+        {
+          "id": "ABS-014",
+          "status": "Conforme",
+          "result": "acceptation UI HTTP=200 | new EN_ATTENTE → ACCEPTE",
+          "http": 200
+        },
+        {
+          "id": "ABS-015",
+          "status": "Conforme",
+          "result": "bouton Autoriser l'absence visible=oui | register HTTP=200 | statut A_VERIFIER_PAR_RH → ENREGISTREE",
+          "http": 200
+        }
+      ],
+      "nonRegression": [],
+      "conclusion": "ANO-009 corrigée : le remplacement archive l’ancien justificatif rejeté, le nouveau est EN_ATTENTE, et l’enregistrement définitif aboutit."
+    },
+    {
+      "anomalyId": "ANO-011",
+      "cause": "Le nouveau modèle de compteurs ne réserve plus de jours à la soumission ; cancelBeforeDecision exigeait pourtant releasedDays === deductedDays alors qu'aucune réservation active n'existe (releasedDays=0).",
+      "filesModified": [
+        "backend/src/leave-requests/leave-requests.service.ts"
+      ],
+      "scenarios": [
+        {
+          "id": "CAN-002",
+          "status": "Conforme",
+          "result": "cancel UI HTTP=200 | statut EN_ATTENTE_VALIDATION → ANNULEE | mouvements solde 0 → 0 (aucun débit/crédit double)",
+          "http": 200
+        },
+        {
+          "id": "RHC-031",
+          "status": "Conforme",
+          "result": "RH cancel HTTP=403 (interdiction préservée)",
+          "http": 403
+        },
+        {
+          "id": "RHC-032",
+          "status": "Conforme",
+          "result": "collaborateur propriétaire cancel HTTP=200 | statut=ANNULEE",
+          "http": 200
+        },
+        {
+          "id": "HALF-054",
+          "status": "Conforme",
+          "result": "demi-journée deductedDays=0.5 | cancel HTTP=200 | statut=ANNULEE",
+          "http": 200
+        }
+      ],
+      "nonRegression": [
+        {
+          "id": "OWNERSHIP",
+          "status": "Conforme",
+          "result": "autre collaborateur (COL-B) cancel HTTP=403",
+          "http": 403
+        }
+      ],
+      "conclusion": "ANO-011 corrigée : annulation avant décision autorisée au propriétaire, interdictions préservées, demi-journées gérées, aucun mouvement de solde parasite."
+    },
+    {
+      "anomalyId": "NON_REGRESSION_LOT1",
+      "cause": "Contrôle de non-régression des correctifs LOT 1 (absences collaborateur).",
+      "filesModified": [],
+      "scenarios": [
+        {
+          "id": "ABS-001",
+          "status": "Conforme",
+          "result": "POST /absence-declarations HTTP=201 | status=BROUILLON | employeeId=self=true",
+          "http": 201
+        },
+        {
+          "id": "ABS-004",
+          "status": "Conforme",
+          "result": "submit HTTP=200 | BROUILLON → A_VERIFIER_PAR_RH",
+          "http": 200
+        },
+        {
+          "id": "ABS-017",
+          "status": "Conforme",
+          "result": "cancel HTTP=200 | BROUILLON → ANNULEE",
+          "http": 200
+        }
+      ],
+      "conclusion": "Non-régression LOT 1 préservée : ABS-001, ABS-004 et ABS-017 conformes."
+    }
+  ]
+}

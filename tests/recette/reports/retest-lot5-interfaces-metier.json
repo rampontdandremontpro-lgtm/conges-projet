@@ -1,0 +1,220 @@
+{
+  "lot": 5,
+  "dateRetest": "29/09/2026",
+  "executed": true,
+  "anomalies": [
+    {
+      "anomalyId": "ANO-012",
+      "severity": "Majeure",
+      "architecture": "RecapCard (NewRequestPage) — source unique services/leaveRequests.js",
+      "filesModified": [
+        "RecapCard.jsx",
+        "NewRequestPage.jsx",
+        "services/leaveRequests.js",
+        "03-recap-actions.css"
+      ],
+      "filesRemoved": [
+        "services/collab/derogations.js",
+        "RequestDetailPage.jsx (ajouts dérogation LOT 5)"
+      ],
+      "duplicationRestante": false,
+      "scenarios": [
+        {
+          "id": "DER-001",
+          "status": "Conforme",
+          "result": "POST /derogations UI HTTP=201 | id dérogation=1 | id demande=1 | statut=EN_ATTENTE_RH | submittedAt=null"
+        },
+        {
+          "id": "DER-002",
+          "status": "Conforme",
+          "result": "PATCH via UI HTTP=200, motif persisté"
+        },
+        {
+          "id": "DER-003",
+          "status": "Conforme",
+          "result": "mécanisme=submittedAt (colonne persistante) | soumission1=200 | soumission2=409 | audit 1→2 (2e=2) | notif 0→1 (2e=1) | bouton après=0 reload=0 nav=0"
+        },
+        {
+          "id": "DER-007",
+          "status": "Conforme",
+          "result": "submit HTTP=200 puis DELETE via UI avec confirmation HTTP=204, GET 404, demande liée BROUILLON"
+        },
+        {
+          "id": "DER-004",
+          "status": "Conforme",
+          "result": "Responsable décision HTTP=403"
+        },
+        {
+          "id": "DER-005",
+          "status": "Conforme",
+          "result": "RH ACCORDER HTTP=200"
+        },
+        {
+          "id": "DER-006",
+          "status": "Conforme",
+          "result": "RH=200 Directeur=200→ACCORDEE | avant consommation=ACCORDEE usedAt=null | soumission demande HTTP=200 | après=UTILISEE usedAt=défini | demande BROUILLON→EN_ATTENTE_VALIDATION | 2e soumission HTTP=400"
+        },
+        {
+          "id": "OWNERSHIP",
+          "status": "Conforme",
+          "result": "COL-B GET=404 PATCH=404 SUBMIT=404 DELETE=404 | dérogation intacte=true"
+        }
+      ],
+      "conclusion": "ANO-012 validée (micro-validation)."
+    },
+    {
+      "anomalyId": "ANO-017",
+      "severity": "Majeure",
+      "architecture": "PeriodClosureModal (BalancesPage) — routes backend réutilisées",
+      "filesModified": [
+        "PeriodClosureModal.jsx",
+        "BalancesPage.jsx",
+        "services/rh/rhBalances.js",
+        "styles/rh/balances.css"
+      ],
+      "scenarios": [
+        {
+          "id": "EXP-006",
+          "status": "Conforme",
+          "result": "preview via UI HTTP=200"
+        },
+        {
+          "id": "EXP-008",
+          "status": "Conforme",
+          "result": "report valide HTTP=201"
+        },
+        {
+          "id": "EXP-009",
+          "status": "Conforme",
+          "result": "report > reliquat HTTP=400 + message"
+        },
+        {
+          "id": "EXP-011",
+          "status": "Conforme",
+          "result": "clôture HTTP=201"
+        },
+        {
+          "id": "EXP-012",
+          "status": "Conforme",
+          "result": "déjà clôturée + API 409"
+        },
+        {
+          "id": "EXP-013",
+          "status": "Conforme",
+          "result": "N-1 2026-2027 acquiredDays=2 availableDays=2 | report exceptionnel=2 | droits N transférés=0 | transferredFromN(clôture)=0 | assertion=acquiredDays===2"
+        },
+        {
+          "id": "EXP-007",
+          "status": "Conforme",
+          "result": "collaborateur preview HTTP=403"
+        },
+        {
+          "id": "EXP-010",
+          "status": "Conforme",
+          "result": "Directeur close HTTP=403"
+        }
+      ],
+      "conclusion": "ANO-017 validée (micro-validation).",
+      "exp013Value": 2,
+      "exp013Evidence": {
+        "reportExceptionnel": 2,
+        "droitsNTransferes": 0,
+        "nMinus1Final": 2,
+        "transferredFromN": 0
+      }
+    }
+  ],
+  "nonRegression": [
+    {
+      "id": "ABS-001",
+      "status": "Conforme",
+      "result": "HTTP=201"
+    },
+    {
+      "id": "ABS-017",
+      "status": "Conforme",
+      "result": "HTTP=200"
+    },
+    {
+      "id": "ADM-021",
+      "status": "Conforme",
+      "result": "HTTP=200"
+    },
+    {
+      "id": "CAN-002",
+      "status": "Conforme",
+      "result": "HTTP=200"
+    },
+    {
+      "id": "DIR-013",
+      "status": "Conforme",
+      "result": "deductedDays=1 N-1=29"
+    },
+    {
+      "id": "EXP-003",
+      "status": "Conforme",
+      "result": "HTTP=403"
+    },
+    {
+      "id": "HALF-018",
+      "status": "Conforme",
+      "result": "HTTP=400"
+    },
+    {
+      "id": "PRE-019",
+      "status": "Conforme",
+      "result": "REPRISE_PAR_RELAIS traces=1"
+    },
+    {
+      "id": "VAL-010",
+      "status": "Conforme",
+      "result": "enable HTTP=200 isActive=true validator.isActive=true"
+    },
+    {
+      "id": "VAL-047",
+      "status": "Conforme",
+      "result": "notifications remplaçant avant=1 après 2 maintenances=1"
+    }
+  ],
+  "responsive": {
+    "ano012": {
+      "1920x1080": "Conforme",
+      "1366x768": "Conforme",
+      "768x1024": "Conforme",
+      "390x844": "Conforme"
+    },
+    "ano017": {
+      "1920x1080": "Conforme",
+      "1366x768": "Conforme",
+      "768x1024": "Conforme",
+      "390x844": "Conforme"
+    }
+  },
+  "build": {
+    "backend": "OK",
+    "frontend": "OK"
+  },
+  "tests": {
+    "passed": 223,
+    "failed": 11,
+    "failedSuites": [
+      "settings.service.spec",
+      "balance-reminder.service.spec",
+      "documents.service.spec"
+    ],
+    "newFailuresLot5": 0
+  },
+  "migrationSubmittedAt": {
+    "migrationCreated": true,
+    "column": "submitted_at",
+    "nullable": true,
+    "existingDatabaseSupported": true,
+    "backfill": {
+      "fromSubmissionNotification": true,
+      "treatedStatusFallback": true
+    },
+    "secondSubmission": 409,
+    "duplicateAudit": false,
+    "duplicateNotification": false
+  }
+}

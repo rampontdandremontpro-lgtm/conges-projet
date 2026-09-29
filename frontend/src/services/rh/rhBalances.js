@@ -72,3 +72,28 @@ export async function confirmRhBalanceImport(referencePeriod, rows) {
   window.dispatchEvent(new CustomEvent('gmes:data-changed', { detail: { source: 'leave-balances-import' } }))
   return data
 }
+
+export async function previewRhPeriodClose(referencePeriod) {
+  const { data } = await apiClient.get(`/leave-balances/period/${referencePeriod}/preview`)
+  return data
+}
+
+export async function grantRhExceptionalCarryover({ employeeId, closingReferencePeriod, days, reason }) {
+  const { data } = await apiClient.post('/leave-balances/period/carryover', {
+    employeeId,
+    closingReferencePeriod,
+    days,
+    reason,
+  })
+  window.dispatchEvent(new CustomEvent('gmes:data-changed', { detail: { source: 'leave-balances-carryover' } }))
+  return data
+}
+
+export async function closeRhPeriod(referencePeriod) {
+  const { data } = await apiClient.post('/leave-balances/period/close', {
+    referencePeriod,
+    confirm: true,
+  })
+  window.dispatchEvent(new CustomEvent('gmes:data-changed', { detail: { source: 'leave-balances-close' } }))
+  return data
+}

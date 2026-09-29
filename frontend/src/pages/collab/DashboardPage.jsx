@@ -156,6 +156,7 @@ export function DashboardCollaborateur() {
             availableDays={availableDays}
             periodLabel={selectedPeriodLabel}
             onNewRequest={() => navigate('/app/new-request')}
+            onNewAbsence={() => navigate('/app/new-absence')}
           />
           <AlertsCard
             balances={balances}

@@ -268,6 +268,23 @@ export class AbsenceDeclarationsService {
 
     this.ensureSingleMode(dto);
 
+    // ANO-015 : un brouillon en mode heures ne peut pas être converti
+    // silencieusement en jours/demi-journées en fournissant uniquement
+    // des périodes sans durationHours.
+    const isHoursDraft =
+      declaration.durationHours !== null &&
+      declaration.durationHours !== undefined;
+
+    if (
+      isHoursDraft &&
+      dto.durationHours === undefined &&
+      (dto.startPeriod !== undefined || dto.endPeriod !== undefined)
+    ) {
+      throw new BadRequestException(
+        'Une absence saisie en heures ne peut pas être convertie en jours/demi-journées en fournissant uniquement des périodes.',
+      );
+    }
+
     const startDate = dto.startDate ?? declaration.startDate;
     const endDate = dto.endDate ?? declaration.endDate;
 
@@ -745,7 +762,13 @@ export class AbsenceDeclarationsService {
       );
     }
 
-    if (
+    if (authenticatedUser.role === UserRole.COLLABORATEUR) {
+      if (declaration.status !== AbsenceDeclarationStatus.BROUILLON) {
+        throw new ForbiddenException(
+          'Vous ne pouvez annuler que vos brouillons d’absence.',
+        );
+      }
+    } else if (
       authenticatedUser.role !== UserRole.RH &&
       declaration.status === AbsenceDeclarationStatus.ENREGISTREE
     ) {

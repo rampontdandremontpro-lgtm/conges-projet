@@ -18,6 +18,7 @@ import {
   confirmRhBalanceImport,
   initializeRhBalance,
 } from '@/services/rh/rhBalances'
+import { PeriodClosureModal } from './PeriodClosureModal'
 import {
   adjacentReferencePeriodOptions,
   currentReferencePeriod,
@@ -445,6 +446,7 @@ export function RhBalancesPage() {
   const [importOpen, setImportOpen] = useState(false)
   const [importState, setImportState] = useState({ busy: false, rows: [], preview: null, error: '' })
   const [importFileName, setImportFileName] = useState('')
+  const [closureOpen, setClosureOpen] = useState(false)
 
   const load = useCallback(async ({ silent = false } = {}) => {
     if (!silent) setState((current) => ({ ...current, loading: true, error: false }))
@@ -646,6 +648,9 @@ export function RhBalancesPage() {
           <button type="button" className="rh-balances-top-action" onClick={() => { setImportOpen(true); setImportState({ busy: false, rows: [], preview: null, error: '' }); setImportFileName('') }}>
             <Icon name="upload" size={17} /> Importer
           </button>
+          <button type="button" className="rh-balances-top-action" onClick={() => setClosureOpen(true)}>
+            <Icon name="shield" size={17} /> Clôture de période
+          </button>
         </div>
       </div>
 
@@ -755,6 +760,8 @@ export function RhBalancesPage() {
           </>
         )}
       </section>
+
+      {closureOpen && <PeriodClosureModal onClose={() => setClosureOpen(false)} onChanged={() => load({ silent: true })} />}
 
       {importOpen && (
         <div className="rh-balances-import-backdrop" role="presentation" onMouseDown={() => !importState.busy && setImportOpen(false)}>

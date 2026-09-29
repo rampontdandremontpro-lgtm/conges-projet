@@ -148,6 +148,7 @@ export class ValidatorsService {
               prenom: backup.validator.prenom,
               email: backup.validator.email,
               role: backup.validator.role,
+              isActive: backup.validator.isActive,
             }
           : null,
         isActive: backup.isActive,

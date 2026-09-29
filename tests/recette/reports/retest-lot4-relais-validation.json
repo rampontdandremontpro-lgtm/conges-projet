@@ -1,0 +1,130 @@
+{
+  "lot": 4,
+  "dateRetest": "29/09/2026",
+  "executed": true,
+  "anomalies": [
+    {
+      "anomalyId": "ANO-016",
+      "severity": "Majeure",
+      "cause": "saveDecisionAccessHistory n'enregistrait REPRISE_PAR_RELAIS que pour le kind 'RELAIS' (Directeur), pas pour 'SECOURS' (valideur de secours RH/Responsable qui reprend un premier niveau absent).",
+      "filesModified": [
+        "backend/src/leave-requests/leave-requests.service.ts"
+      ],
+      "scenarios": [
+        {
+          "id": "PRE-019",
+          "status": "Conforme",
+          "result": "traces=1 actor=2 rh=2",
+          "http": 200
+        }
+      ],
+      "nonRegressions": [
+        {
+          "id": "PRE-016",
+          "status": "Conforme",
+          "result": "absence=1"
+        },
+        {
+          "id": "PRE-017",
+          "status": "Conforme",
+          "result": "HTTP=200"
+        },
+        {
+          "id": "PRE-018",
+          "status": "Conforme",
+          "result": "RESP=ABSENT HTTP=200 status=VALIDEE"
+        },
+        {
+          "id": "PRE-020",
+          "status": "Conforme",
+          "result": "HTTP=200"
+        }
+      ],
+      "negativeControl": {
+        "status": "Conforme",
+        "result": "validation RH normale → traces REPRISE_PAR_RELAIS=0"
+      },
+      "conclusion": "ANO-016 corrigée : REPRISE_PAR_RELAIS tracée pour la reprise (secours), acteur correct, aucune trace pour la validation RH normale."
+    },
+    {
+      "anomalyId": "ANO-018",
+      "severity": "Majeure",
+      "cause": "Le backend enableBackupValidator fonctionnait, mais la réponse getServiceValidators n'exposait pas validator.isActive : le bouton UI « Réactiver » était donc désactivé (disabled) pour les secours inactifs.",
+      "filesModified": [
+        "backend/src/validators/validators.service.ts"
+      ],
+      "scenarios": [
+        {
+          "id": "VAL-010",
+          "status": "Conforme",
+          "result": "UI bouton Réactiver présent=1 enabled=true | PATCH HTTP=200 | isActive=false→true | même id=true",
+          "http": 200
+        },
+        {
+          "id": "VAL-011",
+          "status": "Conforme",
+          "result": "backupValidators=[2,3]"
+        }
+      ],
+      "conclusion": "ANO-018 corrigée : bouton Réactiver utilisable, même ressource réactivée (isActive=true), deux secours exposés sans doublon.",
+      "nonRegressions": [
+        {
+          "id": "VAL-009",
+          "status": "Conforme",
+          "result": "HTTP=200 isActive=false"
+        }
+      ]
+    },
+    {
+      "anomalyId": "ANO-019",
+      "severity": "Majeure",
+      "cause": "La réévaluation de destinataires (maintenance) doit être idempotente : un second passage ne doit pas recréer la notification de soumission déjà envoyée au remplaçant.",
+      "filesModified": [],
+      "scenarios": [
+        {
+          "id": "VAL-047",
+          "status": "Conforme",
+          "result": "passage1 remplaçant=1 Responsable=0 | passage2 remplaçant=1 | passage3 remplaçant=1 | demande distincte notifiée=true"
+        }
+      ],
+      "conclusion": "ANO-019 corrigée : idempotence de la réévaluation (aucun doublon), et nouvelle demande distincte toujours notifiée."
+    }
+  ],
+  "nonRegression": [
+    {
+      "id": "ABS-001",
+      "status": "Conforme",
+      "result": "HTTP=201"
+    },
+    {
+      "id": "ABS-017",
+      "status": "Conforme",
+      "result": "HTTP=200"
+    },
+    {
+      "id": "ADM-021",
+      "status": "Conforme",
+      "result": "HTTP=200"
+    },
+    {
+      "id": "CAN-002",
+      "status": "Conforme",
+      "result": "HTTP=200"
+    },
+    {
+      "id": "DIR-013",
+      "status": "Conforme",
+      "result": "HTTP=201 deductedDays=1 N-1=29 (delta=1)"
+    },
+    {
+      "id": "EXP-003",
+      "status": "Conforme",
+      "result": "HTTP=403"
+    },
+    {
+      "id": "HALF-018",
+      "status": "Conforme",
+      "result": "HTTP=400 durationHours conservé=true"
+    }
+  ]
+}

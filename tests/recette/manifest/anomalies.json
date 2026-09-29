@@ -64,49 +64,49 @@
     "ADM-021",
     "Impossible de réactiver une fermeture GMES depuis l'interface",
     "Bloquante",
-    "Ouverte",
+    "Fermée",
     "D.RAMPONT",
     "Description : Après désactivation/suppression d'une fermeture GMES, l'interface Jours fériés / fermetures ne propose aucune action permettant de la réactiver. Résultat attendu : La RH / l'administrateur doit pouvoir réactiver la fermeture conformément au scénario ADM-021. Résultat obtenu : Aucune action de réactivation n'est disponible dans l'UI.",
-    ""
+    "Correction validée par retest le 29/09/2026 : ADM-021 conforme. ADM-020 et ADM-022 contrôlés en non-régression."
   ],
   [
     "ANO-008",
     "ABS-001 ; ABS-004",
     "Le collaborateur ne peut pas créer ni soumettre une déclaration d'absence",
     "Bloquante",
-    "Ouverte",
+    "Fermée",
     "D.RAMPONT",
-    "Description : Le collaborateur ne peut pas créer ni soumettre sa propre déclaration d'absence. Attendu : le collaborateur crée sa propre déclaration (POST /absence-declarations, HTTP 201) puis la soumet (POST /absence-declarations/:id/submit, HTTP 200). Obtenu : aucune UI collaborateur de création ; POST create = 403 ; POST submit = 403 ; la déclaration reste BROUILLON. Cause technique constatée : restrictions @Roles du controller (RH/DIRECTEUR) incompatibles avec le flux prévu par le cahier, full-functional-test.mjs et le service métier. Impact : bloque ABS-001 et ABS-004, et empêche la validation complète de ABS-002 et ABS-003.",
+    "Description : Le collaborateur ne peut pas créer ni soumettre sa propre déclaration d'absence. Attendu : le collaborateur crée sa propre déclaration (POST /absence-declarations, HTTP 201) puis la soumet (POST /absence-declarations/:id/submit, HTTP 200). Obtenu : aucune UI collaborateur de création ; POST create = 403 ; POST submit = 403 ; la déclaration reste BROUILLON. Cause technique constatée : restrictions @Roles du controller (RH/DIRECTEUR) incompatibles avec le flux prévu par le cahier, full-functional-test.mjs et le service métier. Impact : bloque ABS-001 et ABS-004, et empêche la validation complète de ABS-002 et ABS-003. Correction validée par retest le 29/09/2026 : ABS-001, ABS-002, ABS-003 et ABS-004 conformes.",
     ""
   ],
   [
     "ANO-009",
-    "ABS-012 ; ABS-013",
+    "ABS-012 ; ABS-013 ; ABS-015",
     "Le remplacement d'un justificatif rejeté par le collaborateur n'archive pas l'ancien document",
     "Bloquante",
-    "Ouverte",
+    "Fermée",
     "D.RAMPONT",
     "Description : Attendu : le collaborateur remplace le justificatif rejeté ; l'ancien justificatif est archivé ; le nouveau devient le justificatif actif à contrôler. Obtenu : le bouton « Ajouter un justificatif » appelle POST /documents/absence/:id ; un nouveau document EN_ATTENTE est créé ; l'ancien reste REJETE et actif. Cause technique constatée : RequestDetailPage utilise uploadAbsenceJustificatif au lieu du mécanisme PATCH /documents/:id/replace qui existe côté backend. Impact : ABS-012 et ABS-013 ; ABS-015 bloqué (l'ancien REJETE actif empêche l'enregistrement définitif, car registerByRh exige que tous les justificatifs actifs soient ACCEPTE).",
-    ""
+    "Correction validée par retest le 29/09/2026 : ABS-012, ABS-013 et ABS-015 conformes. ABS-011 et ABS-014 contrôlés en non-régression."
   ],
   [
     "ANO-011",
-    "CAN-002 ; RHC-032",
+    "CAN-002 ; RHC-032 ; HALF-054",
     "Le collaborateur ne peut pas annuler une demande de congé avant décision",
     "Bloquante",
-    "Ouverte",
+    "Fermée",
     "D.RAMPONT",
     "Description : Attendu : un collaborateur annule sa demande EN_ATTENTE_VALIDATION depuis l'UI (bouton « Annuler la demande » → POST /leave-requests/:id/cancel → 200, statut ANNULEE). Obtenu : l'UI déclenche bien POST /leave-requests/:id/cancel mais le backend renvoie HTTP 409 « La réservation active du solde ne correspond pas au nombre de jours de la demande. » et le statut reste EN_ATTENTE_VALIDATION. Cause technique constatée : depuis l'évolution des compteurs, la soumission ne réserve plus de jours (leave-requests.service.ts submit), mais cancelBeforeDecision exige encore releasedDays === deductedDays (releasePaidLeaveReservationForRequest renvoie 0 en l'absence de réservation). Impact : CAN-002 Non conforme.",
-    ""
+    "Correction validée par retest le 29/09/2026 : CAN-002, RHC-032 et HALF-054 conformes. RHC-031 et les contrôles ownership/solde sont conformes."
   ],
   [
     "ANO-010",
     "ABS-017",
     "Le collaborateur ne peut pas annuler son brouillon d'absence",
     "Majeure",
-    "Ouverte",
+    "Fermée",
     "D.RAMPONT",
-    "Description : Attendu : un collaborateur possédant un brouillon d'absence peut lancer et confirmer son annulation. Obtenu : un brouillon valide appartenant à COL-C est visible dans Mes demandes, mais aucune action Annuler/Supprimer n'est disponible. L'appel POST /absence-declarations/:id/cancel avec le token du propriétaire retourne HTTP 403 et le statut reste BROUILLON. Cause technique constatée : la route cancel est limitée à RH/DIRECTEUR ; cancelAbsenceDeclaration existe dans le service frontend collaborateur mais n'est utilisé par aucune interface ; MyRequestCard pour une absence BROUILLON propose uniquement l'ouverture du détail. Impact : ABS-017 Non conforme.",
+    "Description : Attendu : un collaborateur possédant un brouillon d'absence peut lancer et confirmer son annulation. Obtenu : un brouillon valide appartenant à COL-C est visible dans Mes demandes, mais aucune action Annuler/Supprimer n'est disponible. L'appel POST /absence-declarations/:id/cancel avec le token du propriétaire retourne HTTP 403 et le statut reste BROUILLON. Cause technique constatée : la route cancel est limitée à RH/DIRECTEUR ; cancelAbsenceDeclaration existe dans le service frontend collaborateur mais n'est utilisé par aucune interface ; MyRequestCard pour une absence BROUILLON propose uniquement l'ouverture du détail. Impact : ABS-017 Non conforme. Correction validée par retest le 29/09/2026 : ABS-017 conforme.",
     ""
   ],
   [
@@ -114,80 +114,80 @@
     "DER-002 ; DER-003 ; DER-007",
     "Le collaborateur ne peut pas gérer complètement ses dérogations depuis l'interface",
     "Majeure",
-    "Ouverte",
+    "Fermée",
     "D.RAMPONT",
     "Description : Le backend autorise le propriétaire à modifier le motif (PATCH /derogations/:id), soumettre la dérogation (POST /derogations/:id/submit) et la supprimer avant décision (DELETE /derogations/:id), mais aucune action correspondante n'est exposée dans l'interface collaborateur. Impact : les opérations prévues par le parcours utilisateur ne sont réalisables que par appel API.",
-    ""
+    "Correction validée par retest le 29/09/2026 : DER-002, DER-003 et DER-007 conformes. Le collaborateur peut modifier, soumettre et annuler sa dérogation depuis l’interface. L’état de soumission est persisté et une seconde soumission est refusée sans duplication."
   ],
   [
     "ANO-013",
     "DIR-006 ; DIR-007 ; DIR-013",
     "La route Directeur n'effectue ni contrôle ni débit de solde",
     "Majeure",
-    "Ouverte",
+    "Fermée",
     "D.RAMPONT",
     "Description : Attendu : POST /leave-requests/director refuse un solde insuffisant (400), la transaction est cohérente (aucune demande sans solde) et le solde N-1 du Directeur est débité d'un jour. Obtenu : la demande est créée (HTTP 201) même avec un solde N-1 à 0, aucune vérification de solde n'est effectuée et le solde N-1 reste inchangé après enregistrement. Cause technique constatée : createDirectorRequest (leave-requests.service.ts) enregistre directement la demande VALIDEE avec balanceProcessingStatus DEFINITIF sans appeler applyPaidLeaveForRequest ni contrôler le solde. Impact : DIR-006, DIR-007 et DIR-013 Non conformes.",
-    ""
+    "Correction validée par retest le 29/09/2026 : DIR-006, DIR-007 et DIR-013 conformes. DIR-013 micro-validé sur un cas exact d’un jour : deductedDays=1, solde N-1 30→29, delta=1. Atomicité validée par test concurrent."
   ],
   [
     "ANO-014",
     "EXP-003",
     "Le Directeur peut télécharger un export nominatif",
     "Majeure",
-    "Ouverte",
+    "Fermée",
     "D.RAMPONT",
     "Description : Attendu : le Directeur ne doit pas télécharger un export nominatif des demandes de congés. Obtenu : GET /exports/leave-requests?format=csv avec un jeton Directeur retourne HTTP 200 et un CSV contenant les noms, emails et services des collaborateurs. Cause technique constatée : le contrôleur ExportsController autorise RH et DIRECTEUR sur toutes les routes d'export nominatif, et ExportsService.exportLeaveRequests n'applique aucune restriction de rôle Directeur. Impact : EXP-003 Non conforme.",
-    ""
+    "Correction validée par retest le 29/09/2026 : EXP-003 conforme. EXP-001, EXP-002, EXP-004 et EXP-005 contrôlés en non-régression."
   ],
   [
     "ANO-015",
     "HALF-018",
     "Mélange heures/demi-journée mal rejeté sur les brouillons d'absence",
     "Majeure",
-    "Ouverte",
+    "Fermée",
     "D.RAMPONT",
     "Description : Attendu : sur un brouillon d'absence en heures, ajouter startPeriod doit être refusé (400) et durationHours conservé. Obtenu : PATCH brouillon heures + startPeriod retourne HTTP 200 et durationHours passe de 4 à null (mélange de modes accepté avec perte de la valeur). Cause technique constatée : la validation de mode (ensureSingleMode) n'est pas appliquée sur la mise à jour, ou le mode est basculé sans conservation de la valeur précédente. Impact : HALF-018 Non conforme. Note : HALF-022 retesté indépendamment (brouillon B séparé) reste Conforme — durationHours conservé.",
-    ""
+    "Correction validée par retest le 29/09/2026 : HALF-018 conforme. HALF-019, HALF-020 et HALF-021 contrôlés en non-régression."
   ],
   [
     "ANO-016",
     "PRE-019",
     "La reprise RH (secours) ne trace pas REPRISE_PAR_RELAIS",
     "Majeure",
-    "Ouverte",
+    "Fermée",
     "D.RAMPONT",
     "Description : Attendu : la reprise de validation par la RH lorsque le Responsable est absent doit être tracée dans l'audit avec l'action REPRISE_PAR_RELAIS (spec full-functional-test.mjs). Obtenu : la RH (backup validator) valide avec succès (HTTP 200, VALIDEE) mais aucun audit REPRISE_PAR_RELAIS n'est enregistré (traces=0). Cause technique constatée : saveDecisionAccessHistory n'enregistre REPRISE_PAR_RELAIS que pour access.kind RELAIS (Directeur) ; la reprise RH backup produit access.kind SECOURS, non audité. Impact : PRE-019 Non conforme.",
-    ""
+    "Correction validée par retest le 29/09/2026 : PRE-019 conforme. La reprise via secours/relais génère une trace REPRISE_PAR_RELAIS avec l’acteur et la ressource attendus ; une validation RH normale ne génère pas cette trace."
   ],
   [
     "ANO-017",
     "EXP-006 ; EXP-008 ; EXP-009 ; EXP-011 ; EXP-012",
     "Interface RH de clôture/report de période absente",
     "Majeure",
-    "Ouverte",
+    "Fermée",
     "D.RAMPONT",
     "Description : Attendu : la RH doit pouvoir, depuis Soldes collaborateurs / clôture de période, prévisualiser la clôture, accorder un report exceptionnel et clôturer la période. Obtenu : aucune UI frontend n'appelle GET /leave-balances/period/:referencePeriod/preview, POST /leave-balances/period/carryover ni POST /leave-balances/period/close (aucun service rhBalances ne les expose). Les endpoints backend existent mais la procédure utilisateur n'est pas réalisable en UI. Impact : EXP-006, EXP-008, EXP-009, EXP-011 et EXP-012 Non conformes (EXP-010 reste Conforme : négatif Directeur, pas de bouton = protection).",
-    ""
+    "Correction validée par retest le 29/09/2026 : EXP-006, EXP-008, EXP-009, EXP-011 et EXP-012 conformes. L’interface RH permet la prévisualisation, le report exceptionnel et la clôture de période avec gestion des erreurs et prévention d’une seconde clôture."
   ],
   [
     "ANO-018",
     "VAL-010 ; VAL-011",
     "Le bouton Réactiver un valideur de secours est désactivé",
     "Majeure",
-    "Ouverte",
+    "Fermée",
     "D.RAMPONT",
     "Description : Attendu : depuis l’UI ADMIN, réactiver un secours désactivé (VAL-010) et la liste Valideurs doit afficher les secours actifs (VAL-011). Obtenu : le bouton Réactiver est désactivé (VAL-010) et les secours actifs sont affichés « Inopérant » au lieu de « Actif » (VAL-011). Cause technique constatée : ValidatorsPage lit user?.isActive sur validator (id/nom/prenom/email/role uniquement dans getServiceValidators) ; validator.isActive absent => disabled=true pour Réactiver et operational=false => badge Inopérant. Impact : VAL-010 et VAL-011 Non conformes.",
-    ""
+    "Correction validée par retest le 29/09/2026 : VAL-010 et VAL-011 conformes. Le bouton Réactiver est utilisable dans l’interface, la même ressource est réactivée sans doublon et les deux secours sont exposés."
   ],
   [
     "ANO-019",
     "VAL-047",
     "Doublon de notification de soumission lors du re-passage maintenance (remplaçant)",
     "Majeure",
-    "Ouverte",
+    "Fermée",
     "D.RAMPONT",
     "Description : Attendu : pour une demande du collaborateur B avec remplacement actif, la notification LEAVE_REQUEST_SUBMITTED doit être créée uniquement pour le remplaçant, sans doublon lors d’un second passage (maintenance). Obtenu : au premier passage (soumission) 1 notification pour le remplaçant (user 21) et 0 pour le Responsable remplacé ; après POST /leave-requests/maintenance/run, un second enregistrement LEAVE_REQUEST_SUBMITTED est créé pour le même remplaçant (2 au total). Cause probable : le contrôle anti-doublon alreadyExistsSince utilise createdAt >= submittedAt. Sur la reproduction, la notification initiale porte un createdAt antérieur d’une seconde au submittedAt, ce qui empêche sa détection lors de la réévaluation. La raison exacte de cet écart temporel reste à confirmer. Impact : VAL-047 Non conforme.",
-    ""
+    "Retest validé le 29/09/2026 : VAL-047 conforme. Le mécanisme d’idempotence existant a été contrôlé sur trois passages successifs sans duplication ; une demande distincte génère toujours sa propre notification. Aucune correction produit supplémentaire n’a été nécessaire."
   ],
   [
     "ANO-020",

@@ -1,0 +1,138 @@
+[
+  {
+    "id": "ABS-001",
+    "executed": true,
+    "oldStatus": "Non conforme",
+    "result": "POST /absence-declarations HTTP=201 | created=true | employeeId=self=true | status=BROUILLON | BDD 0→1 | UI NewAbsencePage rendue (titre, types, calendrier, demi-journées/heures)",
+    "proof": "api + ui + db",
+    "http": 201,
+    "dbBefore": 0,
+    "dbAfter": 1,
+    "provisionalStatus": "Conforme"
+  },
+  {
+    "id": "ABS-002",
+    "executed": true,
+    "oldStatus": "Bloqué",
+    "result": "POST avec employeeId=COL-C HTTP=403 message=\"Seule la RH peut créer une déclaration pour un autre collaborateur.\" | règle fine atteinte=true | mutation BDD=false",
+    "proof": "api + db",
+    "http": 403,
+    "dbBefore": 0,
+    "dbAfter": 0,
+    "provisionalStatus": "Conforme"
+  },
+  {
+    "id": "ABS-003",
+    "executed": true,
+    "oldStatus": "Bloqué",
+    "result": "POST leaveTypeId rhOnly HTTP=403 message=\"Ce type d’absence peut être saisi uniquement par la RH.\" | règle rhOnly atteinte=true | mutation BDD=false",
+    "proof": "api + db",
+    "http": 403,
+    "dbBefore": 0,
+    "dbAfter": 0,
+    "provisionalStatus": "Conforme"
+  },
+  {
+    "id": "ABS-004",
+    "executed": true,
+    "oldStatus": "Non conforme",
+    "result": "submit HTTP=200 certifiedAccurate=true | avant=BROUILLON | après=A_VERIFIER_PAR_RH | UI bouton « Soumettre la déclaration » visible",
+    "proof": "api + ui",
+    "http": 200,
+    "dbBefore": "BROUILLON",
+    "dbAfter": "A_VERIFIER_PAR_RH",
+    "provisionalStatus": "Conforme"
+  },
+  {
+    "id": "ABS-017",
+    "executed": true,
+    "oldStatus": "Non conforme",
+    "result": "cancel HTTP=200 | avant=BROUILLON | après=ANNULEE | ownership négatif HTTP=403 message=\"Vous ne pouvez consulter que vos propres déclarations d’absence.\" | UI bouton « Annuler le brouillon » visible",
+    "proof": "api + ui",
+    "http": 200,
+    "dbBefore": "BROUILLON",
+    "dbAfter": "ANNULEE",
+    "provisionalStatus": "Conforme"
+  },
+  {
+    "id": "ABS-005",
+    "executed": true,
+    "oldStatus": "Conforme",
+    "result": "API GET HTTP=403 message=\"Vous ne pouvez consulter que vos propres déclarations d’absence.\" | fuite=false",
+    "proof": "api",
+    "http": 403,
+    "provisionalStatus": "Conforme"
+  },
+  {
+    "id": "ABS-006",
+    "executed": true,
+    "oldStatus": "Conforme",
+    "result": "upload UI HTTP=201 | document EN_ATTENTE | déclaration JUSTIFICATIF_EN_ATTENTE → A_VERIFIER_PAR_RH",
+    "proof": "api + ui",
+    "http": 201,
+    "provisionalStatus": "Conforme"
+  },
+  {
+    "id": "ABS-007",
+    "executed": true,
+    "oldStatus": "Conforme",
+    "result": "UI visible=false | liste API HTTP=403 | download API HTTP=403 | PDF divulgué=false",
+    "proof": "api + ui",
+    "http": 403,
+    "provisionalStatus": "Conforme"
+  },
+  {
+    "id": "ABS-008",
+    "executed": true,
+    "oldStatus": "Conforme",
+    "result": "RH filtre statut UI=En attente | occurrence UI=1 | API statut=EN_ATTENTE | fichier visible",
+    "proof": "api + ui",
+    "http": 200,
+    "provisionalStatus": "Conforme"
+  },
+  {
+    "id": "ABS-009",
+    "executed": true,
+    "oldStatus": "Conforme",
+    "result": "menu Documents Directeur=false | download API HTTP=403 | PDF divulgué=false",
+    "proof": "api + ui",
+    "http": 403,
+    "provisionalStatus": "Conforme"
+  },
+  {
+    "id": "ABS-010",
+    "executed": true,
+    "oldStatus": "Conforme",
+    "result": "UI download HTTP=200 | Content-Type=application/pdf | signature=%PDF- | hash=identique",
+    "proof": "api + ui",
+    "http": 200,
+    "provisionalStatus": "Conforme"
+  },
+  {
+    "id": "ABS-011",
+    "executed": true,
+    "oldStatus": "Conforme",
+    "result": "rejet UI HTTP=200 | document EN_ATTENTE → REJETE | déclaration A_VERIFIER_PAR_RH → JUSTIFICATIF_EN_ATTENTE",
+    "proof": "api + ui",
+    "http": 200,
+    "provisionalStatus": "Conforme"
+  },
+  {
+    "id": "ABS-014",
+    "executed": true,
+    "oldStatus": "Conforme",
+    "result": "acceptation UI HTTP=200 | new EN_ATTENTE → ACCEPTE | 2e acceptation HTTP=400",
+    "proof": "api + ui",
+    "http": 200,
+    "provisionalStatus": "Conforme"
+  },
+  {
+    "id": "ABS-016",
+    "executed": true,
+    "oldStatus": "Conforme",
+    "result": "RH création UI HTTP=201 | collaborateur=COL-C | statut=ENREGISTREE | visible RH/COL-C, invisible COL-B",
+    "proof": "api + ui",
+    "http": 201,
+    "provisionalStatus": "Conforme"
+  }
+]

@@ -182,6 +182,7 @@ export class DerogationsService implements OnApplicationBootstrap, OnApplication
         derogation.reason = dto.reason?.trim() ?? '';
         derogation.status = DerogationStatus.EN_ATTENTE_RH;
         derogation.requestedAt = requestedAt;
+        derogation.submittedAt = null;
         derogation.decidedByRhId = null;
         derogation.decisionComment = null;
         derogation.decidedAt = null;
@@ -294,6 +295,12 @@ export class DerogationsService implements OnApplicationBootstrap, OnApplication
 
       this.validateDerogationWindow(notice);
 
+      if (derogation.submittedAt !== null) {
+        throw new ConflictException(
+          'Cette dérogation a déjà été soumise.',
+        );
+      }
+
       const requestedAt = new Date();
 
       derogation.leaveTypeId = leaveRequest.leaveTypeId;
@@ -301,6 +308,7 @@ export class DerogationsService implements OnApplicationBootstrap, OnApplication
       derogation.requestedEndDate = leaveRequest.endDate;
       derogation.status = DerogationStatus.EN_ATTENTE_RH;
       derogation.requestedAt = requestedAt;
+      derogation.submittedAt = requestedAt;
       derogation.expiresAt = null;
 
       await manager.getRepository(Derogation).save(derogation);
@@ -889,6 +897,7 @@ export class DerogationsService implements OnApplicationBootstrap, OnApplication
     derogation.decisionComment = null;
     derogation.decidedAt = null;
     derogation.expiresAt = null;
+    derogation.submittedAt = null;
 
     await repository.save(derogation);
 

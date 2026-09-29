@@ -1,7 +1,7 @@
 import { Icon } from '@/components/ui/Icon'
 import { formatDays } from '@/utils/format'
 
-export function PlanLeaveCard({ availableDays, periodLabel, onNewRequest }) {
+export function PlanLeaveCard({ availableDays, periodLabel, onNewRequest, onNewAbsence }) {
   return (
     <section className="plan-card">
       <span className="plan-card__icon" aria-hidden="true">
@@ -18,6 +18,12 @@ export function PlanLeaveCard({ availableDays, periodLabel, onNewRequest }) {
         Nouvelle demande
         <Icon name="arrowRight" size={18} />
       </button>
+      {onNewAbsence && (
+        <button type="button" className="plan-card__cta plan-card__cta--secondary" onClick={onNewAbsence}>
+          Déclarer une absence
+          <Icon name="calendar" size={18} />
+        </button>
+      )}
     </section>
   )
 }

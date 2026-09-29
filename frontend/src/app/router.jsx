@@ -11,6 +11,7 @@ import { NotFound } from '@/pages/shared/NotFound'
 import { DashboardGate } from '@/pages/shared/DashboardGate'
 import { PracticalInfoPage } from '@/pages/shared/PracticalInfoPage'
 import { NewRequest } from '@/pages/collab/NewRequestPage'
+import { NewAbsencePage } from '@/pages/collab/NewAbsencePage'
 import { HistoryPage } from '@/pages/collab/HistoryPage'
 import { MyRequestsPage } from '@/pages/collab/MyRequestsPage'
 import { DocumentsPage } from '@/pages/collab/DocumentsPage'
@@ -372,6 +373,14 @@ export const router = createBrowserRouter([
         element: (
           <RoleRoute roles={NEW_REQUEST_ROLES}>
             <NewRequest />
+          </RoleRoute>
+        ),
+      },
+      {
+        path: 'new-absence',
+        element: (
+          <RoleRoute roles={[ROLES.COLLABORATEUR]}>
+            <NewAbsencePage />
           </RoleRoute>
         ),
       },

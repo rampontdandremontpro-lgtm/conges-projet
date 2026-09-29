@@ -259,7 +259,9 @@
 .rh-holidays-badge--official { border-color: #ffc894; background: #fff4e9; color: #b85b15; }
 .rh-holidays-badge--closures { border-color: #cad9e9; background: #eef3f8; color: #4e6d8c; }
 .rh-holidays-status.is-active { border-color: #a9e8cb; background: #ecfbf4; color: #0a8a58; }
+.rh-holidays-status.is-inactive { border-color: #d7dde5; background: #f1f4f7; color: #6b7a8c; }
 .rh-holidays-status.is-protected { border-color: #c9dcfb; background: #eef5ff; color: #2168cb; }
+.rh-holidays-row--body.is-inactive { opacity: .62; }
 
 .rh-holidays-actions { display: flex; align-items: center; justify-content: center; }
 .rh-holidays-actions button,

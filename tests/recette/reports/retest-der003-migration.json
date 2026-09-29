@@ -1,0 +1,29 @@
+{
+  "lot": 5,
+  "dateRetest": "29/09/2026",
+  "executed": true,
+  "migrationSubmittedAt": {
+    "migrationCreated": true,
+    "column": "submitted_at",
+    "nullable": true,
+    "existingDatabaseSupported": true,
+    "backfill": {
+      "fromSubmissionNotification": true,
+      "treatedStatusFallback": true
+    },
+    "secondSubmission": 409,
+    "duplicateAudit": false,
+    "duplicateNotification": false
+  },
+  "der003": {
+    "submittedAtBefore": null,
+    "firstSubmit": 200,
+    "submittedAtAfter": "renseigné",
+    "secondSubmit": 409,
+    "audit": "1→2 (2e=2)",
+    "notifications": "0→1 (2e=1)",
+    "buttonAfterSubmit": 0,
+    "buttonNewSession": 0,
+    "status": "Conforme"
+  }
+}

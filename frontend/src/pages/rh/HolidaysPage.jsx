@@ -5,7 +5,9 @@ import { Icon } from '@/components/ui/Icon'
 import {
   createRhClosure,
   disableRhClosure,
+  enableRhClosure,
   getRhHolidays,
+  getRhHolidaysForManagement,
   updateRhClosure,
   updateRhHolidayWorkStatus,
 } from '@/services/rh/rhHolidays'
@@ -116,8 +118,14 @@ export function RhHolidaysPage() {
   const load = useCallback(async ({ silent = false } = {}) => {
     if (!silent) setState((current) => ({ ...current, loading: true, error: false }))
     try {
-      const holidays = await getRhHolidays(year)
-      setState({ loading: false, error: false, holidays })
+      const [holidays, managed] = await Promise.all([
+        getRhHolidays(year),
+        getRhHolidaysForManagement(year),
+      ])
+      const inactiveClosures = managed.filter(
+        (holiday) => holiday.holidayType === 'FERMETURE_GMES' && holiday.isActive === false,
+      )
+      setState({ loading: false, error: false, holidays: [...holidays, ...inactiveClosures] })
     } catch {
       if (!silent) setState((current) => ({ ...current, loading: false, error: true }))
     }
@@ -152,10 +160,23 @@ export function RhHolidaysPage() {
     closures: monthHolidays.filter((holiday) => holidayCategory(holiday) === 'closures').length,
   }), [monthHolidays])
 
-  const visibleHolidays = useMemo(
-    () => monthHolidays.filter((holiday) => filter === 'all' || holidayCategory(holiday) === filter),
-    [filter, monthHolidays],
+  const monthInactiveClosures = useMemo(
+    () => state.holidays.filter((holiday) => holiday.holidayType === 'FERMETURE_GMES' && holiday.isActive === false && holiday.date?.startsWith(month)),
+    [month, state.holidays],
   )
+
+  const visibleHolidays = useMemo(() => {
+    if (filter === 'official') {
+      return monthHolidays.filter((holiday) => holidayCategory(holiday) === 'official')
+    }
+    if (filter === 'closures') {
+      return [
+        ...monthHolidays.filter((holiday) => holidayCategory(holiday) === 'closures'),
+        ...monthInactiveClosures,
+      ]
+    }
+    return [...monthHolidays, ...monthInactiveClosures]
+  }, [filter, monthHolidays, monthInactiveClosures])
 
   const holidaysByDate = useMemo(() => {
     const map = new Map()
@@ -243,6 +264,21 @@ export function RhHolidaysPage() {
       await load({ silent: true })
     } catch (error) {
       setFeedback(error?.response?.data?.message || 'Impossible de supprimer cette fermeture.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const reactivateClosure = async (holiday) => {
+    if (saving) return
+    setSaving(true)
+    try {
+      await enableRhClosure(holiday.id)
+      setFeedback('Fermeture réactivée.')
+      if (drawer?.holiday?.id === holiday.id) setDrawer(null)
+      await load({ silent: true })
+    } catch (error) {
+      setFeedback(error?.response?.data?.message || 'Impossible de réactiver cette fermeture.')
     } finally {
       setSaving(false)
     }
@@ -372,7 +408,7 @@ export function RhHolidaysPage() {
                 {visibleHolidays.map((holiday) => (
                   <div
                     key={`${holiday.date}-${holiday.holidayType}-${holiday.id ?? holiday.name}`}
-                    className={`rh-holidays-row rh-holidays-row--body${holiday.holidayType === 'FERMETURE_GMES' ? ' is-editable' : ' is-official'}`}
+                    className={`rh-holidays-row rh-holidays-row--body${holiday.holidayType === 'FERMETURE_GMES' ? ' is-editable' : ' is-official'}${holiday.isActive === false ? ' is-inactive' : ''}`}
                     role="button"
                     tabIndex={0}
                     onClick={() => openHoliday(holiday)}
@@ -383,21 +419,34 @@ export function RhHolidaysPage() {
                     <strong>{formatDate(holiday.date)}</strong>
                     <span className="rh-holidays-name">{holiday.name}</span>
                     <HolidayBadge holiday={holiday} />
-                    <span className={`rh-holidays-status${holiday.holidayType === 'FERMETURE_GMES' ? ' is-active' : ' is-protected'}`}>
-                      {holiday.holidayType === 'FERMETURE_GMES' ? 'Active' : (holiday.deductible === false ? 'Chômé' : 'Travaillé')}
+                    <span className={`rh-holidays-status${holiday.holidayType === 'FERMETURE_GMES' ? (holiday.isActive === false ? ' is-inactive' : ' is-active') : ' is-protected'}`}>
+                      {holiday.holidayType === 'FERMETURE_GMES' ? (holiday.isActive === false ? 'Inactive' : 'Active') : (holiday.deductible === false ? 'Chômé' : 'Travaillé')}
                     </span>
                     <span className="rh-holidays-actions">
                       {holiday.holidayType === 'FERMETURE_GMES' ? (
-                        <button
-                          type="button"
-                          title="Supprimer la fermeture"
-                          onClick={(event) => {
-                            event.stopPropagation()
-                            setConfirmDelete(holiday)
-                          }}
-                        >
-                          <Icon name="trash" size={15} />
-                        </button>
+                        holiday.isActive === false ? (
+                          <button
+                            type="button"
+                            title="Réactiver la fermeture"
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              reactivateClosure(holiday)
+                            }}
+                          >
+                            <Icon name="refresh" size={15} />
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            title="Supprimer la fermeture"
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              setConfirmDelete(holiday)
+                            }}
+                          >
+                            <Icon name="trash" size={15} />
+                          </button>
+                        )
                       ) : (
                         <span title="Paramétrer le caractère chômé"><Icon name="edit" size={15} /></span>
                       )}

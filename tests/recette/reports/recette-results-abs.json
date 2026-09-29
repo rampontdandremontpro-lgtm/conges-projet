@@ -5,13 +5,13 @@
     "module": "ABS",
     "scenario": "Collaborateur B crée une déclaration d’absence",
     "type": "C - UI + API",
-    "status": "Non conforme",
-    "result": "POST /absence-declarations HTTP=403 message=\"Vous ne disposez pas des autorisations nécessaires.\" | UI création=false | created=false",
-    "date": "2026-09-23T14:55:39.597Z",
-    "duration": "2286 ms",
+    "status": "Bloqué",
+    "result": "POST /absence-declarations HTTP=201 message=\"\" | UI création=false | created=true",
+    "date": "2026-09-29T11:28:39.217Z",
+    "duration": "2226 ms",
     "proof": "CAP-ABS-001.png",
-    "error": "Écart produit : le collaborateur ne peut pas créer sa déclaration (aucune UI + HTTP 403).",
-    "comment": "Payload={\"leaveTypeId\":20,\"startDate\":\"2026-12-10\",\"endDate\":\"2026-12-10\",\"startPeriod\":\"MATIN\",\"endPeriod\":\"APRES_MIDI\",\"comment\":\"ABS recette ABS-001 COL-B\"} | ANO-008"
+    "error": "Règle produit non atteignable.",
+    "comment": "Payload={\"leaveTypeId\":1,\"startDate\":\"2026-12-10\",\"endDate\":\"2026-12-10\",\"startPeriod\":\"MATIN\",\"endPeriod\":\"APRES_MIDI\",\"comment\":\"ABS recette ABS-001 COL-B\"} | ANO-008"
   },
   {
     "id": "ABS-002",
@@ -20,12 +20,12 @@
     "scenario": "Collaborateur ne déclare pas pour un collègue",
     "type": "C - UI + API",
     "status": "Bloqué",
-    "result": "POST avec employeeId=COL-C HTTP=403 message=\"Vous ne disposez pas des autorisations nécessaires.\" | absence COL-C créée=false",
-    "date": "2026-09-23T14:55:39.631Z",
+    "result": "POST avec employeeId=COL-C HTTP=403 message=\"Seule la RH peut créer une déclaration pour un autre collaborateur.\" | absence COL-C créée=false",
+    "date": "2026-09-29T11:28:39.252Z",
     "duration": "34 ms",
     "proof": "",
     "error": "Règle fine non atteinte : RolesGuard bloque toute création collaborateur avant resolveEmployee. Retest après ANO-008.",
-    "comment": "employeeId cible=19 ; déclarations COL-C=0"
+    "comment": "employeeId cible=7 ; déclarations COL-C=0"
   },
   {
     "id": "ABS-003",
@@ -34,12 +34,12 @@
     "scenario": "Type réservé à la RH refusé au collaborateur",
     "type": "C - UI + API",
     "status": "Bloqué",
-    "result": "POST leaveTypeId rhOnly=21 HTTP=403 message=\"Vous ne disposez pas des autorisations nécessaires.\"",
-    "date": "2026-09-23T14:55:39.657Z",
-    "duration": "25 ms",
+    "result": "POST leaveTypeId rhOnly=2 HTTP=403 message=\"Ce type d’absence peut être saisi uniquement par la RH.\"",
+    "date": "2026-09-29T11:28:39.271Z",
+    "duration": "19 ms",
     "proof": "",
     "error": "Règle rhOnly non atteinte end-to-end : RolesGuard bloque le POST collaborateur avant validateLeaveType. Erratum ABS-003 ajouté ; retest après ANO-008.",
-    "comment": "Type rhOnly=21 ; incohérence manifest rôle=RH vs titre collaborateur."
+    "comment": "Type rhOnly=2 ; incohérence manifest rôle=RH vs titre collaborateur."
   },
   {
     "id": "ABS-004",
@@ -48,12 +48,12 @@
     "scenario": "Collaborateur B soumet sa déclaration",
     "type": "C - UI + API",
     "status": "Non conforme",
-    "result": "submit HTTP=403 message=\"Vous ne disposez pas des autorisations nécessaires.\" | statut BROUILLON → BROUILLON",
-    "date": "2026-09-23T14:55:43.235Z",
-    "duration": "3483 ms",
+    "result": "submit HTTP=403 message=\"Seule la personne ayant créé le brouillon peut le transmettre.\" | statut BROUILLON → BROUILLON",
+    "date": "2026-09-29T11:28:42.894Z",
+    "duration": "3590 ms",
     "proof": "CAP-ABS-004.png",
     "error": "Écart produit : le collaborateur ne peut pas soumettre sa déclaration (HTTP 403, statut reste BROUILLON).",
-    "comment": "declarationId=6 | ANO-008"
+    "comment": "declarationId=2 | ANO-008"
   },
   {
     "id": "ABS-005",
@@ -63,11 +63,11 @@
     "type": "C - UI + API",
     "status": "Conforme",
     "result": "UI visible par COL-C=false | API GET HTTP=403 message=\"Vous ne pouvez consulter que vos propres déclarations d’absence.\" | fuite=false",
-    "date": "2026-09-23T14:55:45.879Z",
-    "duration": "2643 ms",
+    "date": "2026-09-29T11:28:45.595Z",
+    "duration": "2701 ms",
     "proof": "CAP-ABS-005.png",
     "error": "",
-    "comment": "propriétaire=COL-B (id=18), demandeur=COL-C (id=19), declarationId=6"
+    "comment": "propriétaire=COL-B (id=6), demandeur=COL-C (id=7), declarationId=2"
   },
   {
     "id": "ABS-006",
@@ -76,12 +76,12 @@
     "scenario": "Collaborateur ajoute un justificatif PDF valide",
     "type": "C - UI + API",
     "status": "Conforme",
-    "result": "upload UI HTTP=201 | documentId=7 | déclaration JUSTIFICATIF_EN_ATTENTE → A_VERIFIER_PAR_RH | document statut=EN_ATTENTE | fichier=justificatif-abs-recette.pdf (application/pdf, 599 o)",
-    "date": "2026-09-23T14:55:49.538Z",
-    "duration": "3379 ms",
+    "result": "upload UI HTTP=201 | documentId=1 | déclaration JUSTIFICATIF_EN_ATTENTE → A_VERIFIER_PAR_RH | document statut=EN_ATTENTE | fichier=justificatif-abs-recette.pdf (application/pdf, 599 o)",
+    "date": "2026-09-29T11:28:49.465Z",
+    "duration": "3764 ms",
     "proof": "CAP-ABS-006.png",
     "error": "",
-    "comment": "declarationId=7, pdf sha256=c73c4dd99a71eba819528db87f01a1b4376f5a14c6af87130c1e8f72d2e5e6be"
+    "comment": "declarationId=3, pdf sha256=c73c4dd99a71eba819528db87f01a1b4376f5a14c6af87130c1e8f72d2e5e6be"
   },
   {
     "id": "ABS-007",
@@ -91,11 +91,11 @@
     "type": "C - UI + API",
     "status": "Conforme",
     "result": "UI visible=false | liste API HTTP=403 | download API HTTP=403 | PDF divulgué=false",
-    "date": "2026-09-23T14:55:52.074Z",
-    "duration": "2527 ms",
+    "date": "2026-09-29T11:28:52.013Z",
+    "duration": "2545 ms",
     "proof": "CAP-ABS-007.png",
     "error": "",
-    "comment": "documentId=7, demandeur=COL-C"
+    "comment": "documentId=1, demandeur=COL-C"
   },
   {
     "id": "ABS-008",
@@ -105,11 +105,11 @@
     "type": "C - UI + API",
     "status": "Conforme",
     "result": "filtre statut UI=En attente | occurrence UI=1 | statut UI=\"En attente\" | collaborateur UI=\"COL-B Recette\" | API occurrences=1 | API statut=EN_ATTENTE | fichier=justificatif-abs-recette.pdf",
-    "date": "2026-09-23T14:55:55.182Z",
-    "duration": "3103 ms",
+    "date": "2026-09-29T11:28:55.194Z",
+    "duration": "3175 ms",
     "proof": "CAP-ABS-008.png",
     "error": "",
-    "comment": "documentId=7, employeeId=18"
+    "comment": "documentId=1, employeeId=6"
   },
   {
     "id": "ABS-009",
@@ -119,11 +119,11 @@
     "type": "C - UI + API",
     "status": "Conforme",
     "result": "menu Documents Directeur=false | filename visible UI=false | boutons téléchargement=0 | download API HTTP=403 | Content-Type=application/json; charset=utf-8 | filename divulgué=false | PDF divulgué=false",
-    "date": "2026-09-23T14:55:58.288Z",
-    "duration": "3098 ms",
+    "date": "2026-09-29T11:28:58.092Z",
+    "duration": "2894 ms",
     "proof": "CAP-ABS-009.png",
     "error": "",
-    "comment": "documentId=7, demandeur=DIRECTEUR"
+    "comment": "documentId=1, demandeur=DIRECTEUR"
   },
   {
     "id": "ABS-010",
@@ -133,11 +133,11 @@
     "type": "C - UI + API",
     "status": "Conforme",
     "result": "UI download HTTP=200 | API HTTP=200 | Content-Type=application/pdf | taille=599 o | signature=%PDF- | hash=identique",
-    "date": "2026-09-23T14:56:01.285Z",
-    "duration": "2992 ms",
+    "date": "2026-09-29T11:29:01.147Z",
+    "duration": "3051 ms",
     "proof": "CAP-ABS-010.png",
     "error": "",
-    "comment": "documentId=7, filename=justificatif-abs-recette.pdf, sha256=c73c4dd99a71eba819528db87f01a1b4376f5a14c6af87130c1e8f72d2e5e6be"
+    "comment": "documentId=1, filename=justificatif-abs-recette.pdf, sha256=c73c4dd99a71eba819528db87f01a1b4376f5a14c6af87130c1e8f72d2e5e6be"
   },
   {
     "id": "ABS-011",
@@ -147,11 +147,11 @@
     "type": "C - UI + API",
     "status": "Conforme",
     "result": "rejet UI HTTP=200 | document EN_ATTENTE → REJETE | motif=\"Justificatif illisible - recette ABS-011.\" | déclaration A_VERIFIER_PAR_RH → JUSTIFICATIF_EN_ATTENTE",
-    "date": "2026-09-23T14:56:05.705Z",
-    "duration": "4413 ms",
+    "date": "2026-09-29T11:29:05.529Z",
+    "duration": "4372 ms",
     "proof": "CAP-ABS-011.png",
     "error": "",
-    "comment": "documentId=7, bouton=Refuser, requête=POST /documents/7/reject"
+    "comment": "documentId=1, bouton=Refuser, requête=POST /documents/1/reject"
   },
   {
     "id": "ABS-012",
@@ -160,12 +160,12 @@
     "scenario": "Collaborateur remplace le justificatif rejeté",
     "type": "C - UI + API",
     "status": "Non conforme",
-    "result": "libellé UI=\"Ajouter un justificatif\" | requête=POST /documents/absence/7 HTTP=201 | old REJETE → REJETE (archivé=false) | new id=8 (EN_ATTENTE) | déclaration=A_VERIFIER_PAR_RH",
-    "date": "2026-09-23T14:56:09.618Z",
-    "duration": "3910 ms",
+    "result": "libellé UI=\"Ajouter un justificatif\" | requête=POST /documents/absence/3 HTTP=201 | old REJETE → REJETE (archivé=false) | new id=2 (EN_ATTENTE) | déclaration=A_VERIFIER_PAR_RH",
+    "date": "2026-09-29T11:29:09.449Z",
+    "duration": "3915 ms",
     "proof": "CAP-ABS-012.png",
     "error": "Le parcours collaborateur n’archive pas l’ancien justificatif.",
-    "comment": "oldDocumentId=7, newDocumentId=8, oldHash=c73c4dd99a71eba819528db87f01a1b4376f5a14c6af87130c1e8f72d2e5e6be, newHash=66e51efd5f9494d86e97c59aef1c45dea2a880d9bb398c21f1b4f02c32215f90"
+    "comment": "oldDocumentId=1, newDocumentId=2, oldHash=c73c4dd99a71eba819528db87f01a1b4376f5a14c6af87130c1e8f72d2e5e6be, newHash=66e51efd5f9494d86e97c59aef1c45dea2a880d9bb398c21f1b4f02c32215f90"
   },
   {
     "id": "ABS-013",
@@ -175,11 +175,11 @@
     "type": "C - UI + API",
     "status": "Non conforme",
     "result": "old réellement ARCHIVE=false (status=REJETE) | accept old HTTP=400 | reject old HTTP=400 | old après=REJETE | new après=EN_ATTENTE | déclaration A_VERIFIER_PAR_RH→A_VERIFIER_PAR_RH",
-    "date": "2026-09-23T14:56:12.764Z",
-    "duration": "3141 ms",
+    "date": "2026-09-29T11:29:13.165Z",
+    "duration": "3708 ms",
     "proof": "CAP-ABS-013.png",
     "error": "Ancien justificatif non archivé par le parcours collaborateur.",
-    "comment": "signification archivé = status ARCHIVE (exclu de findActiveOne). oldDocumentId=7. Rôle Multi-rôles = formulation générique."
+    "comment": "signification archivé = status ARCHIVE (exclu de findActiveOne). oldDocumentId=1. Rôle Multi-rôles = formulation générique."
   },
   {
     "id": "ABS-014",
@@ -189,11 +189,11 @@
     "type": "C - UI + API",
     "status": "Conforme",
     "result": "acceptation UI HTTP=200 | new EN_ATTENTE → ACCEPTE | old=REJETE | 2e acceptation HTTP=400 | déclaration=A_VERIFIER_PAR_RH",
-    "date": "2026-09-23T14:56:17.489Z",
-    "duration": "4721 ms",
+    "date": "2026-09-29T11:29:17.943Z",
+    "duration": "4775 ms",
     "proof": "CAP-ABS-014.png",
     "error": "",
-    "comment": "newDocumentId=8, oldDocumentId=7 (REJETE)"
+    "comment": "newDocumentId=2, oldDocumentId=1 (REJETE)"
   },
   {
     "id": "ABS-015",
@@ -203,11 +203,11 @@
     "type": "C - UI + API",
     "status": "Bloqué",
     "result": "statut=A_VERIFIER_PAR_RH | bouton Autoriser l'absence visible=non | API register HTTP=400 message=\"Tous les justificatifs actifs doivent être acceptés par la RH avant l’enregistrement de l’absence.\" | statut après=A_VERIFIER_PAR_RH",
-    "date": "2026-09-23T14:56:20.601Z",
-    "duration": "3107 ms",
+    "date": "2026-09-29T11:29:21.542Z",
+    "duration": "3593 ms",
     "proof": "CAP-ABS-015.png",
     "error": "Bloqué par ANO-009 : l’ancien justificatif REJETE reste actif, donc « tous les justificatifs actifs acceptés » n’est jamais vrai et l’enregistrement définitif est refusé.",
-    "comment": "declarationId=7, documents actifs=8:ACCEPTE,7:REJETE"
+    "comment": "declarationId=3, documents actifs=2:ACCEPTE,1:REJETE"
   },
   {
     "id": "ABS-016",
@@ -216,12 +216,12 @@
     "scenario": "RH crée une absence pour un collaborateur",
     "type": "C - UI + API",
     "status": "Conforme",
-    "result": "création UI HTTP=201 | createdId=8 | collaborateur=COL-C (19) | dates=2026-09-25 | statut=ENREGISTREE | visible RH=true | visible COL-C=true | visible COL-B=false",
-    "date": "2026-09-23T14:56:24.470Z",
-    "duration": "3865 ms",
+    "result": "création UI HTTP=201 | createdId=4 | collaborateur=COL-C (7) | dates=2026-09-25 | statut=ENREGISTREE | visible RH=true | visible COL-C=true | visible COL-B=false",
+    "date": "2026-09-29T11:29:25.493Z",
+    "duration": "3947 ms",
     "proof": "CAP-ABS-016.png",
     "error": "",
-    "comment": "type=20, bouton=Valider l'absence, requête=POST /absence-declarations"
+    "comment": "type=1, bouton=Valider l'absence, requête=POST /absence-declarations"
   },
   {
     "id": "ABS-017",
@@ -229,12 +229,12 @@
     "module": "ABS",
     "scenario": "Collaborateur annule son brouillon d’absence",
     "type": "C - UI + API",
-    "status": "Non conforme",
-    "result": "brouillon préparé par RH (draftId=9, statut=BROUILLON) | UI bouton annulation=non | API cancel COL-C HTTP=403 | statut après=BROUILLON",
-    "date": "2026-09-23T14:56:26.797Z",
-    "duration": "2321 ms",
+    "status": "Bloqué",
+    "result": "brouillon préparé par RH (draftId=5, statut=BROUILLON) | UI bouton annulation=non | API cancel COL-C HTTP=200 | statut après=ANNULEE",
+    "date": "2026-09-29T11:29:27.803Z",
+    "duration": "2305 ms",
     "proof": "CAP-ABS-017.png",
-    "error": "Le collaborateur possède un brouillon valide, mais aucune action d’annulation n’est disponible et l’API cancel retourne 403.",
-    "comment": "draftId=9, propriétaire=COL-C (id=19)"
+    "error": "Précondition brouillon non satisfaite.",
+    "comment": "draftId=5, propriétaire=COL-C (id=7)"
   }
 ]

@@ -219,7 +219,7 @@ describe('AbsenceDeclarationsService — un seul mode (jours / heures)', () => {
       expect(saved.durationDays).toBeNull();
     });
 
-    it('HEURES → JOURS : PATCH périodes seules → mode jours (durationHours remis à null)', async () => {
+    it('HEURES → JOURS : PATCH périodes seules → refus (400) sans mutation du mode', async () => {
       serviceAny.findAccessibleOne.mockResolvedValue({
         id: 42,
         createdById: 1,
@@ -233,19 +233,12 @@ describe('AbsenceDeclarationsService — un seul mode (jours / heures)', () => {
         status: AbsenceDeclarationStatus.BROUILLON,
       } as never);
 
-      const saved = await service.updateDraft(
-        42,
-        collaboratorUser as never,
-        {
+      await expect(
+        service.updateDraft(42, collaboratorUser as never, {
           startPeriod: DayPeriod.MATIN,
           endPeriod: DayPeriod.APRES_MIDI,
-        } as never,
-      );
-
-      expect(saved.startPeriod).toBe(DayPeriod.MATIN);
-      expect(saved.endPeriod).toBe(DayPeriod.APRES_MIDI);
-      expect(saved.durationHours).toBeNull();
-      expect(saved.durationDays).toBe(1);
+        } as never),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('JOURS → DEMI-JOURNÉE : PATCH périodes identiques → demi-journée', async () => {
