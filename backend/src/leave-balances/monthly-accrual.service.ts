@@ -130,6 +130,7 @@ export class MonthlyAccrualService
     }
 
     const employees = await this.findEligibleEmployees(
+      monthInformation.firstDate,
       monthInformation.lastDate,
     );
     const result: MonthlyAccrualRunResult = {
@@ -144,22 +145,33 @@ export class MonthlyAccrualService
     };
 
     for (const employee of employees) {
-      if (!employee.hireDate || employee.hireDate > monthInformation.firstDate) {
-        result.manualReviewRequired.push({
-          employeeId: employee.id,
-          nom: employee.nom,
-          prenom: employee.prenom,
-          reason:
-            'Arrivée en cours de mois : le prorata doit être contrôlé par la RH tant que sa formule définitive n’est pas validée.',
-        });
+      const presence = this.computePresence(
+        employee.hireDate,
+        employee.exitDate,
+        monthInformation,
+      );
+
+      if (!presence) {
+        // Aucune présence dans le mois cible (ex. départ antérieur au mois) :
+        // aucun droit, aucun mouvement, aucun signalement.
+        continue;
+      }
+
+      const days = this.computeMonthlyCredit(
+        daysPerEmployee,
+        presence,
+      );
+
+      if (days <= 0) {
         continue;
       }
 
       const employeeResult = await this.processEmployeeAccrual({
         employee,
         monthInformation,
-        days: daysPerEmployee,
+        days,
         actorId,
+        presence,
       });
 
       if (employeeResult.status === 'CREDITED') {
@@ -234,6 +246,7 @@ export class MonthlyAccrualService
     monthInformation: MonthInformation;
     days: number;
     actorId: number | null;
+    presence: { daysPresent: number; daysInMonth: number } | null;
   }): Promise<
     | {
         status: 'CREDITED';
@@ -252,6 +265,7 @@ export class MonthlyAccrualService
       const reason = this.buildMonthlyAccrualReason(
         data.monthInformation,
         data.days,
+        data.presence,
       );
       const movementRepository = manager.getRepository(BalanceMovement);
       const existingMovement = await movementRepository.findOne({
@@ -317,14 +331,20 @@ export class MonthlyAccrualService
     });
   }
 
-  private async findEligibleEmployees(lastDate: string): Promise<User[]> {
+  private async findEligibleEmployees(
+    firstDate: string,
+    lastDate: string,
+  ): Promise<User[]> {
     return this.dataSource
       .getRepository(User)
       .createQueryBuilder('user')
-      .where('user.isActive = :isActive', { isActive: true })
-      .andWhere('user.role != :adminRole', { adminRole: UserRole.ADMIN })
+      .where('user.role != :adminRole', { adminRole: UserRole.ADMIN })
       .andWhere('user.hireDate IS NOT NULL')
       .andWhere('user.hireDate <= :lastDate', { lastDate })
+      .andWhere(
+        '(user.isActive = :active OR (user.exitDate IS NOT NULL AND user.exitDate >= :firstDate))',
+        { active: true, firstDate },
+      )
       .orderBy('user.nom', 'ASC')
       .addOrderBy('user.prenom', 'ASC')
       .getMany();
@@ -446,6 +466,7 @@ export class MonthlyAccrualService
   private buildMonthlyAccrualReason(
     monthInformation: MonthInformation,
     days: number,
+    presence: { daysPresent: number; daysInMonth: number } | null,
   ): string {
     const usesElision = ['avril', 'août', 'octobre'].includes(
       monthInformation.monthLabel,
@@ -453,10 +474,50 @@ export class MonthlyAccrualService
     const monthPart = usesElision
       ? `d’${monthInformation.monthLabel}`
       : `de ${monthInformation.monthLabel}`;
+    const formattedDays = this.formatDays(days);
 
-    return `Acquisition mensuelle ${monthPart} ${monthInformation.year} : +${this.formatDays(
-      days,
-    )} jours`;
+    if (presence && presence.daysPresent < presence.daysInMonth) {
+      return `Acquisition proratisée ${monthPart} ${monthInformation.year} : +${formattedDays} jour(s) (présence ${presence.daysPresent}/${presence.daysInMonth})`;
+    }
+
+    return `Acquisition mensuelle ${monthPart} ${monthInformation.year} : +${formattedDays} jours`;
+  }
+
+  private computePresence(
+    hireDate: string | null,
+    exitDate: string | null,
+    monthInformation: MonthInformation,
+  ): { daysPresent: number; daysInMonth: number } | null {
+    const first = new Date(`${monthInformation.firstDate}T00:00:00Z`);
+    const last = new Date(`${monthInformation.lastDate}T00:00:00Z`);
+    const hire = hireDate ? new Date(`${hireDate}T00:00:00Z`) : first;
+    const exit = exitDate ? new Date(`${exitDate}T00:00:00Z`) : last;
+
+    const start = hire.getTime() > first.getTime() ? hire : first;
+    const end = exit.getTime() < last.getTime() ? exit : last;
+
+    if (start.getTime() > end.getTime()) {
+      return null;
+    }
+
+    const daysPresent =
+      Math.round((end.getTime() - start.getTime()) / 86_400_000) + 1;
+    const daysInMonth = Number(monthInformation.lastDate.slice(8, 10));
+
+    return { daysPresent, daysInMonth };
+  }
+
+  private computeMonthlyCredit(
+    daysPerEmployee: number,
+    presence: { daysPresent: number; daysInMonth: number },
+  ): number {
+    if (presence.daysPresent === presence.daysInMonth) {
+      return this.round(daysPerEmployee);
+    }
+
+    return this.round(
+      (daysPerEmployee * presence.daysPresent) / presence.daysInMonth,
+    );
   }
 
   private getMartiniqueDateParts(date: Date): MartiniqueDateParts {

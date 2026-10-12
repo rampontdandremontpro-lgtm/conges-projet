@@ -85,6 +85,11 @@ export class UsersService {
 
     const service = await this.resolveServiceForCreation(createUserDto);
 
+    this.validateExitDate(
+      createUserDto.hireDate ?? null,
+      createUserDto.exitDate ?? null,
+    );
+
     const user = this.userRepository.create({
       nom: createUserDto.nom.trim(),
       prenom: createUserDto.prenom.trim(),
@@ -96,6 +101,7 @@ export class UsersService {
       role: createUserDto.role,
       employmentType: createUserDto.employmentType,
       hireDate: createUserDto.hireDate ?? null,
+      exitDate: createUserDto.exitDate ?? null,
       presenceStatus: PresenceStatus.PRESENT,
       isActive: true,
       serviceId: service?.id ?? null,
@@ -823,6 +829,7 @@ export class UsersService {
       role: user.role,
       employmentType: user.employmentType,
       hireDate: user.hireDate,
+      exitDate: user.exitDate,
       presenceStatus: user.presenceStatus,
       serviceId: user.serviceId,
       profileImageData: preferences.profileImageData,
@@ -1108,12 +1115,21 @@ export class UsersService {
       );
     }
 
+    const hireDate = updateUserDto.hireDate ?? user.hireDate;
+    const exitDate =
+      updateUserDto.exitDate !== undefined
+        ? updateUserDto.exitDate
+        : user.exitDate;
+
+    this.validateExitDate(hireDate, exitDate);
+
     user.nom = updateUserDto.nom?.trim() ?? user.nom;
     user.prenom = updateUserDto.prenom?.trim() ?? user.prenom;
     user.email = email;
     user.role = role;
     user.employmentType = employmentType;
-    user.hireDate = updateUserDto.hireDate ?? user.hireDate;
+    user.hireDate = hireDate;
+    user.exitDate = exitDate;
     user.serviceId = service?.id ?? null;
     user.service = service;
 
@@ -1300,6 +1316,17 @@ export class UsersService {
     ) {
       throw new BadRequestException(
         'Un collaborateur externe doit appartenir à un service externe.',
+      );
+    }
+  }
+
+  private validateExitDate(
+    hireDate: string | null,
+    exitDate: string | null,
+  ): void {
+    if (hireDate && exitDate && exitDate < hireDate) {
+      throw new BadRequestException(
+        'La date de sortie ne peut pas être antérieure à la date d’entrée.',
       );
     }
   }

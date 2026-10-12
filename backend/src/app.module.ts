@@ -15,6 +15,7 @@ import { AddMustChangePassword20260828140000 } from './database/migrations/20260
 import { AddAnticipatedLeave20260828180000 } from './database/migrations/20260828180000-add-anticipated-leave';
 import { AddLeaveRequestDurationHours20260901150000 } from './database/migrations/20260901150000-add-leave-request-duration-hours';
 import { AddDerogationSubmittedAt20260929180000 } from './database/migrations/20260929180000-add-derogation-submitted-at';
+import { AddUserExitDate20260930180000 } from './database/migrations/20260930180000-add-user-exit-date';
 import { DocumentsModule } from './documents/documents.module';
 import { ExportsModule } from './exports/exports.module';
 import { HolidaysModule } from './holidays/holidays.module';
@@ -56,6 +57,7 @@ import { ValidatorsModule } from './validators/validators.module';
           AddAnticipatedLeave20260828180000,
           AddLeaveRequestDurationHours20260901150000,
           AddDerogationSubmittedAt20260929180000,
+          AddUserExitDate20260930180000,
         ],
         migrationsRun: true,
         migrationsTableName: 'typeorm_migrations',

@@ -305,7 +305,7 @@ export function AppLayout() {
           aria-label="Fermer le menu"
         />
       )}
-      <Sidebar collapsed={collapsed} onCloseMobile={() => setMobileOpen(false)} />
+      <Sidebar collapsed={collapsed} onCloseMobile={() => setMobileOpen(false)} onToggleCollapsed={() => setCollapsed((value) => !value)} />
       <div className="app-shell__main">
         <Header
           onOpenMobile={() => setMobileOpen((value) => !value)}

@@ -1,0 +1,174 @@
+{
+  "purpose": "Retest métier BAL-009 — prorata calendaire arrivée/départ",
+  "rule": {
+    "base": "jours calendaires réels du mois",
+    "formula": "MONTHLY_ACCRUAL_RATE × jours de présence / jours calendaires du mois",
+    "arrivalIncluded": true,
+    "departureIncluded": true,
+    "exitDateMeaning": "dernier jour de présence dans l’entreprise",
+    "rounding": "arrondi mathématique à 2 décimales",
+    "monthlyAccrualRate": 2.5,
+    "correctionRh": "CORRECTION_POSITIVE / CORRECTION_NEGATIVE, jamais de réécriture de l’acquisition"
+  },
+  "dateRetest": "30/09/2026",
+  "apiUserTests": {
+    "disableForCaseI": 200,
+    "create": {
+      "status": 201,
+      "hireDate": "2026-07-01",
+      "exitDate": "2026-07-15",
+      "persisted": true
+    },
+    "get": {
+      "exitDate": "2026-07-15",
+      "persisted": true
+    },
+    "patch": {
+      "status": 200,
+      "exitDate": "2026-07-20",
+      "persisted": true
+    },
+    "patchNull": {
+      "status": 200,
+      "exitDate": null,
+      "isNull": true
+    },
+    "invalid": {
+      "status": 400,
+      "rejected": true,
+      "message": "La date de sortie ne peut pas être antérieure à la date d’entrée."
+    }
+  },
+  "cases": {
+    "A": {
+      "expectedDays": 1.29,
+      "observedDays": 1.29,
+      "movementCount": 1,
+      "movementDays": 1.29,
+      "movementReason": "Acquisition proratisée de juillet 2026 : +1,29 jour(s) (présence 16/31)",
+      "presenceExpected": "16/31",
+      "ok": true
+    },
+    "B": {
+      "expectedDays": 1.21,
+      "observedDays": 1.21,
+      "movementCount": 1,
+      "movementDays": 1.21,
+      "movementReason": "Acquisition proratisée de juillet 2026 : +1,21 jour(s) (présence 15/31)",
+      "ok": true
+    },
+    "C": {
+      "expectedDays": 2.5,
+      "observedDays": 2.5,
+      "movementCount": 1,
+      "movementDays": 2.5,
+      "movementReason": "Acquisition mensuelle de juillet 2026 : +2,5 jours",
+      "ok": true
+    },
+    "D": {
+      "expectedDays": 0.08,
+      "observedDays": 0.08,
+      "movementCount": 1,
+      "movementDays": 0.08,
+      "movementReason": "Acquisition proratisée de juillet 2026 : +0,08 jour(s) (présence 1/31)",
+      "ok": true
+    },
+    "E": {
+      "expectedDays": 0.4,
+      "observedDays": 0.4,
+      "movementCount": 1,
+      "movementDays": 0.4,
+      "movementReason": "Acquisition proratisée de juillet 2026 : +0,4 jour(s) (présence 5/31)",
+      "ok": true
+    },
+    "H": {
+      "expectedDays": 0,
+      "observedDays": 0,
+      "movementCount": 0,
+      "ok": true
+    },
+    "I": {
+      "expectedDays": 1.21,
+      "observedDays": 1.21,
+      "movementCount": 1,
+      "movementDays": 1.21,
+      "ok": true
+    }
+  },
+  "idempotence": {
+    "run2Status": 201,
+    "caseA": {
+      "acquiredBefore": 1.29,
+      "acquiredAfter": 1.29,
+      "movementCountBefore": 1,
+      "movementCountAfter": 1,
+      "ok": true
+    },
+    "fullMonth": {
+      "acquired": 2.5,
+      "movementCount": 1,
+      "ok": true
+    }
+  },
+  "correctionRh": {
+    "status": 201,
+    "acquisitionPreserved": true,
+    "correctionSeparated": true,
+    "correctionType": "CORRECTION_POSITIVE",
+    "finalBalance": 1.5,
+    "expectedFinal": 1.5,
+    "reason": "Correction RH BAL-009-G 92502328",
+    "ok": true
+  },
+  "executed": true,
+  "run1Status": 201,
+  "conclusion": "Conforme",
+  "uiAdmin": {
+    "create": {
+      "ok": true,
+      "exitDateVisible": true
+    },
+    "edit": {
+      "ok": true,
+      "exitDateShown": true
+    },
+    "clear": {
+      "ok": true,
+      "exitDateNull": true
+    },
+    "error": {
+      "ok": true,
+      "feedback": "La date de sortie ne peut pas être antérieure à la date d’entrée."
+    }
+  },
+  "uiRh": {
+    "balanceBefore": {
+      "ok": true,
+      "acquired": "1,29"
+    },
+    "balanceAfter": {
+      "ok": true,
+      "acquired": "1,50"
+    },
+    "history": {
+      "hasAcquisition129": true,
+      "hasCorrection021": true,
+      "ok": true
+    }
+  },
+  "migration": {
+    "file": "backend/src/database/migrations/20260930180000-add-user-exit-date.ts",
+    "up": "ALTER TABLE users ADD COLUMN exit_date DATE NULL AFTER hire_date (garde hasTable/hasColumn)",
+    "down": "ALTER TABLE users DROP COLUMN exit_date (garde hasColumn)",
+    "tempDbTest": "UP / DOWN / re-UP / idempotence / type DATE / nullable — Conforme",
+    "recetteDb": "colonne exit_date DATE NULL présente + migration enregistrée dans typeorm_migrations"
+  },
+  "builds": {
+    "backend": "OK (nest build)",
+    "frontend": "OK (vite build)"
+  },
+  "unitTests": {
+    "targeted": "monthly-accrual.service.spec.ts : 28 tests passés (10 nouveaux cas prorata)",
+    "fullSuite": "233 passés / 11 échoués / 0 nouvelle régression (3 suites préexistantes : settings.service.spec, balance-reminder.service.spec, documents.service.spec)"
+  }
+}

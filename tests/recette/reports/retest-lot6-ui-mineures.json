@@ -1,0 +1,203 @@
+{
+  "lot": 6,
+  "dateRetest": "30/09/2026",
+  "executed": true,
+  "ui013NonRegression": {
+    "UI-010": {
+      "executed": true,
+      "modifier": 1,
+      "autoriser": 0,
+      "fermer": 1,
+      "regroupement": true,
+      "status": "Conforme",
+      "evidence": "Modifier=1 Autoriser=0 Fermer=1 regroupé=true"
+    },
+    "UI-011": {
+      "executed": true,
+      "modifier": 1,
+      "autoriser": 1,
+      "fermer": 1,
+      "regroupement": true,
+      "status": "Conforme",
+      "evidence": "Modifier=1 Autoriser=1 Fermer=1 regroupé=true"
+    },
+    "UI-012": {
+      "executed": true,
+      "statutRefus": "Refusé",
+      "motif": "Motif du refus : REFUS UI012 76561517",
+      "voir": 1,
+      "remplacer": 1,
+      "voirFonctionnel": true,
+      "status": "Conforme",
+      "evidence": "statut=Refusé motif=\"Motif du refus : REFUS UI012 76561517\" Voir=1 Remplacer=1"
+    },
+    "UI-019": {
+      "executed": true,
+      "parcoursTab": 2,
+      "focusVisible": true,
+      "fermetureClavier": true,
+      "overlayOrphelin": 0,
+      "status": "Conforme",
+      "evidence": "Tab=2 focusVisible=true fermetureClavier=true orphan=0"
+    },
+    "UI-020": {
+      "executed": true,
+      "loading": false,
+      "http500": true,
+      "errorVisible": true,
+      "reprise": true,
+      "authentificationConservee": true,
+      "status": "Conforme",
+      "evidence": "loading=false 500=true erreurVisible=true reprise=true auth=true"
+    }
+  },
+  "ui018Accessibility": {
+    "tabReachedCollapseControl": true,
+    "tabPressCount": 13,
+    "focusVisible": true,
+    "outline": "solid 2px",
+    "ariaLabel": "Réduire la barre latérale",
+    "ariaExpandedBefore": "true",
+    "keyboardActivation": true,
+    "collapsedAfterEnter": true,
+    "status": "Conforme",
+    "visited": [
+      "A:sidebar__brand",
+      "A:sidebar__nav-item is-active",
+      "A:sidebar__nav-item",
+      "A:sidebar__nav-item",
+      "A:sidebar__nav-item",
+      "A:sidebar__nav-item",
+      "A:sidebar__nav-item",
+      "A:sidebar__nav-item",
+      "A:sidebar__nav-item",
+      "A:sidebar__nav-item",
+      "A:sidebar__nav-item",
+      "A:sidebar__nav-item",
+      "BUTTON:sidebar__collapse-toggle"
+    ]
+  },
+  "ui018Mobile": {
+    "menuBtn": 1,
+    "menuOpen": true,
+    "navClose": true,
+    "orphanOverlay": 0,
+    "desktopControlConflict": false
+  },
+  "ui018Tablette": {
+    "autoCollapsed": true,
+    "toggleVisible": false,
+    "conflit": false
+  },
+  "exp013Official": {
+    "nInitial": 0,
+    "nMinus1Initial": 10,
+    "report": 2,
+    "transfertN": 0,
+    "attenduExact": 2,
+    "observeExact": 2,
+    "mouvements": "report=2 transfertN=0 doubleMouvement=NON",
+    "status": "Conforme"
+  },
+  "anomalies": [
+    {
+      "anomalyId": "ANO-020",
+      "severity": "Mineure",
+      "scenario": "UI-013",
+      "conclusion": "Conforme"
+    },
+    {
+      "anomalyId": "ANO-021",
+      "severity": "Mineure",
+      "scenario": "UI-018",
+      "conclusion": "Conforme"
+    }
+  ],
+  "nonRegression": [
+    {
+      "id": "ABS-001",
+      "status": "Conforme",
+      "result": "HTTP=201"
+    },
+    {
+      "id": "ABS-017",
+      "status": "Conforme",
+      "result": "HTTP=200"
+    },
+    {
+      "id": "ADM-021",
+      "status": "Conforme",
+      "result": "HTTP=200"
+    },
+    {
+      "id": "CAN-002",
+      "status": "Conforme",
+      "result": "HTTP=200"
+    },
+    {
+      "id": "DIR-013",
+      "status": "Conforme",
+      "result": "deductedDays=1 N-1=29"
+    },
+    {
+      "id": "EXP-003",
+      "status": "Conforme",
+      "result": "HTTP=403"
+    },
+    {
+      "id": "HALF-018",
+      "status": "Conforme",
+      "result": "HTTP=400"
+    },
+    {
+      "id": "PRE-019",
+      "status": "Conforme",
+      "result": "REPRISE_PAR_RELAIS traces=1"
+    },
+    {
+      "id": "VAL-010",
+      "status": "Conforme",
+      "result": "enable HTTP=200 isActive=true"
+    },
+    {
+      "id": "VAL-047",
+      "status": "Conforme",
+      "result": "notifications avant=1 après 2 maintenances=1"
+    },
+    {
+      "id": "DER-003",
+      "status": "Conforme",
+      "result": "soumission1=200 soumission2=409 audit=2"
+    },
+    {
+      "id": "EXP-011",
+      "status": "Conforme",
+      "result": "clôture intégrée au cas EXP-013 officiel (close OK → N-1 2026-2027 acquiredDays=2 exact)"
+    }
+  ],
+  "ui013": {
+    "executed": true,
+    "validation": {
+      "HTTP": 200,
+      "statusBefore": "EN_ATTENTE",
+      "statusAfter": "ACCEPTE",
+      "uiStatus": "Validé",
+      "feedback": "Justificatif validé. Vous pouvez maintenant autoriser l’absence.",
+      "feedbackVisible": true,
+      "feedbackUnobscured": true,
+      "drawerStillUsable": true
+    },
+    "refusal": {
+      "HTTP": 200,
+      "statusBefore": "EN_ATTENTE",
+      "statusAfter": "REJETE",
+      "uiStatus": "Refusé",
+      "reason": "Motif du refus visible",
+      "feedback": "Justificatif refusé. Un nouveau justificatif est maintenant attendu.",
+      "feedbackVisible": true,
+      "feedbackUnobscured": true,
+      "drawerStillUsable": true
+    },
+    "status": "Conforme"
+  }
+}

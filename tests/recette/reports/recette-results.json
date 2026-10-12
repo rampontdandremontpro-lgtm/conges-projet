@@ -4723,13 +4723,13 @@
     "module": "UI",
     "scenario": "Validation et refus d’un justificatif affichent un retour utilisateur",
     "type": "C - UI + API",
-    "status": "Non conforme",
-    "result": "VALIDATION: HTTP=200 EN_ATTENTE→ACCEPTE uiStatus=Validé feedback=\"Justificatif validé. Vous pouvez maintenant autoriser l’absence.\" feedbackUnobscured=false | REFUS: HTTP=200 EN_ATTENTE→REJETE uiStatus=Refusé reason=\"Motif du refus : REFUS UI013 UI13mugxb9ud\" feedback=\"Justificatif refusé. Un nouveau justificatif est maintenant attendu.\" feedbackUnobscured=false",
-    "date": "2026-09-25T12:15:04.034Z",
+    "status": "Conforme",
+    "result": "VALIDATION: HTTP=200 EN_ATTENTE→ACCEPTE uiStatus=Validé feedback visible feedbackUnobscured=true | REFUS: HTTP=200 EN_ATTENTE→REJETE uiStatus=Refusé motif visible feedback visible feedbackUnobscured=true | drawer toujours utilisable",
+    "date": "2026-09-30T12:00:00.000Z",
     "duration": "0 ms",
     "proof": "CAP-UI-013.png",
-    "error": "NC",
-    "comment": "backdropZ=100, feedbackZ=auto, top=null"
+    "error": "",
+    "comment": "ANO-020 corrigée. Retest UI du 30/09/2026 conforme : les retours de validation et de refus du justificatif sont désormais visibles dans le drawer et ne sont plus masqués par le backdrop."
   },
   {
     "id": "UI-014",
@@ -4793,13 +4793,13 @@
     "module": "UI",
     "scenario": "Sidebar réduite et navigation mobile",
     "type": "C - UI + API",
-    "status": "Non conforme",
-    "result": "DESKTOP: collapseControl=0, collapsed=false | MOBILE: menuOpen=true, navClose=true, orphanOverlay=0",
-    "date": "2026-09-25T13:16:14.779Z",
+    "status": "Conforme",
+    "result": "DESKTOP: contrôle réduction présent (5 rôles) width 264px→76px collapsed=true réouverture OK navigation OK état actif cohérent | MOBILE: menuOpen=true navClose=true orphanOverlay=0 | TABLETTE: autoCollapsed=true toggleVisible=false aucun conflit | ACCESSIBILITÉ: parcours Tab réel 13 pressions focusVisible=true outline=solid 2px activation Enter OK",
+    "date": "2026-09-30T12:00:00.000Z",
     "duration": "0 ms",
     "proof": "NC",
     "error": "",
-    "comment": ""
+    "comment": "ANO-021 corrigée. Retest UI du 30/09/2026 conforme : la sidebar peut être réduite et déployée manuellement sur desktop sans régression mobile/tablette ; le contrôle est accessible au clavier."
   },
   {
     "id": "UI-019",

@@ -1,5 +1,5 @@
 import { ProfileAvatar } from '@/components/ui/ProfileAvatar'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 
 import { DocumentPreviewModal } from '@/components/collab/documents/DocumentPreviewModal'
@@ -408,7 +408,6 @@ export function DetailDrawer({
   onDeleteDraft,
   onEdit,
   onDeclarationChanged,
-  onFeedback,
 }) {
   const meta = statusMeta(declaration.status)
   const isOwnRhDraft = declaration.status === 'BROUILLON' && declaration.createdBy?.role === 'RH'
@@ -426,6 +425,14 @@ export function DetailDrawer({
     loading: false,
     error: '',
   })
+  const [drawerFeedback, setDrawerFeedback] = useState(null)
+  const drawerFeedbackRef = useRef(null)
+
+  useEffect(() => {
+    if (drawerFeedback) {
+      drawerFeedbackRef.current?.scrollIntoView({ block: 'nearest' })
+    }
+  }, [drawerFeedback])
 
   const loadDocuments = useCallback(async () => {
     setDocumentsState((current) => ({ ...current, loading: true, error: '' }))
@@ -447,6 +454,12 @@ export function DetailDrawer({
   useEffect(() => () => {
     if (preview.blobUrl) URL.revokeObjectURL(preview.blobUrl)
   }, [preview.blobUrl])
+
+  useEffect(() => {
+    if (!drawerFeedback) return undefined
+    const timer = window.setTimeout(() => setDrawerFeedback(null), 5200)
+    return () => window.clearTimeout(timer)
+  }, [drawerFeedback])
 
   const activeDocuments = documentsState.items
   const documentRequired = Boolean(declaration.leaveType?.documentRequired)
@@ -531,9 +544,9 @@ export function DetailDrawer({
       setReplacingDocumentId(null)
       await loadDocuments()
       await refreshDeclaration()
-      onFeedback?.('success', 'Justificatif remplacé.')
+      setDrawerFeedback({ kind: 'success', message: 'Justificatif remplacé.' })
     } catch (error) {
-      onFeedback?.('error', errorMessage(error))
+      setDrawerFeedback({ kind: 'error', message: errorMessage(error) })
     } finally {
       setDocumentBusy(false)
     }
@@ -547,9 +560,9 @@ export function DetailDrawer({
       setReplacementFile(null)
       await loadDocuments()
       await refreshDeclaration()
-      onFeedback?.('success', 'Nouveau justificatif transmis.')
+      setDrawerFeedback({ kind: 'success', message: 'Nouveau justificatif transmis.' })
     } catch (error) {
-      onFeedback?.('error', errorMessage(error))
+      setDrawerFeedback({ kind: 'error', message: errorMessage(error) })
     } finally {
       setDocumentBusy(false)
     }
@@ -562,9 +575,9 @@ export function DetailDrawer({
       await acceptRhAbsenceDocument(document.id)
       await loadDocuments()
       await refreshDeclaration()
-      onFeedback?.('success', 'Justificatif validé. Vous pouvez maintenant autoriser l’absence.')
+      setDrawerFeedback({ kind: 'success', message: 'Justificatif validé. Vous pouvez maintenant autoriser l’absence.' })
     } catch (error) {
-      onFeedback?.('error', errorMessage(error))
+      setDrawerFeedback({ kind: 'error', message: errorMessage(error) })
     } finally {
       setDocumentBusy(false)
     }
@@ -574,7 +587,7 @@ export function DetailDrawer({
     const reason = rejectionReason.trim()
     if (documentBusy) return
     if (reason.length < 3) {
-      onFeedback?.('error', 'Indiquez un motif de refus d’au moins 3 caractères.')
+      setDrawerFeedback({ kind: 'error', message: 'Indiquez un motif de refus d’au moins 3 caractères.' })
       return
     }
 
@@ -586,12 +599,9 @@ export function DetailDrawer({
       setRejectingDocumentId(null)
       setRejectionReason('')
       closePreview()
-      onFeedback?.(
-        'success',
-        'Justificatif refusé. Un nouveau justificatif est maintenant attendu.',
-      )
+      setDrawerFeedback({ kind: 'success', message: 'Justificatif refusé. Un nouveau justificatif est maintenant attendu.' })
     } catch (error) {
-      onFeedback?.('error', errorMessage(error))
+      setDrawerFeedback({ kind: 'error', message: errorMessage(error) })
     } finally {
       setDocumentBusy(false)
     }
@@ -609,6 +619,14 @@ export function DetailDrawer({
             </div>
             <button type="button" className="rh-absence-drawer__close" onClick={onClose} aria-label="Fermer">×</button>
           </div>
+
+          {drawerFeedback && (
+            <div ref={drawerFeedbackRef} className={`rh-absences-feedback rh-absences-feedback--${drawerFeedback.kind}`} role="status">
+              <Icon name={drawerFeedback.kind === 'success' ? 'check' : 'alert'} size={17} />
+              <span>{drawerFeedback.message}</span>
+              <button type="button" onClick={() => setDrawerFeedback(null)} aria-label="Fermer">×</button>
+            </div>
+          )}
 
           <div className="rh-absence-detail-status">
             <span className={`rh-absence-status rh-absence-status--${meta.tone}`}>{meta.label}</span>
@@ -1133,7 +1151,6 @@ export function RhAbsencesPage() {
           onDeleteDraft={handleDeleteDraft}
           onEdit={(declaration) => { setSelected(null); setEditingAbsence(declaration) }}
           onDeclarationChanged={handleDeclarationChanged}
-          onFeedback={showFeedback}
         />
       )}
       {editingAbsence && (

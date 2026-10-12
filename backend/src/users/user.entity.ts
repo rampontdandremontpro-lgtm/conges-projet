@@ -85,6 +85,9 @@ export class User {
   @Column({ name: 'hire_date', type: 'date', nullable: true })
   hireDate!: string | null;
 
+  @Column({ name: 'exit_date', type: 'date', nullable: true })
+  exitDate!: string | null;
+
   @Column({
     name: 'presence_status',
     type: 'enum',

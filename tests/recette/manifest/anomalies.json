@@ -194,19 +194,19 @@
     "UI-013",
     "Le retour utilisateur après validation/refus d’un justificatif est rendu derrière le backdrop du drawer et n’est pas clairement visible.",
     "Mineure",
-    "Ouverte",
+    "Fermée",
     "D.RAMPONT",
     "Description : Attendu : chaque action (Valider / Refuser un justificatif) affiche un retour clair visible. Obtenu : l'action métier réussit (HTTP 200), le statut du document est mis à jour (Validé / Refusé), et le message .rh-events-feedback est présent dans le DOM. Mais le message de retour est rendu sous le drawer / overlay. Au centre géométrique du feedback, elementFromPoint retourne un élément du contenu superposé et non le feedback, pour la validation (topElement=P) comme pour le refus (topElement=DIV). backdropVisible=true, backdropZIndex=100, feedbackZIndex=auto. Le retour existe dans le DOM mais n'est pas au premier plan. Impact : UI-013 Non conforme. Sévérité Mineure car l'action réussit et le statut du document reste clairement visible dans le drawer.",
-    ""
+    "Correction validée par retest le 30/09/2026 : UI-013 conforme. Les retours de validation et de refus d’un justificatif sont désormais clairement visibles dans le drawer et ne sont plus masqués par le backdrop."
   ],
   [
     "ANO-021",
     "UI-018",
     "Aucun contrôle de réduction de la sidebar sur desktop",
     "Mineure",
-    "Ouverte",
+    "Fermée",
     "D.RAMPONT",
     "Description : Attendu : sur desktop (1366 ou 1920), la sidebar doit pouvoir être réduite via l'UI, les icônes restant visibles et le contenu se repositionnant. Obtenu : aucun contrôle de réduction n'est rendu (collapseControlCount=0) ; l'état réduit (app-shell--collapsed) n'est déclenché automatiquement qu'en tablette 768-1024 (media query). La navigation mobile, elle, fonctionne (menu ouvert/fermé, navigation, fermeture après navigation, aucun overlay orphelin). Impact : UI-018 Non conforme. Sévérité Mineure car la navigation reste utilisable.",
-    ""
+    "Correction validée par retest le 30/09/2026 : UI-018 conforme. Un contrôle accessible permet désormais de réduire/déployer la sidebar sur desktop sans régression de la navigation mobile ou tablette."
   ]
 ]

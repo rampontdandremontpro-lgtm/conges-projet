@@ -43,6 +43,10 @@ export class CreateUserDto {
   hireDate?: string;
 
   @IsOptional()
+  @IsDateString()
+  exitDate?: string | null;
+
+  @IsOptional()
   @IsInt()
   @Min(1)
   serviceId?: number;

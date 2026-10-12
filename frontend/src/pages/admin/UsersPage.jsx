@@ -46,6 +46,7 @@ const EMPTY_FORM = {
   employmentType: 'INTERNE',
   serviceId: '',
   hireDate: '',
+  exitDate: '',
   password: '',
 }
 
@@ -85,6 +86,7 @@ function formFromUser(user) {
     employmentType: user.employmentType ?? 'INTERNE',
     serviceId: user.serviceId ? String(user.serviceId) : '',
     hireDate: user.hireDate ? String(user.hireDate).slice(0, 10) : '',
+    exitDate: user.exitDate ? String(user.exitDate).slice(0, 10) : '',
     password: '',
   }
 }
@@ -151,6 +153,10 @@ function UserDrawer({ mode, user, services, onClose, onSaved, onEdit, rhMode = f
       setFeedback('Un service est obligatoire pour ce rôle.')
       return
     }
+    if (form.hireDate && form.exitDate && form.exitDate < form.hireDate) {
+      setFeedback('La date de sortie ne peut pas être antérieure à la date d’entrée.')
+      return
+    }
 
     const payload = {
       nom: form.nom.trim(),
@@ -159,6 +165,7 @@ function UserDrawer({ mode, user, services, onClose, onSaved, onEdit, rhMode = f
       role: form.role,
       employmentType: form.role === 'ADMIN' ? 'INTERNE' : form.employmentType,
       ...(form.hireDate ? { hireDate: form.hireDate } : {}),
+      exitDate: form.exitDate || null,
       ...(!rhMode && form.password.trim() ? { password: form.password } : {}),
     }
 
@@ -218,6 +225,7 @@ function UserDrawer({ mode, user, services, onClose, onSaved, onEdit, rhMode = f
                 <div><dt>Nom</dt><dd>{user.nom}</dd></div>
                 <div className="is-wide"><dt>E-mail</dt><dd>{user.email}</dd></div>
                 <div className="is-wide"><dt>Date d’entrée</dt><dd>{formatDate(user.hireDate)}</dd></div>
+                <div className="is-wide"><dt>Date de sortie</dt><dd>{formatDate(user.exitDate)}</dd></div>
               </dl>
             </section>
 
@@ -252,6 +260,7 @@ function UserDrawer({ mode, user, services, onClose, onSaved, onEdit, rhMode = f
                 <label><span>Nom <b>*</b></span><input value={form.nom} onChange={(event) => setValue('nom', event.target.value)} maxLength="100" /></label>
                 <label className="is-wide"><span>E-mail <b>*</b></span><input type="email" value={form.email} onChange={(event) => setValue('email', event.target.value)} maxLength="190" placeholder="prenom.nom@gmes.fr" /></label>
                 <label className="is-wide"><span>Date d’entrée</span><input type="date" value={form.hireDate} onChange={(event) => setValue('hireDate', event.target.value)} /></label>
+                <label className="is-wide"><span>Date de sortie</span><input type="date" value={form.exitDate} onChange={(event) => setValue('exitDate', event.target.value)} /></label>
               </div>
             </section>
 

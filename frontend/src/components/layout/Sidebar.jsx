@@ -5,7 +5,7 @@ import { useAuth } from '@/auth/AuthContext'
 import { Icon } from '@/components/ui/Icon'
 import { NEW_REQUEST_ITEM, NEW_REQUEST_ROLES, getNavigationForRole } from '@/config/navigation'
 
-export function Sidebar({ collapsed, onCloseMobile }) {
+export function Sidebar({ collapsed, onCloseMobile, onToggleCollapsed }) {
   const { effectiveRole } = useAuth()
   const role = effectiveRole
   const navigation = getNavigationForRole(role)
@@ -71,6 +71,18 @@ export function Sidebar({ collapsed, onCloseMobile }) {
           })}
         </ul>
       </nav>
+
+      <button
+        type="button"
+        className="sidebar__collapse-toggle"
+        onClick={onToggleCollapsed}
+        aria-label={collapsed ? 'Déployer la barre latérale' : 'Réduire la barre latérale'}
+        aria-expanded={!collapsed}
+        title={collapsed ? 'Déployer la barre latérale' : 'Réduire la barre latérale'}
+      >
+        <Icon name={collapsed ? 'chevronRight' : 'chevronLeft'} />
+        <span>{collapsed ? 'Déployer' : 'Réduire'}</span>
+      </button>
     </aside>
   )
 }

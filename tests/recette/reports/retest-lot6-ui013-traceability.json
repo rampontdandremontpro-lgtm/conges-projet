@@ -1,0 +1,35 @@
+{
+  "purpose": "LOT 6 post-fusion traceability lock",
+  "dateRetest": "30/09/2026",
+  "scenario": "UI-013",
+  "executed": true,
+  "validation": {
+    "absenceId": 1,
+    "documentId": 1,
+    "http": 200,
+    "statusBefore": "EN_ATTENTE",
+    "statusAfter": "ACCEPTE",
+    "uiStatus": "Validé",
+    "feedbackVisible": true,
+    "feedbackText": "Justificatif validé. Vous pouvez maintenant autoriser l’absence.\n×",
+    "feedbackUnobscured": true,
+    "elementFromPoint": "SPAN:",
+    "drawerStillUsable": true
+  },
+  "refusal": {
+    "absenceId": 2,
+    "documentId": 2,
+    "http": 200,
+    "statusBefore": "EN_ATTENTE",
+    "statusAfter": "REJETE",
+    "uiStatus": "Refusé",
+    "reason": "Motif du refus : REFUS UI13 TRACE 79716002",
+    "reasonVisible": true,
+    "feedbackVisible": true,
+    "feedbackText": "Justificatif refusé. Un nouveau justificatif est maintenant attendu.\n×",
+    "feedbackUnobscured": true,
+    "elementFromPoint": "SPAN:",
+    "drawerStillUsable": true
+  },
+  "conclusion": "Conforme"
+}

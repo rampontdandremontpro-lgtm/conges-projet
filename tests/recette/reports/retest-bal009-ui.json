@@ -1,0 +1,44 @@
+{
+  "purpose": "Retest UI BAL-009 — Admin Date de sortie + RH solde/correction",
+  "dateRetest": "30/09/2026",
+  "adminUi": {
+    "create": {
+      "ok": true,
+      "exitDateVisible": true
+    },
+    "edit": {
+      "ok": true,
+      "exitDateShown": true
+    },
+    "clear": {
+      "ok": true,
+      "exitDateNull": true
+    },
+    "error": {
+      "ok": true,
+      "feedback": "La date de sortie ne peut pas être antérieure à la date d’entrée."
+    }
+  },
+  "rhUi": {
+    "balanceBefore": {
+      "ok": true,
+      "acquired": "1,29"
+    },
+    "balanceAfter": {
+      "ok": true,
+      "acquired": "1,50"
+    },
+    "history": {
+      "hasAcquisition129": true,
+      "hasCorrection021": true,
+      "ok": true
+    }
+  },
+  "executed": true,
+  "setup": {
+    "uiAId": 24,
+    "serviceId": 6,
+    "accrualRunStatus": 201
+  },
+  "conclusion": "Conforme"
+}
