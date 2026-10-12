@@ -98,12 +98,12 @@ export class Document {
   })
   status!: DocumentStatus;
 
-  @Column({ name: 'uploaded_by_id', type: 'bigint' })
-  uploadedById!: number;
+  @Column({ name: 'uploaded_by_id', type: 'bigint', nullable: true })
+  uploadedById!: number | null;
 
-  @ManyToOne(() => User, { nullable: false, onDelete: 'RESTRICT' })
+  @ManyToOne(() => User, { nullable: true, onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'uploaded_by_id' })
-  uploadedBy!: User;
+  uploadedBy!: User | null;
 
   @Column({ name: 'verified_by_rh_id', type: 'bigint', nullable: true })
   verifiedByRhId!: number | null;

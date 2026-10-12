@@ -1,0 +1,58 @@
+{
+  "title": "Ajustement UI Directeur — Indisponibilité (12/10/2026)",
+  "date": "2026-10-12T16:00:17.272Z",
+  "frontendUrl": "http://localhost:5174",
+  "summary": {
+    "total": 5,
+    "conformes": 5,
+    "nonConformes": 0,
+    "allConformes": true
+  },
+  "results": [
+    {
+      "id": "AJUST-desktop-1920x1080",
+      "action": "Rendu desktop-1920x1080",
+      "expected": "scroll=aucun, centré, cartes >= 560px, fonctionnel",
+      "observed": "scroll=false scrollH=1080/innerH=1080 left=584 align=center save=true cal=true",
+      "pass": "Conforme",
+      "date": "2026-10-12T15:59:58.795Z"
+    },
+    {
+      "id": "AJUST-desktop-1600x900",
+      "action": "Rendu desktop-1600x900",
+      "expected": "scroll=aucun, centré, cartes >= 560px, fonctionnel",
+      "observed": "scroll=false scrollH=900/innerH=900 left=584 align=center save=true cal=true",
+      "pass": "Conforme",
+      "date": "2026-10-12T16:00:02.872Z"
+    },
+    {
+      "id": "AJUST-laptop-1366x768",
+      "action": "Rendu laptop-1366x768",
+      "expected": "scroll=aucun, centré, cartes >= 560px, fonctionnel",
+      "observed": "scroll=false scrollH=768/innerH=768 left=584 align=center save=true cal=true",
+      "pass": "Conforme",
+      "date": "2026-10-12T16:00:09.283Z"
+    },
+    {
+      "id": "AJUST-tablette-768x1024",
+      "action": "Rendu tablette-768x1024",
+      "expected": "scroll=autorisé, centré, fonctionnel",
+      "observed": "scroll=true scrollH=1196/innerH=1024 left=584 align=center save=true cal=true",
+      "pass": "Conforme",
+      "date": "2026-10-12T16:00:13.321Z"
+    },
+    {
+      "id": "AJUST-mobile-390x844",
+      "action": "Rendu mobile-390x844",
+      "expected": "scroll=autorisé, centré, fonctionnel",
+      "observed": "scroll=true scrollH=1177/innerH=844 left=554 align=center save=true cal=true",
+      "pass": "Conforme",
+      "date": "2026-10-12T16:00:17.193Z"
+    }
+  ],
+  "notes": [
+    "Grand écran : aucun scroll vertical (scrollHeight == innerHeight), centrage vertical (align-content center).",
+    "Cartes agrandies : padding 22px, mode indisponibilité 86px, textarea 88px, cellules calendrier 60px.",
+    "Tablette/mobile : scroll autorisé (contenu empilé), aucune hauteur rigide imposée."
+  ]
+}

@@ -60,7 +60,7 @@ export interface DocumentMetadataResponse {
   mimeType: string | null;
   fileSize: number | null;
   status: DocumentStatus;
-  uploadedById: number;
+  uploadedById: number | null;
   verifiedByRhId: number | null;
   rejectionReason: string | null;
   retentionUntil: string | null;

@@ -1,0 +1,94 @@
+{
+  "title": "Dernier contrôle de sécurité avant validation (12/10/2026)",
+  "date": "2026-10-12T16:59:07.605Z",
+  "apiUrl": "http://localhost:3001/api",
+  "database": "gestion_conges_gmes_test",
+  "summary": {
+    "total": 10,
+    "conformes": 10,
+    "nonConformes": 0,
+    "allConformes": true
+  },
+  "results": [
+    {
+      "id": "CTRL-01",
+      "action": "Flux réel : création + soumission signée → EN_ATTENTE_VALIDATION",
+      "expected": "HTTP 200/201, statut EN_ATTENTE_VALIDATION",
+      "observed": "draft=201 submit=200 statut=EN_ATTENTE_VALIDATION",
+      "pass": "Conforme",
+      "date": "2026-10-12T16:59:04.862Z"
+    },
+    {
+      "id": "CTRL-02",
+      "action": "Suppression du service : demande conservée, service NULL, statut inchangé",
+      "expected": "HTTP 204 + demande EN_ATTENTE_VALIDATION conservée (service NULL)",
+      "observed": "HTTP=204 demande=service=null statut=EN_ATTENTE_VALIDATION",
+      "pass": "Conforme",
+      "date": "2026-10-12T16:59:05.167Z"
+    },
+    {
+      "id": "CTRL-03",
+      "action": "Consultation de la demande après suppression du service",
+      "expected": "HTTP 200 (consultation possible)",
+      "observed": "HTTP=200",
+      "pass": "Conforme",
+      "date": "2026-10-12T16:59:05.198Z"
+    },
+    {
+      "id": "CTRL-04",
+      "action": "Historique d’audit de la demande conservé",
+      "expected": "au moins 1 entrée d’audit présente",
+      "observed": "audit=3",
+      "pass": "Conforme",
+      "date": "2026-10-12T16:59:05.202Z"
+    },
+    {
+      "id": "CTRL-05",
+      "action": "Traitement d’une demande dont le service est supprimé",
+      "expected": "HTTP 400 explicite « service supprimé » (pas 500)",
+      "observed": "HTTP=400 msg=\"Le service de cette demande a été supprimé. Cette demande ne peut plus être traitée.\"",
+      "pass": "Conforme",
+      "date": "2026-10-12T16:59:05.238Z"
+    },
+    {
+      "id": "CTRL-06",
+      "action": "Préparation : justificatifs U et V réellement écrits sur disque",
+      "expected": "2 fichiers présents sur disque",
+      "observed": "U=true V=true",
+      "pass": "Conforme",
+      "date": "2026-10-12T16:59:06.859Z"
+    },
+    {
+      "id": "CTRL-07",
+      "action": "Suppression de U : fichier privé + métadonnées supprimés, V intact",
+      "expected": "HTTP 204 + fichier U supprimé + fichier V conservé",
+      "observed": "HTTP=204 fichierU=false fichierV=true metaU=0 metaV=1",
+      "pass": "Conforme",
+      "date": "2026-10-12T16:59:07.079Z"
+    },
+    {
+      "id": "CTRL-08",
+      "action": "Audit : aucune attribution fictive à l’Admin, références U détachées",
+      "expected": "actor_id U → NULL (0 restants), aucune réattribution à Admin",
+      "observed": "actorU_restants=0 auditAdmin_total=61",
+      "pass": "Conforme",
+      "date": "2026-10-12T16:59:07.079Z"
+    },
+    {
+      "id": "CTRL-09",
+      "action": "Non-régression : suppression utilisateur simple",
+      "expected": "HTTP 204 + compte disparu",
+      "observed": "HTTP=204 disparu=true",
+      "pass": "Conforme",
+      "date": "2026-10-12T16:59:07.522Z"
+    },
+    {
+      "id": "CTRL-10",
+      "action": "Non-régression : suppression service vide",
+      "expected": "HTTP 204 + service disparu",
+      "observed": "HTTP=204 disparu=true",
+      "pass": "Conforme",
+      "date": "2026-10-12T16:59:07.604Z"
+    }
+  ]
+}

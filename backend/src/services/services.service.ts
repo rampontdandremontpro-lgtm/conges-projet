@@ -360,6 +360,37 @@ export class ServicesService implements OnModuleInit {
     return this.findOne(id);
   }
 
+  async deletePermanently(id: number): Promise<void> {
+    await this.findOne(id);
+
+    await this.dataSource.transaction(async (manager) => {
+      // Détacher les collaborateurs (ne jamais supprimer leurs comptes).
+      await manager.query(
+        'UPDATE users SET service_id = NULL WHERE service_id = ?',
+        [id],
+      );
+
+      // Détacher les demandes/absences historiques (préserver les données des collaborateurs).
+      await manager.query(
+        'UPDATE leave_requests SET service_id = NULL WHERE service_id = ?',
+        [id],
+      );
+      await manager.query(
+        'UPDATE absence_declarations SET service_id = NULL WHERE service_id = ?',
+        [id],
+      );
+
+      // Supprimer les valideurs de secours rattachés au service.
+      await manager.query(
+        'DELETE FROM service_backup_validators WHERE service_id = ?',
+        [id],
+      );
+
+      // Supprimer le service.
+      await manager.query('DELETE FROM services WHERE id = ?', [id]);
+    });
+  }
+
   async isPrimaryManagerAvailable(
     serviceId: number,
   ): Promise<boolean> {

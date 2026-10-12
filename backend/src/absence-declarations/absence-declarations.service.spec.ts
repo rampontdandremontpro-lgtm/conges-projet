@@ -1,4 +1,4 @@
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 
@@ -195,7 +195,7 @@ describe('AbsenceDeclarationsService — un seul mode (jours / heures)', () => {
       serviceAny.findAccessibleOne.mockResolvedValue(storedHalfDay);
 
       await expect(
-        service.updateDraft(42, collaboratorUser as never, {
+        service.updateDraft(42, rhUser as never, {
           durationHours: 4,
           startPeriod: DayPeriod.MATIN,
         } as never),
@@ -209,7 +209,7 @@ describe('AbsenceDeclarationsService — un seul mode (jours / heures)', () => {
 
       const saved = await service.updateDraft(
         42,
-        collaboratorUser as never,
+        rhUser as never,
         { durationHours: 4 } as never,
       );
 
@@ -234,7 +234,7 @@ describe('AbsenceDeclarationsService — un seul mode (jours / heures)', () => {
       } as never);
 
       await expect(
-        service.updateDraft(42, collaboratorUser as never, {
+        service.updateDraft(42, rhUser as never, {
           startPeriod: DayPeriod.MATIN,
           endPeriod: DayPeriod.APRES_MIDI,
         } as never),
@@ -257,7 +257,7 @@ describe('AbsenceDeclarationsService — un seul mode (jours / heures)', () => {
 
       const saved = await service.updateDraft(
         42,
-        collaboratorUser as never,
+        rhUser as never,
         {
           startPeriod: DayPeriod.MATIN,
           endPeriod: DayPeriod.MATIN,
@@ -289,7 +289,7 @@ describe('AbsenceDeclarationsService — un seul mode (jours / heures)', () => {
 
       const saved = await service.updateDraft(
         42,
-        collaboratorUser as never,
+        rhUser as never,
         { comment: '' } as never,
       );
 
@@ -339,6 +339,60 @@ describe('AbsenceDeclarationsService — un seul mode (jours / heures)', () => {
       } else {
         expect(presenceService.refreshUserStatus).not.toHaveBeenCalled();
       }
+    });
+  });
+
+  describe('autorisation — opérations de déclaration réservées à la RH', () => {
+    const nonRhUsers = [
+      ['COLLABORATEUR', collaboratorUser],
+      ['RESPONSABLE_SERVICE', { id: 3, role: 'RESPONSABLE_SERVICE' } as never],
+      ['DIRECTEUR', { id: 4, role: 'DIRECTEUR' } as never],
+      ['ADMIN', { id: 6, role: 'ADMIN' } as never],
+    ];
+
+    it.each(nonRhUsers)('%s → createDraft refusé (403)', async (_label, user) => {
+      await expect(
+        service.createDraft(user, {
+          leaveTypeId: 7,
+          startDate: '2026-01-05',
+          endDate: '2026-01-05',
+        } as never),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it.each(nonRhUsers)('%s → updateDraft refusé (403)', async (_label, user) => {
+      await expect(
+        service.updateDraft(42, user, {} as never),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it.each(nonRhUsers)('%s → submit refusé (403)', async (_label, user) => {
+      await expect(
+        service.submit(42, user, { certifiedAccurate: true } as never),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it.each(nonRhUsers)('%s → cancel refusé (403)', async (_label, user) => {
+      await expect(
+        service.cancel(42, user),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it.each(nonRhUsers)('%s → deleteDraft refusé (403)', async (_label, user) => {
+      await expect(
+        service.deleteDraft(42, user),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('RH → createDraft autorisé (passe le contrôle de rôle)', async () => {
+      const saved = await service.createDraft(rhUser as never, {
+        leaveTypeId: 7,
+        startDate: '2026-01-05',
+        endDate: '2026-01-05',
+        startPeriod: DayPeriod.MATIN,
+        endPeriod: DayPeriod.MATIN,
+      } as never);
+      expect(saved.startPeriod).toBe(DayPeriod.MATIN);
     });
   });
 });

@@ -1,0 +1,54 @@
+{
+  "title": "Décisions RH réelles après suppression de service (12/10/2026)",
+  "date": "2026-10-12T17:37:04.928Z",
+  "frontendUrl": "http://localhost:5174",
+  "apiUrl": "http://localhost:3001/api",
+  "summary": {
+    "total": 5,
+    "conformes": 5,
+    "nonConformes": 0,
+    "allConformes": true
+  },
+  "results": [
+    {
+      "id": "DEC-01",
+      "action": "RH valide réellement (signature) la demande sans service",
+      "expected": "VALIDEE, aucune erreur",
+      "observed": "validé=true statutRH=Validée",
+      "pass": "Conforme",
+      "date": "2026-10-12T17:36:42.961Z"
+    },
+    {
+      "id": "DEC-02",
+      "action": "RH refuse réellement (motif) la demande sans service",
+      "expected": "REFUSEE, aucune erreur",
+      "observed": "refusé=true statutRH=Refusée",
+      "pass": "Conforme",
+      "date": "2026-10-12T17:36:51.518Z"
+    },
+    {
+      "id": "DEC-03",
+      "action": "Collaborateur voit sa demande Validée",
+      "expected": "statut Validée visible",
+      "observed": "visible=true",
+      "pass": "Conforme",
+      "date": "2026-10-12T17:36:55.812Z"
+    },
+    {
+      "id": "DEC-04",
+      "action": "Collaborateur voit sa demande Refusée",
+      "expected": "statut Refusée visible",
+      "observed": "visible=true",
+      "pass": "Conforme",
+      "date": "2026-10-12T17:37:00.272Z"
+    },
+    {
+      "id": "DEC-05",
+      "action": "Étiquette « Service supprimé » absente pour un service normal",
+      "expected": "nom du service affiché, pas « Service supprimé »",
+      "observed": "serviceNom=true serviceSupprime=false",
+      "pass": "Conforme",
+      "date": "2026-10-12T17:37:04.781Z"
+    }
+  ]
+}

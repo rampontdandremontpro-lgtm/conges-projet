@@ -1,0 +1,513 @@
+{
+  "title": "Retest — Seule la RH peut créer et déclarer des absences",
+  "date": "2026-10-12T13:23:31.737Z",
+  "evolution": {
+    "decidedAt": "2026-10-12",
+    "before": "Le collaborateur pouvait créer/soumettre/annuler ses déclarations d’absence (LOT 1).",
+    "after": "Seule la RH peut créer, soumettre, autoriser, modifier et gérer les déclarations d’absence."
+  },
+  "referentiel": {
+    "RH": "créer, soumettre, autoriser, modifier, annuler et gérer les absences (périmètre existant).",
+    "COLLABORATEUR": "consultation de ses propres absences, états/historique autorisés, transmission/remplacement de justificatif. Aucune création/soumission/annulation.",
+    "RESPONSABLE_SERVICE": "aucune création/déclaration d’absence.",
+    "DIRECTEUR": "aucune création/déclaration via le module de déclarations RH. Fonctions dédiées d’indisponibilité du Directeur préservées (routes director/* inchangées).",
+    "ADMIN": "périmètre technique inchangé, aucun droit métier de création d’absence."
+  },
+  "apiUrl": "http://localhost:3001/api",
+  "database": "gestion_conges_gmes_test",
+  "controls": {
+    "controllerRoles": [
+      "POST /absence-declarations → @Roles(RH)",
+      "POST /absence-declarations/:id/submit → @Roles(RH)",
+      "POST /absence-declarations/:id/cancel → @Roles(RH)",
+      "PATCH /absence-declarations/:id → @Roles(RH)",
+      "DELETE /absence-declarations/:id → @Roles(RH)",
+      "PATCH /absence-declarations/director/:id → @Roles(DIRECTEUR) (indisponibilité Directeur, inchangé)",
+      "POST /absence-declarations/director/:id/cancel → @Roles(DIRECTEUR) (inchangé)"
+    ],
+    "serviceDefense": [
+      "createDraft, submit, cancel, updateDraft, deleteDraft : garde role !== RH → ForbiddenException."
+    ]
+  },
+  "nonMutation": {
+    "perCaseVerified": true,
+    "negativeCasesChecked": 15,
+    "negativeCasesWithMutation": [],
+    "summary": "Aucune mutation constatée sur absence_declarations, notifications, balance_movements, documents, audit_logs, leave_requests pour les 15 cas négatifs (vérification avant/après par cas)."
+  },
+  "summary": {
+    "total": 28,
+    "conformes": 28,
+    "nonConformes": 0,
+    "allPass": true,
+    "negativeCases": 15,
+    "positiveCases": 12
+  },
+  "scenariosImpacted": [
+    {
+      "id": "ABS-001",
+      "before": "Collaborateur crée une déclaration",
+      "after": "Refusé au collaborateur (403) — réservé à la RH",
+      "newExpected": "403 / création RH uniquement"
+    },
+    {
+      "id": "ABS-002",
+      "before": "Collaborateur ne déclare pas pour un collègue",
+      "after": "Le collaborateur ne déclare plus du tout",
+      "newExpected": "403 création"
+    },
+    {
+      "id": "ABS-003",
+      "before": "Type réservé RH refusé au collaborateur",
+      "after": "Tous les types d’absence sont réservés à la RH",
+      "newExpected": "403 création"
+    },
+    {
+      "id": "ABS-004",
+      "before": "Collaborateur soumet sa déclaration",
+      "after": "Refusé au collaborateur — soumission RH uniquement",
+      "newExpected": "403 soumission"
+    },
+    {
+      "id": "ABS-017",
+      "before": "Collaborateur annule son brouillon",
+      "after": "Refusé au collaborateur — annulation RH uniquement",
+      "newExpected": "403 annulation"
+    },
+    {
+      "id": "ABS-016",
+      "before": "RH crée une absence pour un collaborateur",
+      "after": "Inchangé",
+      "newExpected": "201 création RH"
+    },
+    {
+      "id": "ABS-006",
+      "before": "Collaborateur ajoute un justificatif",
+      "after": "Inchangé (conservé)",
+      "newExpected": "201 justificatif"
+    },
+    {
+      "id": "ABS-012",
+      "before": "Collaborateur remplace un justificatif rejeté",
+      "after": "Inchangé (conservé)",
+      "newExpected": "201 remplacement"
+    },
+    {
+      "id": "ABS-005",
+      "before": "Autre collaborateur ne consulte pas l’absence",
+      "after": "Inchangé",
+      "newExpected": "403 lecture"
+    }
+  ],
+  "filesModified": [
+    "backend/src/absence-declarations/absence-declarations.controller.ts",
+    "backend/src/absence-declarations/absence-declarations.service.ts",
+    "backend/src/absence-declarations/absence-declarations.service.spec.ts",
+    "frontend/src/components/collab/dashboard/PlanLeaveCard.jsx",
+    "frontend/src/pages/collab/DashboardPage.jsx",
+    "frontend/src/app/router.jsx",
+    "frontend/src/pages/collab/RequestDetailPage.jsx"
+  ],
+  "builds": {
+    "backend": "OK (nest build)",
+    "frontend": "OK (vite build)",
+    "jest": "254 passed / 11 failed (échecs préexistants : settings, balance-reminder, documents) — aucune régression supplémentaire"
+  },
+  "errorsRemaining": [
+    "Jest : 11 échecs préexistants (settings.service.spec, balance-reminder.service.spec, documents.service.spec) — non liés à cette évolution."
+  ],
+  "results": [
+    {
+      "id": "RETEST-ABS-RH-01",
+      "priority": "P1",
+      "module": "ABS",
+      "role": "Collaborateur",
+      "scenario": "Collaborateur crée une absence pour lui-même",
+      "type": "API",
+      "status": "Conforme",
+      "expected": "HTTP 403, aucune mutation en base",
+      "actual": "HTTP=403",
+      "mutation": "aucune",
+      "comment": "Aucune mutation constatée",
+      "date": "2026-10-12T13:23:29.426Z"
+    },
+    {
+      "id": "RETEST-ABS-RH-02",
+      "priority": "P1",
+      "module": "ABS",
+      "role": "Collaborateur",
+      "scenario": "Collaborateur crée une absence pour un collègue",
+      "type": "API",
+      "status": "Conforme",
+      "expected": "HTTP 403, aucune mutation en base",
+      "actual": "HTTP=403",
+      "mutation": "aucune",
+      "comment": "Aucune mutation constatée",
+      "date": "2026-10-12T13:23:29.488Z"
+    },
+    {
+      "id": "RETEST-ABS-RH-03",
+      "priority": "P1",
+      "module": "ABS",
+      "role": "Collaborateur",
+      "scenario": "Collaborateur crée avec un type réservé RH",
+      "type": "API",
+      "status": "Conforme",
+      "expected": "HTTP 403, aucune mutation en base",
+      "actual": "HTTP=403",
+      "mutation": "aucune",
+      "comment": "Aucune mutation constatée",
+      "date": "2026-10-12T13:23:29.551Z"
+    },
+    {
+      "id": "RETEST-ABS-RH-04",
+      "priority": "P1",
+      "module": "ABS",
+      "role": "Collaborateur",
+      "scenario": "Collaborateur crée avec un type normalement autorisé (règle désormais RH-only)",
+      "type": "API",
+      "status": "Conforme",
+      "expected": "HTTP 403, aucune mutation en base",
+      "actual": "HTTP=403",
+      "mutation": "aucune",
+      "comment": "Aucune mutation constatée",
+      "date": "2026-10-12T13:23:29.597Z"
+    },
+    {
+      "id": "RETEST-ABS-RH-05",
+      "priority": "P1",
+      "module": "ABS",
+      "role": "Responsable service",
+      "scenario": "Responsable essaie de créer une absence",
+      "type": "API",
+      "status": "Conforme",
+      "expected": "HTTP 403, aucune mutation en base",
+      "actual": "HTTP=403",
+      "mutation": "aucune",
+      "comment": "Aucune mutation constatée",
+      "date": "2026-10-12T13:23:29.669Z"
+    },
+    {
+      "id": "RETEST-ABS-RH-06",
+      "priority": "P1",
+      "module": "ABS",
+      "role": "Directeur",
+      "scenario": "Directeur essaie de créer une absence via le module de déclarations RH",
+      "type": "API",
+      "status": "Conforme",
+      "expected": "HTTP 403, aucune mutation en base",
+      "actual": "HTTP=403",
+      "mutation": "aucune",
+      "comment": "Aucune mutation constatée",
+      "date": "2026-10-12T13:23:29.748Z"
+    },
+    {
+      "id": "RETEST-ABS-RH-07",
+      "priority": "P1",
+      "module": "ABS",
+      "role": "Admin",
+      "scenario": "Admin essaie de créer une absence",
+      "type": "API",
+      "status": "Conforme",
+      "expected": "HTTP 403, aucune mutation en base",
+      "actual": "HTTP=403",
+      "mutation": "aucune",
+      "comment": "Aucune mutation constatée",
+      "date": "2026-10-12T13:23:29.830Z"
+    },
+    {
+      "id": "RETEST-ABS-RH-PREP",
+      "priority": "P1",
+      "module": "ABS",
+      "role": "RH",
+      "scenario": "Préparation : RH crée un brouillon pour le collaborateur (précondition)",
+      "type": "API",
+      "status": "Conforme",
+      "expected": "HTTP 201 (BROUILLON)",
+      "actual": "HTTP=201 id=18",
+      "mutation": "création préparatoire",
+      "comment": "Brouillon créé par la RH",
+      "date": "2026-10-12T13:23:29.919Z"
+    },
+    {
+      "id": "RETEST-ABS-RH-08",
+      "priority": "P1",
+      "module": "ABS",
+      "role": "Collaborateur",
+      "scenario": "Collaborateur soumet un brouillon existant",
+      "type": "API",
+      "status": "Conforme",
+      "expected": "HTTP 403, aucune mutation en base",
+      "actual": "HTTP=403",
+      "mutation": "aucune",
+      "comment": "Aucune mutation constatée",
+      "date": "2026-10-12T13:23:29.976Z"
+    },
+    {
+      "id": "RETEST-ABS-RH-09",
+      "priority": "P1",
+      "module": "ABS",
+      "role": "Collaborateur",
+      "scenario": "Collaborateur annule un brouillon existant",
+      "type": "API",
+      "status": "Conforme",
+      "expected": "HTTP 403, aucune mutation en base",
+      "actual": "HTTP=403",
+      "mutation": "aucune",
+      "comment": "Aucune mutation constatée",
+      "date": "2026-10-12T13:23:30.049Z"
+    },
+    {
+      "id": "RETEST-ABS-RH-10",
+      "priority": "P1",
+      "module": "ABS",
+      "role": "Collaborateur",
+      "scenario": "Collaborateur modifie (PATCH) un brouillon existant",
+      "type": "API",
+      "status": "Conforme",
+      "expected": "HTTP 403, aucune mutation en base",
+      "actual": "HTTP=403",
+      "mutation": "aucune",
+      "comment": "Aucune mutation constatée",
+      "date": "2026-10-12T13:23:30.097Z"
+    },
+    {
+      "id": "RETEST-ABS-RH-11",
+      "priority": "P1",
+      "module": "ABS",
+      "role": "Collaborateur",
+      "scenario": "Collaborateur supprime (DELETE) un brouillon existant",
+      "type": "API",
+      "status": "Conforme",
+      "expected": "HTTP 403, aucune mutation en base",
+      "actual": "HTTP=403",
+      "mutation": "aucune",
+      "comment": "Aucune mutation constatée",
+      "date": "2026-10-12T13:23:30.142Z"
+    },
+    {
+      "id": "RETEST-ABS-RH-12",
+      "priority": "P1",
+      "module": "ABS",
+      "role": "Responsable service",
+      "scenario": "Responsable essaie de soumettre un brouillon",
+      "type": "API",
+      "status": "Conforme",
+      "expected": "HTTP 403, aucune mutation en base",
+      "actual": "HTTP=403",
+      "mutation": "aucune",
+      "comment": "Aucune mutation constatée",
+      "date": "2026-10-12T13:23:30.220Z"
+    },
+    {
+      "id": "RETEST-ABS-RH-13",
+      "priority": "P1",
+      "module": "ABS",
+      "role": "Directeur",
+      "scenario": "Directeur essaie de soumettre un brouillon (module RH)",
+      "type": "API",
+      "status": "Conforme",
+      "expected": "HTTP 403, aucune mutation en base",
+      "actual": "HTTP=403",
+      "mutation": "aucune",
+      "comment": "Aucune mutation constatée",
+      "date": "2026-10-12T13:23:30.272Z"
+    },
+    {
+      "id": "RETEST-ABS-RH-14",
+      "priority": "P1",
+      "module": "ABS",
+      "role": "Admin",
+      "scenario": "Admin essaie de soumettre un brouillon",
+      "type": "API",
+      "status": "Conforme",
+      "expected": "HTTP 403, aucune mutation en base",
+      "actual": "HTTP=403",
+      "mutation": "aucune",
+      "comment": "Aucune mutation constatée",
+      "date": "2026-10-12T13:23:30.346Z"
+    },
+    {
+      "id": "RETEST-ABS-RH-15",
+      "priority": "P1",
+      "module": "ABS",
+      "role": "RH",
+      "scenario": "Le brouillon préparé reste intact (non détruit) après les tentatives interdites",
+      "type": "API",
+      "status": "Conforme",
+      "expected": "HTTP 200, statut BROUILLON",
+      "actual": "HTTP=200 status=BROUILLON",
+      "mutation": "aucune",
+      "comment": "Préservation de la donnée existante",
+      "date": "2026-10-12T13:23:30.395Z"
+    },
+    {
+      "id": "RETEST-ABS-RH-16",
+      "priority": "P1",
+      "module": "ABS",
+      "role": "RH",
+      "scenario": "RH crée une absence pour un collaborateur",
+      "type": "API",
+      "status": "Conforme",
+      "expected": "HTTP 201 (BROUILLON)",
+      "actual": "HTTP=201 id=19",
+      "mutation": "création RH",
+      "comment": "",
+      "date": "2026-10-12T13:23:30.477Z"
+    },
+    {
+      "id": "RETEST-ABS-RH-17",
+      "priority": "P1",
+      "module": "ABS",
+      "role": "RH",
+      "scenario": "RH soumet/enregistre l’absence (workflow rhOnly sans justificatif)",
+      "type": "API",
+      "status": "Conforme",
+      "expected": "HTTP 200, statut ENREGISTREE",
+      "actual": "HTTP=200 status=ENREGISTREE",
+      "mutation": "statut ENREGISTREE",
+      "comment": "Enregistrement définitif RH",
+      "date": "2026-10-12T13:23:30.757Z"
+    },
+    {
+      "id": "RETEST-ABS-RH-18",
+      "priority": "P1",
+      "module": "ABS",
+      "role": "RH",
+      "scenario": "RH modifie une absence enregistrée",
+      "type": "API",
+      "status": "Conforme",
+      "expected": "HTTP 200, commentaire mis à jour",
+      "actual": "HTTP=200 comment=RETEST RH modifié",
+      "mutation": "modification RH",
+      "comment": "",
+      "date": "2026-10-12T13:23:30.855Z"
+    },
+    {
+      "id": "RETEST-ABS-RH-19",
+      "priority": "P1",
+      "module": "ABS",
+      "role": "RH",
+      "scenario": "RH annule une absence (workflow existant)",
+      "type": "API",
+      "status": "Conforme",
+      "expected": "HTTP 200, statut ANNULEE",
+      "actual": "HTTP=200 status=ANNULEE",
+      "mutation": "statut ANNULEE",
+      "comment": "",
+      "date": "2026-10-12T13:23:30.975Z"
+    },
+    {
+      "id": "RETEST-ABS-RH-20",
+      "priority": "P1",
+      "module": "ABS",
+      "role": "RH",
+      "scenario": "RH supprime le brouillon préparé (DELETE)",
+      "type": "API",
+      "status": "Conforme",
+      "expected": "HTTP 204",
+      "actual": "HTTP=204",
+      "mutation": "suppression du brouillon de test",
+      "comment": "",
+      "date": "2026-10-12T13:23:31.023Z"
+    },
+    {
+      "id": "RETEST-ABS-RH-21",
+      "priority": "P1",
+      "module": "ABS",
+      "role": "RH",
+      "scenario": "RH crée et soumet une absence à justificatif obligatoire",
+      "type": "API",
+      "status": "Conforme",
+      "expected": "HTTP 200, statut JUSTIFICATIF_EN_ATTENTE (justificatif ajoutable plus tard)",
+      "actual": "create=201 submit=200 status=JUSTIFICATIF_EN_ATTENTE",
+      "mutation": "création + soumission RH",
+      "comment": "",
+      "date": "2026-10-12T13:23:31.209Z"
+    },
+    {
+      "id": "RETEST-ABS-RH-22",
+      "priority": "P1",
+      "module": "ABS",
+      "role": "Collaborateur",
+      "scenario": "Collaborateur transmet un justificatif sur une absence existante (conservé)",
+      "type": "API",
+      "status": "Conforme",
+      "expected": "HTTP 201 (document créé), statut bascule A_VERIFIER_PAR_RH",
+      "actual": "HTTP=201 docId=4",
+      "mutation": "ajout justificatif collaborateur",
+      "comment": "Droit collaborateur préservé",
+      "date": "2026-10-12T13:23:31.323Z"
+    },
+    {
+      "id": "RETEST-ABS-RH-23",
+      "priority": "P1",
+      "module": "ABS",
+      "role": "RH",
+      "scenario": "RH accepte le justificatif et enregistre définitivement l’absence",
+      "type": "API",
+      "status": "Conforme",
+      "expected": "HTTP 200 accept + HTTP 200 register (ENREGISTREE)",
+      "actual": "accept=200 register=200 status=ENREGISTREE",
+      "mutation": "enregistrement définitif RH",
+      "comment": "",
+      "date": "2026-10-12T13:23:31.474Z"
+    },
+    {
+      "id": "RETEST-ABS-RH-24",
+      "priority": "P1",
+      "module": "ABS",
+      "role": "Collaborateur",
+      "scenario": "Collaborateur consulte sa propre absence créée par la RH",
+      "type": "API",
+      "status": "Conforme",
+      "expected": "HTTP 200",
+      "actual": "HTTP=200 id=20",
+      "mutation": "aucune",
+      "comment": "Consultation préservée",
+      "date": "2026-10-12T13:23:31.519Z"
+    },
+    {
+      "id": "RETEST-ABS-RH-25",
+      "priority": "P1",
+      "module": "ABS",
+      "role": "Collaborateur B",
+      "scenario": "Collaborateur B ne peut pas lire l’absence d’un collègue",
+      "type": "API",
+      "status": "Conforme",
+      "expected": "HTTP 403",
+      "actual": "HTTP=403",
+      "mutation": "aucune",
+      "comment": "Périmètre de lecture préservé",
+      "date": "2026-10-12T13:23:31.576Z"
+    },
+    {
+      "id": "RETEST-ABS-RH-26",
+      "priority": "P1",
+      "module": "ABS",
+      "role": "Collaborateur B",
+      "scenario": "Collaborateur B ne peut pas gérer les justificatifs d’un collègue",
+      "type": "API",
+      "status": "Conforme",
+      "expected": "HTTP 403",
+      "actual": "HTTP=403",
+      "mutation": "aucune",
+      "comment": "Périmètre justificatif préservé",
+      "date": "2026-10-12T13:23:31.602Z"
+    },
+    {
+      "id": "RETEST-ABS-RH-27",
+      "priority": "P1",
+      "module": "ABS",
+      "role": "Collaborateur",
+      "scenario": "Non-régression : le collaborateur crée toujours une demande de congé (brouillon)",
+      "type": "API",
+      "status": "Conforme",
+      "expected": "HTTP 201 (BROUILLON)",
+      "actual": "HTTP=201 id=38",
+      "mutation": "création demande de congé (module distinct)",
+      "comment": "Module congés inchangé",
+      "date": "2026-10-12T13:23:31.688Z"
+    }
+  ]
+}

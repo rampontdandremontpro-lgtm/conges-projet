@@ -9,6 +9,7 @@ import { PageContainer } from '@/components/ui/PageContainer'
 import { useAutoDismiss } from '@/hooks/useAutoDismiss'
 import {
   createAdminUser,
+  deleteAdminUser,
   disableAdminUser,
   enableAdminUser,
   getAdminUsersData,
@@ -394,6 +395,20 @@ function PasswordResetModal({ user, onCancel, onSuccess }) {
   )
 }
 
+function DeleteConfirm({ user, busy, onCancel, onConfirm }) {
+  return (
+    <div className="admin-users-confirm-overlay" role="presentation" onMouseDown={onCancel}>
+      <div className="admin-users-confirm" role="dialog" aria-modal="true" onMouseDown={(event) => event.stopPropagation()}>
+        <span className="admin-users-confirm__icon is-delete"><Icon name="trash" size={22} /></span>
+        <h3>Supprimer définitivement ce compte ?</h3>
+        <p>Cette suppression est définitive et peut effacer les données associées à cet utilisateur. Cette action est irréversible.</p>
+        <p className="admin-users-confirm__name"><strong>{fullName(user)}</strong></p>
+        <div><button type="button" onClick={onCancel}>Annuler</button><button type="button" className="is-delete" onClick={onConfirm} disabled={busy}>{busy ? 'Suppression…' : 'Supprimer définitivement'}</button></div>
+      </div>
+    </div>
+  )
+}
+
 function StatusConfirm({ user, busy, onCancel, onConfirm }) {
   const nextActive = !user.isActive
   return (
@@ -415,8 +430,10 @@ export function AdminUsersPage({ rhMode = false }) {
   const [filters, setFilters] = useState({ role: 'ALL', serviceId: 'ALL', type: 'ALL', status: 'ALL' })
   const [drawer, setDrawer] = useState(null)
   const [statusTarget, setStatusTarget] = useState(null)
+  const [deleteTarget, setDeleteTarget] = useState(null)
   const [passwordResetTarget, setPasswordResetTarget] = useState(null)
   const [statusBusy, setStatusBusy] = useState(false)
+  const [deleteBusy, setDeleteBusy] = useState(false)
   const [feedback, setFeedback] = useState(null)
   const [page, setPage] = useState(1)
 
@@ -536,6 +553,22 @@ export function AdminUsersPage({ rhMode = false }) {
     }
   }
 
+  const confirmDelete = async () => {
+    if (!deleteTarget || deleteBusy) return
+    setDeleteBusy(true)
+    try {
+      await deleteAdminUser(deleteTarget.id)
+      setFeedback({ kind: 'success', message: `${fullName(deleteTarget)} a été supprimé définitivement.` })
+      setDeleteTarget(null)
+      await load({ silent: true })
+    } catch (error) {
+      setFeedback({ kind: 'error', message: errorMessage(error) })
+      setDeleteTarget(null)
+    } finally {
+      setDeleteBusy(false)
+    }
+  }
+
   return (
     <PageContainer className="admin-users-page">
       {feedback && <div className={`admin-users-feedback admin-users-feedback--${feedback.kind}`} role="status"><Icon name={feedback.kind === 'success' ? 'check' : 'alert'} size={16} /> {feedback.message}</div>}
@@ -581,6 +614,9 @@ export function AdminUsersPage({ rhMode = false }) {
                           <button type="button" className="is-password" title="Réinitialiser le mot de passe" aria-label={`Réinitialiser le mot de passe de ${fullName(item)}`} onClick={(event) => { event.stopPropagation(); setPasswordResetTarget(item) }}><Icon name="shield" size={16} /></button>
                         )}
                         <button type="button" className={item.isActive ? 'is-disable' : 'is-enable'} disabled={isSelf} title={isSelf ? 'Votre propre compte ne peut pas être désactivé ici' : item.isActive ? 'Désactiver' : 'Réactiver'} aria-label={item.isActive ? `Désactiver ${fullName(item)}` : `Réactiver ${fullName(item)}`} onClick={(event) => { event.stopPropagation(); if (!isSelf) setStatusTarget(item) }}><Icon name={item.isActive ? 'ban' : 'refresh'} size={16} /></button>
+                        {!rhMode && (
+                          <button type="button" className="is-delete" disabled={isSelf} title={isSelf ? 'Votre propre compte ne peut pas être supprimé ici' : 'Supprimer définitivement'} aria-label={`Supprimer définitivement ${fullName(item)}`} onClick={(event) => { event.stopPropagation(); if (!isSelf) setDeleteTarget(item) }}><Icon name="trash" size={16} /></button>
+                        )}
                       </div>
                     </div>
                   )
@@ -594,6 +630,7 @@ export function AdminUsersPage({ rhMode = false }) {
 
       {drawer && <UserDrawer mode={drawer.mode} user={drawer.user} services={state.services} rhMode={rhMode} onClose={() => setDrawer(null)} onEdit={(selected) => setDrawer({ mode: 'edit', user: selected })} onSaved={handleSaved} />}
       {statusTarget && <StatusConfirm user={statusTarget} busy={statusBusy} onCancel={() => setStatusTarget(null)} onConfirm={confirmStatus} />}
+      {deleteTarget && <DeleteConfirm user={deleteTarget} busy={deleteBusy} onCancel={() => setDeleteTarget(null)} onConfirm={confirmDelete} />}
       {passwordResetTarget && <PasswordResetModal user={passwordResetTarget} onCancel={() => setPasswordResetTarget(null)} onSuccess={(message) => { setPasswordResetTarget(null); setFeedback({ kind: 'success', message }) }} />}
     </PageContainer>
   )

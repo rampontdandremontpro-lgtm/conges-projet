@@ -1,7 +1,9 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
+  HttpCode,
   Param,
   ParseIntPipe,
   Patch,
@@ -82,5 +84,14 @@ export class ServicesController {
     @Param('id', ParseIntPipe) id: number,
   ) {
     return this.servicesService.enable(id);
+  }
+
+  @Delete(':id')
+  @HttpCode(204)
+  @Roles(UserRole.ADMIN)
+  deletePermanently(
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    return this.servicesService.deletePermanently(id);
   }
 }

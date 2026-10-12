@@ -1,0 +1,93 @@
+{
+  "title": "Téléchargements + dimensions UI (12/10/2026)",
+  "date": "2026-10-12T16:17:03.221Z",
+  "frontendUrl": "http://localhost:5174",
+  "summary": {
+    "total": 10,
+    "conformes": 10,
+    "nonConformes": 0,
+    "allConformes": true
+  },
+  "results": [
+    {
+      "id": "DL-Directeur-CSV",
+      "action": "Téléchargement CSV réel (Directeur)",
+      "expected": "fichier non vide téléchargé",
+      "observed": "ok=demandes_conges_2026-10-12.csv fichier=demandes_conges_2026-10-12.csv taille=376",
+      "pass": "Conforme",
+      "date": "2026-10-12T16:16:29.696Z"
+    },
+    {
+      "id": "DL-Directeur-XLSX",
+      "action": "Téléchargement XLSX réel (Directeur)",
+      "expected": "fichier non vide téléchargé",
+      "observed": "ok=demandes_conges_2026-10-12.xlsx fichier=demandes_conges_2026-10-12.xlsx taille=2815",
+      "pass": "Conforme",
+      "date": "2026-10-12T16:16:29.697Z"
+    },
+    {
+      "id": "DL-RH-CSV",
+      "action": "Téléchargement CSV réel (RH)",
+      "expected": "fichier non vide téléchargé",
+      "observed": "ok=demandes_conges_2026-10-12.csv fichier=demandes_conges_2026-10-12.csv taille=376",
+      "pass": "Conforme",
+      "date": "2026-10-12T16:16:34.359Z"
+    },
+    {
+      "id": "DL-RH-XLSX",
+      "action": "Téléchargement XLSX réel (RH)",
+      "expected": "fichier non vide téléchargé",
+      "observed": "ok=demandes_conges_2026-10-12.xlsx fichier=demandes_conges_2026-10-12.xlsx taille=2815",
+      "pass": "Conforme",
+      "date": "2026-10-12T16:16:34.359Z"
+    },
+    {
+      "id": "UI-1920x1080",
+      "action": "Rendu 1920x1080",
+      "expected": "aucun scroll (V+H)",
+      "observed": "innerH=1080 scrollH=1080 clientH=1080 vScroll=false hOverflow=false layoutTop=86",
+      "pass": "Conforme",
+      "date": "2026-10-12T16:16:39.187Z"
+    },
+    {
+      "id": "UI-1666x900",
+      "action": "Rendu 1666x900",
+      "expected": "aucun scroll (V+H)",
+      "observed": "innerH=900 scrollH=900 clientH=900 vScroll=false hOverflow=false layoutTop=86",
+      "pass": "Conforme",
+      "date": "2026-10-12T16:16:43.956Z"
+    },
+    {
+      "id": "UI-1600x900",
+      "action": "Rendu 1600x900",
+      "expected": "aucun scroll (V+H)",
+      "observed": "innerH=900 scrollH=900 clientH=900 vScroll=false hOverflow=false layoutTop=86",
+      "pass": "Conforme",
+      "date": "2026-10-12T16:16:48.703Z"
+    },
+    {
+      "id": "UI-1366x768",
+      "action": "Rendu 1366x768",
+      "expected": "aucun scroll (V+H)",
+      "observed": "innerH=768 scrollH=768 clientH=768 vScroll=false hOverflow=false layoutTop=86",
+      "pass": "Conforme",
+      "date": "2026-10-12T16:16:53.425Z"
+    },
+    {
+      "id": "UI-tablette-768x1024",
+      "action": "Rendu tablette-768x1024",
+      "expected": "scroll autorisé si nécessaire",
+      "observed": "innerH=1024 scrollH=1196 clientH=1024 vScroll=true hOverflow=false layoutTop=82",
+      "pass": "Conforme",
+      "date": "2026-10-12T16:16:58.435Z"
+    },
+    {
+      "id": "UI-mobile-390x844",
+      "action": "Rendu mobile-390x844",
+      "expected": "scroll autorisé si nécessaire",
+      "observed": "innerH=844 scrollH=1177 clientH=844 vScroll=true hOverflow=false layoutTop=71",
+      "pass": "Conforme",
+      "date": "2026-10-12T16:17:03.090Z"
+    }
+  ]
+}

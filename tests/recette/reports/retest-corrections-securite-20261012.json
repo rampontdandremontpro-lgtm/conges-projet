@@ -1,0 +1,38 @@
+{
+  "title": "Corrections sécurité suppressions + export (12/10/2026)",
+  "date": "2026-10-12T16:13:26.608Z",
+  "apiUrl": "http://localhost:3001/api",
+  "database": "gestion_conges_gmes_test",
+  "summary": {
+    "total": 3,
+    "conformes": 3,
+    "nonConformes": 0,
+    "allConformes": true
+  },
+  "results": [
+    {
+      "id": "SEC-01",
+      "action": "Suppression RH : demande créée pour autrui conservée, auteur détaché",
+      "expected": "HTTP 204, demande conservée, created_by_id = NULL",
+      "observed": "HTTP=204 req=employee=17 createdBy=null",
+      "pass": "Conforme",
+      "date": "2026-10-12T16:13:25.049Z"
+    },
+    {
+      "id": "SEC-02",
+      "action": "Suppression service : demande conservée (service NULL) + validation → 400 explicite",
+      "expected": "HTTP 204 + service_id=NULL + validate 400 \"service supprimé\" (pas 500)",
+      "observed": "HTTP=204 draft=service=null validate=400 msg=\"Le service de cette demande a été supprimé. Cette demande ne peut plus être traitée.\"",
+      "pass": "Conforme",
+      "date": "2026-10-12T16:13:26.232Z"
+    },
+    {
+      "id": "SEC-03",
+      "action": "Préparation jeu exportable (VALIDEE)",
+      "expected": "overview 200 pour le Directeur",
+      "observed": "overview=200",
+      "pass": "Conforme",
+      "date": "2026-10-12T16:13:26.607Z"
+    }
+  ]
+}

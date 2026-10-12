@@ -237,7 +237,7 @@ export function RhLeavesAndAbsencesPage() {
                 <div className="rh-events-row rh-events-row--head"><span>Collaborateur</span><span>Catégorie</span><span>Type</span><span>Début</span><span>Fin</span><span>Durée</span><span>Statut</span><span>Déclaré</span><span /></div>
                 {visible.length === 0 ? <div className="rh-events-empty">Aucun congé ou absence ne correspond aux filtres.</div> : visible.map((row) => (
                   <button key={row.key} type="button" className="rh-events-row rh-events-row--data" onClick={() => row.nature === 'CONGE' ? navigate(`/app/rh-all-requests/${row.id}`) : setSelectedAbsence(row.source)}>
-                    <span className="rh-events-person"><ProfileAvatar user={row.employee} className="rh-events-avatar" /><span><strong>{fullName(row.employee)}</strong><small>{row.service?.name ?? 'Service non renseigné'}</small></span></span>
+                    <span className="rh-events-person"><ProfileAvatar user={row.employee} className="rh-events-avatar" /><span><strong>{fullName(row.employee)}</strong><small>{row.service?.name ?? 'Service supprimé'}</small></span></span>
                     <span><b className={`rh-events-nature rh-events-nature--${row.nature.toLowerCase()}`}>{row.natureLabel}</b></span>
                     <span className="rh-events-type"><span>{row.type?.name ?? '—'}</span>{row.nature === 'CONGE' && row.source?.isAnticipatedLeave && <b className="rh-events-anticipated">Congé anticipé</b>}</span>
                     <span>{formatDateNumericFR(row.startDate)}</span>

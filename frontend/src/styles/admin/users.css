@@ -421,3 +421,10 @@ form.admin-users-password-reset > .admin-users-password-reset__actions { justify
 .admin-users-password-reset__actions button { min-height:41px; padding:0 15px; border:1px solid #d8e2ee; border-radius:10px; background:#fff; color:#55718f; font:inherit; font-size:11.5px; font-weight:850; cursor:pointer; }
 .admin-users-password-reset__actions button.is-password { display:inline-flex; align-items:center; gap:7px; padding:0 17px; }
 @media(max-width:680px){.admin-users-password-reset__context,.admin-users-password-reset__fields{grid-template-columns:1fr}.admin-users-password-reset__user > div span{white-space:normal}.admin-users-password-reset__actions{display:grid;grid-template-columns:1fr}.admin-users-password-reset__actions button{width:100%}}
+
+/* Suppression définitive d'un utilisateur (Admin) */
+.admin-users-actions button.is-delete:hover { border-color: #e6c9cc; background: #fff0f1; color: #b23b48; }
+.admin-users-confirm__icon.is-delete { background: #fff0f1; color: #c94b57; }
+.admin-users-confirm button.is-delete { border-color: #c94b57; background: #c94b57; color: #fff; }
+.admin-users-confirm button.is-delete:hover { background: #b23b48; }
+.admin-users-confirm__name { margin: -4px 0 2px; font-size: 12.5px; }

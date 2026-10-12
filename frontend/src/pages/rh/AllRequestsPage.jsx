@@ -398,7 +398,7 @@ export function RhAllRequestsPage() {
                       <ProfileAvatar user={request.employee} className="rh-all-requests-avatar" />
                       <span>
                         <strong>{request.employee?.nom} {request.employee?.prenom}</strong>
-                        <small>{request.service?.name ?? 'Service non renseigné'}</small>
+                        <small>{request.service?.name ?? 'Service supprimé'}</small>
                       </span>
                     </span>
                     <span className="rh-all-requests-type">{request.leaveType?.name ?? '—'}</span>

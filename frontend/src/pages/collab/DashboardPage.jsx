@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import { PageContainer } from '@/components/ui/PageContainer'
+import { ProductionPhaseInfoPopup } from '@/components/collab/ProductionPhaseInfoPopup'
 import { LeaveBalanceCard } from '@/components/collab/dashboard/LeaveBalanceCard'
 import { NextLeaveCard } from '@/components/collab/dashboard/NextLeaveCard'
 import { RecentRequestsCard } from '@/components/collab/dashboard/RecentRequestsCard'
@@ -115,6 +116,7 @@ export function DashboardCollaborateur() {
 
   return (
     <PageContainer className="dash-page">
+      <ProductionPhaseInfoPopup />
       <div className="dash-grid">
         <div className="dash-col dash-col--main">
           <LeaveBalanceCard
@@ -156,7 +158,6 @@ export function DashboardCollaborateur() {
             availableDays={availableDays}
             periodLabel={selectedPeriodLabel}
             onNewRequest={() => navigate('/app/new-request')}
-            onNewAbsence={() => navigate('/app/new-absence')}
           />
           <AlertsCard
             balances={balances}

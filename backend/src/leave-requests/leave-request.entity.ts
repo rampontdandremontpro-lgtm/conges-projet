@@ -68,12 +68,12 @@ export class LeaveRequest {
   @JoinColumn({ name: 'employee_id' })
   employee!: User;
 
-  @Column({ name: 'created_by_id', type: 'bigint' })
-  createdById!: number;
+  @Column({ name: 'created_by_id', type: 'bigint', nullable: true })
+  createdById!: number | null;
 
-  @ManyToOne(() => User, { nullable: false, onDelete: 'RESTRICT' })
+  @ManyToOne(() => User, { nullable: true, onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'created_by_id' })
-  createdBy!: User;
+  createdBy!: User | null;
 
   @Column({ name: 'leave_type_id', type: 'bigint' })
   leaveTypeId!: number;
@@ -82,12 +82,12 @@ export class LeaveRequest {
   @JoinColumn({ name: 'leave_type_id' })
   leaveType!: LeaveType;
 
-  @Column({ name: 'service_id', type: 'bigint' })
-  serviceId!: number;
+  @Column({ name: 'service_id', type: 'bigint', nullable: true })
+  serviceId!: number | null;
 
-  @ManyToOne(() => Service, { nullable: false, onDelete: 'RESTRICT' })
+  @ManyToOne(() => Service, { nullable: true, onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'service_id' })
-  service!: Service;
+  service!: Service | null;
 
   @Column({ name: 'start_date', type: 'date' })
   startDate!: string;

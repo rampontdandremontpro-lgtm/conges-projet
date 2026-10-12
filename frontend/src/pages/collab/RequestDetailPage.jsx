@@ -5,7 +5,6 @@ import { RequestStatusBadge } from '@/components/collab/requests/RequestStatusBa
 import { getEffectiveLeaveRequestStatus } from '@/config/leaveMeta'
 import { Icon } from '@/components/ui/Icon'
 import {
-  cancelAbsenceDeclaration,
   cancelLeaveRequest,
   downloadCancellationPdf,
   downloadPendingSummaryPdf,
@@ -16,7 +15,6 @@ import {
   getLeaveRequest,
   uploadAbsenceJustificatif,
 } from '@/services/collab/requestDetails'
-import { submitAbsenceDeclaration } from '@/services/absenceDeclarations'
 import { formatDateNumericFR, formatDays, formatRangeNumericFR, todayISO } from '@/utils/format'
 import { errorMessage } from '@/utils/newRequest'
 import { notifyAppDataChanged } from '@/utils/dataRefresh'
@@ -179,16 +177,6 @@ export function RequestDetailPage() {
   const handleCancelPendingLeave = () => {
     if (!window.confirm('Annuler cette demande de congé ?')) return
     run('cancel', () => cancelLeaveRequest(numericId), 'Demande annulée.')
-  }
-
-  const handleSubmitAbsence = () => {
-    if (!window.confirm('Soumettre cette déclaration d’absence ?')) return
-    run('submit', () => submitAbsenceDeclaration(numericId, { certifiedAccurate: true }), 'Déclaration soumise.')
-  }
-
-  const handleCancelAbsenceDraft = () => {
-    if (!window.confirm('Annuler ce brouillon d’absence ?')) return
-    run('cancel', () => cancelAbsenceDeclaration(numericId), 'Brouillon annulé.')
   }
 
   const handleJustificatif = async (event) => {
@@ -398,14 +386,9 @@ export function RequestDetailPage() {
             )}
 
             {isAbsence && request.status === 'BROUILLON' && (
-              <>
-                <button type="button" className="request-detail-button request-detail-button--primary" disabled={Boolean(busy)} onClick={handleSubmitAbsence}>
-                  <Icon name="check" size={16} /> {busy === 'submit' ? 'Soumission…' : 'Soumettre la déclaration'}
-                </button>
-                <button type="button" className="request-detail-button request-detail-button--danger-outline" disabled={Boolean(busy)} onClick={handleCancelAbsenceDraft}>
-                  <Icon name="trash" size={16} /> {busy === 'cancel' ? 'Annulation…' : 'Annuler le brouillon'}
-                </button>
-              </>
+              <div className="request-detail-consent-note">
+                Ce brouillon d’absence est géré par la RH. Seule la RH peut le soumettre, le modifier ou l’annuler.
+              </div>
             )}
 
             {isAbsence && !['ENREGISTREE', 'ANNULEE', 'BROUILLON'].includes(request.status) && (

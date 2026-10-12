@@ -21,7 +21,7 @@ type AuthenticatedRequest = Request & { user: AuthenticatedUser };
 
 @Controller('exports')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(UserRole.RH)
+@Roles(UserRole.RH, UserRole.DIRECTEUR)
 export class ExportsController {
   constructor(private readonly exportsService: ExportsService) {}
 

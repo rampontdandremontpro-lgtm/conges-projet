@@ -353,7 +353,7 @@ export class NotificationsService {
       );
       const takeoverDelayDays = Math.max(
         1,
-        Number(request.service.takeoverDelayDays ?? 7),
+        Number(request.service?.takeoverDelayDays ?? 7),
       );
       const finalization = request.finalDeciderId !== null;
       const validationLate =
@@ -416,10 +416,9 @@ export class NotificationsService {
           id: request.leaveType.id,
           name: request.leaveType.name,
         },
-        service: {
-          id: request.service.id,
-          name: request.service.name,
-        },
+        service: request.service
+          ? { id: request.service.id, name: request.service.name }
+          : null,
         startDate: request.startDate,
         endDate: request.endDate,
         daysBeforeStart,

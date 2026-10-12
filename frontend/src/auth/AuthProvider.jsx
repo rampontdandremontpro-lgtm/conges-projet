@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { AuthContext } from '@/auth/AuthContext'
 import { clearToken, getToken, setToken } from '@/auth/tokenStorage'
+import { resetCollaboratorProductionInfoDismissal } from '@/config/features'
 import { apiClient } from '@/services/apiClient'
 
 const PROFILE_MODE_KEY = 'gmes-profile-mode'
@@ -60,6 +61,7 @@ export function AuthProvider({ children }) {
   const logout = useCallback(() => {
     clearToken()
     sessionStorage.removeItem(PROFILE_MODE_KEY)
+    resetCollaboratorProductionInfoDismissal()
     setProfileMode('MANAGEMENT')
     setUser(null)
   }, [])

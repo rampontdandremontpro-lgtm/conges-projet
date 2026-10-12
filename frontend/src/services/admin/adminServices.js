@@ -35,3 +35,8 @@ export async function enableAdminService(id) {
   window.dispatchEvent(new Event('gmes:data-changed'))
   return response.data
 }
+
+export async function deleteAdminService(id) {
+  await apiClient.delete(`/services/${id}`)
+  window.dispatchEvent(new Event('gmes:data-changed'))
+}

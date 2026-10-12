@@ -117,6 +117,11 @@ export class ValidatorResolutionService {
     leaveRequest: LeaveRequest,
     options: ResolutionOptions = {},
   ): Promise<ValidatorResolution> {
+    if (!leaveRequest.service) {
+      throw new BadRequestException(
+        'Le service de cette demande a été supprimé. Cette demande ne peut plus être traitée.',
+      );
+    }
     const manager = options.manager;
     const now = options.now ?? new Date();
     const userRepository = manager
@@ -251,6 +256,15 @@ export class ValidatorResolutionService {
     const userRepository = manager
       ? manager.getRepository(User)
       : this.userRepository;
+
+    if (!leaveRequest.service) {
+      // Service supprimé : la RH reste destinataire de la traçabilité.
+      const rhUsers = await userRepository.find({
+        where: { role: UserRole.RH, isActive: true },
+        select: { id: true },
+      });
+      return rhUsers.map((user) => user.id);
+    }
     const service = leaveRequest.service;
 
     if (
@@ -339,6 +353,14 @@ export class ValidatorResolutionService {
     leaveRequest: LeaveRequest,
     options: ResolutionOptions = {},
   ): Promise<ValidationTreatment> {
+    if (!leaveRequest.service) {
+      if (
+        leaveRequest.status === LeaveRequestStatus.EN_ATTENTE_VALIDATION
+      ) {
+        return { kind: 'RH_FINALISATION', reason: null };
+      }
+      return { kind: 'SANS_VALIDATION', reason: null };
+    }
     if (
       leaveRequest.status === LeaveRequestStatus.EN_ATTENTE_VALIDATION &&
       leaveRequest.finalDeciderId !== null
@@ -415,6 +437,21 @@ export class ValidatorResolutionService {
     if (leaveRequest.employeeId === authenticatedUser.id) {
       throw new ForbiddenException(
         'Vous ne pouvez pas traiter votre propre demande.',
+      );
+    }
+
+    // Cas métier : le service a été supprimé. Seule la RH peut prendre la
+    // décision finale sur une demande encore en attente de validation.
+    if (!leaveRequest.service) {
+      if (
+        leaveRequest.status === LeaveRequestStatus.EN_ATTENTE_VALIDATION &&
+        authenticatedUser.role === UserRole.RH
+      ) {
+        return { kind: 'RH_FINALISATION', reason: null };
+      }
+
+      throw new ForbiddenException(
+        'Le service de cette demande a été supprimé. Seule la RH peut traiter cette demande.',
       );
     }
 
@@ -533,6 +570,11 @@ export class ValidatorResolutionService {
     userId: number,
     options: ResolutionOptions = {},
   ): Promise<boolean> {
+    if (!leaveRequest.service) {
+      throw new BadRequestException(
+        'Le service de cette demande a été supprimé. Cette demande ne peut plus être traitée.',
+      );
+    }
     if (
       leaveRequest.status === LeaveRequestStatus.EN_ATTENTE_VALIDATION &&
       leaveRequest.finalDeciderId !== null
@@ -579,6 +621,11 @@ export class ValidatorResolutionService {
     authenticatedUser: AuthenticatedUser,
     options: ResolutionOptions,
   ): Promise<DecisionAccess> {
+    if (!leaveRequest.service) {
+      throw new BadRequestException(
+        'Le service de cette demande a été supprimé. Cette demande ne peut plus être traitée.',
+      );
+    }
     const resolution = await this.buildResolution(
       leaveRequest,
       options,

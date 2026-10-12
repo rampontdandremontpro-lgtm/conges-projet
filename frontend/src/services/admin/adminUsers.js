@@ -36,6 +36,11 @@ export async function enableAdminUser(id) {
   return response.data
 }
 
+export async function deleteAdminUser(id) {
+  await apiClient.delete(`/users/${id}`)
+  window.dispatchEvent(new Event('gmes:data-changed'))
+}
+
 export async function resetManagedUserPassword(id, temporaryPassword) {
   const response = await apiClient.patch(`/users/${id}/reset-password`, { temporaryPassword })
   window.dispatchEvent(new Event('gmes:data-changed'))

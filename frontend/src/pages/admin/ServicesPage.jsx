@@ -7,6 +7,7 @@ import { PageContainer } from '@/components/ui/PageContainer'
 import { useAutoDismiss } from '@/hooks/useAutoDismiss'
 import {
   createAdminService,
+  deleteAdminService,
   disableAdminService,
   enableAdminService,
   getAdminServicesData,
@@ -293,6 +294,20 @@ function ServiceDrawer({ mode, service, users, counts, onClose, onSaved, onEdit 
   )
 }
 
+function DeleteConfirm({ service, busy, onCancel, onConfirm }) {
+  return (
+    <div className="admin-services-confirm-overlay" role="presentation" onMouseDown={onCancel}>
+      <div className="admin-services-confirm" role="dialog" aria-modal="true" onMouseDown={(event) => event.stopPropagation()}>
+        <span className="admin-services-confirm__icon is-delete"><Icon name="trash" size={22} /></span>
+        <h3>Supprimer définitivement ce service ?</h3>
+        <p>Cette suppression est définitive et peut effacer les rattachements et références associés. Cette action est irréversible.</p>
+        <p className="admin-services-confirm__name"><strong>{service.name}</strong></p>
+        <div><button type="button" onClick={onCancel}>Annuler</button><button type="button" className="is-delete" onClick={onConfirm} disabled={busy}>{busy ? 'Suppression…' : 'Supprimer définitivement'}</button></div>
+      </div>
+    </div>
+  )
+}
+
 function StatusConfirm({ service, busy, onCancel, onConfirm }) {
   const enable = !service.isActive
   return (
@@ -313,7 +328,9 @@ export function AdminServicesPage() {
   const [filters, setFilters] = useState({ type: 'ALL', status: 'ALL', manager: 'ALL' })
   const [drawer, setDrawer] = useState(null)
   const [statusTarget, setStatusTarget] = useState(null)
+  const [deleteTarget, setDeleteTarget] = useState(null)
   const [statusBusy, setStatusBusy] = useState(false)
+  const [deleteBusy, setDeleteBusy] = useState(false)
   const [feedback, setFeedback] = useState(null)
   const [page, setPage] = useState(1)
 
@@ -438,6 +455,22 @@ export function AdminServicesPage() {
     }
   }
 
+  const confirmDelete = async () => {
+    if (!deleteTarget || deleteBusy) return
+    setDeleteBusy(true)
+    try {
+      await deleteAdminService(deleteTarget.id)
+      setFeedback({ kind: 'success', message: `Le service « ${deleteTarget.name} » a été supprimé définitivement.` })
+      setDeleteTarget(null)
+      await load({ silent: true })
+    } catch (error) {
+      setFeedback({ kind: 'error', message: errorMessage(error) })
+      setDeleteTarget(null)
+    } finally {
+      setDeleteBusy(false)
+    }
+  }
+
   return (
     <PageContainer className="admin-services-page">
       {feedback && <div className={`admin-services-feedback admin-services-feedback--${feedback.kind}`} role="status"><Icon name={feedback.kind === 'success' ? 'check' : 'alert'} size={16} /> {feedback.message}</div>}
@@ -479,6 +512,7 @@ export function AdminServicesPage() {
                       <div className="admin-services-actions">
                         <button type="button" title="Modifier" aria-label={`Modifier ${service.name}`} onClick={(event) => { event.stopPropagation(); setDrawer({ mode: 'edit', service }) }}><Icon name="edit" size={16} /></button>
                         <button type="button" className={service.isActive ? 'is-disable' : 'is-enable'} title={service.isActive ? 'Désactiver' : 'Réactiver'} aria-label={service.isActive ? `Désactiver ${service.name}` : `Réactiver ${service.name}`} onClick={(event) => { event.stopPropagation(); setStatusTarget(service) }}><Icon name={service.isActive ? 'ban' : 'refresh'} size={16} /></button>
+                        <button type="button" className="is-delete" title="Supprimer définitivement" aria-label={`Supprimer définitivement ${service.name}`} onClick={(event) => { event.stopPropagation(); setDeleteTarget(service) }}><Icon name="trash" size={16} /></button>
                       </div>
                     </div>
                   )
@@ -492,6 +526,7 @@ export function AdminServicesPage() {
 
       {drawer && <ServiceDrawer mode={drawer.mode} service={drawer.service} users={state.users} counts={drawer.service ? countsByService.get(String(drawer.service.id)) : null} onClose={() => setDrawer(null)} onEdit={(selected) => setDrawer({ mode: 'edit', service: selected })} onSaved={handleSaved} />}
       {statusTarget && <StatusConfirm service={statusTarget} busy={statusBusy} onCancel={() => setStatusTarget(null)} onConfirm={confirmStatus} />}
+      {deleteTarget && <DeleteConfirm service={deleteTarget} busy={deleteBusy} onCancel={() => setDeleteTarget(null)} onConfirm={confirmDelete} />}
     </PageContainer>
   )
 }

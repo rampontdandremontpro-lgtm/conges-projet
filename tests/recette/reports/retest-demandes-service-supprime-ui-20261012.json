@@ -1,0 +1,38 @@
+{
+  "title": "Interface RH — demandes après suppression de service (12/10/2026)",
+  "date": "2026-10-12T17:22:01.932Z",
+  "frontendUrl": "http://localhost:5174",
+  "apiUrl": "http://localhost:3001/api",
+  "summary": {
+    "total": 3,
+    "conformes": 3,
+    "nonConformes": 0,
+    "allConformes": true
+  },
+  "results": [
+    {
+      "id": "UI-01",
+      "action": "Affichage RH : demande sans service visible avec « Service supprimé »",
+      "expected": "demande visible + mention Service supprimé",
+      "observed": "visible=true serviceSupprime=true",
+      "pass": "Conforme",
+      "date": "2026-10-12T17:21:56.280Z"
+    },
+    {
+      "id": "UI-02",
+      "action": "Page de décision RH : boutons Valider et Refuser présents",
+      "expected": "boutons présents",
+      "observed": "valider=true refuser=true",
+      "pass": "Conforme",
+      "date": "2026-10-12T17:21:57.345Z"
+    },
+    {
+      "id": "UI-03",
+      "action": "Collaborateur : consultation de sa demande après suppression du service",
+      "expected": "demande visible",
+      "observed": "visible=true",
+      "pass": "Conforme",
+      "date": "2026-10-12T17:22:01.831Z"
+    }
+  ]
+}

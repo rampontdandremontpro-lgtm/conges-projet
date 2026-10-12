@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  HttpCode,
   Param,
   ParseIntPipe,
   Patch,
@@ -253,5 +254,18 @@ export class UsersController {
     @Param('id', ParseIntPipe) id: number,
   ) {
     return this.usersService.enable(id, request.user.role);
+  }
+
+  @Delete(':id')
+  @HttpCode(204)
+  @Roles(UserRole.ADMIN)
+  deletePermanently(
+    @Req() request: AuthenticatedRequest,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    return this.usersService.deletePermanently(
+      id,
+      request.user,
+    );
   }
 }

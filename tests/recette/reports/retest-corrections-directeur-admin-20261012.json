@@ -1,0 +1,174 @@
+{
+  "title": "Retest corrections Directeur / Admin — 12/10/2026",
+  "date": "2026-10-12T15:35:36.538Z",
+  "apiUrl": "http://localhost:3001/api",
+  "database": "gestion_conges_gmes_test",
+  "summary": {
+    "total": 16,
+    "conformes": 16,
+    "nonConformes": 0,
+    "allConformes": true
+  },
+  "results": [
+    {
+      "id": "EXP-01",
+      "area": "Exports",
+      "action": "RH GET /exports/overview",
+      "expected": "HTTP 200",
+      "observed": "HTTP=200",
+      "pass": "Conforme",
+      "comment": "",
+      "date": "2026-10-12T15:35:33.026Z"
+    },
+    {
+      "id": "EXP-02",
+      "area": "Exports",
+      "action": "Directeur GET /exports/overview",
+      "expected": "HTTP 200 (anciennement 403)",
+      "observed": "HTTP=200",
+      "pass": "Conforme",
+      "comment": "",
+      "date": "2026-10-12T15:35:33.027Z"
+    },
+    {
+      "id": "EXP-03",
+      "area": "Exports",
+      "action": "RH export CSV",
+      "expected": "HTTP 200 + contenu CSV",
+      "observed": "HTTP=200 bytes=3",
+      "pass": "Conforme",
+      "comment": "",
+      "date": "2026-10-12T15:35:33.224Z"
+    },
+    {
+      "id": "EXP-04",
+      "area": "Exports",
+      "action": "Directeur export CSV (identique RH)",
+      "expected": "HTTP 200 + contenu identique",
+      "observed": "HTTP=200 identique=true",
+      "pass": "Conforme",
+      "comment": "",
+      "date": "2026-10-12T15:35:33.224Z"
+    },
+    {
+      "id": "EXP-05",
+      "area": "Exports",
+      "action": "RH export XLSX",
+      "expected": "HTTP 200 + signature PK",
+      "observed": "HTTP=200 PK=true",
+      "pass": "Conforme",
+      "comment": "",
+      "date": "2026-10-12T15:35:33.224Z"
+    },
+    {
+      "id": "EXP-06",
+      "area": "Exports",
+      "action": "Directeur export XLSX",
+      "expected": "HTTP 200 + signature PK",
+      "observed": "HTTP=200 PK=true",
+      "pass": "Conforme",
+      "comment": "",
+      "date": "2026-10-12T15:35:33.224Z"
+    },
+    {
+      "id": "EXP-07",
+      "area": "Exports",
+      "action": "Collaborateur GET /exports/overview",
+      "expected": "HTTP 403",
+      "observed": "HTTP=403",
+      "pass": "Conforme",
+      "comment": "",
+      "date": "2026-10-12T15:35:33.234Z"
+    },
+    {
+      "id": "USR-01",
+      "area": "Admin utilisateurs",
+      "action": "Supprimer un utilisateur actif sans relation",
+      "expected": "HTTP 204 + compte disparu",
+      "observed": "HTTP=204 disparu=true",
+      "pass": "Conforme",
+      "comment": "",
+      "date": "2026-10-12T15:35:33.669Z"
+    },
+    {
+      "id": "USR-02",
+      "area": "Admin utilisateurs",
+      "action": "Supprimer un utilisateur inactif",
+      "expected": "HTTP 204 + compte disparu",
+      "observed": "HTTP=204 disparu=true",
+      "pass": "Conforme",
+      "comment": "",
+      "date": "2026-10-12T15:35:34.130Z"
+    },
+    {
+      "id": "USR-03",
+      "area": "Admin utilisateurs",
+      "action": "Supprimer un utilisateur avec demandes + soldes + mouvement + justificatif",
+      "expected": "HTTP 204 + données associées effacées",
+      "observed": "HTTP=204 disparu=true reliques={\"leave_requests\":0,\"leave_balances\":0,\"balance_movements\":0,\"documents\":0}",
+      "pass": "Conforme",
+      "comment": "",
+      "date": "2026-10-12T15:35:34.799Z"
+    },
+    {
+      "id": "USR-04",
+      "area": "Admin utilisateurs",
+      "action": "Supprimer un utilisateur avec lien de validation",
+      "expected": "HTTP 204 + affectation valideur supprimée",
+      "observed": "HTTP=204 disparu=true validations=0",
+      "pass": "Conforme",
+      "comment": "",
+      "date": "2026-10-12T15:35:35.244Z"
+    },
+    {
+      "id": "USR-05",
+      "area": "Admin utilisateurs",
+      "action": "RH DELETE /users/:id",
+      "expected": "HTTP 403",
+      "observed": "HTTP=403",
+      "pass": "Conforme",
+      "comment": "",
+      "date": "2026-10-12T15:35:35.255Z"
+    },
+    {
+      "id": "SRV-01",
+      "area": "Admin services",
+      "action": "Supprimer un service vide",
+      "expected": "HTTP 204 + service disparu",
+      "observed": "HTTP=204 disparu=true",
+      "pass": "Conforme",
+      "comment": "",
+      "date": "2026-10-12T15:35:35.333Z"
+    },
+    {
+      "id": "SRV-02",
+      "area": "Admin services",
+      "action": "Supprimer un service avec collaborateurs (comptes conservés)",
+      "expected": "HTTP 204 + collaborateurs conservés avec service_id NULL",
+      "observed": "HTTP=204 disparu=true U5=[{\"id\":25,\"service_id\":null}] U6=[{\"id\":26,\"service_id\":null}]",
+      "pass": "Conforme",
+      "comment": "",
+      "date": "2026-10-12T15:35:36.139Z"
+    },
+    {
+      "id": "SRV-03",
+      "area": "Admin services",
+      "action": "Supprimer un service avec responsable et valideur",
+      "expected": "HTTP 204 + responsable conservé + valideur supprimé",
+      "observed": "HTTP=204 disparu=true manager=[{\"id\":27,\"service_id\":null}] validations=0",
+      "pass": "Conforme",
+      "comment": "",
+      "date": "2026-10-12T15:35:36.534Z"
+    },
+    {
+      "id": "SRV-04",
+      "area": "Admin services",
+      "action": "RH DELETE /services/:id",
+      "expected": "HTTP 403",
+      "observed": "HTTP=403",
+      "pass": "Conforme",
+      "comment": "",
+      "date": "2026-10-12T15:35:36.537Z"
+    }
+  ]
+}

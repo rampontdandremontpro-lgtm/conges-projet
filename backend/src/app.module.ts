@@ -16,6 +16,8 @@ import { AddAnticipatedLeave20260828180000 } from './database/migrations/2026082
 import { AddLeaveRequestDurationHours20260901150000 } from './database/migrations/20260901150000-add-leave-request-duration-hours';
 import { AddDerogationSubmittedAt20260929180000 } from './database/migrations/20260929180000-add-derogation-submitted-at';
 import { AddUserExitDate20260930180000 } from './database/migrations/20260930180000-add-user-exit-date';
+import { MakeServiceIdNullable20261012100000 } from './database/migrations/20261012100000-make-service-id-nullable';
+import { MakeActorReferencesNullable20261012120000 } from './database/migrations/20261012120000-make-actor-references-nullable';
 import { DocumentsModule } from './documents/documents.module';
 import { ExportsModule } from './exports/exports.module';
 import { HolidaysModule } from './holidays/holidays.module';
@@ -58,6 +60,8 @@ import { ValidatorsModule } from './validators/validators.module';
           AddLeaveRequestDurationHours20260901150000,
           AddDerogationSubmittedAt20260929180000,
           AddUserExitDate20260930180000,
+          MakeServiceIdNullable20261012100000,
+          MakeActorReferencesNullable20261012120000,
         ],
         migrationsRun: true,
         migrationsTableName: 'typeorm_migrations',

@@ -3,11 +3,15 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Not, Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
+import * as fs from 'node:fs/promises';
+import * as path from 'node:path';
 
 import {
   Service,
@@ -42,6 +46,8 @@ import {
 
 @Injectable()
 export class UsersService {
+  private readonly logger = new Logger(UsersService.name);
+
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
@@ -51,6 +57,7 @@ export class UsersService {
     private readonly settingsService: SettingsService,
     private readonly validatorResolutionService: ValidatorResolutionService,
     private readonly dataSource: DataSource,
+    private readonly configService: ConfigService,
   ) {}
 
   async create(
@@ -1170,6 +1177,146 @@ export class UsersService {
     user.isActive = true;
     await this.userRepository.save(user);
     return this.findOne(id);
+  }
+
+  async deletePermanently(
+    id: number,
+    actor: AuthenticatedUser,
+  ): Promise<void> {
+    if (id === actor.id) {
+      throw new BadRequestException(
+        'Vous ne pouvez pas supprimer votre propre compte.',
+      );
+    }
+
+    const user = await this.findOne(id);
+
+    const storageKeysToDelete: string[] = await this.dataSource.transaction(async (manager) => {
+      const targetId = user.id;
+
+      // 1) Détacher les références d'auteur : une action historique réalisée par
+      //    un compte supprimé ne doit jamais être attribuée à un autre utilisateur.
+      await manager.query(
+        'UPDATE absence_declarations SET created_by_id = NULL WHERE created_by_id = ?',
+        [targetId],
+      );
+      await manager.query(
+        'UPDATE leave_requests SET created_by_id = NULL WHERE created_by_id = ?',
+        [targetId],
+      );
+      await manager.query(
+        'UPDATE documents SET uploaded_by_id = NULL WHERE uploaded_by_id = ?',
+        [targetId],
+      );
+      await manager.query(
+        'UPDATE validator_replacements SET created_by_rh_id = NULL WHERE created_by_rh_id = ?',
+        [targetId],
+      );
+
+      // 2) Supprimer les affectations valideurs/remplacements liés à l'utilisateur.
+      await manager.query(
+        'DELETE FROM service_backup_validators WHERE validator_id = ?',
+        [targetId],
+      );
+      await manager.query(
+        'DELETE FROM validator_replacements WHERE employee_id = ? OR replacement_validator_id = ?',
+        [targetId, targetId],
+      );
+
+      // 3) Supprimer les justificatifs liés aux demandes/absences de l'utilisateur
+      //    (métadonnées + fichiers privés sur disque).
+      const documentsToDelete = (await manager.query(
+        `SELECT storage_key FROM documents
+         WHERE leave_request_id IN (SELECT id FROM leave_requests WHERE employee_id = ?)
+            OR absence_declaration_id IN (SELECT id FROM absence_declarations WHERE employee_id = ?)`,
+        [targetId, targetId],
+      )) as { storage_key: string }[];
+      await manager.query(
+        `DELETE FROM documents
+         WHERE leave_request_id IN (SELECT id FROM leave_requests WHERE employee_id = ?)
+            OR absence_declaration_id IN (SELECT id FROM absence_declarations WHERE employee_id = ?)`,
+        [targetId, targetId],
+      );
+
+      // 4) Supprimer les données propres de l'utilisateur (ordre respectant les clés étrangères).
+      await manager.query(
+        'DELETE FROM balance_movements WHERE employee_id = ?',
+        [targetId],
+      );
+      await manager.query(
+        'DELETE FROM leave_balances WHERE employee_id = ?',
+        [targetId],
+      );
+      await manager.query(
+        'DELETE FROM derogations WHERE employee_id = ?',
+        [targetId],
+      );
+      await manager.query(
+        'DELETE FROM leave_requests WHERE employee_id = ?',
+        [targetId],
+      );
+      await manager.query(
+        'DELETE FROM absence_declarations WHERE employee_id = ?',
+        [targetId],
+      );
+
+      // 5) Supprimer l'utilisateur (les clés SET NULL / CASCADE traitent les références restantes).
+      await manager.query('DELETE FROM users WHERE id = ?', [targetId]);
+
+      return documentsToDelete.map(
+        (row) => row.storage_key,
+      );
+    });
+
+    // Suppression des fichiers privés après la validation de la transaction.
+    await this.deletePhysicalFiles(storageKeysToDelete);
+  }
+
+  private privateStorageRoot(): string {
+    return path.resolve(
+      this.configService.get<string>(
+        'PRIVATE_STORAGE_ROOT',
+        path.join(process.cwd(), 'storage', 'private'),
+      ),
+    );
+  }
+
+  private async deletePhysicalFiles(storageKeys: string[]): Promise<void> {
+    const root = this.privateStorageRoot();
+    const rootWithSeparator = `${root}${path.sep}`;
+
+    await Promise.all(
+      storageKeys.map(async (storageKey) => {
+        const absolutePath = path.resolve(root, storageKey);
+
+        if (
+          absolutePath !== root &&
+          !absolutePath.startsWith(rootWithSeparator)
+        ) {
+          this.logger.warn(
+            `Clé de stockage invalide ignorée lors de la suppression : ${storageKey}`,
+          );
+          return;
+        }
+
+        try {
+          await fs.unlink(absolutePath);
+        } catch (error) {
+          const code =
+            typeof error === 'object' &&
+            error !== null &&
+            'code' in error
+              ? String((error as { code: unknown }).code)
+              : '';
+
+          if (code !== 'ENOENT') {
+            this.logger.warn(
+              `Le fichier privé ${storageKey} n’a pas pu être supprimé immédiatement.`,
+            );
+          }
+        }
+      }),
+    );
   }
 
 

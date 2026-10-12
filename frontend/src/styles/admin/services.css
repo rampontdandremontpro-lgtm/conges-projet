@@ -443,3 +443,10 @@
 .admin-services-actions {
   justify-content: center;
 }
+
+/* Suppression définitive d'un service (Admin) */
+.admin-services-actions button.is-delete:hover { border-color: #e6c9cc; background: #fff0f1; color: #b23b48; }
+.admin-services-confirm__icon.is-delete { background: #fff0f0; color: #df4e4e; }
+.admin-services-confirm button.is-delete { border-color: #df4f4f; background: #df4f4f; color: #fff; }
+.admin-services-confirm button.is-delete:hover { background: #c63f3f; }
+.admin-services-confirm__name { margin: -4px 0 2px; font-size: 12.5px; }

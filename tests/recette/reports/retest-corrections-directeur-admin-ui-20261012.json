@@ -1,0 +1,68 @@
+{
+  "title": "Retest UI corrections Directeur / Admin — 12/10/2026",
+  "date": "2026-10-12T15:37:55.484Z",
+  "frontendUrl": "http://localhost:5174",
+  "apiUrl": "http://localhost:3001/api",
+  "summary": {
+    "total": 6,
+    "conformes": 6,
+    "nonConformes": 0,
+    "allConformes": true
+  },
+  "results": [
+    {
+      "id": "UI-EXP-01",
+      "area": "Directeur exports",
+      "action": "Ouvrir /app/director-exports",
+      "expected": "Page chargée sans erreur 403",
+      "observed": "erreur=false (1174 car.)",
+      "pass": "Conforme",
+      "date": "2026-10-12T15:37:34.554Z"
+    },
+    {
+      "id": "UI-EXP-02",
+      "area": "Directeur exports",
+      "action": "Téléchargement CSV réel",
+      "expected": "Download déclenché",
+      "observed": "aucun bouton actif (aucune donnée)",
+      "pass": "Conforme",
+      "date": "2026-10-12T15:37:34.562Z"
+    },
+    {
+      "id": "UI-DIR-01",
+      "area": "Directeur indisponibilité",
+      "action": "Centrage vertical des cartes",
+      "expected": "align-content center + min-height",
+      "observed": "layout={\"alignContent\":\"center\",\"minHeight\":\"940px\",\"alignItems\":\"start\"}",
+      "pass": "Conforme",
+      "date": "2026-10-12T15:37:38.209Z"
+    },
+    {
+      "id": "UI-USR-01",
+      "area": "Admin utilisateurs",
+      "action": "Suppression définitive via interface",
+      "expected": "Utilisateur disparu de la liste",
+      "observed": "disparu=true",
+      "pass": "Conforme",
+      "date": "2026-10-12T15:37:44.985Z"
+    },
+    {
+      "id": "UI-SRV-01",
+      "area": "Admin services",
+      "action": "Suppression définitive via interface",
+      "expected": "Service disparu de la liste",
+      "observed": "disparu=true",
+      "pass": "Conforme",
+      "date": "2026-10-12T15:37:51.175Z"
+    },
+    {
+      "id": "UI-RH-01",
+      "area": "RH clôture",
+      "action": "Bouton « Clôture de période » présent",
+      "expected": "Bouton présent",
+      "observed": "présent=true",
+      "pass": "Conforme",
+      "date": "2026-10-12T15:37:55.357Z"
+    }
+  ]
+}

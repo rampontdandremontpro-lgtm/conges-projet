@@ -16,13 +16,15 @@
   grid-template-columns: minmax(0, .9fr) minmax(480px, 1.1fr);
   gap: 18px;
   align-items: start;
+  align-content: center;
+  min-height: calc(100svh - 156px);
 }
 
 .director-availability-left,
 .director-availability-right {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
   min-width: 0;
 }
 
@@ -38,7 +40,7 @@
 .director-availability-document-card,
 .director-availability-recap-card,
 .director-availability-duration-card {
-  padding: 18px;
+  padding: 22px 22px 20px;
 }
 
 .director-availability-card__heading {
@@ -209,8 +211,8 @@
 }
 
 .director-availability-field textarea {
-  min-height: 76px;
-  max-height: 118px;
+  min-height: 88px;
+  max-height: 132px;
   resize: vertical;
   padding: 11px 12px;
   border-radius: 13px;
@@ -481,7 +483,7 @@
 }
 
 .director-availability-calendar-card {
-  padding: 18px 18px 15px;
+  padding: 22px 22px 18px;
 }
 
 .director-availability-calendar-heading {
@@ -550,12 +552,12 @@
 }
 
 .director-availability-calendar .nr-cal__cell {
-  height: 55px;
+  height: 60px;
 }
 
 .director-availability-calendar .nr-cal__day-circle {
-  width: 41px;
-  height: 41px;
+  width: 44px;
+  height: 44px;
 }
 
 .director-availability-calendar .nr-cal__nav-btn {
@@ -746,7 +748,7 @@
   grid-template-columns: 42px minmax(0, 1fr) 20px;
   align-items: center;
   gap: 10px;
-  min-height: 78px;
+  min-height: 86px;
   padding: 11px 12px;
   border: 1px solid var(--da-blue);
   border-radius: 15px;

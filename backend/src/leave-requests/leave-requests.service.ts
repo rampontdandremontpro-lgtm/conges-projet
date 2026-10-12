@@ -1557,7 +1557,7 @@ export class LeaveRequestsService {
       const pending: LeaveRequest[] = [];
       for (const leaveRequest of requests) {
         if (
-          leaveRequest.service.validationMode !==
+          leaveRequest.service?.validationMode !==
             ValidationMode.RESPONSABLE_PUIS_RELAIS ||
           leaveRequest.employeeId === authenticatedUser.id ||
           [
@@ -1874,6 +1874,7 @@ export class LeaveRequestsService {
       const decisionAt = new Date();
       const oldStatus = leaveRequest.status;
       const requiresRhFinalization =
+        leaveRequest.service != null &&
         leaveRequest.service.validationMode ===
           ValidationMode.RESPONSABLE_PUIS_RELAIS &&
         leaveRequest.employee.role === UserRole.COLLABORATEUR &&
@@ -2721,9 +2722,9 @@ export class LeaveRequestsService {
         metadata: {
           actorRole: authenticatedUser.role,
           primaryManagerId:
-            leaveRequest.service.primaryManagerId,
+            leaveRequest.service?.primaryManagerId ?? null,
           takeoverDelayDays:
-            leaveRequest.service.takeoverDelayDays,
+            leaveRequest.service?.takeoverDelayDays ?? null,
         },
       },
       manager,

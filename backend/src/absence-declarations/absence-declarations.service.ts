@@ -58,6 +58,12 @@ export class AbsenceDeclarationsService {
     authenticatedUser: AuthenticatedUser,
     dto: CreateAbsenceDeclarationDto,
   ): Promise<AbsenceDeclaration> {
+    if (authenticatedUser.role !== UserRole.RH) {
+      throw new ForbiddenException(
+        'Seule la RH peut créer une déclaration d’absence.',
+      );
+    }
+
     const employee = await this.resolveEmployee(
       authenticatedUser,
       dto.employeeId,
@@ -223,6 +229,12 @@ export class AbsenceDeclarationsService {
     authenticatedUser: AuthenticatedUser,
     dto: UpdateAbsenceDeclarationDto,
   ): Promise<AbsenceDeclaration> {
+    if (authenticatedUser.role !== UserRole.RH) {
+      throw new ForbiddenException(
+        'Seule la RH peut modifier une déclaration d’absence.',
+      );
+    }
+
     const declaration = await this.findAccessibleOne(
       id,
       authenticatedUser,
@@ -370,6 +382,12 @@ export class AbsenceDeclarationsService {
     authenticatedUser: AuthenticatedUser,
     dto: SubmitAbsenceDeclarationDto,
   ): Promise<AbsenceDeclaration> {
+    if (authenticatedUser.role !== UserRole.RH) {
+      throw new ForbiddenException(
+        'Seule la RH peut soumettre une déclaration d’absence.',
+      );
+    }
+
     const declaration = await this.findAccessibleOne(
       id,
       authenticatedUser,
@@ -711,6 +729,12 @@ export class AbsenceDeclarationsService {
     id: number,
     authenticatedUser: AuthenticatedUser,
   ): Promise<void> {
+    if (authenticatedUser.role !== UserRole.RH) {
+      throw new ForbiddenException(
+        'Seule la RH peut supprimer une déclaration d’absence.',
+      );
+    }
+
     const declaration = await this.findAccessibleOne(
       id,
       authenticatedUser,
@@ -751,6 +775,12 @@ export class AbsenceDeclarationsService {
     id: number,
     authenticatedUser: AuthenticatedUser,
   ): Promise<AbsenceDeclaration> {
+    if (authenticatedUser.role !== UserRole.RH) {
+      throw new ForbiddenException(
+        'Seule la RH peut annuler une déclaration d’absence.',
+      );
+    }
+
     const declaration = await this.findAccessibleOne(
       id,
       authenticatedUser,
@@ -762,23 +792,7 @@ export class AbsenceDeclarationsService {
       );
     }
 
-    if (authenticatedUser.role === UserRole.COLLABORATEUR) {
-      if (declaration.status !== AbsenceDeclarationStatus.BROUILLON) {
-        throw new ForbiddenException(
-          'Vous ne pouvez annuler que vos brouillons d’absence.',
-        );
-      }
-    } else if (
-      authenticatedUser.role !== UserRole.RH &&
-      declaration.status === AbsenceDeclarationStatus.ENREGISTREE
-    ) {
-      throw new ForbiddenException(
-        'Une absence déjà enregistrée doit être annulée par la RH.',
-      );
-    }
-
     const cancelledByRh =
-      authenticatedUser.role === UserRole.RH &&
       declaration.employeeId !== authenticatedUser.id;
 
     declaration.status = AbsenceDeclarationStatus.ANNULEE;

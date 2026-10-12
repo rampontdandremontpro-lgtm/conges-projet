@@ -1,0 +1,133 @@
+{
+  "title": "Retest Playwright — Seule la RH peut créer et déclarer des absences",
+  "date": "2026-10-12T13:28:45.618Z",
+  "frontendUrl": "http://localhost:5174",
+  "apiUrl": "http://localhost:3001/api",
+  "database": "gestion_conges_gmes_test",
+  "summary": {
+    "total": 8,
+    "conformes": 8,
+    "nonConformes": 0,
+    "allPass": true
+  },
+  "notes": [
+    "Vérifications navigateur réelles via Playwright (Chromium headless).",
+    "Le token applicatif étant conservé en mémoire, la navigation est effectuée côté SPA (pas de rechargement complet).",
+    "La création RH via l’interface est couverte par le retest API (RETEST-ABS-RH-16..23) ; la page de gestion RH est chargée ici.",
+    "Aucune mutation métier n’est effectuée par ces scénarios UI (lecture seule + création préparatoire RH via API)."
+  ],
+  "results": [
+    {
+      "id": "RETEST-ABS-UI-01",
+      "priority": "P1",
+      "module": "ABS",
+      "role": "Collaborateur",
+      "scenario": "Desktop — « Nouvelle demande » visible sur le tableau de bord",
+      "type": "UI (Playwright)",
+      "status": "Conforme",
+      "expected": "Comportement attendu observé",
+      "actual": "Nouvelle demande visible=true",
+      "mutation": "lecture seule (aucune mutation métier)",
+      "comment": "",
+      "date": "2026-10-12T13:28:33.598Z"
+    },
+    {
+      "id": "RETEST-ABS-UI-02",
+      "priority": "P1",
+      "module": "ABS",
+      "role": "Collaborateur",
+      "scenario": "Desktop — « Déclarer une absence » absent du tableau de bord",
+      "type": "UI (Playwright)",
+      "status": "Conforme",
+      "expected": "Comportement attendu observé",
+      "actual": "occurrences « Déclarer une absence »=0",
+      "mutation": "lecture seule (aucune mutation métier)",
+      "comment": "",
+      "date": "2026-10-12T13:28:33.598Z"
+    },
+    {
+      "id": "RETEST-ABS-UI-03",
+      "priority": "P1",
+      "module": "ABS",
+      "role": "Collaborateur",
+      "scenario": "Desktop — accès direct /app/new-absence refusé (aucun formulaire)",
+      "type": "UI (Playwright)",
+      "status": "Conforme",
+      "expected": "Comportement attendu observé",
+      "actual": "url=http://localhost:5174/app/dashboard h1=Tableau de bord",
+      "mutation": "lecture seule (aucune mutation métier)",
+      "comment": "",
+      "date": "2026-10-12T13:28:34.326Z"
+    },
+    {
+      "id": "RETEST-ABS-UI-04",
+      "priority": "P1",
+      "module": "ABS",
+      "role": "Collaborateur",
+      "scenario": "Desktop — consultation d’une absence existante sans actions interdites",
+      "type": "UI (Playwright)",
+      "status": "Conforme",
+      "expected": "Comportement attendu observé",
+      "actual": "titre=ABS-RH-DOC-RETEST submit=0 annuler=0 lectureSeule=true",
+      "mutation": "lecture seule (aucune mutation métier)",
+      "comment": "",
+      "date": "2026-10-12T13:28:35.063Z"
+    },
+    {
+      "id": "RETEST-ABS-UI-05",
+      "priority": "P1",
+      "module": "ABS",
+      "role": "Collaborateur",
+      "scenario": "Desktop — transmission de justificatif conservée (bouton présent)",
+      "type": "UI (Playwright)",
+      "status": "Conforme",
+      "expected": "Comportement attendu observé",
+      "actual": "bouton « Ajouter un justificatif »=1",
+      "mutation": "lecture seule (aucune mutation métier)",
+      "comment": "",
+      "date": "2026-10-12T13:28:35.782Z"
+    },
+    {
+      "id": "RETEST-ABS-UI-06",
+      "priority": "P1",
+      "module": "ABS",
+      "role": "Collaborateur",
+      "scenario": "Tablette — « Nouvelle demande » visible, « Déclarer une absence » absent",
+      "type": "UI (Playwright)",
+      "status": "Conforme",
+      "expected": "Comportement attendu observé",
+      "actual": "Nouvelle demande=true occurrences absence=0",
+      "mutation": "lecture seule (aucune mutation métier)",
+      "comment": "",
+      "date": "2026-10-12T13:28:38.954Z"
+    },
+    {
+      "id": "RETEST-ABS-UI-07",
+      "priority": "P1",
+      "module": "ABS",
+      "role": "Collaborateur",
+      "scenario": "Mobile — « Nouvelle demande » visible, « Déclarer une absence » absent",
+      "type": "UI (Playwright)",
+      "status": "Conforme",
+      "expected": "Comportement attendu observé",
+      "actual": "Nouvelle demande=true occurrences absence=0",
+      "mutation": "lecture seule (aucune mutation métier)",
+      "comment": "",
+      "date": "2026-10-12T13:28:42.011Z"
+    },
+    {
+      "id": "RETEST-ABS-UI-08",
+      "priority": "P1",
+      "module": "ABS",
+      "role": "RH",
+      "scenario": "Desktop — page réelle de gestion Congés et Absences accessible",
+      "type": "UI (Playwright)",
+      "status": "Conforme",
+      "expected": "Comportement attendu observé",
+      "actual": "page chargée=true (1455 car.)",
+      "mutation": "lecture seule (aucune mutation métier)",
+      "comment": "",
+      "date": "2026-10-12T13:28:45.508Z"
+    }
+  ]
+}

@@ -1,0 +1,94 @@
+{
+  "title": "Pop-up information temporaire Collaborateur (12/10/2026)",
+  "date": "2026-10-12T18:12:55.099Z",
+  "frontendUrl": "http://localhost:5174",
+  "apiUrl": "http://localhost:3001/api",
+  "summary": {
+    "total": 10,
+    "conformes": 10,
+    "nonConformes": 0,
+    "allConformes": true
+  },
+  "results": [
+    {
+      "id": "T1",
+      "action": "Connexion Collaborateur",
+      "expected": "fenêtre affichée (titre + bouton)",
+      "observed": "visible=true titre=\"Information importante\" bouton=\"J'ai compris\"",
+      "pass": "Conforme",
+      "date": "2026-10-12T18:12:35.771Z"
+    },
+    {
+      "id": "T2",
+      "action": "Clic « J'ai compris »",
+      "expected": "fenêtre fermée",
+      "observed": "fermée=true",
+      "pass": "Conforme",
+      "date": "2026-10-12T18:12:36.439Z"
+    },
+    {
+      "id": "T3",
+      "action": "Navigation entre pages",
+      "expected": "pas de réapparition",
+      "observed": "mes-demandes=true dashboard=true",
+      "pass": "Conforme",
+      "date": "2026-10-12T18:12:38.303Z"
+    },
+    {
+      "id": "T4",
+      "action": "Rafraîchissement + reconnexion (même session navigateur)",
+      "expected": "pas de réapparition",
+      "observed": "réapparition=false",
+      "pass": "Conforme",
+      "date": "2026-10-12T18:12:40.621Z"
+    },
+    {
+      "id": "T5",
+      "action": "Déconnexion puis nouvelle connexion",
+      "expected": "fenêtre réaffichée",
+      "observed": "réaffichée=true",
+      "pass": "Conforme",
+      "date": "2026-10-12T18:12:43.406Z"
+    },
+    {
+      "id": "T6",
+      "action": "Connexion RH",
+      "expected": "aucune fenêtre",
+      "observed": "présente=false",
+      "pass": "Conforme",
+      "date": "2026-10-12T18:12:46.244Z"
+    },
+    {
+      "id": "T7",
+      "action": "Connexion Directeur",
+      "expected": "aucune fenêtre",
+      "observed": "présente=false",
+      "pass": "Conforme",
+      "date": "2026-10-12T18:12:49.013Z"
+    },
+    {
+      "id": "T8",
+      "action": "Connexion Administrateur",
+      "expected": "aucune fenêtre",
+      "observed": "présente=false",
+      "pass": "Conforme",
+      "date": "2026-10-12T18:12:51.815Z"
+    },
+    {
+      "id": "T9",
+      "action": "Affichage mobile (390×844)",
+      "expected": "fenêtre affichée, pas de débordement horizontal",
+      "observed": "visible=true overflow=false",
+      "pass": "Conforme",
+      "date": "2026-10-12T18:12:54.646Z"
+    },
+    {
+      "id": "T10",
+      "action": "Soldes et calculs inchangés",
+      "expected": "résumé des soldes identique avant/après",
+      "observed": "identique=true",
+      "pass": "Conforme",
+      "date": "2026-10-12T18:12:55.099Z"
+    }
+  ]
+}

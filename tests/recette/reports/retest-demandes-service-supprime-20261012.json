@@ -1,0 +1,118 @@
+{
+  "title": "Demandes en attente après suppression d’un service (12/10/2026)",
+  "date": "2026-10-12T17:20:15.756Z",
+  "apiUrl": "http://localhost:3001/api",
+  "database": "gestion_conges_gmes_test",
+  "summary": {
+    "total": 13,
+    "conformes": 13,
+    "nonConformes": 0,
+    "allConformes": true
+  },
+  "results": [
+    {
+      "id": "A-01",
+      "action": "Scénario A : création + soumission → EN_ATTENTE_VALIDATION",
+      "expected": "201/200, statut EN_ATTENTE_VALIDATION",
+      "observed": "submit=200 pending=true",
+      "pass": "Conforme",
+      "date": "2026-10-12T17:20:11.391Z"
+    },
+    {
+      "id": "A-02",
+      "action": "Scénario A : suppression du service (demande conservée)",
+      "expected": "HTTP 204",
+      "observed": "del=204",
+      "pass": "Conforme",
+      "date": "2026-10-12T17:20:11.393Z"
+    },
+    {
+      "id": "A-03",
+      "action": "Scénario A : demande conservée avec service NULL",
+      "expected": "service_id NULL, statut EN_ATTENTE_VALIDATION",
+      "observed": "service=null statut=EN_ATTENTE_VALIDATION",
+      "pass": "Conforme",
+      "date": "2026-10-12T17:20:11.397Z"
+    },
+    {
+      "id": "A-04",
+      "action": "Scénario A : demande visible dans l’interface RH (management/all)",
+      "expected": "présente",
+      "observed": "visible=true",
+      "pass": "Conforme",
+      "date": "2026-10-12T17:20:11.491Z"
+    },
+    {
+      "id": "A-05",
+      "action": "Scénario A : acceptation par la RH",
+      "expected": "HTTP 200, statut VALIDEE",
+      "observed": "HTTP=200 statut=VALIDEE msg=",
+      "pass": "Conforme",
+      "date": "2026-10-12T17:20:11.683Z"
+    },
+    {
+      "id": "A-06",
+      "action": "Scénario A : audit + notifications produits",
+      "expected": "audit DEMANDE_VALIDEE + notification",
+      "observed": "audit=1 notif=4",
+      "pass": "Conforme",
+      "date": "2026-10-12T17:20:11.689Z"
+    },
+    {
+      "id": "B-01",
+      "action": "Scénario B : refus par la RH après suppression du service",
+      "expected": "HTTP 200, statut REFUSEE",
+      "observed": "HTTP=200 statut=REFUSEE msg=",
+      "pass": "Conforme",
+      "date": "2026-10-12T17:20:12.993Z"
+    },
+    {
+      "id": "B-02",
+      "action": "Scénario B : collaborateur voit le résultat du refus",
+      "expected": "HTTP 200, statut REFUSEE visible",
+      "observed": "HTTP=200 statut=REFUSEE",
+      "pass": "Conforme",
+      "date": "2026-10-12T17:20:13.041Z"
+    },
+    {
+      "id": "C-01",
+      "action": "Collaborateur ne peut pas valider sa propre demande",
+      "expected": "HTTP 403",
+      "observed": "HTTP=403",
+      "pass": "Conforme",
+      "date": "2026-10-12T17:20:13.952Z"
+    },
+    {
+      "id": "C-02",
+      "action": "Responsable ne reçoit pas les droits RH (service supprimé)",
+      "expected": "HTTP 403",
+      "observed": "HTTP=403",
+      "pass": "Conforme",
+      "date": "2026-10-12T17:20:13.988Z"
+    },
+    {
+      "id": "C-03",
+      "action": "Utilisateur non autorisé → HTTP 403",
+      "expected": "HTTP 403",
+      "observed": "HTTP=403",
+      "pass": "Conforme",
+      "date": "2026-10-12T17:20:14.369Z"
+    },
+    {
+      "id": "C-04",
+      "action": "Demande déjà traitée → pas de 2e décision",
+      "expected": "2e validation refusée (400/409)",
+      "observed": "v1=200 v2=409",
+      "pass": "Conforme",
+      "date": "2026-10-12T17:20:14.609Z"
+    },
+    {
+      "id": "NR-01",
+      "action": "Non-régression : validation ordinaire (service existant)",
+      "expected": "HTTP 200, statut VALIDEE",
+      "observed": "submit=200 validate=200 statut=VALIDEE",
+      "pass": "Conforme",
+      "date": "2026-10-12T17:20:15.755Z"
+    }
+  ]
+}

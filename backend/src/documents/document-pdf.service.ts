@@ -447,7 +447,7 @@ export class DocumentPdfService {
           'Collaborateur',
           `${leaveRequest.employee.nom} ${leaveRequest.employee.prenom}`,
         ],
-        ['Service', leaveRequest.service.name],
+        ['Service', leaveRequest.service?.name ?? 'Service supprimé'],
         ['Type de congé', leaveRequest.leaveType.name],
         [
           'Période annulée',
@@ -589,7 +589,7 @@ export class DocumentPdfService {
         [
           [employeeName, 532],
           [leaveRequest.employee.email, 577],
-          [leaveRequest.service.name, 622],
+          [leaveRequest.service?.name ?? 'Service supprimé', 622],
         ].forEach(([value, yPx]) => {
           this.drawExactPdfText(document, String(value), {
             xPx: 420,
@@ -818,7 +818,7 @@ export class DocumentPdfService {
       employeeId: leaveRequest.employeeId,
       employeeName: `${leaveRequest.employee.nom} ${leaveRequest.employee.prenom}`,
       serviceId: leaveRequest.serviceId,
-      serviceName: leaveRequest.service.name,
+      serviceName: leaveRequest.service?.name ?? 'Service supprimé',
       leaveTypeId: leaveRequest.leaveTypeId,
       leaveTypeName: leaveRequest.leaveType.name,
       startDate: leaveRequest.startDate,
@@ -2051,7 +2051,7 @@ export class DocumentPdfService {
         [
           [employeeName, 344],
           [leaveRequest.employee.email, 382],
-          [leaveRequest.service.name, 420],
+          [leaveRequest.service?.name ?? 'Service supprimé', 420],
           [
             this.formatEmploymentType(
               leaveRequest.employee.employmentType,

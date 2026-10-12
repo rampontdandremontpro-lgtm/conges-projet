@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { DataSource, EntityManager, In } from 'typeorm';
 
 import {
@@ -38,8 +38,8 @@ export interface PresenceSlotAnalysis {
 }
 
 export interface ServiceAvailabilityAnalysis {
-  serviceId: number;
-  serviceName: string;
+  serviceId: number | null;
+  serviceName: string | null;
   totalActiveEmployees: number;
   hasMinimumPresenceRule: boolean;
   minimumPresence: number | null;
@@ -64,13 +64,30 @@ export class ServiceAvailabilityService {
     const entityManager = manager ?? this.dataSource.manager;
     const service =
       leaveRequest.service ??
-      (await entityManager.getRepository(Service).findOneByOrFail({
-        id: leaveRequest.serviceId,
-      }));
+      (leaveRequest.serviceId != null
+        ? await entityManager
+            .getRepository(Service)
+            .findOneByOrFail({ id: leaveRequest.serviceId })
+        : null);
+
+    if (!service) {
+      return {
+        serviceId: null,
+        serviceName: null,
+        totalActiveEmployees: 0,
+        hasMinimumPresenceRule: false,
+        minimumPresence: null,
+        minimumRemainingEmployees: 0,
+        minimumPresenceBreached: false,
+        requiresJustification: false,
+        overlaps: [],
+        slots: [],
+      };
+    }
 
     const activeEmployees = await entityManager.getRepository(User).find({
       where: {
-        serviceId: leaveRequest.serviceId,
+        serviceId: service.id,
         isActive: true,
         role: In([
           UserRole.COLLABORATEUR,

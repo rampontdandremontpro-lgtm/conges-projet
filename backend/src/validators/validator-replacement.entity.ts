@@ -45,12 +45,12 @@ export class ValidatorReplacement {
   @Column({ type: 'text', nullable: true })
   reason!: string | null;
 
-  @Column({ name: 'created_by_rh_id', type: 'bigint' })
-  createdByRhId!: number;
+  @Column({ name: 'created_by_rh_id', type: 'bigint', nullable: true })
+  createdByRhId!: number | null;
 
-  @ManyToOne(() => User, { nullable: false, onDelete: 'RESTRICT' })
+  @ManyToOne(() => User, { nullable: true, onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'created_by_rh_id' })
-  createdByRh!: User;
+  createdByRh!: User | null;
 
   @Column({ name: 'is_active', type: 'boolean', default: true })
   isActive!: boolean;
