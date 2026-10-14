@@ -12,13 +12,8 @@ import { RequestReviewModal } from '@/components/collab/new-request/RequestRevie
 import { SignatureModal } from '@/components/collab/new-request/SignatureModal'
 import {
   createLeaveRequest,
-  deleteDerogation,
-  getMyDerogations,
   getMyLeaveBalanceProjection,
-  requestDerogation,
-  submitDerogation,
   submitLeaveRequest,
-  updateDerogation,
   updateLeaveRequest,
 } from '@/services/leaveRequests'
 import {
@@ -32,7 +27,7 @@ import { getLeaveRequest } from '@/services/collab/requestDetails'
 import { notifyAppDataChanged } from '@/utils/dataRefresh'
 import { calculateDeductedDaysPreview } from '@/utils/leaveDuration'
 import { changeLeaveBoundaryPeriod, selectLeaveDate } from '@/utils/leaveDateSelection'
-import { currentReferencePeriod, isNPlusOneReferencePeriod, referencePeriodForIsoDate } from '@/utils/referencePeriods'
+import { endOfNPlusOneReferencePeriod, isNPlusOneReferencePeriod, referencePeriodForIsoDate } from '@/utils/referencePeriods'
 
 import '@/styles/collab/new-request/index.css'
 
@@ -59,7 +54,7 @@ export function NewRequest() {
     const first = currentMonth()
     return [first, nextMonthOf(first)]
   })
-  const { resources, todayIso, retryResources, setDerogations } =
+  const { resources, todayIso, retryResources } =
     useNewRequestResources(months, setSelection)
   const previousEditIdRef = useRef(editId)
 
@@ -69,6 +64,7 @@ export function NewRequest() {
   const [signatureOpen, setSignatureOpen] = useState(false)
   const [projection, setProjection] = useState({ loading: false, data: null })
   const [toast, setToast] = useState(null)
+  const [derogationReason, setDerogationReason] = useState('')
   const [editLoading, setEditLoading] = useState(isEditMode)
   const [editError, setEditError] = useState(false)
 
@@ -192,8 +188,14 @@ export function NewRequest() {
     return () => { cancelled = true }
   }, [draft?.id, previewDeductedDays, selectedType?.deductsPaidLeaveBalance, selection.startDate, todayIso])
 
-  const selectedReferencePeriod = referencePeriodForIsoDate(selection.startDate)
-  const activeReferencePeriod = currentReferencePeriod()
+  const periodStart = resources.settings?.REFERENCE_PERIOD_START || '06-01'
+  const selectedReferencePeriod = referencePeriodForIsoDate(selection.startDate, periodStart)
+  // La période active est déduite de todayIso (date métier Martinique,
+  // rafraîchie toutes les minutes et au retour sur la page). La limite se
+  // met donc à jour automatiquement lors du changement de période, sans
+  // rechargement manuel.
+  const activeReferencePeriod = referencePeriodForIsoDate(todayIso, periodStart)
+  const maxSelectableDate = endOfNPlusOneReferencePeriod(activeReferencePeriod, periodStart)
   const isAnticipatedLeave = Boolean(
     selection.startDate &&
       (draft?.isAnticipatedLeave && draft.leaveTypeId === selection.leaveTypeId && draft.startDate === selection.startDate && draft.endDate === selection.endDate
@@ -210,6 +212,16 @@ export function NewRequest() {
       draft.endPeriod === selection.endPeriod,
   )
   const dirty = !draftMatchesSelection
+
+  // Occupation du calendrier : on exclut le brouillon en cours d'édition
+  // pour ne jamais bloquer l'utilisateur sur ses propres dates.
+  const calendarOccupiedPeriods = useMemo(() => {
+    if (!draft) return resources.occupiedPeriods
+    const draftKey = `leave-${draft.id}`
+    return resources.occupiedPeriods.filter(
+      (period) => period.key !== draftKey,
+    )
+  }, [draft, resources.occupiedPeriods])
 
   const derogation = useMemo(() => {
     if (!draft) {
@@ -232,6 +244,10 @@ export function NewRequest() {
     selection.leaveTypeId,
     selection.startDate,
   ])
+
+  useEffect(() => {
+    setDerogationReason((previous) => previous || (derogation?.reason ?? ''))
+  }, [derogation?.reason])
 
   const handlePick = (iso) => {
     setSelection((previous) => selectLeaveDate(previous, iso))
@@ -338,7 +354,13 @@ export function NewRequest() {
     setSubmitting(true)
     try {
       const request = await persistCurrentRequest()
-      await submitLeaveRequest(request.id, { signatureType, signatureData })
+      await submitLeaveRequest(request.id, {
+        signatureType,
+        signatureData,
+        ...(derogationReason.trim()
+          ? { derogationReason: derogationReason.trim() }
+          : {}),
+      })
       notifyAppDataChanged({ source: 'leave-request', action: 'submitted', id: request.id })
       setSignatureOpen(false)
       navigate('/app/my-requests', {
@@ -354,64 +376,6 @@ export function NewRequest() {
       showToast('error', errorMessage(error))
       setSubmitting(false)
     }
-  }
-
-  const handleRequestDerogation = async ({ reason }) => {
-    if (
-      !selection.leaveTypeId ||
-      !selection.startDate ||
-      !selection.endDate ||
-      saving ||
-      submitting
-    ) {
-      return false
-    }
-
-    setSaving(true)
-    try {
-      const saved = await persistCurrentRequest()
-      await requestDerogation({ leaveRequestId: saved.id, reason })
-      const updated = await getMyDerogations()
-      setDerogations(updated)
-      notifyAppDataChanged({
-        source: 'derogation',
-        action: 'requested',
-        id: saved.id,
-      })
-      showToast(
-        'success',
-        'Dérogation demandée — votre brouillon a été enregistré et la RH va examiner votre demande.',
-      )
-      return true
-    } catch (error) {
-      showToast('error', errorMessage(error))
-      throw error
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  const refreshDerogations = async () => {
-    const updated = await getMyDerogations()
-    setDerogations(updated)
-  }
-
-  const handleUpdateDerogation = async (id, reason) => {
-    await updateDerogation(id, reason)
-    await refreshDerogations()
-    showToast('success', 'Motif de dérogation mis à jour.')
-  }
-
-  const handleSubmitDerogation = async (id) => {
-    await submitDerogation(id)
-    await refreshDerogations()
-    showToast('success', 'Dérogation soumise à la RH.')
-  }
-
-  const handleCancelDerogation = async (id) => {
-    await deleteDerogation(id)
-    await refreshDerogations()
-    showToast('success', 'Dérogation annulée.')
   }
 
   const hasCompleteRange = Boolean(selection.startDate && selection.endDate)
@@ -488,6 +452,10 @@ export function NewRequest() {
                 onNext={goNext}
                 allowsHalfDays={Boolean(selectedType?.allowsHalfDays)}
                 onBoundaryPeriodChange={handleBoundaryPeriodChange}
+                occupiedPeriods={calendarOccupiedPeriods}
+                onBlockedMessage={(message) => showToast('error', message)}
+                maxSelectableDate={maxSelectableDate}
+                periodStart={periodStart}
               />
             </section>
           </div>
@@ -505,15 +473,12 @@ export function NewRequest() {
               holidays={resources.holidays}
               draft={draft}
               dirty={dirty}
-              derogation={derogation}
+              derogationReason={derogationReason}
+              onDerogationReasonChange={setDerogationReason}
               saving={saving}
               submitting={submitting}
               onSaveDraft={handleSaveDraft}
               onSubmit={() => setReviewOpen(true)}
-              onRequestDerogation={handleRequestDerogation}
-              onUpdateDerogation={handleUpdateDerogation}
-              onSubmitDerogation={handleSubmitDerogation}
-              onCancelDerogation={handleCancelDerogation}
               editingExisting={isEditMode}
               isAnticipatedLeave={isAnticipatedLeave}
             />

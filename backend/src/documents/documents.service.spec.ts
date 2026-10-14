@@ -6,6 +6,7 @@ import type { DataSource, Repository } from 'typeorm';
 import type { AbsenceDeclaration } from '../absence-declarations/absence-declaration.entity';
 import type { AbsenceDeclarationsService } from '../absence-declarations/absence-declarations.service';
 import type { LeaveRequest } from '../leave-requests/leave-request.entity';
+import type { NotificationsService } from '../notifications/notifications.service';
 import type { Document } from './document.entity';
 import { DocumentsService } from './documents.service';
 
@@ -43,6 +44,7 @@ function createService() {
     {} as Repository<AbsenceDeclaration>,
     {} as Repository<LeaveRequest>,
     {} as AbsenceDeclarationsService,
+    {} as NotificationsService,
     {} as DataSource,
     configService,
   );

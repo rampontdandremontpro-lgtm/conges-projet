@@ -137,6 +137,7 @@ describe('LeaveRequestSchedulerService — maintenance à la bascule de période
           expiredRequests: 0,
           notificationsReevaluated: 0,
           presenceStatusesRefreshed: 0,
+          consolidatedRequests: 0,
           balanceReminders: null,
           errors: [],
         });

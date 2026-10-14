@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -18,6 +19,12 @@ import {
   DayPeriod,
 } from '../leave-requests/leave-request.entity';
 import { getMartiniqueDateString } from '../leave-requests/leave-request-period.util';
+import {
+  findPeriodConflict,
+  formatSlotConflictDate,
+  formatSlotConflictPeriod,
+  type PeriodSlot,
+} from '../leave-requests/slot-overlap.util';
 import {
   LeaveType,
   LeaveTypeCategory,
@@ -107,6 +114,8 @@ export class AbsenceDeclarationsService {
       employeeId: employee.id,
       startDate: dto.startDate,
       endDate: dto.endDate,
+      startPeriod: duration.startPeriod,
+      endPeriod: duration.endPeriod,
       ignoredAbsenceId: null,
     });
 
@@ -348,6 +357,8 @@ export class AbsenceDeclarationsService {
       employeeId: declaration.employeeId,
       startDate,
       endDate,
+      startPeriod: duration.startPeriod,
+      endPeriod: duration.endPeriod,
       ignoredAbsenceId: declaration.id,
     });
 
@@ -417,6 +428,8 @@ export class AbsenceDeclarationsService {
       employeeId: declaration.employeeId,
       startDate: declaration.startDate,
       endDate: declaration.endDate,
+      startPeriod: declaration.startPeriod,
+      endPeriod: declaration.endPeriod,
       ignoredAbsenceId: declaration.id,
     });
 
@@ -603,6 +616,8 @@ export class AbsenceDeclarationsService {
       employeeId: declaration.employeeId,
       startDate,
       endDate,
+      startPeriod: duration.startPeriod,
+      endPeriod: duration.endPeriod,
       ignoredAbsenceId: declaration.id,
     });
 
@@ -1141,16 +1156,25 @@ export class AbsenceDeclarationsService {
     employeeId: number;
     startDate: string;
     endDate: string;
+    startPeriod: DayPeriod | null;
+    endPeriod: DayPeriod | null;
     ignoredAbsenceId: number | null;
   }): Promise<void> {
-    const ignoredLeaveStatuses = [
+    const releasedLeaveStatuses = [
       LeaveRequestStatus.REFUSEE,
       LeaveRequestStatus.ANNULEE,
       LeaveRequestStatus.ANNULEE_APRES_VALIDATION,
       LeaveRequestStatus.EXPIREE_NON_VALIDEE,
     ];
 
-    const overlappingLeave = await this.leaveRequestRepository
+    const candidate: PeriodSlot = {
+      startDate: input.startDate,
+      endDate: input.endDate,
+      startPeriod: input.startPeriod,
+      endPeriod: input.endPeriod,
+    };
+
+    const overlappingLeaves = await this.leaveRequestRepository
       .createQueryBuilder('leaveRequest')
       .where('leaveRequest.employeeId = :employeeId', {
         employeeId: input.employeeId,
@@ -1161,16 +1185,25 @@ export class AbsenceDeclarationsService {
       .andWhere('leaveRequest.endDate >= :startDate', {
         startDate: input.startDate,
       })
-      .andWhere('leaveRequest.status NOT IN (:...ignoredStatuses)', {
-        ignoredStatuses: ignoredLeaveStatuses,
+      .andWhere('leaveRequest.status NOT IN (:...releasedStatuses)', {
+        releasedStatuses: releasedLeaveStatuses,
       })
       .orderBy('leaveRequest.startDate', 'ASC')
-      .getOne();
+      .getMany();
 
-    if (overlappingLeave) {
-      throw new BadRequestException(
-        `Cette absence chevauche la demande de congé n°${overlappingLeave.id} du ${overlappingLeave.startDate} au ${overlappingLeave.endDate}.`,
-      );
+    for (const other of overlappingLeaves) {
+      const conflict = findPeriodConflict(candidate, {
+        startDate: other.startDate,
+        endDate: other.endDate,
+        startPeriod: other.startPeriod,
+        endPeriod: other.endPeriod,
+      });
+
+      if (conflict) {
+        throw new ConflictException(
+          `${formatSlotConflictPeriod(conflict.period)} du ${formatSlotConflictDate(conflict.date)} est déjà couvert par ${this.describeLeaveOccupancy(other)}.`,
+        );
+      }
     }
 
     const qb = this.absenceDeclarationRepository
@@ -1194,15 +1227,51 @@ export class AbsenceDeclarationsService {
       });
     }
 
-    const overlappingAbsence = await qb
+    const overlappingAbsences = await qb
       .orderBy('absence.startDate', 'ASC')
-      .getOne();
+      .getMany();
 
-    if (overlappingAbsence) {
-      throw new BadRequestException(
-        `Cette absence chevauche la déclaration n°${overlappingAbsence.id} du ${overlappingAbsence.startDate} au ${overlappingAbsence.endDate}.`,
-      );
+    for (const absence of overlappingAbsences) {
+      const conflict = findPeriodConflict(candidate, {
+        startDate: absence.startDate,
+        endDate: absence.endDate,
+        startPeriod: absence.startPeriod,
+        endPeriod: absence.endPeriod,
+      });
+
+      if (conflict) {
+        throw new ConflictException(
+          `${formatSlotConflictPeriod(conflict.period)} du ${formatSlotConflictDate(conflict.date)} est déjà couvert par ${this.describeAbsenceOccupancy(absence)}.`,
+        );
+      }
     }
+  }
+
+  private describeLeaveOccupancy(
+    leaveRequest: LeaveRequest,
+  ): string {
+    const label =
+      leaveRequest.status === LeaveRequestStatus.BROUILLON
+        ? 'un brouillon de demande'
+        : leaveRequest.status === LeaveRequestStatus.VALIDEE
+          ? 'une demande validée'
+          : leaveRequest.status ===
+              LeaveRequestStatus.ANNULATION_EN_ATTENTE_ACCORD
+            ? 'une demande en attente d’annulation'
+            : 'une demande en attente';
+
+    return `${label} n°${leaveRequest.id}`;
+  }
+
+  private describeAbsenceOccupancy(
+    absence: AbsenceDeclaration,
+  ): string {
+    const label =
+      absence.status === AbsenceDeclarationStatus.ENREGISTREE
+        ? 'une absence validée'
+        : 'une absence en attente';
+
+    return `${label} n°${absence.id}`;
   }
 
   private ensureDraft(declaration: AbsenceDeclaration): void {

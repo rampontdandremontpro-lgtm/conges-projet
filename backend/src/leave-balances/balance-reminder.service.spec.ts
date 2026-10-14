@@ -452,9 +452,9 @@ describe('BalanceReminderService — E4 rappels de fin de période', () => {
       expect(recap.title).toBe(
         'Récapitulatif des congés à utiliser avant le 31 mai 2027',
       );
-      expect(recap.message).toContain('Marie DUPONT');
+      expect(recap.message).toContain('DUPONT Marie');
       expect(recap.message).toContain('Équipe RH');
-      expect(recap.message).toContain('2026-2027');
+      expect(recap.message).toContain('2025/2026');
       expect(recap.message).toContain('N-1');
       expect(recap.message).toContain('Rappel 3 mois');
       expect(recap.message).toContain(

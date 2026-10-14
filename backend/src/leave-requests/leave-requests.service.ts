@@ -65,9 +65,18 @@ import {
   calculateDeductedLeaveDays,
   getMartiniqueDateString,
 } from './leave-request-period.util';
+import {
+  findPeriodConflict,
+  formatSlotConflictDate,
+  formatSlotConflictPeriod,
+  type PeriodSlot,
+} from './slot-overlap.util';
 import { normalizeDirectorUnavailabilityDuration } from './director-unavailability-duration.util';
 import { AuditAction } from '../audit/audit-log.entity';
-import { currentReferencePeriod } from '../leave-balances/reference-period.util';
+import {
+  currentReferencePeriod,
+  referencePeriodEndDate,
+} from '../leave-balances/reference-period.util';
 import { AuditService } from '../audit/audit.service';
 import { ServiceAvailabilityService } from './service-availability.service';
 import {
@@ -143,6 +152,11 @@ export class LeaveRequestsService {
     const endPeriod =
       createLeaveRequestDto.endPeriod ?? DayPeriod.APRES_MIDI;
 
+    await this.ensureWithinSelectablePeriods(
+      createLeaveRequestDto.startDate,
+      createLeaveRequestDto.endDate,
+    );
+
     const dates = await this.validateAndCalculateDates(
       createLeaveRequestDto.startDate,
       createLeaveRequestDto.endDate,
@@ -204,6 +218,11 @@ export class LeaveRequestsService {
       employeeCancellationResponseAt: null,
       cancelledAt: null,
     });
+
+    await this.ensureNoPersonalOverlap(
+      this.leaveRequestRepository.manager,
+      leaveRequest,
+    );
 
     const savedRequest = await this.leaveRequestRepository.save(
       leaveRequest,
@@ -1067,6 +1086,17 @@ export class LeaveRequestsService {
         await this.ensureModificationAllowed(startDate);
       }
 
+      // La limite N/N+1 n'est contrôlée que si les dates changent
+      // réellement. Une modification sans changement de dates (ex. simple
+      // commentaire) sur une ancienne demande déjà enregistrée ne doit pas
+      // être rejetée, même si ses dates dépassent la limite actuelle.
+      const datesChanged =
+        startDate !== leaveRequest.startDate ||
+        endDate !== leaveRequest.endDate;
+      if (datesChanged) {
+        await this.ensureWithinSelectablePeriods(startDate, endDate);
+      }
+
       const dates = await this.validateAndCalculateDates(
         startDate,
         endDate,
@@ -1318,11 +1348,12 @@ export class LeaveRequestsService {
 
       if (!notice.isNoticeCompliant) {
         const derogation =
-          await this.derogationsService.consumeGrantedDerogation(
+          await this.derogationsService.attachDerogationForSubmission(
             manager,
             {
               leaveRequest,
               actorId: authenticatedUser.id,
+              reason: submitLeaveRequestDto.derogationReason,
             },
           );
 
@@ -1818,7 +1849,8 @@ export class LeaveRequestsService {
     authenticatedUser: AuthenticatedUser,
     dto: ValidateLeaveRequestDto,
   ): Promise<LeaveRequest> {
-    let forwardedToRh = false;
+    let forwardedToSecondLevel = false;
+    let forwardedStage: string | null = null;
 
     await this.dataSource.transaction(async (manager) => {
       const leaveRequest =
@@ -1857,7 +1889,7 @@ export class LeaveRequestsService {
 
       if (
         authenticatedUser.role === UserRole.RH &&
-        access.kind !== 'RH_FINALISATION' &&
+        access.kind === 'DIRECTEUR_RH' &&
         dto.rhConfirmedDirectorAgreement !== true
       ) {
         throw new BadRequestException(
@@ -1873,19 +1905,35 @@ export class LeaveRequestsService {
 
       const decisionAt = new Date();
       const oldStatus = leaveRequest.status;
-      const requiresRhFinalization =
-        leaveRequest.service != null &&
-        leaveRequest.service.validationMode ===
-          ValidationMode.RESPONSABLE_PUIS_RELAIS &&
-        leaveRequest.employee.role === UserRole.COLLABORATEUR &&
-        leaveRequest.finalDeciderId === null &&
-        authenticatedUser.role !== UserRole.RH;
+      const circuit =
+        await this.validatorResolutionService.resolveCircuit(
+          leaveRequest,
+          { manager },
+        );
+      const isFirstLevel =
+        circuit !== null && leaveRequest.finalDeciderId === null;
 
-      if (requiresRhFinalization) {
-        // Premier niveau : le Responsable (ou son relais autorisé) donne son accord,
-        // puis la demande reste ouverte pour la validation finale de la RH.
+      if (isFirstLevel) {
+        // Premier niveau : accord signé par le premier valideur, puis
+        // transmission au second valideur du circuit.
+        if (authenticatedUser.role === UserRole.RH) {
+          await this.derogationsService.grantDerogationOnRhFirstValidation(
+            manager,
+            {
+              leaveRequest,
+              rhId: authenticatedUser.id,
+              decisionAt,
+            },
+          );
+        }
+
+        const secondLevelRole = circuit?.secondLevelRole ?? UserRole.RH;
+
         leaveRequest.status = LeaveRequestStatus.EN_ATTENTE_VALIDATION;
         leaveRequest.finalDeciderId = authenticatedUser.id;
+        leaveRequest.finalDecider = {
+          id: authenticatedUser.id,
+        } as User;
         leaveRequest.finalDeciderRole = authenticatedUser.role;
         leaveRequest.decisionAt = decisionAt;
         leaveRequest.refusalComment = null;
@@ -1920,10 +1968,15 @@ export class LeaveRequestsService {
             comment: null,
             metadata: {
               firstLevelValidatorRole: authenticatedUser.role,
+              firstLevelValidatorId: authenticatedUser.id,
+              firstLevelSignatureType: dto.signatureType,
+              firstLevelSignatureData: validatorSignatureData,
+              firstLevelSignedAt: decisionAt,
               accessKind: access.kind,
+              circuitKind: circuit?.kind,
               serviceAvailability: availability,
               minimumPresenceJustification,
-              nextValidatorRole: UserRole.RH,
+              nextValidatorRole: secondLevelRole,
             },
           },
           manager,
@@ -1934,16 +1987,24 @@ export class LeaveRequestsService {
             userId: leaveRequest.employeeId,
             type: 'LEAVE_REQUEST_IN_PROGRESS',
             title: 'Demande en cours de traitement',
-            message: `Votre demande du ${leaveRequest.startDate} au ${leaveRequest.endDate} a été validée au premier niveau et transmise à la RH pour validation finale.`,
+            message: `Votre demande du ${leaveRequest.startDate} au ${leaveRequest.endDate} a été validée au premier niveau et transmise au valideur suivant.`,
             leaveRequestId: leaveRequest.id,
           },
           manager,
         );
 
-        await this.notificationsService.createForActiveRoles(
-          [UserRole.RH],
+        const secondLevelRecipientIds =
+          await this.validatorResolutionService.getDecisionRecipientIds(
+            leaveRequest,
+            { manager },
+          );
+        await this.notificationsService.createForUsers(
+          secondLevelRecipientIds,
           {
-            type: 'LEAVE_REQUEST_RH_FINALIZATION',
+            type:
+              secondLevelRole === UserRole.RH
+                ? 'LEAVE_REQUEST_RH_FINALIZATION'
+                : 'LEAVE_REQUEST_SUBMITTED',
             title: 'Demande à finaliser',
             message: `La demande n°${leaveRequest.id} de ${leaveRequest.employee.nom} ${leaveRequest.employee.prenom} a été validée au premier niveau et attend votre validation finale.`,
             leaveRequestId: leaveRequest.id,
@@ -1951,7 +2012,13 @@ export class LeaveRequestsService {
           manager,
         );
 
-        forwardedToRh = true;
+        forwardedToSecondLevel = true;
+        forwardedStage =
+          circuit?.kind === 'RH_DIRECTEUR'
+            ? 'DIRECTEUR_FINALISATION'
+            : circuit?.kind === 'RH_RESPONSABLE'
+              ? 'RESPONSABLE_FINALISATION'
+              : 'RH_FINALISATION';
         return;
       }
 
@@ -2008,6 +2075,9 @@ export class LeaveRequestsService {
 
       leaveRequest.status = LeaveRequestStatus.VALIDEE;
       leaveRequest.finalDeciderId = authenticatedUser.id;
+      leaveRequest.finalDecider = {
+        id: authenticatedUser.id,
+      } as User;
       leaveRequest.finalDeciderRole = authenticatedUser.role;
       leaveRequest.decisionAt = decisionAt;
       leaveRequest.refusalComment = null;
@@ -2016,10 +2086,10 @@ export class LeaveRequestsService {
       leaveRequest.validatorSignedAt = decisionAt;
       leaveRequest.rhConfirmedDirectorAgreement =
         authenticatedUser.role === UserRole.RH &&
-        access.kind !== 'RH_FINALISATION';
+        access.kind === 'DIRECTEUR_RH';
       leaveRequest.rhDirectorAgreementConfirmedAt =
         authenticatedUser.role === UserRole.RH &&
-        access.kind !== 'RH_FINALISATION'
+        access.kind === 'DIRECTEUR_RH'
           ? decisionAt
           : null;
       leaveRequest.realBalanceAfter = realBalanceAfter;
@@ -2049,6 +2119,10 @@ export class LeaveRequestsService {
           comment: null,
           metadata: {
             finalDeciderRole: authenticatedUser.role,
+            finalDeciderId: authenticatedUser.id,
+            finalSignatureType: dto.signatureType,
+            finalSignatureData: validatorSignatureData,
+            finalSignedAt: decisionAt,
             accessKind: access.kind,
             realBalanceBefore: leaveRequest.realBalanceBefore,
             realBalanceAfter,
@@ -2065,10 +2139,11 @@ export class LeaveRequestsService {
 
     const decidedRequest = await this.findDecidedRequest(id);
 
-    if (forwardedToRh) {
+    if (forwardedToSecondLevel) {
       return Object.assign(decidedRequest, {
         workflowStatus: 'EN_COURS_TRAITEMENT',
-        validationStage: 'RH_FINALISATION',
+        validationStage:
+          forwardedStage ?? 'RH_FINALISATION',
       });
     }
 
@@ -2137,11 +2212,34 @@ export class LeaveRequestsService {
         BalanceProcessingStatus.DEMANDE_ACTUELLE;
 
       const decisionAt = new Date();
+      const circuit =
+        await this.validatorResolutionService.resolveCircuit(
+          leaveRequest,
+          { manager },
+        );
+      const isFirstLevel =
+        circuit !== null && leaveRequest.finalDeciderId === null;
+
+      if (isFirstLevel && authenticatedUser.role === UserRole.RH) {
+        await this.derogationsService.refuseDerogationOnRhFirstValidation(
+          manager,
+          {
+            leaveRequest,
+            rhId: authenticatedUser.id,
+            decisionAt,
+            comment: dto.comment?.trim() || null,
+          },
+        );
+      }
+
       const oldStatus = leaveRequest.status;
       const refusalComment = dto.comment?.trim() || null;
 
       leaveRequest.status = LeaveRequestStatus.REFUSEE;
       leaveRequest.finalDeciderId = authenticatedUser.id;
+      leaveRequest.finalDecider = {
+        id: authenticatedUser.id,
+      } as User;
       leaveRequest.finalDeciderRole = authenticatedUser.role;
       leaveRequest.decisionAt = decisionAt;
       leaveRequest.refusalComment = refusalComment;
@@ -2802,6 +2900,30 @@ export class LeaveRequestsService {
     return currentReferencePeriod(date, startMonthDay);
   }
 
+  /**
+   * Limite de sélection : le début et la fin d'une demande ne doivent pas
+   * dépasser la fin de la période N+1 (ex. 31/05/2028 au 14/10/2026).
+   */
+  private async ensureWithinSelectablePeriods(
+    startDate: string,
+    endDate: string,
+  ): Promise<void> {
+    const today = getMartiniqueDateString(new Date());
+    const periodStart = await this.settingsService.getString(
+      'REFERENCE_PERIOD_START',
+      '06-01',
+    );
+    const activePeriod = currentReferencePeriod(today, periodStart);
+    const nPlus1 = this.nextReferencePeriod(activePeriod);
+    const maxDate = referencePeriodEndDate(nPlus1, periodStart);
+
+    if (startDate > maxDate || endDate > maxDate) {
+      throw new BadRequestException(
+        `La période sélectionnée dépasse la fin de la période N+1 (${maxDate}).`,
+      );
+    }
+  }
+
   private nextReferencePeriod(referencePeriod: string): string {
     const match = /^(\d{4})-(\d{4})$/.exec(referencePeriod);
     if (!match) {
@@ -2908,21 +3030,25 @@ export class LeaveRequestsService {
     manager: EntityManager,
     leaveRequest: LeaveRequest,
   ): Promise<void> {
-    const ignoredStatuses = [
+    const releasedStatuses = [
       LeaveRequestStatus.REFUSEE,
       LeaveRequestStatus.ANNULEE,
       LeaveRequestStatus.ANNULEE_APRES_VALIDATION,
       LeaveRequestStatus.EXPIREE_NON_VALIDEE,
     ];
 
-    const overlappingRequest = await manager
+    const candidate: PeriodSlot = {
+      startDate: leaveRequest.startDate,
+      endDate: leaveRequest.endDate,
+      startPeriod: leaveRequest.startPeriod,
+      endPeriod: leaveRequest.endPeriod,
+    };
+
+    const requestQuery = manager
       .getRepository(LeaveRequest)
       .createQueryBuilder('otherRequest')
       .where('otherRequest.employeeId = :employeeId', {
         employeeId: leaveRequest.employeeId,
-      })
-      .andWhere('otherRequest.id <> :requestId', {
-        requestId: leaveRequest.id,
       })
       .andWhere('otherRequest.startDate <= :endDate', {
         endDate: leaveRequest.endDate,
@@ -2930,19 +3056,36 @@ export class LeaveRequestsService {
       .andWhere('otherRequest.endDate >= :startDate', {
         startDate: leaveRequest.startDate,
       })
-      .andWhere('otherRequest.status NOT IN (:...ignoredStatuses)', {
-        ignoredStatuses,
-      })
-      .orderBy('otherRequest.startDate', 'ASC')
-      .getOne();
+      .andWhere('otherRequest.status NOT IN (:...releasedStatuses)', {
+        releasedStatuses,
+      });
 
-    if (overlappingRequest) {
-      throw new BadRequestException(
-        `Cette demande chevauche votre demande n°${overlappingRequest.id} du ${overlappingRequest.startDate} au ${overlappingRequest.endDate}.`,
-      );
+    if (leaveRequest.id != null) {
+      requestQuery.andWhere('otherRequest.id <> :requestId', {
+        requestId: leaveRequest.id,
+      });
     }
 
-    const overlappingAbsence = await manager
+    const overlappingRequests = await requestQuery
+      .orderBy('otherRequest.startDate', 'ASC')
+      .getMany();
+
+    for (const other of overlappingRequests) {
+      const conflict = findPeriodConflict(candidate, {
+        startDate: other.startDate,
+        endDate: other.endDate,
+        startPeriod: other.startPeriod,
+        endPeriod: other.endPeriod,
+      });
+
+      if (conflict) {
+        throw new ConflictException(
+          `${formatSlotConflictPeriod(conflict.period)} du ${formatSlotConflictDate(conflict.date)} est déjà couvert par ${this.describeLeaveOccupancy(other)}.`,
+        );
+      }
+    }
+
+    const overlappingAbsences = await manager
       .getRepository(AbsenceDeclaration)
       .createQueryBuilder('absence')
       .where('absence.employeeId = :employeeId', {
@@ -2958,13 +3101,49 @@ export class LeaveRequestsService {
         cancelledStatus: AbsenceDeclarationStatus.ANNULEE,
       })
       .orderBy('absence.startDate', 'ASC')
-      .getOne();
+      .getMany();
 
-    if (overlappingAbsence) {
-      throw new BadRequestException(
-        `Cette demande chevauche votre déclaration d’absence n°${overlappingAbsence.id} du ${overlappingAbsence.startDate} au ${overlappingAbsence.endDate}.`,
-      );
+    for (const absence of overlappingAbsences) {
+      const conflict = findPeriodConflict(candidate, {
+        startDate: absence.startDate,
+        endDate: absence.endDate,
+        startPeriod: absence.startPeriod,
+        endPeriod: absence.endPeriod,
+      });
+
+      if (conflict) {
+        throw new ConflictException(
+          `${formatSlotConflictPeriod(conflict.period)} du ${formatSlotConflictDate(conflict.date)} est déjà couvert par ${this.describeAbsenceOccupancy(absence)}.`,
+        );
+      }
     }
+  }
+
+  private describeLeaveOccupancy(
+    leaveRequest: LeaveRequest,
+  ): string {
+    const label =
+      leaveRequest.status === LeaveRequestStatus.BROUILLON
+        ? 'un brouillon de demande'
+        : leaveRequest.status === LeaveRequestStatus.VALIDEE
+          ? 'une demande validée'
+          : leaveRequest.status ===
+              LeaveRequestStatus.ANNULATION_EN_ATTENTE_ACCORD
+            ? 'une demande en attente d’annulation'
+            : 'une demande en attente';
+
+    return `${label} n°${leaveRequest.id}`;
+  }
+
+  private describeAbsenceOccupancy(
+    absence: AbsenceDeclaration,
+  ): string {
+    const label =
+      absence.status === AbsenceDeclarationStatus.ENREGISTREE
+        ? 'une absence validée'
+        : 'une absence en attente';
+
+    return `${label} n°${absence.id}`;
   }
 
   private validateSubmissionTiming(
@@ -3048,9 +3227,9 @@ export class LeaveRequestsService {
       );
     }
 
-    if (decodedSignature.length > 500 * 1024) {
+    if (decodedSignature.length > 100 * 1024) {
       throw new BadRequestException(
-        'La signature dessinée ne doit pas dépasser 500 Ko.',
+        'La signature dessinée ne doit pas dépasser 100 Ko.',
       );
     }
 

@@ -59,4 +59,24 @@ describe('leave-request-notice.util', () => {
     expect(result.daysBeforeStart).toBe(-1);
     expect(result.isDerogationWindow).toBe(false);
   });
+
+  describe('limite de la période estivale (30 vs 31 octobre)', () => {
+    it('avec fin au 31/10, un congé se terminant le 31/10 chevauche la période estivale', () => {
+      const result = evaluateSubmissionNotice('2026-10-27', '2026-10-31', 5, now, rules);
+      expect(result.overlapsSummerPeriod).toBe(true);
+      expect(result.requiredNoticeDays).toBe(60);
+    });
+
+    it('avec fin au 31/10, un congé débutant le 01/11 ne chevauche plus la période estivale', () => {
+      const result = evaluateSubmissionNotice('2026-11-01', '2026-11-05', 5, now, rules);
+      expect(result.overlapsSummerPeriod).toBe(false);
+      expect(result.requiredNoticeDays).toBe(30);
+    });
+
+    it('avec l’ancienne fin au 30/10, un congé le 31/10 ne chevauchait pas la période estivale', () => {
+      const legacy = { ...rules, summerPeriodEnd: '10-30' };
+      const result = evaluateSubmissionNotice('2026-10-31', '2026-10-31', 1, now, legacy);
+      expect(result.overlapsSummerPeriod).toBe(false);
+    });
+  });
 });

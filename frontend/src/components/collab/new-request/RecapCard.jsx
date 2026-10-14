@@ -1,21 +1,9 @@
-import { useEffect, useState } from 'react'
-
 import { Icon } from '@/components/ui/Icon'
-import { useAutoDismiss } from '@/hooks/useAutoDismiss'
 import { formatDays, formatRangeCompactFR } from '@/utils/format'
 import { formatRelativeReferencePeriod } from '@/utils/referencePeriods'
 import { buildRequestRightsSituation } from '@/utils/requestRightsSituation'
 import { evaluateNotice } from '@/utils/leaveNotice'
 import { calculateDeductedDaysPreview } from '@/utils/leaveDuration'
-
-const DEROGATION_LABELS = {
-  EN_ATTENTE_RH: 'En attente',
-  EN_ATTENTE_DIRECTEUR: 'En cours de traitement',
-  ACCORDEE: 'Validée · traitement terminé',
-  REFUSEE: 'Refusée',
-  EXPIREE: 'Délai dépassé',
-  UTILISEE: 'Appliquée à la demande',
-}
 
 function departureTimingLabel(daysBeforeStart) {
   if (daysBeforeStart === 0) {
@@ -52,25 +40,13 @@ export function RecapCard({
   submitting,
   onSaveDraft,
   onSubmit,
-  onRequestDerogation,
-  onUpdateDerogation,
-  onSubmitDerogation,
-  onCancelDerogation,
+  derogationReason = '',
+  onDerogationReasonChange,
   editingExisting = false,
   preparationMode = false,
   preparedForName = '',
   isAnticipatedLeave = false,
 }) {
-  const [derogationFormOpen, setDerogationFormOpen] = useState(false)
-  const [derogationReason, setDerogationReason] = useState('')
-  const [derogationSending, setDerogationSending] = useState(false)
-  const [derogationError, setDerogationError] = useState(null)
-  const [editingDerogation, setEditingDerogation] = useState(false)
-  const [editingDerogationReason, setEditingDerogationReason] = useState('')
-  const [derogationBusy, setDerogationBusy] = useState(false)
-
-  useAutoDismiss(derogationError, setDerogationError)
-
   const { startDate, endDate, startPeriod, endPeriod } = selection ?? {}
   const periodComplete = Boolean(startDate && endDate)
 
@@ -107,100 +83,19 @@ export function RecapCard({
     !notice.isNoticeCompliant &&
     notice.isDerogationWindow
 
-  const derogationWorkflowStatus = derogation?.workflowStatus ?? (derogation?.status === 'EN_ATTENTE_RH' && derogation?.decidedByRhId ? 'EN_ATTENTE_DIRECTEUR' : derogation?.status)
-
-  const derogationAllowed = Boolean(
-    derogationNeeded &&
-      (!derogation || derogation.status === 'EXPIREE'),
-  )
-
-  const derogationEditable = Boolean(
-    derogation &&
-    derogation.status === 'EN_ATTENTE_RH' &&
-    derogation.decidedByRhId == null,
-  )
-
-  // La soumission n'est proposée qu'une seule fois, sur la base de l'état
-  // persistant `submittedAt` (renseigné uniquement par submitDraft, jamais
-  // par createDraft). Modifier/Annuler restent autorisés tant que la RH n'a
-  // pas décidé (règle backend ensureDerogationIsDraft).
-  const canSubmitDerogation = Boolean(
-    derogationEditable && derogation.submittedAt == null,
-  )
-
-  const runDerogationAction = async (action) => {
-    if (derogationBusy) return
-    setDerogationBusy(true)
-    try {
-      await action()
-    } finally {
-      setDerogationBusy(false)
-    }
-  }
-
-  const submitExistingDerogation = () => {
-    runDerogationAction(() => onSubmitDerogation?.(derogation.id))
-  }
-
-  const cancelExistingDerogation = () => {
-    if (!window.confirm('Annuler cette demande de dérogation ?')) return
-    runDerogationAction(() => onCancelDerogation?.(derogation.id))
-  }
-
-  const saveExistingDerogation = () => {
-    const reason = editingDerogationReason.trim()
-    if (!reason) return
-    runDerogationAction(async () => {
-      await onUpdateDerogation?.(derogation.id, reason)
-      setEditingDerogation(false)
-    })
-  }
-
   const submitAllowed =
     periodComplete &&
     Boolean(leaveType) &&
-    (!notice || notice.isNoticeCompliant || (draftClean && derogationWorkflowStatus === 'ACCORDEE'))
+    (!notice || notice.isNoticeCompliant || notice.isDerogationWindow)
 
   const submitHint =
     notice && !notice.isNoticeCompliant
-      ? derogationWorkflowStatus === 'ACCORDEE' && draftClean
-        ? 'Dérogation accordée — la soumission est possible.'
-        : notice.daysBeforeStart < 0
-          ? 'La date de départ est dépassée : la soumission est impossible.'
-          : !notice.isDerogationWindow
-            ? lateSubmissionMessage(notice.daysBeforeStart)
-            : derogationWorkflowStatus === 'EN_ATTENTE_RH'
-              ? 'Votre demande de dérogation est en attente de décision RH.'
-              : derogationWorkflowStatus === 'EN_ATTENTE_DIRECTEUR'
-                ? 'La RH a validé la dérogation. Elle est en attente de la décision finale du Directeur.'
-                : derogationWorkflowStatus === 'REFUSEE'
-                  ? 'La dérogation a été refusée. Modifiez les dates si nécessaire.'
-                  : 'Une dérogation validée par la RH puis le Directeur est requise pour soumettre.'
+      ? notice.daysBeforeStart < 0
+        ? 'La date de départ est dépassée : la soumission est impossible.'
+        : !notice.isDerogationWindow
+          ? lateSubmissionMessage(notice.daysBeforeStart)
+          : 'Une dérogation sera soumise avec votre demande et examinée par la RH.'
       : null
-
-  useEffect(() => {
-    if (derogationAllowed) {
-      return
-    }
-
-    setDerogationFormOpen(false)
-    setDerogationReason('')
-    setDerogationError(null)
-  }, [derogationAllowed])
-
-  const handleDerogationSubmit = async () => {
-    setDerogationError(null)
-    setDerogationSending(true)
-    try {
-      await onRequestDerogation({ reason: derogationReason.trim() })
-      setDerogationFormOpen(false)
-      setDerogationReason('')
-    } catch {
-      setDerogationFormOpen(false)
-    } finally {
-      setDerogationSending(false)
-    }
-  }
 
   return (
     <aside className="nr-recap">
@@ -267,7 +162,7 @@ export function RecapCard({
                   <Icon name="alert" size={15} />
                   <span>
                     Dérogation nécessaire
-                    <em>Le délai de prévenance n’est pas respecté. Une dérogation est nécessaire pour poursuivre cette demande.</em>
+                    <em>Cette demande est effectuée moins de {notice.requiredNoticeDays} jours calendaires avant le début du congé. Le délai de prévenance n’est pas respecté : une dérogation est nécessaire pour poursuivre.</em>
                   </span>
                 </p>
               ) : (
@@ -296,15 +191,17 @@ export function RecapCard({
             <section className="nr-recap__block nr-recap__rights-block">
               <div className="nr-recap__rights-titleline">
                 <h4 className="nr-recap__subtitle">Situation de vos congés</h4>
-                {isAnticipatedLeave && <span className="nr-anticipated-badge">Période N+1</span>}
               </div>
               {isAnticipatedLeave && (
                 <div className="nr-anticipated-panel" role="note">
-                  <span className="nr-anticipated-panel__icon"><Icon name="calendar" size={17} /></span>
-                  <span className="nr-anticipated-panel__content">
+                  <div className="nr-anticipated-panel__head">
+                    <span className="nr-anticipated-panel__icon"><Icon name="calendar" size={15} /></span>
                     <strong>Congé anticipé</strong>
-                    <small>Cette demande utilise les droits de la prochaine période de congés. Les indicateurs ci-dessous correspondent à cette période.</small>
-                  </span>
+                    <span className="nr-anticipated-panel__badge">N+1</span>
+                  </div>
+                  <p className="nr-anticipated-panel__text">
+                    Ce congé est prévu sur la prochaine période de référence. Les droits acquis disponibles seront utilisés en priorité. Les indicateurs ci-dessous présentent les droits concernés par cette demande.
+                  </p>
                 </div>
               )}
               {!isAnticipatedLeave && <p className="nr-recap__rights-note">Les indicateurs ci-dessous correspondent aux périodes concernées par votre demande.</p>}
@@ -327,75 +224,7 @@ export function RecapCard({
             </section>
           )}
 
-          {!preparationMode && derogation && (
-            <section className="nr-recap__block nr-derogation-manage">
-              <h4 className="nr-recap__subtitle">Dérogation RH</h4>
-              <span
-                className={`nr-derogation-badge nr-derogation-badge--${derogation.status.toLowerCase()}`}
-              >
-                {DEROGATION_LABELS[derogationWorkflowStatus] ?? derogation.status}
-              </span>
-
-              {derogation.reason && (
-                <p className="nr-derogation-manage__reason">{derogation.reason}</p>
-              )}
-
-              {derogationEditable && !editingDerogation && (
-                <div className="nr-derogation-manage__actions">
-                  <button type="button" className="nr-btn nr-btn--ghost" onClick={() => { setEditingDerogationReason(derogation.reason ?? ''); setEditingDerogation(true) }} disabled={derogationBusy || saving || submitting}>
-                    Modifier
-                  </button>
-                  {canSubmitDerogation && (
-                    <button type="button" className="nr-btn nr-btn--secondary" onClick={submitExistingDerogation} disabled={derogationBusy || saving || submitting}>
-                      {derogationBusy ? 'Soumission…' : 'Soumettre'}
-                    </button>
-                  )}
-                  <button type="button" className="nr-btn nr-btn--ghost" onClick={cancelExistingDerogation} disabled={derogationBusy || saving || submitting}>
-                    Annuler
-                  </button>
-                </div>
-              )}
-
-              {derogationEditable && editingDerogation && (
-                <div className="nr-derogation-manage__form">
-                  <textarea
-                    id="derogation-reason"
-                    rows={3}
-                    maxLength={2000}
-                    value={editingDerogationReason}
-                    onChange={(event) => setEditingDerogationReason(event.target.value)}
-                  />
-                  <div className="nr-derogation-manage__actions">
-                    <button type="button" className="nr-btn nr-btn--ghost" onClick={() => setEditingDerogation(false)} disabled={derogationBusy || saving || submitting}>Annuler</button>
-                    <button
-                      type="button"
-                      className="nr-btn nr-btn--secondary"
-                      onClick={saveExistingDerogation}
-                      disabled={derogationBusy || saving || submitting || !editingDerogationReason.trim()}
-                    >
-                      {derogationBusy ? 'Enregistrement…' : 'Enregistrer'}
-                    </button>
-                  </div>
-                </div>
-              )}
-            </section>
-          )}
-
-          {derogationAllowed && !derogationFormOpen && (
-            <button
-              type="button"
-              className="nr-recap__derogation-cta"
-              onClick={() => setDerogationFormOpen(true)}
-              disabled={saving || submitting}
-            >
-              <Icon name="alert" size={15} />
-              {derogation?.status === 'EXPIREE'
-                ? 'Demander une nouvelle dérogation'
-                : 'Demander une dérogation'}
-            </button>
-          )}
-
-          {derogationFormOpen && (
+          {derogationNeeded && (
             <div className="nr-derogation-form">
               <label className="nr-derogation-form__label" htmlFor="derogation-reason">
                 Motif de la dérogation (facultatif)
@@ -406,35 +235,12 @@ export function RecapCard({
                 rows="3"
                 maxLength={2000}
                 value={derogationReason}
-                onChange={(event) => setDerogationReason(event.target.value)}
+                onChange={(event) => onDerogationReasonChange?.(event.target.value)}
                 placeholder="Vous pouvez préciser le motif de votre demande hors délai…"
               />
               <p className="nr-derogation-form__count">
                 {derogationReason.trim().length}/2000 — facultatif
               </p>
-              {derogationError && <p className="nr-derogation-form__error">{derogationError}</p>}
-              <div className="nr-derogation-form__actions">
-                <button
-                  type="button"
-                  className="nr-btn nr-btn--ghost"
-                  onClick={() => {
-                    setDerogationFormOpen(false)
-                    setDerogationReason('')
-                    setDerogationError(null)
-                  }}
-                  disabled={derogationSending}
-                >
-                  Annuler
-                </button>
-                <button
-                  type="button"
-                  className="nr-btn nr-btn--secondary"
-                  onClick={handleDerogationSubmit}
-                  disabled={derogationSending || saving || submitting}
-                >
-                  {derogationSending ? 'Envoi…' : 'Envoyer la demande'}
-                </button>
-              </div>
             </div>
           )}
 

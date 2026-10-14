@@ -222,7 +222,6 @@ export function DirectorRequestDecisionPage() {
   const canDecide =
     request.status === 'EN_ATTENTE_VALIDATION' &&
     Boolean(request.decisionAccess) &&
-    !request.finalDeciderId &&
     !request.lockedAt
   const readonlyStatus = requestStatusMeta(request.status)
 

@@ -1,6 +1,5 @@
 import {
   BadRequestException,
-  ConflictException,
   ForbiddenException,
   Injectable,
   InternalServerErrorException,
@@ -34,12 +33,26 @@ import {
   SignatureType,
 } from '../leave-requests/leave-request.entity';
 import { UserRole } from '../users/user.entity';
+import {
+  formatMartiniqueDateOnly,
+  formatMartiniqueDateTime,
+} from './martinique-date.util';
+import { AuditAction, AuditLog } from '../audit/audit-log.entity';
 
 export interface ValidationPdfFile {
   buffer: Buffer;
   filename: string;
   referenceNumber: string;
   checksum: string;
+}
+
+interface FirstLevelValidatorData {
+  userId: number | null;
+  role: UserRole | null;
+  name: string | null;
+  signatureType: SignatureType | null;
+  signatureData: string | null;
+  signedAt: Date | null;
 }
 
 @Injectable()
@@ -59,7 +72,7 @@ export class DocumentPdfService {
   private readonly pdfTemplateWidthPx = 1055;
   private readonly pdfTemplateHeightPx = 1491;
 
-  private readonly validationPdfDesignVersion = 'code-v8-balance-clean';
+  private readonly validationPdfDesignVersion = 'code-v9-deux-validateurs';
 
   constructor(
     @InjectRepository(Document)
@@ -67,6 +80,9 @@ export class DocumentPdfService {
 
     @InjectRepository(LeaveRequest)
     private readonly leaveRequestRepository: Repository<LeaveRequest>,
+
+    @InjectRepository(AuditLog)
+    private readonly auditLogRepository: Repository<AuditLog>,
   ) {}
 
   async ensureValidationPdf(
@@ -112,11 +128,16 @@ export class DocumentPdfService {
       generatedAt,
     );
 
+    const firstLevelValidator = await this.findFirstLevelValidator(
+      leaveRequest.id,
+    );
+
     const pdfBuffer = await this.buildValidationPdf({
       leaveRequest,
       referenceNumber,
       generatedAt,
       documentFingerprint,
+      firstLevelValidator,
     });
 
     await this.writeFileAtomically(absolutePath, pdfBuffer);
@@ -683,23 +704,67 @@ export class DocumentPdfService {
       );
     }
 
-    if (
-      leaveRequest.finalDeciderId === null ||
-      leaveRequest.finalDecider === null ||
-      leaveRequest.decisionAt === null ||
-      leaveRequest.employeeSignatureType === null ||
-      leaveRequest.employeeSignatureData === null ||
-      leaveRequest.employeeSignedAt === null ||
-      leaveRequest.validatorSignatureType === null ||
-      leaveRequest.validatorSignatureData === null ||
-      leaveRequest.validatorSignedAt === null
-    ) {
-      throw new ConflictException(
-        'Le PDF officiel n’est pas disponible pour cette ancienne demande, car les signatures figées nécessaires au document ne sont pas présentes.',
-      );
+    // Les anciennes demandes peuvent ne pas disposer de toutes les signatures
+    // figées. Le document est alors généré avec une indication neutre
+    // (« Non renseigné ») au lieu d'inventer des données.
+    return leaveRequest;
+  }
+
+  /**
+   * Retrouve la première validation (RH) enregistrée au moment de la décision,
+   * avec sa signature réelle, dans le journal d'audit. Ne déduit jamais le
+   * valideur à partir du responsable actuel du collaborateur.
+   */
+  private async findFirstLevelValidator(
+    leaveRequestId: number,
+  ): Promise<FirstLevelValidatorData | null> {
+    const log = await this.auditLogRepository.findOne({
+      where: {
+        resourceType: 'LEAVE_REQUESTS',
+        resourceId: leaveRequestId,
+        action: AuditAction.DEMANDE_PREVALIDEE,
+      },
+      relations: { actor: true },
+      order: { id: 'ASC' },
+    });
+
+    if (!log) {
+      return null;
     }
 
-    return leaveRequest;
+    const metadata = (log.newValue?.metadata ?? {}) as Record<
+      string,
+      unknown
+    >;
+
+    const signedAtValue = metadata.firstLevelSignedAt as
+      | string
+      | Date
+      | null
+      | undefined;
+    const signedAt = signedAtValue
+      ? new Date(signedAtValue)
+      : null;
+
+    return {
+      userId:
+        (metadata.firstLevelValidatorId as number | null) ??
+        log.actorId ??
+        null,
+      role:
+        (metadata.firstLevelValidatorRole as UserRole | null) ??
+        log.actor?.role ??
+        null,
+      name: log.actor
+        ? `${log.actor.nom} ${log.actor.prenom}`.trim()
+        : null,
+      signatureType:
+        (metadata.firstLevelSignatureType as SignatureType | null) ??
+        null,
+      signatureData:
+        (metadata.firstLevelSignatureData as string | null) ?? null,
+      signedAt: Number.isNaN(signedAt?.getTime()) ? null : signedAt,
+    };
   }
 
   private ensureUserCanAccessValidationPdf(
@@ -929,7 +994,7 @@ export class DocumentPdfService {
       xPx: 70,
       yPx: 500,
       widthPx: 914,
-      heightPx: 245,
+      heightPx: 208,
       title: 'DÉTAILS DU CONGÉ',
       icon: 'calendar',
       labels: [
@@ -948,42 +1013,24 @@ export class DocumentPdfService {
 
     this.drawExactSectionCard(document, {
       xPx: 70,
-      yPx: 755,
+      yPx: 722,
       widthPx: 914,
-      heightPx: 165,
-      title: 'SITUATION DU SOLDE',
-      icon: 'balance',
-      labels: [
-        ['Solde avant décompte', 825],
-        ['Jours décomptés', 863],
-        ['Solde après décompte', 901],
-      ],
-      labelXPx: 110,
-      valueXPx: 412,
-      lineStartXPx: 108,
-      lineEndXPx: 952,
-      firstRowYPx: 825,
-      rowHeightPx: 38,
-    });
-
-    this.drawExactSectionCard(document, {
-      xPx: 70,
-      yPx: 930,
-      widthPx: 914,
-      heightPx: 220,
+      heightPx: 296,
       title: 'TRAÇABILITÉ',
       icon: 'document',
       labels: [
-        ['Soumise le', 1004],
-        ['Décision enregistrée le', 1042],
-        ['Décision prise par', 1080],
-        ['Rôle du valideur', 1118],
+        ['Soumise le', 798],
+        ['Première validation le', 836],
+        ['Premier valideur', 874],
+        ['Validation finale le', 912],
+        ['Valideur final', 950],
+        ['Rôle du valideur final', 988],
       ],
       labelXPx: 110,
       valueXPx: 412,
       lineStartXPx: 108,
       lineEndXPx: 952,
-      firstRowYPx: 1004,
+      firstRowYPx: 798,
       rowHeightPx: 38,
     });
 
@@ -1502,7 +1549,7 @@ export class DocumentPdfService {
     const xPx = 49;
     const yPx = 290;
     const widthPx = 957;
-    const heightPx = 120;
+    const heightPx = 128;
     const x = this.pdfTemplateX(document, xPx);
     const y = this.pdfTemplateY(document, yPx);
     const width = this.pdfTemplateX(document, widthPx);
@@ -1540,26 +1587,16 @@ export class DocumentPdfService {
     );
     this.drawExactPdfText(
       document,
-      'Ce document est un récapitulatif provisoire. Il ne constitue pas une autorisation d’absence.',
+      'Ce document est un récapitulatif provisoire fourni à titre indicatif. Il ne constitue pas une autorisation d’absence. Le bulletin de paie fait foi pour le décompte des jours de congé et le solde.',
       {
         xPx: 168,
-        yPx: 362,
+        yPx: 358,
         widthPx: 705,
         fontSizePx: 14,
         font: 'Helvetica',
-        color: '#3A5577',
-      },
-    );
-    this.drawExactPdfText(
-      document,
-      'Sous réserve du solde inscrit sur votre bulletin de paie.',
-      {
-        xPx: 168,
-        yPx: 386,
-        widthPx: 705,
-        fontSizePx: 13,
-        font: 'Helvetica-Bold',
         color: '#B91C1C',
+        multiline: true,
+        lineGapPx: 2,
       },
     );
 
@@ -1624,9 +1661,9 @@ export class DocumentPdfService {
     document: PDFKit.PDFDocument,
   ): void {
     const xPx = 70;
-    const yPx = 1160;
+    const yPx = 1095;
     const widthPx = 914;
-    const heightPx = 202;
+    const heightPx = 272;
 
     this.drawExactShadow(document, {
       xPx,
@@ -1649,7 +1686,7 @@ export class DocumentPdfService {
 
     this.drawExactPdfText(document, 'SIGNATURES', {
       xPx: 442,
-      yPx: 1180,
+      yPx: 1112,
       widthPx: 170,
       fontSizePx: 18,
       font: 'Helvetica-Bold',
@@ -1657,44 +1694,27 @@ export class DocumentPdfService {
       align: 'center',
     });
 
-    [403, 597].forEach((startXPx) => {
+    // Trois colonnes de signature réparties symétriquement dans le cadre
+    // (cadre X 70 -> 984, centres à 222 / 527 / 832, largeur 264).
+    const columns = [
+      { startPx: 90, endPx: 354 },
+      { startPx: 395, endPx: 659 },
+      { startPx: 700, endPx: 964 },
+    ];
+    columns.forEach((column) => {
       document
         .moveTo(
-          this.pdfTemplateX(document, startXPx),
-          this.pdfTemplateY(document, 1190),
+          this.pdfTemplateX(document, column.startPx),
+          this.pdfTemplateY(document, 1242),
         )
         .lineTo(
-          this.pdfTemplateX(document, startXPx + 45),
-          this.pdfTemplateY(document, 1190),
+          this.pdfTemplateX(document, column.endPx),
+          this.pdfTemplateY(document, 1242),
         )
-        .lineWidth(this.pdfTemplateY(document, 1.3))
-        .strokeColor('#8FB4E3')
+        .lineWidth(this.pdfTemplateY(document, 1))
+        .strokeColor('#B5C8DE')
         .stroke();
     });
-    [448, 642].forEach((dotXPx) => {
-      document
-        .circle(
-          this.pdfTemplateX(document, dotXPx),
-          this.pdfTemplateY(document, 1190),
-          this.pdfTemplateY(document, 3),
-        )
-        .fillAndStroke('#FFFFFF', '#8FB4E3');
-    });
-
-    document
-      .moveTo(this.pdfTemplateX(document, 140), this.pdfTemplateY(document, 1274))
-      .lineTo(this.pdfTemplateX(document, 397), this.pdfTemplateY(document, 1274))
-      .lineWidth(this.pdfTemplateY(document, 1))
-      .strokeColor('#B5C8DE')
-      .stroke();
-    document
-      .moveTo(this.pdfTemplateX(document, 642), this.pdfTemplateY(document, 1274))
-      .lineTo(this.pdfTemplateX(document, 899), this.pdfTemplateY(document, 1274))
-      .lineWidth(this.pdfTemplateY(document, 1))
-      .strokeColor('#B5C8DE')
-      .stroke();
-
-    this.drawExactValidationSeal(document);
   }
 
   private drawExactValidationSeal(
@@ -1739,29 +1759,6 @@ export class DocumentPdfService {
     document: PDFKit.PDFDocument,
   ): void {
     this.drawExactFooterWaves(document);
-
-    this.drawExactFooterShield(document, 198, 1373);
-    this.drawExactPdfText(
-      document,
-      'Document officiel généré par l’application\nde gestion des congés GMES',
-      {
-        xPx: 232,
-        yPx: 1381,
-        widthPx: 270,
-        fontSizePx: 12.5,
-        font: 'Helvetica',
-        color: '#3C64A0',
-        multiline: true,
-        lineGapPx: 1,
-      },
-    );
-
-    document
-      .moveTo(this.pdfTemplateX(document, 527), this.pdfTemplateY(document, 1382))
-      .lineTo(this.pdfTemplateX(document, 527), this.pdfTemplateY(document, 1415))
-      .lineWidth(this.pdfTemplateY(document, 1.1))
-      .strokeColor('#7EA5DA')
-      .stroke();
   }
 
   private drawExactPendingFooterBase(
@@ -1769,7 +1766,7 @@ export class DocumentPdfService {
   ): void {
     this.drawExactFooterWaves(document);
 
-    const lineY = this.pdfTemplateY(document, 1281);
+    const lineY = this.pdfTemplateY(document, 1265);
     document
       .moveTo(this.pdfTemplateX(document, 49), lineY)
       .lineTo(this.pdfTemplateX(document, 1006), lineY)
@@ -1795,10 +1792,10 @@ export class DocumentPdfService {
       (this.pdfTemplateWidthPx - referencePillWidthPx) / 2;
 
     document
-      .moveTo(this.pdfTemplateX(document, 180), this.pdfTemplateY(document, 1378))
+      .moveTo(this.pdfTemplateX(document, 180), this.pdfTemplateY(document, 1331))
       .lineTo(
         this.pdfTemplateX(document, referencePillXPx),
-        this.pdfTemplateY(document, 1378),
+        this.pdfTemplateY(document, 1331),
       )
       .lineWidth(this.pdfTemplateY(document, 1.4))
       .strokeColor('#154FA6')
@@ -1809,9 +1806,9 @@ export class DocumentPdfService {
           document,
           referencePillXPx + referencePillWidthPx,
         ),
-        this.pdfTemplateY(document, 1378),
+        this.pdfTemplateY(document, 1331),
       )
-      .lineTo(this.pdfTemplateX(document, 875), this.pdfTemplateY(document, 1378))
+      .lineTo(this.pdfTemplateX(document, 875), this.pdfTemplateY(document, 1331))
       .lineWidth(this.pdfTemplateY(document, 1.4))
       .strokeColor('#154FA6')
       .stroke();
@@ -1819,24 +1816,26 @@ export class DocumentPdfService {
     document
       .roundedRect(
         this.pdfTemplateX(document, referencePillXPx),
-        this.pdfTemplateY(document, 1357),
+        this.pdfTemplateY(document, 1313),
         this.pdfTemplateX(document, referencePillWidthPx),
-        this.pdfTemplateY(document, 42),
+        this.pdfTemplateY(document, 36),
         this.pdfTemplateY(document, 7),
       )
       .fill('#0B2C6F');
 
     this.drawExactPdfText(
       document,
-      'DOCUMENT PROVISOIRE – NE CONSTITUE PAS UNE AUTORISATION D’ABSENCE',
+      'DOCUMENT PROVISOIRE À TITRE INDICATIF — NE CONSTITUE PAS UNE AUTORISATION D’ABSENCE',
       {
-        xPx: 255,
-        yPx: 1388,
-        widthPx: 550,
-        fontSizePx: 12.5,
+        xPx: 77,
+        yPx: 1364,
+        widthPx: 900,
+        fontSizePx: 11.5,
         font: 'Helvetica-Bold',
         color: '#154FA6',
         align: 'center',
+        multiline: true,
+        lineGapPx: 1,
       },
     );
   }
@@ -1905,14 +1904,14 @@ export class DocumentPdfService {
     const height = document.page.height;
 
     document
-      .moveTo(0, this.pdfTemplateY(document, 1388))
+      .moveTo(0, this.pdfTemplateY(document, 1413))
       .bezierCurveTo(
         width * 0.25,
-        this.pdfTemplateY(document, 1420),
+        this.pdfTemplateY(document, 1445),
         width * 0.62,
-        this.pdfTemplateY(document, 1440),
+        this.pdfTemplateY(document, 1465),
         width,
-        this.pdfTemplateY(document, 1393),
+        this.pdfTemplateY(document, 1418),
       )
       .lineTo(width, height)
       .lineTo(0, height)
@@ -1920,14 +1919,14 @@ export class DocumentPdfService {
       .fill('#DCEBFA');
 
     document
-      .moveTo(0, this.pdfTemplateY(document, 1417))
+      .moveTo(0, this.pdfTemplateY(document, 1442))
       .bezierCurveTo(
         width * 0.26,
-        this.pdfTemplateY(document, 1453),
+        this.pdfTemplateY(document, 1478),
         width * 0.62,
-        this.pdfTemplateY(document, 1458),
+        this.pdfTemplateY(document, 1483),
         width,
-        this.pdfTemplateY(document, 1411),
+        this.pdfTemplateY(document, 1436),
       )
       .lineTo(width, height)
       .lineTo(0, height)
@@ -1935,14 +1934,14 @@ export class DocumentPdfService {
       .fill('#285CC2');
 
     document
-      .moveTo(0, this.pdfTemplateY(document, 1443))
+      .moveTo(0, this.pdfTemplateY(document, 1468))
       .bezierCurveTo(
         width * 0.30,
-        this.pdfTemplateY(document, 1470),
+        this.pdfTemplateY(document, 1495),
         width * 0.60,
-        this.pdfTemplateY(document, 1478),
+        this.pdfTemplateY(document, 1503),
         width,
-        this.pdfTemplateY(document, 1438),
+        this.pdfTemplateY(document, 1463),
       )
       .lineTo(width, height)
       .lineTo(0, height)
@@ -1950,14 +1949,14 @@ export class DocumentPdfService {
       .fill('#0B347C');
 
     document
-      .moveTo(width * 0.78, this.pdfTemplateY(document, 1427))
+      .moveTo(width * 0.78, this.pdfTemplateY(document, 1452))
       .bezierCurveTo(
         width * 0.87,
-        this.pdfTemplateY(document, 1421),
+        this.pdfTemplateY(document, 1446),
         width * 0.95,
-        this.pdfTemplateY(document, 1409),
+        this.pdfTemplateY(document, 1434),
         width,
-        this.pdfTemplateY(document, 1397),
+        this.pdfTemplateY(document, 1422),
       )
       .lineWidth(this.pdfTemplateY(document, 4))
       .strokeColor('#F97316')
@@ -1994,12 +1993,14 @@ export class DocumentPdfService {
     referenceNumber: string;
     generatedAt: Date;
     documentFingerprint: string;
+    firstLevelValidator: FirstLevelValidatorData | null;
   }): Promise<Buffer> {
     const {
       leaveRequest,
       referenceNumber,
       generatedAt,
       documentFingerprint,
+      firstLevelValidator,
     } = input;
 
     return new Promise<Buffer>((resolvePromise, rejectPromise) => {
@@ -2091,16 +2092,22 @@ export class DocumentPdfService {
           });
         });
 
+        const firstLevelName =
+          firstLevelValidator?.name || 'Non renseigné';
+        const firstLevelSignedAt = firstLevelValidator?.signedAt
+          ? this.formatDateTime(firstLevelValidator.signedAt)
+          : 'Non renseigné';
+        const finalValidatorName =
+          `${leaveRequest.finalDecider?.nom ?? ''} ${leaveRequest.finalDecider?.prenom ?? ''}`.trim() ||
+          'Non renseigné';
+
         [
-          [
-            this.formatOptionalDays(leaveRequest.realBalanceBefore),
-            825,
-          ],
-          [this.formatDays(leaveRequest.deductedDays), 863],
-          [
-            this.formatOptionalDays(leaveRequest.realBalanceAfter),
-            901,
-          ],
+          [this.formatDateTime(leaveRequest.submittedAt), 798],
+          [firstLevelSignedAt, 836],
+          [firstLevelName, 874],
+          [this.formatDateTime(leaveRequest.decisionAt), 912],
+          [finalValidatorName, 950],
+          [this.formatRole(leaveRequest.finalDeciderRole), 988],
         ].forEach(([value, yPx]) => {
           this.drawExactPdfText(document, String(value), {
             xPx: 412,
@@ -2111,40 +2118,27 @@ export class DocumentPdfService {
             color: '#173B70',
           });
         });
-
-        [
-          [this.formatDateTime(leaveRequest.submittedAt), 1004],
-          [this.formatDateTime(leaveRequest.decisionAt), 1042],
-          [
-            `${leaveRequest.finalDecider?.nom ?? ''} ${leaveRequest.finalDecider?.prenom ?? ''}`.trim(),
-            1080,
-          ],
-          [this.formatRole(leaveRequest.finalDeciderRole), 1118],
-        ].forEach(([value, yPx]) => {
-          this.drawExactPdfText(document, String(value), {
-            xPx: 412,
-            yPx: Number(yPx),
-            widthPx: 500,
-            fontSizePx: 15,
-            font: 'Helvetica',
-            color: '#173B70',
-          });
-        });
-
-        this.drawExactValidationSignatures(document, leaveRequest);
 
         this.drawExactPdfText(
           document,
-          `Référence : ${referenceNumber}`,
+          'Cette demande de congé est validée. Le décompte des jours et les soldes restent provisoires et sont communiqués à titre indicatif. Le bulletin de paie fait foi pour ces informations.',
           {
-            xPx: 555,
-            yPx: 1391,
-            widthPx: 280,
+            xPx: 110,
+            yPx: 1032,
+            widthPx: 834,
             fontSizePx: 13,
             font: 'Helvetica-Bold',
-            color: '#154FA6',
+            color: '#C62828',
             align: 'center',
+            multiline: true,
+            lineGapPx: 2,
           },
+        );
+
+        this.drawExactValidationSignatures(
+          document,
+          leaveRequest,
+          firstLevelValidator,
         );
 
         document
@@ -2291,116 +2285,131 @@ export class DocumentPdfService {
   private drawExactValidationSignatures(
     document: PDFKit.PDFDocument,
     leaveRequest: LeaveRequest,
+    firstLevelValidator: FirstLevelValidatorData | null,
   ): void {
-    this.drawExactPdfText(document, 'Collaborateur', {
-      xPx: 176,
-      yPx: 1183,
-      widthPx: 210,
-      fontSizePx: 14,
-      font: 'Helvetica-Bold',
-      color: '#154FA6',
-      align: 'center',
-    });
-    this.drawExactPdfText(document, 'Valideur', {
-      xPx: 666,
-      yPx: 1183,
-      widthPx: 210,
-      fontSizePx: 14,
-      font: 'Helvetica-Bold',
-      color: '#154FA6',
-      align: 'center',
-    });
+    const finalValidatorName =
+      `${leaveRequest.finalDecider?.nom ?? ''} ${leaveRequest.finalDecider?.prenom ?? ''}`.trim() ||
+      'Non renseigné';
 
-    this.drawExactSignature(document, {
-      signatureType: leaveRequest.employeeSignatureType!,
-      signatureData: leaveRequest.employeeSignatureData!,
-      xPx: 176,
-      yPx: 1216,
-      widthPx: 210,
-      heightPx: 47,
-    });
-    this.drawExactSignature(document, {
-      signatureType: leaveRequest.validatorSignatureType!,
-      signatureData: leaveRequest.validatorSignatureData!,
-      xPx: 666,
-      yPx: 1216,
-      widthPx: 210,
-      heightPx: 47,
-    });
-
-    const leftName =
-      `${leaveRequest.employee.nom} ${leaveRequest.employee.prenom}`;
-    const rightName =
-      `${leaveRequest.finalDecider!.nom} ${leaveRequest.finalDecider!.prenom}`;
-
-    this.drawExactPdfText(document, leftName, {
-      xPx: 158,
-      yPx: 1284,
-      widthPx: 245,
-      fontSizePx: 15,
-      font: 'Helvetica-Bold',
-      color: '#0B2347',
-      align: 'center',
-    });
-    this.drawExactPdfText(document, rightName, {
-      xPx: 648,
-      yPx: 1284,
-      widthPx: 245,
-      fontSizePx: 15,
-      font: 'Helvetica-Bold',
-      color: '#0B2347',
-      align: 'center',
-    });
-
-    this.drawExactPdfText(document, 'Collaborateur', {
-      xPx: 158,
-      yPx: 1314,
-      widthPx: 245,
-      fontSizePx: 13,
-      font: 'Helvetica-Oblique',
-      color: '#345B8A',
-      align: 'center',
-    });
-    this.drawExactPdfText(
-      document,
-      this.formatRole(leaveRequest.finalDeciderRole),
+    const signers: Array<{
+      title: string;
+      roleLabel: string;
+      name: string;
+      signatureType: SignatureType | null;
+      signatureData: string | null;
+      signedAt: Date | null;
+      missing: boolean;
+      xPx: number;
+    }> = [
       {
-        xPx: 648,
-        yPx: 1314,
-        widthPx: 245,
-        fontSizePx: 13,
-        font: 'Helvetica-Oblique',
-        color: '#345B8A',
-        align: 'center',
+        title: 'Collaborateur',
+        roleLabel: 'Collaborateur',
+        name:
+          `${leaveRequest.employee.nom} ${leaveRequest.employee.prenom}`.trim() ||
+          'Non renseigné',
+        signatureType: leaveRequest.employeeSignatureType,
+        signatureData: leaveRequest.employeeSignatureData,
+        signedAt: leaveRequest.employeeSignedAt,
+        missing:
+          !leaveRequest.employeeSignatureType ||
+          !leaveRequest.employeeSignatureData,
+        xPx: 90,
       },
-    );
+      {
+        title: 'Premier valideur',
+        roleLabel: this.formatRole(firstLevelValidator?.role ?? null),
+        name: firstLevelValidator?.name || 'Non renseigné',
+        signatureType: firstLevelValidator?.signatureType ?? null,
+        signatureData: firstLevelValidator?.signatureData ?? null,
+        signedAt: firstLevelValidator?.signedAt ?? null,
+        missing:
+          !firstLevelValidator ||
+          (!firstLevelValidator.signatureData &&
+            !firstLevelValidator.name),
+        xPx: 395,
+      },
+      {
+        title: 'Valideur final',
+        roleLabel: this.formatRole(leaveRequest.finalDeciderRole),
+        name: finalValidatorName,
+        signatureType: leaveRequest.validatorSignatureType,
+        signatureData: leaveRequest.validatorSignatureData,
+        signedAt: leaveRequest.validatorSignedAt,
+        missing:
+          !leaveRequest.validatorSignatureType ||
+          !leaveRequest.validatorSignatureData,
+        xPx: 700,
+      },
+    ];
 
-    this.drawExactPdfText(
-      document,
-      this.formatDateTime(leaveRequest.employeeSignedAt),
-      {
-        xPx: 158,
-        yPx: 1338,
-        widthPx: 245,
-        fontSizePx: 11.5,
-        font: 'Helvetica-Oblique',
-        color: '#4E78A7',
+    const widthPx = 264;
+
+    for (const signer of signers) {
+      this.drawExactPdfText(document, signer.title, {
+        xPx: signer.xPx,
+        yPx: 1164,
+        widthPx,
+        fontSizePx: 14,
+        font: 'Helvetica-Bold',
+        color: '#154FA6',
         align: 'center',
-      },
-    );
-    this.drawExactPdfText(
-      document,
-      this.formatDateTime(leaveRequest.validatorSignedAt),
-      {
-        xPx: 648,
-        yPx: 1338,
-        widthPx: 245,
-        fontSizePx: 11.5,
-        font: 'Helvetica-Oblique',
-        color: '#4E78A7',
-        align: 'center',
-      },
-    );
+      });
+
+      if (signer.signatureType && signer.signatureData) {
+        this.drawExactSignature(document, {
+          signatureType: signer.signatureType,
+          signatureData: signer.signatureData,
+          xPx: signer.xPx + 20,
+          yPx: 1190,
+          widthPx: widthPx - 40,
+          heightPx: 44,
+        });
+      } else {
+        this.drawExactPdfText(document, 'Non renseigné', {
+          xPx: signer.xPx,
+          yPx: 1218,
+          widthPx,
+          fontSizePx: 12,
+          font: 'Helvetica-Oblique',
+          color: '#7B93B2',
+          align: 'center',
+        });
+      }
+
+      if (!signer.missing) {
+        this.drawExactPdfText(document, signer.name, {
+          xPx: signer.xPx,
+          yPx: 1256,
+          widthPx,
+          fontSizePx: 15,
+          font: 'Helvetica-Bold',
+          color: '#0B2347',
+          align: 'center',
+        });
+        this.drawExactPdfText(document, signer.roleLabel, {
+          xPx: signer.xPx,
+          yPx: 1286,
+          widthPx,
+          fontSizePx: 13,
+          font: 'Helvetica-Oblique',
+          color: '#345B8A',
+          align: 'center',
+        });
+        this.drawExactPdfText(
+          document,
+          this.formatDateTime(signer.signedAt),
+          {
+            xPx: signer.xPx,
+            yPx: 1310,
+            widthPx,
+            fontSizePx: 11.5,
+            font: 'Helvetica-Oblique',
+            color: '#4E78A7',
+            align: 'center',
+          },
+        );
+      }
+    }
   }
 
   private drawExactSignature(
@@ -2458,7 +2467,7 @@ export class DocumentPdfService {
     const dateWidth = document.widthOfString(dateText);
     const totalWidth = prefixWidth + dateWidth;
     const textX = centerX - totalWidth / 2 + this.pdfTemplateX(document, 18);
-    const textY = this.pdfTemplateY(document, 1318);
+    const textY = this.pdfTemplateY(document, 1293);
 
     document
       .font('Helvetica')
@@ -2481,9 +2490,9 @@ export class DocumentPdfService {
 
     this.drawExactPdfTextCenteredInBox(document, input.referenceNumber, {
       xPx: referencePillXPx,
-      yPx: 1357,
+      yPx: 1313,
       widthPx: referencePillWidthPx,
-      heightPx: 42,
+      heightPx: 36,
       fontSizePx: 14,
       font: 'Helvetica-Bold',
       color: '#FFFFFF',
@@ -2491,18 +2500,19 @@ export class DocumentPdfService {
       opticalOffsetYPx: 0.5,
     });
 
-
     this.drawExactPdfText(
       document,
-      'Sous réserve du solde inscrit sur votre bulletin de paie.',
+      'Le bulletin de paie fait foi pour le décompte des jours de congé et le solde.',
       {
-        xPx: 330,
-        yPx: 1408,
-        widthPx: 395,
-        fontSizePx: 13,
+        xPx: 77,
+        yPx: 1384,
+        widthPx: 900,
+        fontSizePx: 11.5,
         font: 'Helvetica-Bold',
         color: '#B91C1C',
         align: 'center',
+        multiline: true,
+        lineGapPx: 1,
       },
     );
   }
@@ -2511,7 +2521,7 @@ export class DocumentPdfService {
     document: PDFKit.PDFDocument,
   ): void {
     const x = this.pdfTemplateX(document, 330);
-    const y = this.pdfTemplateY(document, 1307);
+    const y = this.pdfTemplateY(document, 1291);
     const width = this.pdfTemplateX(document, 23);
     const height = this.pdfTemplateY(document, 31);
 
@@ -2527,7 +2537,7 @@ export class DocumentPdfService {
       .strokeColor('#154FA6')
       .stroke();
 
-    [1317, 1324, 1331].forEach((linePx) => {
+    [1301, 1308, 1315].forEach((linePx) => {
       document
         .moveTo(this.pdfTemplateX(document, 336), this.pdfTemplateY(document, linePx))
         .lineTo(this.pdfTemplateX(document, 348), this.pdfTemplateY(document, linePx))
@@ -3702,24 +3712,11 @@ export class DocumentPdfService {
   }
 
   private formatDateOnly(dateValue: string): string {
-    const [year, month, day] = dateValue
-      .split('-')
-      .map((value) => Number(value));
-
-    return new Intl.DateTimeFormat('fr-FR', {
-      dateStyle: 'long',
-    }).format(new Date(year, month - 1, day));
+    return formatMartiniqueDateOnly(dateValue);
   }
 
   private formatDateTime(dateValue: Date | null): string {
-    if (!dateValue) {
-      return 'Non renseigné';
-    }
-
-    return new Intl.DateTimeFormat('fr-FR', {
-      dateStyle: 'long',
-      timeStyle: 'short',
-    }).format(dateValue);
+    return formatMartiniqueDateTime(dateValue);
   }
 
   private formatDayPeriod(period: DayPeriod): string {

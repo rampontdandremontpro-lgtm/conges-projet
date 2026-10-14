@@ -1398,9 +1398,9 @@ export class UsersService {
       );
     }
 
-    if (decodedSignature.length > 500 * 1024) {
+    if (decodedSignature.length > 100 * 1024) {
       throw new BadRequestException(
-        'La signature dessinée ne doit pas dépasser 500 Ko.',
+        'La signature dessinée ne doit pas dépasser 100 Ko.',
       );
     }
 

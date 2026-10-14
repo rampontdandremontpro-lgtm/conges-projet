@@ -119,8 +119,8 @@ export function RhRequestDecisionPage() {
   }, [state.request])
 
   const handleValidate = () => {
-    const isRhFinalization = state.request?.decisionAccess?.kind === 'RH_FINALISATION'
-    if (!isRhFinalization && !directorAgreementConfirmed) {
+    const requiresDirectorAgreement = state.request?.decisionAccess?.kind === 'DIRECTEUR_RH'
+    if (requiresDirectorAgreement && !directorAgreementConfirmed) {
       setFeedback({ kind: 'error', message: 'Vous devez confirmer avoir obtenu l’accord du Directeur avant de valider.' })
       return
     }
@@ -139,7 +139,7 @@ export function RhRequestDecisionPage() {
       await validateRhRequest(id, {
         signatureType,
         signatureData,
-        rhConfirmedDirectorAgreement: state.request?.decisionAccess?.kind === 'RH_FINALISATION' ? undefined : true,
+        rhConfirmedDirectorAgreement: state.request?.decisionAccess?.kind === 'DIRECTEUR_RH' ? true : undefined,
         minimumPresenceJustification: minimumPresenceJustification.trim() || undefined,
       })
       window.dispatchEvent(new Event('gmes:data-changed'))
@@ -346,7 +346,7 @@ export function RhRequestDecisionPage() {
 
           {canDecide ? (
             <>
-              {request.decisionAccess?.kind !== 'RH_FINALISATION' && (
+              {request.decisionAccess?.kind === 'DIRECTEUR_RH' && (
                 <label
                   className={`manager-request-actions-card__agreement${directorAgreementConfirmed ? ' is-checked' : ''}`}
                 >

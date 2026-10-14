@@ -1,6 +1,16 @@
 import { useEffect, useMemo, useState } from 'react'
 
 import { getMyPreferences } from '@/services/profile'
+import { changeLeaveBoundaryPeriod, selectLeaveDate } from '@/utils/leaveDateSelection'
+import {
+  addIsoDays,
+  findSelectionConflict,
+  formatConflictMessage,
+  occupancyForDate,
+  occupancyLabel,
+} from '@/utils/occupiedPeriods'
+import { formatDateNumericFR } from '@/utils/format'
+import { unlockDateForIsoDate } from '@/utils/referencePeriods'
 
 const WEEKDAY_LABELS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
 
@@ -117,6 +127,46 @@ function selectionTimingLabel({ startDate, endDate, startPeriod, endPeriod }) {
   return `Du ${formatCalendarDate(startDate)} (${departure}) au ${formatCalendarDate(endDate)} (${returnPeriod})`
 }
 
+function finalizationConflict(candidate, occupiedPeriods, allowsHalfDays) {
+  if (!candidate.startDate || !candidate.endDate) return null
+  if (!occupiedPeriods?.length) return null
+
+  if (!allowsHalfDays) {
+    return findSelectionConflict({
+      startDate: candidate.startDate,
+      endDate: candidate.endDate,
+      startPeriod: candidate.startPeriod,
+      endPeriod: candidate.endPeriod,
+      periods: occupiedPeriods,
+    })
+  }
+
+  // En demi-journée, les bornes seront précisées par le popover : seuls les
+  // jours intermédiaires (journées complètes) sont définitivement fixés lors
+  // de la finalisation.
+  const start =
+    candidate.startDate < candidate.endDate
+      ? candidate.startDate
+      : candidate.endDate
+  const end =
+    candidate.startDate > candidate.endDate
+      ? candidate.startDate
+      : candidate.endDate
+
+  for (let date = addIsoDays(start, 1); date < end; date = addIsoDays(date, 1)) {
+    const occ = occupancyForDate(occupiedPeriods, date)
+    if (occ.am || occ.pm) {
+      return {
+        date,
+        slot: occ.am ? 'MATIN' : 'APRES_MIDI',
+        period: occ.am ?? occ.pm,
+      }
+    }
+  }
+
+  return null
+}
+
 export function LeaveCalendar({
   months,
   todayIso,
@@ -130,6 +180,10 @@ export function LeaveCalendar({
   blockNonDeductibleDates = true,
   singleSelection = false,
   restartSelectionOnSelectedRange = false,
+  occupiedPeriods = [],
+  onBlockedMessage,
+  maxSelectableDate = null,
+  periodStart = '06-01',
 }) {
   const { startDate, endDate, startPeriod, endPeriod } = selection ?? {}
   const [selectionEmojis, setSelectionEmojis] = useState({ startEmoji: '😊', endEmoji: '😔' })
@@ -205,14 +259,37 @@ export function LeaveCalendar({
 
   const isSingle = Boolean(rangeStart && rangeEnd && rangeStart === rangeEnd)
 
+  const occupancyOf = (iso) => occupancyForDate(occupiedPeriods, iso)
+
+  const isBeyondLimit = (iso) =>
+    Boolean(maxSelectableDate && iso > maxSelectableDate)
+
   const isBlockedDate = (iso, inMonth) => {
     if (!inMonth) {
       return true
     }
-    if (!blockNonDeductibleDates) return false
-    const date = parseISODate(iso)
-    const holiday = holidayMap.get(iso)
-    return date.getUTCDay() === 0 || Boolean(holiday && holiday.deductible === false)
+
+    if (isBeyondLimit(iso)) {
+      return true
+    }
+
+    if (blockNonDeductibleDates) {
+      const date = parseISODate(iso)
+      const holiday = holidayMap.get(iso)
+      if (
+        date.getUTCDay() === 0 ||
+        Boolean(holiday && holiday.deductible === false)
+      ) {
+        return true
+      }
+    }
+
+    const occ = occupancyOf(iso)
+    if (allowsHalfDays) {
+      // Une date n'est totalement bloquée que si ses deux créneaux sont pris.
+      return Boolean(occ.am && occ.pm)
+    }
+    return Boolean(occ.am || occ.pm)
   }
 
   const handleDayClick = (iso, inMonth) => {
@@ -225,6 +302,20 @@ export function LeaveCalendar({
       setPeriodPopoverAnchor(null)
       setPeriodPopoverMode(null)
       return
+    }
+
+    // Validation anti-chevauchement lors de la finalisation d'une sélection.
+    const candidate = selectLeaveDate(selection, iso)
+    if (candidate.startDate && candidate.endDate) {
+      const conflict = finalizationConflict(
+        candidate,
+        occupiedPeriods,
+        allowsHalfDays,
+      )
+      if (conflict) {
+        onBlockedMessage?.(formatConflictMessage(conflict))
+        return
+      }
     }
 
     // En mode édition, une ancienne sélection est affichée mais le calendrier
@@ -303,6 +394,21 @@ export function LeaveCalendar({
   }
 
   const handlePeriodChoice = (change) => {
+    const candidate = changeLeaveBoundaryPeriod(selection, change)
+    if (candidate.startDate && candidate.endDate && occupiedPeriods?.length) {
+      const conflict = findSelectionConflict({
+        startDate: candidate.startDate,
+        endDate: candidate.endDate,
+        startPeriod: candidate.startPeriod,
+        endPeriod: candidate.endPeriod,
+        periods: occupiedPeriods,
+      })
+      if (conflict) {
+        onBlockedMessage?.(formatConflictMessage(conflict))
+        return
+      }
+    }
+
     onBoundaryPeriodChange?.(change)
     // Une fois le choix fait, on libère le calendrier pour l'étape suivante.
     setPeriodPopoverAnchor(null)
@@ -340,6 +446,10 @@ export function LeaveCalendar({
     setHoverInfo(null)
   }
 
+  const popoverOcc = periodPopoverAnchor
+    ? occupancyOf(periodPopoverAnchor)
+    : { am: null, pm: null }
+
   return (
     <div className="nr-cal">
       <div className="nr-cal__body">
@@ -375,6 +485,39 @@ export function LeaveCalendar({
                     const isClosure = holiday?.holidayType === 'FERMETURE_GMES'
                     const isHoliday = Boolean(holiday && !isClosure)
                     const isBlocked = isBlockedDate(iso, cell.inMonth)
+                    const beyondLimit = Boolean(cell.inMonth && isBeyondLimit(iso))
+                    const occ = cell.inMonth
+                      ? occupancyOf(iso)
+                      : { am: null, pm: null }
+                    const occFull = Boolean(occ.am && occ.pm)
+                    const occAm = Boolean(occ.am && !occ.pm)
+                    const occPm = Boolean(occ.pm && !occ.am)
+                    const occTone = occFull
+                      ? occ.am.tone === occ.pm.tone ? occ.am.tone : 'pending'
+                      : occAm
+                        ? occ.am.tone
+                        : occPm
+                          ? occ.pm.tone
+                          : null
+
+                    const occTitle = (() => {
+                      if (!cell.inMonth) return ''
+                      const am = occupancyLabel(occ.am)
+                      const pm = occupancyLabel(occ.pm)
+                      if (occ.am && occ.pm && occ.am.key === occ.pm.key) {
+                        return am
+                      }
+                      if (occ.am && occ.pm) {
+                        return `${am} · ${pm}`
+                      }
+                      if (occ.am) return `Matin — ${am}`
+                      if (occ.pm) return `Après-midi — ${pm}`
+                      return ''
+                    })()
+
+                    const beyondLimitTitle = beyondLimit
+                      ? `Cette date dépasse la période N+1 actuellement autorisée. Elle sera accessible à partir du ${formatDateNumericFR(unlockDateForIsoDate(iso, periodStart))}.`
+                      : ''
                     const isStart = Boolean(rangeStart && iso === rangeStart)
                     const isEnd = Boolean(rangeEnd && iso === rangeEnd)
                     const single = isStart && isSingle
@@ -432,6 +575,11 @@ export function LeaveCalendar({
                       isStart ? 'nr-cal__cell--start' : '',
                       isEnd ? 'nr-cal__cell--end' : '',
                       single ? 'nr-cal__cell--single' : '',
+                      isBlocked ? 'nr-cal__cell--blocked' : '',
+                      beyondLimit ? 'nr-cal__cell--beyond-limit' : '',
+                      occFull ? `nr-cal__cell--occupied nr-cal__cell--tone-${occTone}` : '',
+                      occAm ? `nr-cal__cell--occ-am nr-cal__cell--tone-${occTone}` : '',
+                      occPm ? `nr-cal__cell--occ-pm nr-cal__cell--tone-${occTone}` : '',
                     ]
                       .filter(Boolean)
                       .join(' ')
@@ -444,8 +592,9 @@ export function LeaveCalendar({
                         onClick={() => handleDayClick(iso, cell.inMonth)}
                         onMouseEnter={() => handleDayEnter(iso, cell.inMonth, holiday)}
                         onMouseLeave={handleDayLeave}
-                        title={holiday ? `${iso} — ${holiday.name}` : undefined}
-                        disabled={isBlocked}
+                        title={beyondLimitTitle || occTitle || (holiday ? `${iso} — ${holiday.name}` : undefined)}
+                        aria-disabled={isBlocked}
+                        tabIndex={isBlocked ? -1 : 0}
                         aria-label={holiday ? `${iso}, ${holiday.name}` : iso}
                       >
                         {showLeftBand && <span className="nr-cal__band nr-cal__band--left" />}
@@ -535,6 +684,7 @@ export function LeaveCalendar({
                                 type="button"
                                 className={currentBoundaryValue('single') === 'FULL_DAY' ? 'is-active' : ''}
                                 aria-pressed={currentBoundaryValue('single') === 'FULL_DAY'}
+                                disabled={Boolean(popoverOcc.am || popoverOcc.pm)}
                                 onClick={() => handlePeriodChoice({ boundary: 'single', value: 'FULL_DAY' })}
                               >
                                 Journée entière
@@ -543,6 +693,7 @@ export function LeaveCalendar({
                                 type="button"
                                 className={currentBoundaryValue('single') === 'MATIN' ? 'is-active' : ''}
                                 aria-pressed={currentBoundaryValue('single') === 'MATIN'}
+                                disabled={Boolean(popoverOcc.am)}
                                 onClick={() => handlePeriodChoice({ boundary: 'single', value: 'MATIN' })}
                               >
                                 Matin
@@ -551,6 +702,7 @@ export function LeaveCalendar({
                                 type="button"
                                 className={currentBoundaryValue('single') === 'APRES_MIDI' ? 'is-active' : ''}
                                 aria-pressed={currentBoundaryValue('single') === 'APRES_MIDI'}
+                                disabled={Boolean(popoverOcc.pm)}
                                 onClick={() => handlePeriodChoice({ boundary: 'single', value: 'APRES_MIDI' })}
                               >
                                 Après-midi
@@ -562,6 +714,7 @@ export function LeaveCalendar({
                                 type="button"
                                 className={currentBoundaryValue(periodPopoverMode === 'departure' ? 'start' : 'end') === 'MATIN' ? 'is-active' : ''}
                                 aria-pressed={currentBoundaryValue(periodPopoverMode === 'departure' ? 'start' : 'end') === 'MATIN'}
+                                disabled={Boolean(popoverOcc.am)}
                                 onClick={() => handlePeriodChoice({ boundary: periodPopoverMode === 'departure' ? 'start' : 'end', value: 'MATIN' })}
                               >
                                 Matin
@@ -570,6 +723,7 @@ export function LeaveCalendar({
                                 type="button"
                                 className={currentBoundaryValue(periodPopoverMode === 'departure' ? 'start' : 'end') === 'APRES_MIDI' ? 'is-active' : ''}
                                 aria-pressed={currentBoundaryValue(periodPopoverMode === 'departure' ? 'start' : 'end') === 'APRES_MIDI'}
+                                disabled={Boolean(popoverOcc.pm)}
                                 onClick={() => handlePeriodChoice({ boundary: periodPopoverMode === 'departure' ? 'start' : 'end', value: 'APRES_MIDI' })}
                               >
                                 Après-midi
@@ -632,7 +786,26 @@ export function LeaveCalendar({
         <span className="nr-cal__legend-item">
           <i className="nr-cal__legend-dot nr-cal__legend-dot--closure" /> Fermeture GMES
         </span>
+        <span className="nr-cal__legend-item">
+          <i className="nr-cal__legend-dot nr-cal__legend-dot--draft" /> Brouillon
+        </span>
+        <span className="nr-cal__legend-item">
+          <i className="nr-cal__legend-dot nr-cal__legend-dot--pending" /> En attente
+        </span>
+        <span className="nr-cal__legend-item">
+          <i className="nr-cal__legend-dot nr-cal__legend-dot--validated" /> Validé
+        </span>
+        <span className="nr-cal__legend-item">
+          <i className="nr-cal__legend-dot nr-cal__legend-dot--absence" /> Absence
+        </span>
       </div>
+
+      {maxSelectableDate && (
+        <p className="nr-cal__limit-note">
+          Les demandes peuvent être planifiées jusqu’à la fin de la période
+          N+1, soit le {formatDateNumericFR(maxSelectableDate)}.
+        </p>
+      )}
     </div>
   )
 }

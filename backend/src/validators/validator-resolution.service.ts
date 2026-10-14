@@ -14,6 +14,10 @@ import {
 
 import type { AuthenticatedUser } from '../auth/jwt-payload.interface';
 import {
+  Derogation,
+  DerogationStatus,
+} from '../derogations/derogation.entity';
+import {
   LeaveRequestStatus,
   type LeaveRequest,
 } from '../leave-requests/leave-request.entity';
@@ -43,7 +47,10 @@ export type DecisionAccessKind =
   | 'URGENCE'
   | 'REMPLACEMENT'
   | 'SECOURS'
-  | 'RH_FINALISATION';
+  | 'RH_FINALISATION'
+  | 'RH_PREMIERE_VALIDATION'
+  | 'DIRECTEUR_FINALISATION'
+  | 'RESPONSABLE_FINALISATION';
 
 export interface DecisionAccess {
   kind: DecisionAccessKind;
@@ -58,11 +65,24 @@ export type ValidationTreatmentKind =
   | 'DIRECTEUR_RH'
   | 'DIRECTEUR_SEUL'
   | 'SANS_VALIDATION'
-  | 'RH_FINALISATION';
+  | 'RH_FINALISATION'
+  | 'RH_DIRECTEUR'
+  | 'RH_RESPONSABLE';
 
 export interface ValidationTreatment {
   kind: ValidationTreatmentKind;
   reason: string | null;
+}
+
+export type LeaveRequestCircuitKind =
+  | 'RH_DIRECTEUR'
+  | 'RESPONSABLE_RH'
+  | 'RH_RESPONSABLE';
+
+export interface LeaveRequestCircuit {
+  kind: LeaveRequestCircuitKind;
+  firstLevelRole: UserRole;
+  secondLevelRole: UserRole;
 }
 
 export interface ValidatorResolution {
@@ -110,8 +130,116 @@ export class ValidatorResolutionService {
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
 
+    @InjectRepository(Derogation)
+    private readonly derogationRepository: Repository<Derogation>,
+
     private readonly presenceService: PresenceService,
   ) {}
+
+  async resolveCircuit(
+    leaveRequest: LeaveRequest,
+    options: ResolutionOptions = {},
+  ): Promise<LeaveRequestCircuit | null> {
+    if (
+      !leaveRequest.service ||
+      leaveRequest.employee.role !== UserRole.COLLABORATEUR ||
+      leaveRequest.service.serviceType === ServiceType.EXTERNE
+    ) {
+      return null;
+    }
+
+    // Pour un collaborateur GMES interne, les quatre règles validées
+    // priment sur tout ancien mode : aucun mode DIRECTEUR_SEUL ou
+    // SANS_VALIDATION ne doit permettre de contourner l'ordre RH → Directeur
+    // ou Responsable → RH / RH → Responsable.
+    const hasResponsible = await this.hasResponsibleManager(
+      leaveRequest,
+      options,
+    );
+    const hasDerogation = await this.hasActiveDerogation(
+      leaveRequest,
+      options,
+    );
+
+    if (hasResponsible) {
+      return hasDerogation
+        ? {
+            kind: 'RH_RESPONSABLE',
+            firstLevelRole: UserRole.RH,
+            secondLevelRole: UserRole.RESPONSABLE_SERVICE,
+          }
+        : {
+            kind: 'RESPONSABLE_RH',
+            firstLevelRole: UserRole.RESPONSABLE_SERVICE,
+            secondLevelRole: UserRole.RH,
+          };
+    }
+
+    return {
+      kind: 'RH_DIRECTEUR',
+      firstLevelRole: UserRole.RH,
+      secondLevelRole: UserRole.DIRECTEUR,
+    };
+  }
+
+  private async hasResponsibleManager(
+    leaveRequest: LeaveRequest,
+    options: ResolutionOptions = {},
+  ): Promise<boolean> {
+    if (!leaveRequest.service) {
+      return false;
+    }
+
+    const resolution = await this.buildResolution(
+      leaveRequest,
+      options,
+    );
+
+    return Boolean(
+      resolution.firstLevelId !== null &&
+        resolution.firstLevelEligible &&
+        resolution.firstLevelBelongsToService,
+    );
+  }
+
+  private async hasActiveDerogation(
+    leaveRequest: LeaveRequest,
+    options: ResolutionOptions = {},
+  ): Promise<boolean> {
+    const manager = options.manager;
+    const repository = manager
+      ? manager.getRepository(Derogation)
+      : this.derogationRepository;
+
+    const derogation = await repository.findOne({
+      where: { leaveRequestId: leaveRequest.id },
+    });
+
+    if (!derogation) {
+      return false;
+    }
+
+    return [
+      DerogationStatus.EN_ATTENTE_RH,
+      DerogationStatus.ACCORDEE,
+      DerogationStatus.UTILISEE,
+    ].includes(derogation.status);
+  }
+
+  private async getActiveUsersByRole(
+    role: UserRole,
+    options: ResolutionOptions = {},
+  ): Promise<number[]> {
+    const manager = options.manager;
+    const repository = manager
+      ? manager.getRepository(User)
+      : this.userRepository;
+    const users = await repository.find({
+      where: { role, isActive: true },
+      select: { id: true },
+    });
+    return users.map((user) => user.id);
+  }
 
   async buildResolution(
     leaveRequest: LeaveRequest,
@@ -271,6 +399,18 @@ export class ValidatorResolutionService {
       leaveRequest.status === LeaveRequestStatus.EN_ATTENTE_VALIDATION &&
       leaveRequest.finalDeciderId !== null
     ) {
+      const circuit = await this.resolveCircuit(
+        leaveRequest,
+        options,
+      );
+      if (circuit) {
+        return this.getSecondLevelRecipientIds(
+          leaveRequest,
+          circuit,
+          options,
+        );
+      }
+
       const rhUsers = await userRepository.find({
         where: { role: UserRole.RH, isActive: true },
         select: { id: true },
@@ -299,35 +439,22 @@ export class ValidatorResolutionService {
         .filter((userId) => userId !== leaveRequest.employeeId);
     }
 
+    const circuit = await this.resolveCircuit(
+      leaveRequest,
+      options,
+    );
+    if (circuit) {
+      return this.getFirstLevelRecipientIds(
+        leaveRequest,
+        circuit,
+        options,
+      );
+    }
+
     if (
       service.validationMode === ValidationMode.RESPONSABLE_PUIS_RELAIS
     ) {
-      const resolution = await this.buildResolution(
-        leaveRequest,
-        options,
-      );
-      if (
-        resolution.firstLevelId !== null &&
-        resolution.firstLevelEligible &&
-        resolution.firstLevelPresent &&
-        !resolution.delayExpired
-      ) {
-        return [resolution.firstLevelId];
-      }
-      const recipientIds = new Set<number>(
-        resolution.backupValidatorIds,
-      );
-      const directors = await userRepository.find({
-        where: {
-          role: UserRole.DIRECTEUR,
-          isActive: true,
-        },
-        select: { id: true },
-      });
-      for (const director of directors) {
-        recipientIds.add(director.id);
-      }
-      return [...recipientIds];
+      return this.getManagerRecipientIds(leaveRequest, options);
     }
 
     if (service.validationMode === ValidationMode.DIRECTEUR_SEUL) {
@@ -349,6 +476,96 @@ export class ValidatorResolutionService {
     return validators.map((user) => user.id);
   }
 
+  private async getManagerRecipientIds(
+    leaveRequest: LeaveRequest,
+    options: ResolutionOptions = {},
+  ): Promise<number[]> {
+    const manager = options.manager;
+    const userRepository = manager
+      ? manager.getRepository(User)
+      : this.userRepository;
+    const resolution = await this.buildResolution(
+      leaveRequest,
+      options,
+    );
+    if (
+      resolution.firstLevelId !== null &&
+      resolution.firstLevelEligible &&
+      resolution.firstLevelPresent &&
+      !resolution.delayExpired
+    ) {
+      return [resolution.firstLevelId];
+    }
+    const recipientIds = new Set<number>(
+      resolution.backupValidatorIds,
+    );
+    const directors = await userRepository.find({
+      where: {
+        role: UserRole.DIRECTEUR,
+        isActive: true,
+      },
+      select: { id: true },
+    });
+    for (const director of directors) {
+      recipientIds.add(director.id);
+    }
+    return [...recipientIds];
+  }
+
+  private async getResponsableRecipientIds(
+    leaveRequest: LeaveRequest,
+    options: ResolutionOptions = {},
+  ): Promise<number[]> {
+    const resolution = await this.buildResolution(
+      leaveRequest,
+      options,
+    );
+    if (
+      resolution.firstLevelId !== null &&
+      resolution.firstLevelEligible &&
+      resolution.firstLevelPresent &&
+      !resolution.delayExpired
+    ) {
+      return [resolution.firstLevelId];
+    }
+    return [...resolution.backupValidatorIds];
+  }
+
+  private async getFirstLevelRecipientIds(
+    leaveRequest: LeaveRequest,
+    circuit: LeaveRequestCircuit,
+    options: ResolutionOptions = {},
+  ): Promise<number[]> {
+    switch (circuit.kind) {
+      case 'RH_DIRECTEUR':
+      case 'RH_RESPONSABLE':
+        return this.getActiveUsersByRole(UserRole.RH, options);
+      case 'RESPONSABLE_RH':
+        return this.getManagerRecipientIds(
+          leaveRequest,
+          options,
+        );
+    }
+  }
+
+  private async getSecondLevelRecipientIds(
+    leaveRequest: LeaveRequest,
+    circuit: LeaveRequestCircuit,
+    options: ResolutionOptions = {},
+  ): Promise<number[]> {
+    switch (circuit.kind) {
+      case 'RH_DIRECTEUR':
+        return this.getActiveUsersByRole(UserRole.DIRECTEUR, options);
+      case 'RESPONSABLE_RH':
+        return this.getActiveUsersByRole(UserRole.RH, options);
+      case 'RH_RESPONSABLE':
+        return this.getResponsableRecipientIds(
+          leaveRequest,
+          options,
+        );
+    }
+  }
+
   async describeTreatment(
     leaveRequest: LeaveRequest,
     options: ResolutionOptions = {},
@@ -365,6 +582,16 @@ export class ValidatorResolutionService {
       leaveRequest.status === LeaveRequestStatus.EN_ATTENTE_VALIDATION &&
       leaveRequest.finalDeciderId !== null
     ) {
+      const circuit = await this.resolveCircuit(
+        leaveRequest,
+        options,
+      );
+      if (circuit?.kind === 'RH_DIRECTEUR') {
+        return { kind: 'RH_DIRECTEUR', reason: null };
+      }
+      if (circuit?.kind === 'RH_RESPONSABLE') {
+        return { kind: 'RH_RESPONSABLE', reason: null };
+      }
       return { kind: 'RH_FINALISATION', reason: null };
     }
 
@@ -378,6 +605,17 @@ export class ValidatorResolutionService {
 
     if (leaveRequest.service.serviceType === ServiceType.EXTERNE) {
       return { kind: 'DIRECTEUR_RH', reason: null };
+    }
+
+    const circuit = await this.resolveCircuit(
+      leaveRequest,
+      options,
+    );
+    if (circuit?.kind === 'RH_DIRECTEUR') {
+      return { kind: 'RH_DIRECTEUR', reason: null };
+    }
+    if (circuit?.kind === 'RH_RESPONSABLE') {
+      return { kind: 'RH_RESPONSABLE', reason: null };
     }
 
     switch (leaveRequest.service.validationMode) {
@@ -459,6 +697,19 @@ export class ValidatorResolutionService {
       leaveRequest.status === LeaveRequestStatus.EN_ATTENTE_VALIDATION &&
       leaveRequest.finalDeciderId !== null
     ) {
+      const circuit = await this.resolveCircuit(
+        leaveRequest,
+        options,
+      );
+      if (circuit) {
+        return this.resolveSecondLevelAccess(
+          leaveRequest,
+          authenticatedUser,
+          circuit,
+          options,
+        );
+      }
+
       if (authenticatedUser.role !== UserRole.RH) {
         throw new ForbiddenException(
           'Cette demande a déjà été validée au premier niveau et doit maintenant être finalisée par la RH.',
@@ -518,6 +769,19 @@ export class ValidatorResolutionService {
       };
     }
 
+    const circuit = await this.resolveCircuit(
+      leaveRequest,
+      options,
+    );
+    if (circuit) {
+      return this.resolveFirstLevelAccess(
+        leaveRequest,
+        authenticatedUser,
+        circuit,
+        options,
+      );
+    }
+
     switch (leaveRequest.service.validationMode) {
       case ValidationMode.DIRECTEUR_ET_RH:
         if (
@@ -575,10 +839,35 @@ export class ValidatorResolutionService {
         'Le service de cette demande a été supprimé. Cette demande ne peut plus être traitée.',
       );
     }
+
+    const circuit = await this.resolveCircuit(
+      leaveRequest,
+      options,
+    );
+
     if (
       leaveRequest.status === LeaveRequestStatus.EN_ATTENTE_VALIDATION &&
       leaveRequest.finalDeciderId !== null
     ) {
+      if (circuit?.kind === 'RH_RESPONSABLE') {
+        const resolution = await this.buildResolution(
+          leaveRequest,
+          options,
+        );
+        if (
+          resolution.firstLevelId === userId &&
+          resolution.firstLevelEligible
+        ) {
+          return true;
+        }
+        return resolution.backupValidatorIds.includes(userId);
+      }
+      return false;
+    }
+
+    // Premier niveau avec dérogation : la RH traite la dérogation en premier,
+    // le Responsable n'intervient qu'au second niveau.
+    if (circuit?.kind === 'RH_RESPONSABLE') {
       return false;
     }
 
@@ -614,6 +903,94 @@ export class ValidatorResolutionService {
     return (
       relayOpen && resolution.backupValidatorIds.includes(userId)
     );
+  }
+
+  private async resolveFirstLevelAccess(
+    leaveRequest: LeaveRequest,
+    authenticatedUser: AuthenticatedUser,
+    circuit: LeaveRequestCircuit,
+    options: ResolutionOptions,
+  ): Promise<DecisionAccess> {
+    switch (circuit.kind) {
+      case 'RH_DIRECTEUR':
+      case 'RH_RESPONSABLE':
+        if (authenticatedUser.role !== UserRole.RH) {
+          throw new ForbiddenException(
+            'Cette demande doit d’abord être traitée par la RH.',
+          );
+        }
+        return {
+          kind: 'RH_PREMIERE_VALIDATION',
+          reason: null,
+        };
+
+      case 'RESPONSABLE_RH':
+        return this.resolveManagerFirstAccess(
+          leaveRequest,
+          authenticatedUser,
+          options,
+        );
+    }
+  }
+
+  private async resolveSecondLevelAccess(
+    leaveRequest: LeaveRequest,
+    authenticatedUser: AuthenticatedUser,
+    circuit: LeaveRequestCircuit,
+    options: ResolutionOptions,
+  ): Promise<DecisionAccess> {
+    switch (circuit.kind) {
+      case 'RH_DIRECTEUR':
+        if (authenticatedUser.role !== UserRole.DIRECTEUR) {
+          throw new ForbiddenException(
+            'Cette demande doit maintenant être finalisée par le Directeur.',
+          );
+        }
+        return {
+          kind: 'DIRECTEUR_FINALISATION',
+          reason: null,
+        };
+
+      case 'RESPONSABLE_RH':
+        if (authenticatedUser.role !== UserRole.RH) {
+          throw new ForbiddenException(
+            'Cette demande doit maintenant être finalisée par la RH.',
+          );
+        }
+        return {
+          kind: 'RH_FINALISATION',
+          reason: null,
+        };
+
+      case 'RH_RESPONSABLE': {
+        const resolution = await this.buildResolution(
+          leaveRequest,
+          options,
+        );
+        if (
+          resolution.firstLevelId === authenticatedUser.id &&
+          resolution.firstLevelEligible
+        ) {
+          return {
+            kind: 'RESPONSABLE_FINALISATION',
+            reason: null,
+          };
+        }
+        if (
+          resolution.backupValidatorIds.includes(
+            authenticatedUser.id,
+          )
+        ) {
+          return {
+            kind: 'SECOURS',
+            reason: 'Le Responsable principal est indisponible.',
+          };
+        }
+        throw new ForbiddenException(
+          'Cette demande doit être finalisée par le Responsable du service.',
+        );
+      }
+    }
   }
 
   private async resolveManagerFirstAccess(

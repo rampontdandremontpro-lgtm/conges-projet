@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { createHash } from 'node:crypto';
 import { EntityManager, Repository } from 'typeorm';
 
 import { AuditQueryDto } from './dto/audit-query.dto';
@@ -93,7 +94,7 @@ export class AuditService {
     const collaboratorByResource = await this.resolveCollaborators(logs);
 
     return logs.map((log) => ({
-      ...log,
+      ...this.sanitizeSignatures(log),
       collaborator:
         log.resourceId === null
           ? null
@@ -144,7 +145,42 @@ export class AuditService {
       });
     }
 
-    return qb.getMany();
+    return (await qb.getMany()).map((log) =>
+      this.sanitizeSignatures(log),
+    );
+  }
+
+  private sanitizeSignatures(log: AuditLog): AuditLog {
+    if (!log.newValue) {
+      return log;
+    }
+
+    const sanitized = this.redactSignatureData(log.newValue);
+    return Object.assign(log, { newValue: sanitized });
+  }
+
+  private redactSignatureData(value: unknown): unknown {
+    if (Array.isArray(value)) {
+      return value.map((item) => this.redactSignatureData(item));
+    }
+
+    if (value !== null && typeof value === 'object') {
+      const record = value as Record<string, unknown>;
+      const result: Record<string, unknown> = {};
+      for (const [key, item] of Object.entries(record)) {
+        if (/SignatureData$/i.test(key) && typeof item === 'string') {
+          const hash = createHash('sha256')
+            .update(item)
+            .digest('hex');
+          result[key] = `[REDACTED:sha256=${hash}]`;
+        } else {
+          result[key] = this.redactSignatureData(item);
+        }
+      }
+      return result;
+    }
+
+    return value;
   }
 
   private applyQueryFilters(qb: any, query: AuditQueryDto): void {

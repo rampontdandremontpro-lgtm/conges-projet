@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { getEmployeeLeavePeriodSummaries, getMyLeavePeriodSummaries, getPublicSettings } from '@/services/collab/dashboard'
+import { getMyAbsenceDeclarations, getMyLeaveRequests } from '@/services/collab/myRequests'
 import {
   getHolidays,
   getLeaveTypes,
   getMyDerogations,
   getSeasonalPeriod,
 } from '@/services/leaveRequests'
+import { buildOccupiedPeriods } from '@/utils/occupiedPeriods'
 import { todayISO } from '@/utils/format'
 import { settingsMap } from '@/utils/newRequest'
 
@@ -19,6 +21,7 @@ const INITIAL_RESOURCES = {
   settings: null,
   seasonal: null,
   derogations: [],
+  occupiedPeriods: [],
 }
 
 export function useNewRequestResources(months, setSelection, options = {}) {
@@ -56,13 +59,17 @@ export function useNewRequestResources(months, setSelection, options = {}) {
         ? getEmployeeLeavePeriodSummaries(balanceEmployeeId)
         : getMyLeavePeriodSummaries()
     const derogationsPromise = includeDerogations ? getMyDerogations() : Promise.resolve([])
+    const ownOccupancyPromise = balanceEmployeeId === undefined
+      ? Promise.all([getMyLeaveRequests(), getMyAbsenceDeclarations()])
+      : Promise.resolve([[], []])
 
-    const [leaveTypes, settings, seasonal, derogations, periodSummaries] = await Promise.all([
+    const [leaveTypes, settings, seasonal, derogations, periodSummaries, ownOccupancy] = await Promise.all([
       getLeaveTypes(),
       getPublicSettings(),
       getSeasonalPeriod(),
       derogationsPromise,
       summaryPromise,
+      ownOccupancyPromise,
     ])
     const filtered = leaveTypes.filter((type) => {
       const normalizedName = String(type.name ?? '')
@@ -79,12 +86,18 @@ export function useNewRequestResources(months, setSelection, options = {}) {
         normalizedName !== 'conge'
       )
     })
+    const [myLeaveRequests, myAbsenceDeclarations] = ownOccupancy
+
     return {
       leaveTypes: filtered,
       periodSummaries,
       settings: settingsMap(settings),
       seasonal,
       derogations,
+      occupiedPeriods: buildOccupiedPeriods({
+        leaveRequests: myLeaveRequests,
+        absenceDeclarations: myAbsenceDeclarations,
+      }),
     }
   }, [balanceEmployeeId, includeDerogations])
 
@@ -151,6 +164,35 @@ export function useNewRequestResources(months, setSelection, options = {}) {
         setResources((previous) => ({ ...previous, loading: false, error: true })),
       )
   }, [fetchAll, setSelection])
+
+  // Rafraîchit les dates occupées après une action (suppression, refus,
+  // annulation) et lors du retour sur la fenêtre, sans rechargement manuel.
+  useEffect(() => {
+    if (balanceEmployeeId !== undefined) return undefined
+
+    const refreshOccupancy = () => {
+      Promise.all([getMyLeaveRequests(), getMyAbsenceDeclarations()])
+        .then(([leaveRequests, absenceDeclarations]) => {
+          setResources((previous) => ({
+            ...previous,
+            occupiedPeriods: buildOccupiedPeriods({
+              leaveRequests,
+              absenceDeclarations,
+            }),
+          }))
+        })
+        .catch(() => {})
+    }
+
+    window.addEventListener('gmes:data-changed', refreshOccupancy)
+    window.addEventListener('focus', refreshOccupancy)
+    document.addEventListener('visibilitychange', refreshOccupancy)
+    return () => {
+      window.removeEventListener('gmes:data-changed', refreshOccupancy)
+      window.removeEventListener('focus', refreshOccupancy)
+      document.removeEventListener('visibilitychange', refreshOccupancy)
+    }
+  }, [balanceEmployeeId])
 
   useEffect(() => {
     const years = [...new Set([months[0].year, months[1].year, months[1].year + 1])]

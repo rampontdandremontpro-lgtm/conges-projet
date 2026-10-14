@@ -343,7 +343,7 @@ describe('AbsenceDeclarationsService — un seul mode (jours / heures)', () => {
   });
 
   describe('autorisation — opérations de déclaration réservées à la RH', () => {
-    const nonRhUsers = [
+    const nonRhUsers: Array<[string, never]> = [
       ['COLLABORATEUR', collaboratorUser],
       ['RESPONSABLE_SERVICE', { id: 3, role: 'RESPONSABLE_SERVICE' } as never],
       ['DIRECTEUR', { id: 4, role: 'DIRECTEUR' } as never],

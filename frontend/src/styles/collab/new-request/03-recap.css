@@ -1,9 +1,59 @@
-
 .nr-recap__rights-titleline { display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; }
-.nr-anticipated-badge { display:inline-flex; align-items:center; min-height:27px; padding:5px 10px; border:1px solid #f0b56f; border-radius:999px; background:#fff2df; color:#9b4a0d; font-size:10.5px; font-weight:950; letter-spacing:.02em; }
-.nr-anticipated-panel { display:grid; grid-template-columns:36px minmax(0,1fr); align-items:start; gap:10px; margin:10px 0 12px; padding:13px 12px; border:1px solid #efb56c; border-radius:13px; background:linear-gradient(135deg,#fff8ed 0%,#ffefd8 100%); box-shadow:0 5px 14px rgba(169,83,18,.10); color:#704318; }
-.nr-anticipated-panel__icon { display:grid; width:36px; height:36px; place-items:center; border-radius:11px; background:#f47521; color:#fff; box-shadow:0 4px 10px rgba(244,117,33,.22); }
-.nr-anticipated-panel__content { display:flex; min-width:0; flex-direction:column; gap:4px; }
-.nr-anticipated-panel strong { color:#823f0e; font-size:12.2px; font-weight:950; line-height:1.2; }
-.nr-anticipated-panel small { color:#795b3d; font-size:10.7px; font-weight:650; line-height:1.48; }
+
+.nr-anticipated-badge { display:inline-flex; align-items:center; min-height:24px; padding:3px 9px; border:1px solid #d7e5f6; border-radius:999px; background:#f1f6fd; color:#2b5f9e; font-size:10.5px; font-weight:800; letter-spacing:.02em; }
+
+/* Encart compact « Congé anticipé ». */
+.nr-anticipated-panel {
+  margin: 8px 0 10px;
+  padding: 10px 12px;
+  border: 1px solid #d7e5f6;
+  border-radius: 10px;
+  background: #f1f6fd;
+}
+
+.nr-anticipated-panel__head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+.nr-anticipated-panel__icon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  color: #2f6cb5;
+}
+
+.nr-anticipated-panel__head strong {
+  flex: 1;
+  min-width: 0;
+  color: #1d4f86;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.nr-anticipated-panel__badge {
+  flex: 0 0 auto;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #dbeafe;
+  color: #1e5aa8;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: .02em;
+}
+
+.nr-anticipated-panel__text {
+  margin: 6px 0 0;
+  color: #5b7290;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
 .nr-negative-balance-warning { display:flex; align-items:flex-start; gap:8px; margin:10px 0 0; padding:10px 11px; border-radius:11px; background:#fff0f1; color:#a52a2a; font-size:10.5px; font-weight:750; line-height:1.4; }

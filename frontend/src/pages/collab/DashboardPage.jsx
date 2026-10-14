@@ -6,11 +6,10 @@ import { ProductionPhaseInfoPopup } from '@/components/collab/ProductionPhaseInf
 import { LeaveBalanceCard } from '@/components/collab/dashboard/LeaveBalanceCard'
 import { NextLeaveCard } from '@/components/collab/dashboard/NextLeaveCard'
 import { RecentRequestsCard } from '@/components/collab/dashboard/RecentRequestsCard'
-import { PlanLeaveCard } from '@/components/collab/dashboard/PlanLeaveCard'
 import { AlertsCard } from '@/components/collab/dashboard/AlertsCard'
 import { getMyLeavePeriodSummaries, getMyLeaveRequests, getPublicSettings } from '@/services/collab/dashboard'
 import { todayISO } from '@/utils/format'
-import { adjacentReferencePeriodOptions, counterReferencePeriod, currentReferencePeriod, formatReferencePeriodRange } from '@/utils/referencePeriods'
+import { adjacentReferencePeriodOptions, counterReferencePeriod, currentReferencePeriod } from '@/utils/referencePeriods'
 
 import '@/styles/collab/dashboard/index.css'
 
@@ -105,14 +104,12 @@ export function DashboardCollaborateur() {
     }
   }, [])
 
-  const periodOptions = adjacentReferencePeriodOptions()
-  const selectedPeriodLabel = periodOptions.find((item) => item.value === selectedPeriod)?.label ?? formatReferencePeriodRange(selectedPeriod)
+  const periodOptions = adjacentReferencePeriodOptions(undefined, { parenthesizedCounter: true })
   const balanceSummary = balances.data.find((item) => item.referencePeriod === selectedPeriod) ?? {
     referencePeriod: selectedPeriod, acquiredDays: 0, takenDays: 0, balanceDays: 0, validatedDays: 0, pendingDays: 0,
   }
   const nextLeave = computeNextLeave(requests.data)
   const recent = requests.data.slice(0, 4)
-  const availableDays = balanceSummary?.balanceDays ?? null
 
   return (
     <PageContainer className="dash-page">
@@ -153,11 +150,6 @@ export function DashboardCollaborateur() {
             loading={requests.loading}
             error={requests.error}
             onRetry={retryRequests}
-          />
-          <PlanLeaveCard
-            availableDays={availableDays}
-            periodLabel={selectedPeriodLabel}
-            onNewRequest={() => navigate('/app/new-request')}
           />
           <AlertsCard
             balances={balances}

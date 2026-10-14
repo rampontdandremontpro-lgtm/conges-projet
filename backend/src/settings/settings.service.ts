@@ -15,11 +15,18 @@ import { Setting } from './setting.entity';
 import { UpdateSettingDto } from './dto/update-setting.dto';
 import { CreatePracticalLinkDto } from './dto/create-practical-link.dto';
 import { UpdatePracticalLinkDto } from './dto/update-practical-link.dto';
+import { CreateInternalRuleDto } from './dto/create-internal-rule.dto';
+import { UpdateInternalRuleDto } from './dto/update-internal-rule.dto';
 import {
   normalizePracticalLinkInput,
   parsePracticalLinks,
   type PracticalLink,
 } from './practical-links.util';
+import {
+  normalizeInternalRuleInput,
+  parseInternalRules,
+  type InternalRule,
+} from './internal-rules.util';
 
 export interface SubmissionRules {
   normalDeadlineDays: number;
@@ -143,6 +150,92 @@ export class SettingsService {
     }
     await this.savePracticalLinks(previous, next, authenticatedUser, 'PRACTICAL_LINK_DELETED');
     return next;
+  }
+
+  async getInternalRules(): Promise<InternalRule[]> {
+    const raw = await this.getValue('INTERNAL_RULES_JSON');
+    return parseInternalRules(raw);
+  }
+
+  async createInternalRule(
+    dto: CreateInternalRuleDto,
+    authenticatedUser: AuthenticatedUser,
+  ): Promise<InternalRule[]> {
+    const previous = await this.getInternalRules();
+    let normalized: Omit<InternalRule, 'id'>;
+    try {
+      normalized = normalizeInternalRuleInput(dto);
+    } catch (error) {
+      throw new BadRequestException(
+        error instanceof Error ? error.message : 'Règle invalide.',
+      );
+    }
+    const next = [...previous, { id: randomUUID(), ...normalized }];
+    await this.saveInternalRules(previous, next, authenticatedUser, 'INTERNAL_RULE_CREATED');
+    return next;
+  }
+
+  async updateInternalRule(
+    id: string,
+    dto: UpdateInternalRuleDto,
+    authenticatedUser: AuthenticatedUser,
+  ): Promise<InternalRule[]> {
+    const previous = await this.getInternalRules();
+    const index = previous.findIndex((item) => item.id === id);
+    if (index < 0) throw new NotFoundException('La règle interne est introuvable.');
+
+    const current = previous[index];
+    let normalized: Omit<InternalRule, 'id'>;
+    try {
+      normalized = normalizeInternalRuleInput({
+        title: dto.title ?? current.title,
+        content: dto.content ?? current.content,
+        icon: dto.icon ?? current.icon,
+      });
+    } catch (error) {
+      throw new BadRequestException(
+        error instanceof Error ? error.message : 'Règle invalide.',
+      );
+    }
+    const next = [...previous];
+    next[index] = { id: current.id, ...normalized };
+    await this.saveInternalRules(previous, next, authenticatedUser, 'INTERNAL_RULE_UPDATED');
+    return next;
+  }
+
+  async deleteInternalRule(
+    id: string,
+    authenticatedUser: AuthenticatedUser,
+  ): Promise<InternalRule[]> {
+    const previous = await this.getInternalRules();
+    const next = previous.filter((item) => item.id !== id);
+    if (next.length === previous.length) {
+      throw new NotFoundException('La règle interne est introuvable.');
+    }
+    await this.saveInternalRules(previous, next, authenticatedUser, 'INTERNAL_RULE_DELETED');
+    return next;
+  }
+
+  private async saveInternalRules(
+    previous: InternalRule[],
+    next: InternalRule[],
+    authenticatedUser: AuthenticatedUser,
+    action: string,
+  ): Promise<void> {
+    const saved = await this.upsertInternal(
+      'INTERNAL_RULES_JSON',
+      JSON.stringify(next),
+      'Règles internes GMES affichées dans la page Informations pratiques.',
+      authenticatedUser.id,
+    );
+    await this.auditService.record({
+      actorId: authenticatedUser.id,
+      action,
+      resourceType: 'SETTINGS',
+      resourceId: saved.id,
+      oldValue: { internalRules: previous },
+      newValue: { internalRules: next },
+    });
   }
 
   private async savePracticalLinks(

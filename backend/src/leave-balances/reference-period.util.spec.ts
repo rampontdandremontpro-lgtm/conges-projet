@@ -143,3 +143,27 @@ describe('reference-period.util — période de référence et échéances E4', 
     });
   });
 });
+
+describe('reference-period.util — limite de sélection N/N+1', () => {
+  const endOfNPlusOne = (date: string, periodStart = '06-01') =>
+    referencePeriodEndDate(
+      nextReferencePeriod(currentReferencePeriod(date, periodStart)),
+      periodStart,
+    );
+
+  it('bascule du 31 mai au 1er juin (début 06-01)', () => {
+    expect(endOfNPlusOne('2027-05-31')).toBe('2028-05-31');
+    expect(endOfNPlusOne('2027-06-01')).toBe('2029-05-31');
+    expect(endOfNPlusOne('2028-06-01')).toBe('2030-05-31');
+  });
+
+  it('exemples au 14/10/2026 : limite au 31/05/2028', () => {
+    expect(endOfNPlusOne('2026-10-14')).toBe('2028-05-31');
+  });
+
+  it('respecte une configuration de début de période différente', () => {
+    // Début de période au 15/04 : N+1 se termine le 14/04 de l'année N+2.
+    expect(endOfNPlusOne('2027-04-14', '04-15')).toBe('2028-04-14');
+    expect(endOfNPlusOne('2027-04-15', '04-15')).toBe('2029-04-14');
+  });
+});

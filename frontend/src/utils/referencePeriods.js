@@ -1,5 +1,12 @@
 const REFERENCE_PERIOD_PATTERN = /^(\d{4})-(\d{4})$/
 
+function toIsoDate(date) {
+  const year = date.getUTCFullYear()
+  const month = String(date.getUTCMonth() + 1).padStart(2, '0')
+  const day = String(date.getUTCDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
 function parsedPeriod(referencePeriod) {
   const value = String(referencePeriod ?? '').trim()
   const match = REFERENCE_PERIOD_PATTERN.exec(value)
@@ -34,15 +41,17 @@ export function formatNamedReferencePeriod(referencePeriod, counterType) {
   return `${counterType} ${formatCounterReferencePeriod(referencePeriod, counterType)}`
 }
 
-export function currentReferencePeriod(date = new Date()) {
+export function currentReferencePeriod(date = new Date(), periodStart = '06-01') {
   const parts = new Intl.DateTimeFormat('en-CA', {
     timeZone: 'America/Martinique',
     year: 'numeric',
     month: '2-digit',
+    day: '2-digit',
   }).formatToParts(date)
   const values = Object.fromEntries(parts.map((part) => [part.type, part.value]))
   const year = Number(values.year)
-  const start = Number(values.month) >= 6 ? year : year - 1
+  const monthDay = `${values.month}-${values.day}`
+  const start = monthDay >= periodStart ? year : year - 1
   return `${start}-${start + 1}`
 }
 
@@ -74,7 +83,10 @@ export function formatRelativeReferencePeriod(referencePeriod, activeReferencePe
   return label ? `${label} ${range}` : range
 }
 
-export function adjacentReferencePeriodOptions(referencePeriod = currentReferencePeriod()) {
+export function adjacentReferencePeriodOptions(
+  referencePeriod = currentReferencePeriod(),
+  { parenthesizedCounter = false } = {},
+) {
   const parsed = parsedPeriod(referencePeriod)
   if (!parsed) return []
 
@@ -82,18 +94,81 @@ export function adjacentReferencePeriodOptions(referencePeriod = currentReferenc
   const n = parsed.value
   const nPlus1 = `${parsed.endYear}-${parsed.endYear + 1}`
 
+  const labelFor = (counter, value) =>
+    parenthesizedCounter
+      ? `(${counter}) ${formatReferencePeriodRange(value)}`
+      : `${counter} (${formatReferencePeriodRange(value)})`
+
   return [
-    { value: nMinus1, label: `N-1 ${formatReferencePeriodRange(nMinus1)}` },
-    { value: n, label: `N ${formatReferencePeriodRange(n)}` },
-    { value: nPlus1, label: `N+1 ${formatReferencePeriodRange(nPlus1)}` },
+    { value: nMinus1, label: labelFor('N-1', nMinus1) },
+    { value: n, label: labelFor('N', n) },
+    { value: nPlus1, label: labelFor('N+1', nPlus1) },
   ]
 }
 
-export function referencePeriodForIsoDate(isoDate) {
+export function referencePeriodForIsoDate(isoDate, periodStart = '06-01') {
   const match = String(isoDate ?? '').match(/^(\d{4})-(\d{2})-(\d{2})$/)
   if (!match) return null
   const year = Number(match[1])
   const monthDay = `${match[2]}-${match[3]}`
-  const start = monthDay >= '06-01' ? year : year - 1
+  const start = monthDay >= periodStart ? year : year - 1
   return `${start}-${start + 1}`
+}
+
+export function referencePeriodStartDate(referencePeriod, periodStart = '06-01') {
+  const parsed = parsedPeriod(referencePeriod)
+  if (!parsed) return null
+  return `${parsed.startYear}-${periodStart}`
+}
+
+export function referencePeriodEndDate(referencePeriod, periodStart = '06-01') {
+  const parsed = parsedPeriod(referencePeriod)
+  if (!parsed) return null
+  const [month, day] = periodStart.split('-').map(Number)
+  const nextStart = new Date(Date.UTC(parsed.endYear, month - 1, day))
+  nextStart.setUTCDate(nextStart.getUTCDate() - 1)
+  return toIsoDate(nextStart)
+}
+
+/**
+ * Dernière date sélectionnable : fin de la période N+1.
+ */
+export function endOfNPlusOneReferencePeriod(
+  activeReferencePeriod = currentReferencePeriod(),
+  periodStart = '06-01',
+) {
+  return referencePeriodEndDate(
+    nextReferencePeriod(activeReferencePeriod),
+    periodStart,
+  )
+}
+
+/**
+ * Début de la période qui suit la période active. Utilisé comme date de
+ * renouvellement de la fenêtre de sélection.
+ */
+export function startOfNextReferencePeriod(
+  activeReferencePeriod = currentReferencePeriod(),
+  periodStart = '06-01',
+) {
+  return referencePeriodStartDate(
+    nextReferencePeriod(activeReferencePeriod),
+    periodStart,
+  )
+}
+
+/**
+ * Date à laquelle une date bloquée devient sélectionnable.
+ *
+ * Une date D (période P) devient sélectionnable dès que la période active
+ * atteint P−1 : D appartient alors à N+1. Le déblocage correspond donc au
+ * début de la période P−1.
+ *
+ * Ex. au 14/10/2026 : 01/06/2028 (période 2028-2029) → 01/06/2027.
+ */
+export function unlockDateForIsoDate(isoDate, periodStart = '06-01') {
+  const period = referencePeriodForIsoDate(isoDate, periodStart)
+  if (!period) return null
+  const unlockPeriod = counterReferencePeriod(period, 'N-1')
+  return referencePeriodStartDate(unlockPeriod, periodStart)
 }

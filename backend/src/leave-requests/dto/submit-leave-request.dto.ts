@@ -1,5 +1,6 @@
 import {
   IsEnum,
+  IsOptional,
   IsString,
   MaxLength,
   MinLength,
@@ -15,4 +16,9 @@ export class SubmitLeaveRequestDto {
   @MinLength(2)
   @MaxLength(1_000_000)
   signatureData!: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(2_000)
+  derogationReason?: string;
 }

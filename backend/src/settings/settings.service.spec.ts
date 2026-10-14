@@ -2,6 +2,7 @@ import { BadRequestException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 
+import { AuditService } from '../audit/audit.service';
 import { Setting } from './setting.entity';
 import { SettingsService } from './settings.service';
 
@@ -36,6 +37,10 @@ describe('SettingsService — notification de changement de AFTERNOON_START_HOUR
         {
           provide: getRepositoryToken(Setting),
           useValue: settingRepository,
+        },
+        {
+          provide: AuditService,
+          useValue: { record: jest.fn().mockResolvedValue({}) },
         },
       ],
     }).compile();

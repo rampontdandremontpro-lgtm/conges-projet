@@ -1,15 +1,13 @@
 import { ProfileAvatar } from '@/components/ui/ProfileAvatar'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 
 import { useAuth } from '@/auth/AuthContext'
 
 import { Icon } from '@/components/ui/Icon'
-import { useAutoDismiss } from '@/hooks/useAutoDismiss'
 import { PaginationBar } from '@/components/ui/PaginationBar'
 import { PageContainer } from '@/components/ui/PageContainer'
 import {
-  decideRhDerogation,
   getRhDerogation,
   getRhDerogations,
 } from '@/services/rh/rhDerogations'
@@ -129,25 +127,15 @@ function matchesSearch(item, query) {
   return needle.split(/\s+/).every((token) => haystack.includes(token))
 }
 
-function errorMessage(error) {
-  const message = error?.response?.data?.message
-  if (Array.isArray(message)) return message.join(' ')
-  return message || error?.message || 'Une erreur est survenue.'
-}
-
 function StatusBadge({ status }) {
   const meta = statusMeta(status)
   return <span className={`rh-derogation-status rh-derogation-status--${meta.tone}`}>{meta.label}</span>
 }
 
-function DerogationDetailDrawer({ itemId, onClose, onChanged }) {
+function DerogationDetailDrawer({ itemId, onClose }) {
   const { user } = useAuth()
+  const navigate = useNavigate()
   const [state, setState] = useState({ loading: true, error: false, item: null })
-  const [comment, setComment] = useState('')
-  const [busy, setBusy] = useState('')
-  const [feedback, setFeedback] = useState('')
-
-  useAutoDismiss(feedback, setFeedback, { clearValue: '' })
 
   const load = useCallback(async () => {
     setState((current) => ({ ...current, loading: true, error: false }))
@@ -170,36 +158,6 @@ function DerogationDetailDrawer({ itemId, onClose, onChanged }) {
   const isPending = isDirector
     ? workflowStatus === 'EN_ATTENTE_DIRECTEUR'
     : workflowStatus === 'EN_ATTENTE_RH'
-
-  const decide = async (decision) => {
-    if (!item || busy) return
-    const cleanComment = comment.trim()
-
-    if (decision === 'REFUSER' && !cleanComment) {
-      setFeedback('Indiquez le motif du refus avant de poursuivre.')
-      return
-    }
-
-    setBusy(decision)
-    setFeedback('')
-    try {
-      const updated = await decideRhDerogation(item.id, decision, cleanComment)
-      setState({ loading: false, error: false, item: updated })
-      setComment('')
-      onChanged(
-        decision === 'ACCORDER'
-          ? isDirector
-            ? `Dérogation accordée définitivement à ${fullName(updated.employee)}.`
-            : `Validation RH enregistrée pour ${fullName(updated.employee)} ; dérogation transmise au Directeur.`
-          : `Dérogation refusée pour ${fullName(updated.employee)}.`,
-      )
-    } catch (error) {
-      setFeedback(errorMessage(error))
-      await load()
-    } finally {
-      setBusy('')
-    }
-  }
 
   return (
     <div className="rh-derogation-overlay" role="presentation" onMouseDown={onClose}>
@@ -282,70 +240,55 @@ function DerogationDetailDrawer({ itemId, onClose, onChanged }) {
               </div>
             )}
 
-            {isPending && (
+            {isPending && item.leaveRequestId && item.leaveRequest?.status === 'EN_ATTENTE_VALIDATION' && (
               <div className="rh-derogation-decision-card">
                 <div className="rh-derogation-decision-card__intro">
-                  <span className="rh-derogation-decision-card__icon"><Icon name="shield" size={19} /></span>
+                  <span className="rh-derogation-decision-card__icon"><Icon name="info" size={19} /></span>
                   <div>
-                    <strong>{isDirector ? 'Décision finale du Directeur' : 'Validation RH'}</strong>
+                    <strong>Dérogation à traiter avec la demande de congé</strong>
                     <p>
-                      {isDirector
-                        ? 'La RH a validé cette dérogation. Vérifiez la demande avant la décision finale.'
-                        : 'Vérifiez la demande avant de la transmettre au Directeur ou de la refuser.'}
+                      Cette dérogation est examinée dans le cadre de la demande de
+                      congé n°{item.leaveRequestId}. Ouvrez la demande pour accepter
+                      ou refuser, puis signer.
                     </p>
                   </div>
                 </div>
-
-                <div className="rh-derogation-deadline">
-                  <Icon name="clock" size={16} />
-                  <span>Délai de traitement : <strong>avant le début du congé</strong>.</span>
-                </div>
-
-                <label className="rh-derogation-comment">
-                  <span>Commentaire de décision <em>obligatoire en cas de refus</em></span>
-                  <textarea
-                    rows={4}
-                    maxLength={2000}
-                    value={comment}
-                    onChange={(event) => {
-                      setComment(event.target.value)
-                      setFeedback('')
-                    }}
-                    placeholder="Ajoutez une précision ou indiquez le motif du refus…"
-                  />
-                  <small>{comment.length}/2000</small>
-                </label>
-
-                {feedback && <div className="rh-derogation-decision-error"><Icon name="alert" size={15} /> {feedback}</div>}
-
                 <div className="rh-derogation-detail-actions">
                   <button
                     type="button"
-                    className="rh-derogation-button rh-derogation-button--danger"
-                    disabled={Boolean(busy)}
-                    onClick={() => decide('REFUSER')}
-                  >
-                    <Icon name="alert" size={16} />
-                    {busy === 'REFUSER' ? 'Refus…' : 'Refuser'}
-                  </button>
-                  <button
-                    type="button"
                     className="rh-derogation-button rh-derogation-button--primary"
-                    disabled={Boolean(busy)}
-                    onClick={() => decide('ACCORDER')}
+                    onClick={() =>
+                      navigate(
+                        isDirector
+                          ? `/app/director-all-requests/${item.leaveRequestId}`
+                          : `/app/rh-all-requests/${item.leaveRequestId}`,
+                      )
+                    }
                   >
-                    <Icon name="check" size={16} />
-                    {busy === 'ACCORDER' ? 'Validation…' : isDirector ? 'Accorder définitivement' : 'Valider et transmettre au Directeur'}
+                    Traiter la demande
                   </button>
                 </div>
               </div>
             )}
 
-            {!isPending && (
-              <div className="rh-derogation-detail-actions">
-                <button type="button" className="rh-derogation-button rh-derogation-button--secondary" onClick={onClose}>Fermer</button>
+            {isPending && (!item.leaveRequestId || item.leaveRequest?.status !== 'EN_ATTENTE_VALIDATION') && (
+              <div className="rh-derogation-decision-card">
+                <div className="rh-derogation-decision-card__intro">
+                  <span className="rh-derogation-decision-card__icon"><Icon name="info" size={19} /></span>
+                  <div>
+                    <strong>Aucune action possible</strong>
+                    <p>
+                      Cette dérogation n’est pas liée à une demande de congé
+                      effectivement soumise. Elle ne peut pas être traitée ici.
+                    </p>
+                  </div>
+                </div>
               </div>
             )}
+
+            <div className="rh-derogation-detail-actions">
+              <button type="button" className="rh-derogation-button rh-derogation-button--secondary" onClick={onClose}>Fermer</button>
+            </div>
           </>
         )}
       </aside>
@@ -363,7 +306,6 @@ export function RhDerogationsPage() {
   const [filter, setFilter] = useState(initialFilter)
   const [page, setPage] = useState(1)
   const [selectedId, setSelectedId] = useState(null)
-  const [feedback, setFeedback] = useState(null)
 
   const load = useCallback(async ({ silent = false } = {}) => {
     if (!silent) setState((current) => ({ ...current, loading: true, error: false }))
@@ -389,12 +331,6 @@ export function RhDerogationsPage() {
       window.removeEventListener('gmes:data-changed', refresh)
     }
   }, [load])
-
-  useEffect(() => {
-    if (!feedback) return undefined
-    const timer = window.setTimeout(() => setFeedback(null), 4500)
-    return () => window.clearTimeout(timer)
-  }, [feedback])
 
   const query = searchParams.get('q') ?? ''
   const requestedDerogationId = Number(searchParams.get('derogation'))
@@ -433,22 +369,8 @@ export function RhDerogationsPage() {
   const safePage = Math.min(page, totalPages)
   const visibleItems = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE)
 
-  const changed = async (message) => {
-    setFeedback({ kind: 'success', message })
-    await load({ silent: true })
-    window.dispatchEvent(new CustomEvent('gmes:data-changed'))
-  }
-
   return (
     <PageContainer className="rh-derogations-page">
-      {feedback && (
-        <div className={`rh-derogations-feedback rh-derogations-feedback--${feedback.kind}`} role="status">
-          <Icon name="check" size={17} />
-          <span>{feedback.message}</span>
-          <button type="button" aria-label="Fermer" onClick={() => setFeedback(null)}>×</button>
-        </div>
-      )}
-
       <section className="rh-derogations-card">
         <div className="rh-derogations-toolbar">
           <div>
@@ -546,7 +468,6 @@ export function RhDerogationsPage() {
         <DerogationDetailDrawer
           itemId={selectedId}
           onClose={() => setSelectedId(null)}
-          onChanged={changed}
         />
       )}
     </PageContainer>

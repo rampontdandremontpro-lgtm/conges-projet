@@ -8,18 +8,11 @@ import {
   todayISO,
 } from '@/utils/format'
 
-function countdownLabel(startIso) {
-  const days = daysBetween(todayISO(), startIso)
-  if (days <= 0) return "Aujourd'hui"
-  if (days === 1) return 'Demain'
-  return `J-${days}`
-}
-
 function daysSplit(startIso) {
   const days = daysBetween(todayISO(), startIso)
-  if (days <= 0) return { value: "Aujourd'hui", unit: null }
-  if (days === 1) return { value: 'Demain', unit: null }
-  return { value: String(days), unit: 'jours' }
+  if (days <= 0) return { value: "Aujourd'hui", unit: null, textual: true }
+  if (days === 1) return { value: 'Demain', unit: null, textual: true }
+  return { value: String(days), unit: 'jours', textual: false }
 }
 
 export function NextLeaveCard({ nextLeave, loading, error, onRetry }) {
@@ -49,7 +42,7 @@ export function NextLeaveCard({ nextLeave, loading, error, onRetry }) {
           <div className="next-leave__stat">
             <span className="next-leave__stat-label">Dans</span>
             <span className="next-leave__stat-value">
-              <strong className="next-leave__stat-figure">{dans.value}</strong>
+              <strong className={`next-leave__stat-figure${dans.textual ? ' next-leave__stat-figure--text' : ''}`}>{dans.value}</strong>
               {dans.unit && <span className="next-leave__stat-unit">{dans.unit}</span>}
             </span>
           </div>
@@ -66,12 +59,6 @@ export function NextLeaveCard({ nextLeave, loading, error, onRetry }) {
             {formatRangeCompactFR(nextLeave.startDate, nextLeave.endDate)}
           </span>
           <span className="next-leave__type">{nextLeave.leaveType.name}</span>
-        </div>
-        <div className="next-leave__progress-row">
-          <div className="next-leave__progress" aria-hidden="true">
-            <div className="next-leave__progress-fill" />
-          </div>
-          <span className="next-leave__countdown">{countdownLabel(nextLeave.startDate)}</span>
         </div>
       </div>
     )

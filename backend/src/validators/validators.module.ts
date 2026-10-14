@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { AuditModule } from '../audit/audit.module';
+import { Derogation } from '../derogations/derogation.entity';
 import { Service } from '../services/service.entity';
 import { User } from '../users/user.entity';
 import { ServiceBackupValidator } from './service-backup-validator.entity';
@@ -17,6 +18,7 @@ import { ValidatorsService } from './validators.service';
       ValidatorReplacement,
       Service,
       User,
+      Derogation,
     ]),
     AuditModule,
   ],

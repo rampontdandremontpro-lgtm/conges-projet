@@ -20,6 +20,8 @@ import { UpdateSeasonalPeriodDto } from './dto/update-seasonal-period.dto';
 import { UpdateSettingDto } from './dto/update-setting.dto';
 import { CreatePracticalLinkDto } from './dto/create-practical-link.dto';
 import { UpdatePracticalLinkDto } from './dto/update-practical-link.dto';
+import { CreateInternalRuleDto } from './dto/create-internal-rule.dto';
+import { UpdateInternalRuleDto } from './dto/update-internal-rule.dto';
 import { SettingsService } from './settings.service';
 
 type AuthenticatedRequest = Request & { user: AuthenticatedUser };
@@ -80,6 +82,46 @@ export class SettingsController {
     @Req() request: AuthenticatedRequest,
   ) {
     return this.settingsService.deletePracticalLink(id, request.user);
+  }
+
+  @Get('internal-rules')
+  @Roles(
+    UserRole.COLLABORATEUR,
+    UserRole.RESPONSABLE_SERVICE,
+    UserRole.RH,
+    UserRole.DIRECTEUR,
+    UserRole.ADMIN,
+  )
+  getInternalRules() {
+    return this.settingsService.getInternalRules();
+  }
+
+  @Post('internal-rules')
+  @Roles(UserRole.RH, UserRole.ADMIN)
+  createInternalRule(
+    @Req() request: AuthenticatedRequest,
+    @Body() dto: CreateInternalRuleDto,
+  ) {
+    return this.settingsService.createInternalRule(dto, request.user);
+  }
+
+  @Patch('internal-rules/:id')
+  @Roles(UserRole.RH, UserRole.ADMIN)
+  updateInternalRule(
+    @Param('id') id: string,
+    @Req() request: AuthenticatedRequest,
+    @Body() dto: UpdateInternalRuleDto,
+  ) {
+    return this.settingsService.updateInternalRule(id, dto, request.user);
+  }
+
+  @Delete('internal-rules/:id')
+  @Roles(UserRole.RH, UserRole.ADMIN)
+  deleteInternalRule(
+    @Param('id') id: string,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    return this.settingsService.deleteInternalRule(id, request.user);
   }
 
   @Get('seasonal-period')

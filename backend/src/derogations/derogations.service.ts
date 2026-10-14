@@ -439,6 +439,24 @@ export class DerogationsService implements OnApplicationBootstrap, OnApplication
       });
     }
 
+    // Les dérogations encore « en attente » ne sont traitables que si la
+    // demande de congé associée a réellement été soumise. Toute dérogation
+    // en attente liée à un brouillon (non soumis, supprimé ou déjà terminé)
+    // est une entrée fantôme et ne doit plus apparaître comme active.
+    queryBuilder.andWhere(
+      `NOT (
+        derogation.status = :pendingStatus
+        AND (
+          leaveRequest.id IS NULL
+          OR leaveRequest.status != :submittedStatus
+        )
+      )`,
+      {
+        pendingStatus: DerogationStatus.EN_ATTENTE_RH,
+        submittedStatus: LeaveRequestStatus.EN_ATTENTE_VALIDATION,
+      },
+    );
+
     const derogations = await queryBuilder
       .orderBy('derogation.requestedAt', 'ASC')
       .addOrderBy('derogation.id', 'ASC')
@@ -488,6 +506,15 @@ export class DerogationsService implements OnApplicationBootstrap, OnApplication
     authenticatedUser: AuthenticatedUser,
     dto: DecideDerogationDto,
   ): Promise<Derogation> {
+    // Ancien circuit autonome de décision des dérogations : neutralisé.
+    // Depuis la mise en place des quatre circuits GMES, la dérogation est
+    // examinée et décidée avec la demande de congé (RH au premier niveau).
+    // Cet endpoint ne modifie plus aucune donnée afin de ne jamais bloquer
+    // la soumission normale du collaborateur.
+    throw new BadRequestException(
+      'Le circuit autonome de décision des dérogations est désactivé : la dérogation est désormais examinée avec la demande de congé associée.',
+    );
+
     let expiredDuringDecision = false;
 
     await this.dataSource.transaction(async (manager) => {
@@ -785,6 +812,156 @@ export class DerogationsService implements OnApplicationBootstrap, OnApplication
     });
 
     return derogation;
+  }
+
+  async attachDerogationForSubmission(
+    manager: EntityManager,
+    data: {
+      leaveRequest: LeaveRequest;
+      actorId: number;
+      reason?: string;
+    },
+  ): Promise<Derogation> {
+    const now = new Date();
+    const repository = manager.getRepository(Derogation);
+
+    const existing = await repository
+      .createQueryBuilder('derogation')
+      .setLock('pessimistic_write')
+      .where('derogation.leaveRequestId = :leaveRequestId', {
+        leaveRequestId: data.leaveRequest.id,
+      })
+      .andWhere('derogation.employeeId = :employeeId', {
+        employeeId: data.leaveRequest.employeeId,
+      })
+      .getOne();
+
+    const reasonProvided = data.reason !== undefined;
+    const normalizedReason =
+      data.reason?.trim() ?? '';
+
+    // `leave_request_id` est unique : une seule dérogation peut exister par
+    // demande. On réutilise donc l'entrée existante (même fantôme, expirée ou
+    // déjà décidée) en la réinitialisant pour la soumission en cours.
+    const derogation = existing ?? repository.create({
+      employeeId: data.leaveRequest.employeeId,
+      leaveRequestId: data.leaveRequest.id,
+    });
+
+    derogation.employeeId = data.leaveRequest.employeeId;
+    derogation.leaveRequestId = data.leaveRequest.id;
+    derogation.leaveTypeId = data.leaveRequest.leaveTypeId;
+    derogation.requestedStartDate = data.leaveRequest.startDate;
+    derogation.requestedEndDate = data.leaveRequest.endDate;
+    derogation.reason = reasonProvided
+      ? normalizedReason
+      : (existing?.reason ?? '');
+    derogation.status = DerogationStatus.EN_ATTENTE_RH;
+    derogation.decidedByRhId = null;
+    derogation.decisionComment = null;
+    derogation.decidedAt = null;
+    derogation.expiresAt = null;
+    derogation.usedAt = null;
+    derogation.submittedAt = now;
+
+    await repository.save(derogation);
+
+    await this.createHistory(manager, {
+      leaveRequest: data.leaveRequest,
+      action: AuditAction.DEROGATION_DEMANDEE,
+      actorId: data.actorId,
+      comment: derogation.reason,
+      metadata: {
+        derogationId: derogation.id,
+        submittedWithLeaveRequest: true,
+        renewed: Boolean(existing),
+      },
+    });
+
+    return derogation;
+  }
+
+  async grantDerogationOnRhFirstValidation(
+    manager: EntityManager,
+    data: {
+      leaveRequest: LeaveRequest;
+      rhId: number;
+      decisionAt: Date;
+    },
+  ): Promise<void> {
+    const repository = manager.getRepository(Derogation);
+    const derogation = await repository
+      .createQueryBuilder('derogation')
+      .setLock('pessimistic_write')
+      .where('derogation.leaveRequestId = :leaveRequestId', {
+        leaveRequestId: data.leaveRequest.id,
+      })
+      .getOne();
+
+    if (!derogation) {
+      return;
+    }
+
+    derogation.status = DerogationStatus.ACCORDEE;
+    derogation.decidedByRhId = data.rhId;
+    derogation.decidedAt = data.decisionAt;
+    derogation.decisionComment = null;
+    await repository.save(derogation);
+
+    await this.createHistory(manager, {
+      leaveRequest: data.leaveRequest,
+      action: AuditAction.DEROGATION_PREVALIDEE_RH,
+      actorId: data.rhId,
+      comment: null,
+      metadata: {
+        derogationId: derogation.id,
+        status: derogation.status,
+        validationLevel: 'RH',
+        decidedByRhId: data.rhId,
+      },
+    });
+  }
+
+  async refuseDerogationOnRhFirstValidation(
+    manager: EntityManager,
+    data: {
+      leaveRequest: LeaveRequest;
+      rhId: number;
+      decisionAt: Date;
+      comment: string | null;
+    },
+  ): Promise<void> {
+    const repository = manager.getRepository(Derogation);
+    const derogation = await repository
+      .createQueryBuilder('derogation')
+      .setLock('pessimistic_write')
+      .where('derogation.leaveRequestId = :leaveRequestId', {
+        leaveRequestId: data.leaveRequest.id,
+      })
+      .getOne();
+
+    if (!derogation) {
+      return;
+    }
+
+    derogation.status = DerogationStatus.REFUSEE;
+    derogation.decidedByRhId = data.rhId;
+    derogation.decidedAt = data.decisionAt;
+    derogation.decisionComment = data.comment;
+    await repository.save(derogation);
+
+    await this.createHistory(manager, {
+      leaveRequest: data.leaveRequest,
+      action: AuditAction.DEROGATION_REFUSEE,
+      actorId: data.rhId,
+      comment: data.comment,
+      metadata: {
+        derogationId: derogation.id,
+        status: derogation.status,
+        validationLevel: 'RH',
+        decidedByRhId: data.rhId,
+      },
+    });
   }
 
   async invalidateForDraftChange(

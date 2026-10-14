@@ -181,8 +181,32 @@
   cursor: pointer;
 }
 
-.nr-cal__cell:disabled {
+.nr-cal__cell:disabled,
+.nr-cal__cell--blocked {
   cursor: default;
+}
+
+/* Dates au-delà de la fin de N+1 : grisées et non sélectionnables. */
+.nr-cal__cell--beyond-limit {
+  cursor: not-allowed;
+}
+
+.nr-cal__cell--beyond-limit .nr-cal__day-circle {
+  opacity: 0.4;
+}
+
+.nr-cal__cell--beyond-limit .nr-cal__day-num {
+  color: #b9c7d9;
+}
+
+.nr-cal__limit-note {
+  margin: 12px 0 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #f4f8fd;
+  color: #5b7290;
+  font-size: 11px;
+  line-height: 1.45;
 }
 
 .nr-cal__band {
@@ -295,7 +319,7 @@
   color: #d0dcef;
 }
 
-.nr-cal__cell:not(:disabled):not(.nr-cal__cell--edge):not(.nr-cal__cell--in-range):not(.nr-cal__cell--today):not(.nr-cal__cell--holiday):hover .nr-cal__day-circle {
+.nr-cal__cell:not(:disabled):not(.nr-cal__cell--blocked):not(.nr-cal__cell--edge):not(.nr-cal__cell--in-range):not(.nr-cal__cell--today):not(.nr-cal__cell--holiday):hover .nr-cal__day-circle {
   background: #e4edf9;
 }
 
@@ -389,6 +413,68 @@
 
 .nr-cal__legend-dot--closure {
   background: rgba(107, 127, 163, 0.3);
+}
+
+.nr-cal__legend-dot--draft {
+  background: #94a3b8;
+}
+
+.nr-cal__legend-dot--pending {
+  background: #f59e0b;
+}
+
+.nr-cal__legend-dot--validated {
+  background: #16a34a;
+}
+
+.nr-cal__legend-dot--absence {
+  background: #8b5cf6;
+}
+
+/* Occupation du calendrier : couleurs des dates déjà réservées. */
+.nr-cal__cell {
+  --occ-tone: #94a3b8;
+  --occ-tint: rgba(148, 163, 184, 0.16);
+}
+
+.nr-cal__cell--tone-draft {
+  --occ-tone: #94a3b8;
+  --occ-tint: rgba(148, 163, 184, 0.16);
+}
+
+.nr-cal__cell--tone-pending {
+  --occ-tone: #f59e0b;
+  --occ-tint: rgba(245, 158, 11, 0.16);
+}
+
+.nr-cal__cell--tone-validated {
+  --occ-tone: #16a34a;
+  --occ-tint: rgba(22, 163, 74, 0.16);
+}
+
+.nr-cal__cell--tone-absence-pending {
+  --occ-tone: #8b5cf6;
+  --occ-tint: rgba(139, 92, 246, 0.16);
+}
+
+.nr-cal__cell--tone-absence-validated {
+  --occ-tone: #6d28d9;
+  --occ-tint: rgba(109, 40, 217, 0.2);
+}
+
+/* Jour occupé (journée complète) : pastille colorée autour du numéro. */
+.nr-cal__cell--occupied .nr-cal__day-circle {
+  background: var(--occ-tint);
+  box-shadow: inset 0 0 0 2px var(--occ-tone);
+}
+
+/* Demi-journée occupée : pastille teintée sur la moitié concernée. */
+.nr-cal__cell--occ-am .nr-cal__day-circle {
+  background: linear-gradient(to right, var(--occ-tint) 50%, transparent 50%);
+}
+
+.nr-cal__cell--occ-pm .nr-cal__day-circle {
+  background: linear-gradient(to right, transparent 50%, var(--occ-tint) 50%);
 }
 
 
