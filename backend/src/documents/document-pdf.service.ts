@@ -32,7 +32,8 @@ import {
   LeaveRequestStatus,
   SignatureType,
 } from '../leave-requests/leave-request.entity';
-import { UserRole } from '../users/user.entity';
+import { User, UserRole } from '../users/user.entity';
+import { LegalEntity } from '../legal-entities/legal-entity.entity';
 import {
   formatMartiniqueDateOnly,
   formatMartiniqueDateTime,
@@ -83,6 +84,9 @@ export class DocumentPdfService {
 
     @InjectRepository(AuditLog)
     private readonly auditLogRepository: Repository<AuditLog>,
+
+    @InjectRepository(LegalEntity)
+    private readonly legalEntityRepository: Repository<LegalEntity>,
   ) {}
 
   async ensureValidationPdf(
@@ -429,6 +433,9 @@ export class DocumentPdfService {
     generatedAt: Date;
   }): Promise<Buffer> {
     const { leaveRequest, referenceNumber, generatedAt } = input;
+    const entity = await this.resolveEntityIdentity(
+      leaveRequest.employee,
+    );
 
     return new Promise<Buffer>((resolvePromise, rejectPromise) => {
       const chunks: Buffer[] = [];
@@ -437,7 +444,7 @@ export class DocumentPdfService {
         margins: { top: 48, right: 48, bottom: 48, left: 48 },
         info: {
           Title: 'Annulation d’une demande de congé validée',
-          Author: 'GMES',
+          Author: entity.name,
           Subject: referenceNumber,
         },
       });
@@ -451,7 +458,7 @@ export class DocumentPdfService {
       document
         .font('Helvetica-Bold')
         .fontSize(18)
-        .text('GMES', { align: 'center' })
+        .text(entity.name, { align: 'center' })
         .moveDown(0.4)
         .fontSize(15)
         .text('Annulation d’une demande de congé validée', {
@@ -562,6 +569,9 @@ export class DocumentPdfService {
     generatedAt: Date;
   }): Promise<Buffer> {
     const { leaveRequest, referenceNumber, generatedAt } = input;
+    const entity = await this.resolveEntityIdentity(
+      leaveRequest.employee,
+    );
 
     return new Promise<Buffer>((resolvePromise, rejectPromise) => {
       const chunks: Buffer[] = [];
@@ -570,9 +580,9 @@ export class DocumentPdfService {
         margins: { top: 0, right: 0, bottom: 0, left: 0 },
         info: {
           Title: `Récapitulatif provisoire ${referenceNumber}`,
-          Author: 'GMES',
+          Author: entity.name,
           Subject: 'Demande de congé en attente de validation',
-          Keywords: 'GMES, congé, en attente, récapitulatif provisoire',
+          Keywords: `${entity.name}, congé, en attente, récapitulatif provisoire`,
           CreationDate: generatedAt,
         },
       });
@@ -592,6 +602,10 @@ export class DocumentPdfService {
           yPx: 68,
           widthPx: 170,
           heightPx: 170,
+          logoPath: entity.logoPath,
+          fallbackName: entity.name,
+          fallbackFontSizePx: 15,
+          fallbackColor: '#0B5DBB',
         });
 
         this.drawExactPdfText(document, referenceNumber, {
@@ -2002,6 +2016,9 @@ export class DocumentPdfService {
       documentFingerprint,
       firstLevelValidator,
     } = input;
+    const entity = await this.resolveEntityIdentity(
+      leaveRequest.employee,
+    );
 
     return new Promise<Buffer>((resolvePromise, rejectPromise) => {
       const chunks: Buffer[] = [];
@@ -2010,9 +2027,9 @@ export class DocumentPdfService {
         margins: { top: 0, right: 0, bottom: 0, left: 0 },
         info: {
           Title: `Demande de congé validée ${referenceNumber}`,
-          Author: 'GMES',
+          Author: entity.name,
           Subject: 'Demande de congé validée',
-          Keywords: 'GMES, congé, validation, document officiel',
+          Keywords: `${entity.name}, congé, validation, document officiel`,
           CreationDate: generatedAt,
         },
       });
@@ -2032,6 +2049,10 @@ export class DocumentPdfService {
           yPx: 63,
           widthPx: 168,
           heightPx: 168,
+          logoPath: entity.logoPath,
+          fallbackName: entity.name,
+          fallbackFontSizePx: 15,
+          fallbackColor: '#0B5DBB',
         });
 
         this.drawExactPdfTextCenteredInBox(document, referenceNumber, {
@@ -2160,6 +2181,38 @@ export class DocumentPdfService {
     });
   }
 
+  private readonly legalEntityLogoPaths: Record<string, string> = {
+    GMES: resolve(process.cwd(), 'asset', 'gmes-logo.png'),
+    EFFICIENCE: resolve(process.cwd(), 'asset', 'logo-efficience.png'),
+    GMES_INGENIERIE: resolve(
+      process.cwd(),
+      'asset',
+      'logo-gmes-ingenierie.png',
+    ),
+  };
+
+  private legalEntityLogoPath(code: string | null): string | null {
+    if (!code) return null;
+    return this.legalEntityLogoPaths[code] ?? null;
+  }
+
+  private async resolveEntityIdentity(
+    employee: User | null,
+  ): Promise<{ name: string; logoPath: string | null }> {
+    const fallback = { name: 'GMES', logoPath: this.logoPath };
+    if (!employee?.legalEntityId) return fallback;
+
+    const entity = await this.legalEntityRepository.findOneBy({
+      id: employee.legalEntityId,
+    });
+    if (!entity) return fallback;
+
+    return {
+      name: entity.name,
+      logoPath: this.legalEntityLogoPath(entity.code),
+    };
+  }
+
   private drawExactPdfLogo(
     document: PDFKit.PDFDocument,
     input: {
@@ -2167,25 +2220,38 @@ export class DocumentPdfService {
       yPx: number;
       widthPx: number;
       heightPx: number;
+      logoPath: string | null;
+      fallbackName: string;
+      fallbackFontSizePx?: number;
+      fallbackColor?: string;
     },
   ): void {
-    if (!existsSync(this.logoPath)) {
+    if (input.logoPath && existsSync(input.logoPath)) {
+      document.image(
+        input.logoPath,
+        this.pdfTemplateX(document, input.xPx),
+        this.pdfTemplateY(document, input.yPx),
+        {
+          fit: [
+            this.pdfTemplateX(document, input.widthPx),
+            this.pdfTemplateY(document, input.heightPx),
+          ],
+          align: 'center',
+          valign: 'center',
+        },
+      );
       return;
     }
 
-    document.image(
-      this.logoPath,
-      this.pdfTemplateX(document, input.xPx),
-      this.pdfTemplateY(document, input.yPx),
-      {
-        fit: [
-          this.pdfTemplateX(document, input.widthPx),
-          this.pdfTemplateY(document, input.heightPx),
-        ],
-        align: 'center',
-        valign: 'center',
-      },
-    );
+    this.drawExactPdfTextCenteredInBox(document, input.fallbackName, {
+      xPx: input.xPx,
+      yPx: input.yPx,
+      widthPx: input.widthPx,
+      heightPx: input.heightPx,
+      fontSizePx: input.fallbackFontSizePx ?? 20,
+      font: 'Helvetica-Bold',
+      color: input.fallbackColor ?? '#0B5DBB',
+    });
   }
 
   private drawExactPdfTextCenteredInBox(
@@ -3297,13 +3363,14 @@ export class DocumentPdfService {
   private drawContinuationHeader(
     document: PDFKit.PDFDocument,
     referenceNumber: string,
+    entityName = 'GMES',
   ): void {
     document
       .font('Helvetica-Bold')
       .fontSize(9)
       .fillColor('#013069')
       .text(
-        `GMES — Demande de congé validée — ${referenceNumber}`,
+        `${entityName} — Demande de congé validée — ${referenceNumber}`,
         document.page.margins.left,
         34,
         {

@@ -18,6 +18,8 @@ import {
   ServiceType,
 } from '../services/service.entity';
 import { ServicesService } from '../services/services.service';
+import { LegalEntitiesService } from '../legal-entities/legal-entities.service';
+import { LegalEntity } from '../legal-entities/legal-entity.entity';
 import { PresenceService } from '../presence/presence.service';
 import {
   DayPeriod,
@@ -56,6 +58,7 @@ export class UsersService {
     private readonly holidaysService: HolidaysService,
     private readonly settingsService: SettingsService,
     private readonly validatorResolutionService: ValidatorResolutionService,
+    private readonly legalEntitiesService: LegalEntitiesService,
     private readonly dataSource: DataSource,
     private readonly configService: ConfigService,
   ) {}
@@ -91,6 +94,11 @@ export class UsersService {
     }
 
     const service = await this.resolveServiceForCreation(createUserDto);
+    const legalEntity = await this.resolveLegalEntityForMutation(
+      createUserDto.role,
+      createUserDto.employmentType,
+      createUserDto.legalEntityId,
+    );
 
     this.validateExitDate(
       createUserDto.hireDate ?? null,
@@ -113,6 +121,8 @@ export class UsersService {
       isActive: true,
       serviceId: service?.id ?? null,
       service,
+      legalEntityId: legalEntity?.id ?? null,
+      legalEntity,
       signatureType: null,
       signatureData: null,
       signatureUpdatedAt: null,
@@ -124,7 +134,7 @@ export class UsersService {
 
   async findAll(actorRole: UserRole = UserRole.ADMIN): Promise<User[]> {
     const users = await this.userRepository.find({
-      relations: { service: true },
+      relations: { service: true, legalEntity: true },
       order: { nom: 'ASC', prenom: 'ASC' },
     });
 
@@ -141,7 +151,7 @@ export class UsersService {
   ): Promise<User> {
     const user = await this.userRepository.findOne({
       where: { id },
-      relations: { service: true },
+      relations: { service: true, legalEntity: true },
     });
 
     if (!user || (actorRole === UserRole.RH && !this.isRhManageableRole(user.role))) {
@@ -156,7 +166,7 @@ export class UsersService {
   async findByEmail(email: string): Promise<User | null> {
     return this.userRepository.findOne({
       where: { email: email.trim().toLowerCase() },
-      relations: { service: true },
+      relations: { service: true, legalEntity: true },
     });
   }
 
@@ -167,6 +177,7 @@ export class UsersService {
       .createQueryBuilder('user')
       .addSelect('user.passwordHash')
       .leftJoinAndSelect('user.service', 'service')
+      .leftJoinAndSelect('user.legalEntity', 'legalEntity')
       .where('LOWER(user.email) = LOWER(:email)', {
         email: email.trim(),
       })
@@ -178,6 +189,7 @@ export class UsersService {
       .createQueryBuilder('user')
       .addSelect('user.passwordHash')
       .leftJoinAndSelect('user.service', 'service')
+      .leftJoinAndSelect('user.legalEntity', 'legalEntity')
       .where('user.id = :id', { id })
       .getOne();
   }
@@ -848,6 +860,14 @@ export class UsersService {
             externalCompanyName: user.service.externalCompanyName,
           }
         : null,
+      legalEntity: user.legalEntity
+        ? {
+            id: user.legalEntity.id,
+            code: user.legalEntity.code,
+            name: user.legalEntity.name,
+          }
+        : null,
+      legalEntityId: user.legalEntityId,
       signature: {
         configured: Boolean(user.signatureType),
         type: user.signatureType,
@@ -1128,6 +1148,12 @@ export class UsersService {
         ? updateUserDto.exitDate
         : user.exitDate;
 
+    const legalEntity = await this.resolveLegalEntityForMutation(
+      role,
+      employmentType,
+      updateUserDto.legalEntityId ?? user.legalEntityId,
+    );
+
     this.validateExitDate(hireDate, exitDate);
 
     user.nom = updateUserDto.nom?.trim() ?? user.nom;
@@ -1139,6 +1165,8 @@ export class UsersService {
     user.exitDate = exitDate;
     user.serviceId = service?.id ?? null;
     user.service = service;
+    user.legalEntityId = legalEntity?.id ?? null;
+    user.legalEntity = legalEntity;
 
     if (updateUserDto.microsoftId !== undefined) {
       user.microsoftId = updateUserDto.microsoftId.trim() || null;
@@ -1405,6 +1433,37 @@ export class UsersService {
     }
 
     return signatureData;
+  }
+
+  private async resolveLegalEntityForMutation(
+    role: UserRole,
+    employmentType: EmploymentType,
+    legalEntityId: number | null | undefined,
+  ): Promise<LegalEntity | null> {
+    if (legalEntityId === undefined || legalEntityId === null) {
+      // Les collaborateurs externes / prestataires ne sont pas rattachés à une
+      // entreprise interne. Les collaborateurs internes sont rattachés à GMES
+      // par défaut (comportement identique à la migration de backfill).
+      if (employmentType === EmploymentType.EXTERNE) {
+        return null;
+      }
+      return this.legalEntitiesService.findByCode('GMES');
+    }
+
+    if (employmentType === EmploymentType.EXTERNE) {
+      throw new BadRequestException(
+        'Un collaborateur externe ne peut pas être rattaché à une entreprise interne.',
+      );
+    }
+
+    const entity = await this.legalEntitiesService.findById(legalEntityId);
+    if (!entity) {
+      throw new NotFoundException(
+        'L’entreprise de rattachement est introuvable.',
+      );
+    }
+
+    return entity;
   }
 
   private async resolveServiceForCreation(

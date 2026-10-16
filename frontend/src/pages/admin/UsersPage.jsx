@@ -46,6 +46,7 @@ const EMPTY_FORM = {
   role: 'COLLABORATEUR',
   employmentType: 'INTERNE',
   serviceId: '',
+  legalEntityId: '',
   hireDate: '',
   exitDate: '',
   password: '',
@@ -77,8 +78,15 @@ function formatDate(value) {
   return new Intl.DateTimeFormat('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' }).format(date)
 }
 
-function formFromUser(user) {
-  if (!user) return { ...EMPTY_FORM }
+function defaultLegalEntityId(legalEntities) {
+  const gmes = (legalEntities ?? []).find((entity) => entity.code === 'GMES')
+  return gmes ? String(gmes.id) : ''
+}
+
+function formFromUser(user, legalEntities = []) {
+  if (!user) {
+    return { ...EMPTY_FORM, legalEntityId: defaultLegalEntityId(legalEntities) }
+  }
   return {
     nom: user.nom ?? '',
     prenom: user.prenom ?? '',
@@ -86,19 +94,20 @@ function formFromUser(user) {
     role: user.role ?? 'COLLABORATEUR',
     employmentType: user.employmentType ?? 'INTERNE',
     serviceId: user.serviceId ? String(user.serviceId) : '',
+    legalEntityId: user.legalEntityId ? String(user.legalEntityId) : '',
     hireDate: user.hireDate ? String(user.hireDate).slice(0, 10) : '',
     exitDate: user.exitDate ? String(user.exitDate).slice(0, 10) : '',
     password: '',
   }
 }
 
-function UserDrawer({ mode, user, services, onClose, onSaved, onEdit, rhMode = false }) {
+function UserDrawer({ mode, user, services, legalEntities = [], onClose, onSaved, onEdit, rhMode = false }) {
   const isCreate = mode === 'create'
   const isView = mode === 'view'
   const roleOptions = rhMode
     ? Object.entries(ROLE_LABELS).filter(([value]) => ['COLLABORATEUR', 'RESPONSABLE_SERVICE'].includes(value))
     : Object.entries(ROLE_LABELS)
-  const [form, setForm] = useState(() => formFromUser(user))
+  const [form, setForm] = useState(() => formFromUser(user, legalEntities))
   const [busy, setBusy] = useState(false)
   const [feedback, setFeedback] = useState('')
   const [passwordVisible, setPasswordVisible] = useState(false)
@@ -106,9 +115,9 @@ function UserDrawer({ mode, user, services, onClose, onSaved, onEdit, rhMode = f
   useAutoDismiss(feedback, setFeedback, { clearValue: '' })
 
   useEffect(() => {
-    setForm(formFromUser(user))
+    setForm(formFromUser(user, legalEntities))
     setFeedback('')
-  }, [user, mode])
+  }, [user, mode, legalEntities])
 
   const eligibleServices = useMemo(
     () => services.filter((service) =>
@@ -154,6 +163,14 @@ function UserDrawer({ mode, user, services, onClose, onSaved, onEdit, rhMode = f
       setFeedback('Un service est obligatoire pour ce rôle.')
       return
     }
+    if (
+      form.role !== 'ADMIN' &&
+      form.employmentType === 'INTERNE' &&
+      !form.legalEntityId
+    ) {
+      setFeedback('L’entreprise de rattachement est obligatoire pour un collaborateur interne.')
+      return
+    }
     if (form.hireDate && form.exitDate && form.exitDate < form.hireDate) {
       setFeedback('La date de sortie ne peut pas être antérieure à la date d’entrée.')
       return
@@ -175,6 +192,11 @@ function UserDrawer({ mode, user, services, onClose, onSaved, onEdit, rhMode = f
     } else {
       payload.serviceId = Number(form.serviceId)
     }
+
+    payload.legalEntityId =
+      form.role !== 'ADMIN' && form.employmentType === 'INTERNE'
+        ? Number(form.legalEntityId)
+        : null
 
     setBusy(true)
     try {
@@ -236,6 +258,7 @@ function UserDrawer({ mode, user, services, onClose, onSaved, onEdit, rhMode = f
                 <div><dt>Rôle</dt><dd><span className={`admin-users-role admin-users-role--${ROLE_TONES[user.role] ?? 'neutral'}`}>{ROLE_LABELS[user.role] ?? user.role}</span></dd></div>
                 <div><dt>Type</dt><dd>{user.employmentType === 'EXTERNE' ? 'Externe' : 'Interne'}</dd></div>
                 <div className="is-wide"><dt>Service</dt><dd>{user.service?.name ?? 'Aucun service'}</dd></div>
+                <div className="is-wide"><dt>Entreprise de rattachement</dt><dd>{user.legalEntity?.name ?? 'Non renseignée'}</dd></div>
               </dl>
             </section>
 
@@ -273,6 +296,9 @@ function UserDrawer({ mode, user, services, onClose, onSaved, onEdit, rhMode = f
                   <>
                     <label><span>Type <b>*</b></span><select value={form.employmentType} onChange={(event) => setValue('employmentType', event.target.value)}><option value="INTERNE">Interne</option><option value="EXTERNE">Externe</option></select></label>
                     <label><span>Service <b>*</b></span><select value={form.serviceId} onChange={(event) => setValue('serviceId', event.target.value)}><option value="">Sélectionner…</option>{eligibleServices.map((service) => <option key={service.id} value={service.id}>{service.name}{service.externalCompanyName ? ` — ${service.externalCompanyName}` : ''}{service.isActive ? '' : ' (inactif)'}</option>)}</select></label>
+                    {form.employmentType === 'INTERNE' && (
+                      <label className="is-wide"><span>Entreprise de rattachement <b>*</b></span><select value={form.legalEntityId} onChange={(event) => setValue('legalEntityId', event.target.value)}><option value="">Sélectionner…</option>{legalEntities.map((entity) => <option key={entity.id} value={entity.id}>{entity.name}</option>)}</select></label>
+                    )}
                   </>
                 )}
                 {form.role === 'ADMIN' && <div className="admin-users-admin-note is-wide"><Icon name="info" size={17} /><span>Un administrateur n’est rattaché à aucun service métier.</span></div>}
@@ -426,7 +452,7 @@ function StatusConfirm({ user, busy, onCancel, onConfirm }) {
 export function AdminUsersPage({ rhMode = false }) {
   const { user: authenticatedUser } = useAuth()
   const [searchParams, setSearchParams] = useSearchParams()
-  const [state, setState] = useState({ loading: true, error: false, users: [], services: [] })
+  const [state, setState] = useState({ loading: true, error: false, users: [], services: [], legalEntities: [] })
   const [filters, setFilters] = useState({ role: 'ALL', serviceId: 'ALL', type: 'ALL', status: 'ALL' })
   const [drawer, setDrawer] = useState(null)
   const [statusTarget, setStatusTarget] = useState(null)
@@ -441,7 +467,7 @@ export function AdminUsersPage({ rhMode = false }) {
     if (!silent) setState((current) => ({ ...current, loading: true, error: false }))
     try {
       const data = await getAdminUsersData()
-      setState({ loading: false, error: false, users: data.users, services: data.services })
+      setState({ loading: false, error: false, users: data.users, services: data.services, legalEntities: data.legalEntities })
     } catch {
       if (!silent) setState((current) => ({ ...current, loading: false, error: true }))
     }
@@ -628,7 +654,7 @@ export function AdminUsersPage({ rhMode = false }) {
         )}
       </section>
 
-      {drawer && <UserDrawer mode={drawer.mode} user={drawer.user} services={state.services} rhMode={rhMode} onClose={() => setDrawer(null)} onEdit={(selected) => setDrawer({ mode: 'edit', user: selected })} onSaved={handleSaved} />}
+      {drawer && <UserDrawer mode={drawer.mode} user={drawer.user} services={state.services} legalEntities={state.legalEntities} rhMode={rhMode} onClose={() => setDrawer(null)} onEdit={(selected) => setDrawer({ mode: 'edit', user: selected })} onSaved={handleSaved} />}
       {statusTarget && <StatusConfirm user={statusTarget} busy={statusBusy} onCancel={() => setStatusTarget(null)} onConfirm={confirmStatus} />}
       {deleteTarget && <DeleteConfirm user={deleteTarget} busy={deleteBusy} onCancel={() => setDeleteTarget(null)} onConfirm={confirmDelete} />}
       {passwordResetTarget && <PasswordResetModal user={passwordResetTarget} onCancel={() => setPasswordResetTarget(null)} onSuccess={(message) => { setPasswordResetTarget(null); setFeedback({ kind: 'success', message }) }} />}

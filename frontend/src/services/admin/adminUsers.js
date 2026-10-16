@@ -1,14 +1,21 @@
 import { apiClient } from '@/services/apiClient'
 
+export async function getLegalEntities() {
+  const { data } = await apiClient.get('/legal-entities')
+  return Array.isArray(data) ? data : []
+}
+
 export async function getAdminUsersData() {
-  const [usersResponse, servicesResponse] = await Promise.all([
+  const [usersResponse, servicesResponse, legalEntitiesResponse] = await Promise.all([
     apiClient.get('/users'),
     apiClient.get('/services'),
+    apiClient.get('/legal-entities'),
   ])
 
   return {
     users: Array.isArray(usersResponse.data) ? usersResponse.data : [],
     services: Array.isArray(servicesResponse.data) ? servicesResponse.data : [],
+    legalEntities: Array.isArray(legalEntitiesResponse.data) ? legalEntitiesResponse.data : [],
   }
 }
 

@@ -55,4 +55,9 @@ export class CreateUserDto {
   @IsString()
   @Length(2, 255)
   microsoftId?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  legalEntityId?: number;
 }

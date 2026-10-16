@@ -9,6 +9,7 @@ import {
 } from 'typeorm';
 
 import { Service } from '../services/service.entity';
+import { LegalEntity } from '../legal-entities/legal-entity.entity';
 
 export enum UserRole {
   COLLABORATEUR = 'COLLABORATEUR',
@@ -81,6 +82,16 @@ export class User {
   })
   @JoinColumn({ name: 'service_id' })
   service!: Service | null;
+
+  @Column({ name: 'legal_entity_id', type: 'bigint', nullable: true })
+  legalEntityId!: number | null;
+
+  @ManyToOne(() => LegalEntity, {
+    nullable: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn({ name: 'legal_entity_id' })
+  legalEntity!: LegalEntity | null;
 
   @Column({ name: 'hire_date', type: 'date', nullable: true })
   hireDate!: string | null;

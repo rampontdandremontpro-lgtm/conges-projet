@@ -22,7 +22,7 @@ import {
   LeaveBalance,
   LeaveBalanceCounterType,
 } from './leave-balance.entity';
-import { roundPeriodCloseDays } from './reference-period-rounding.util';
+import { roundPeriodCloseDays, roundAcquiredDaysUp } from './reference-period-rounding.util';
 
 interface ClosureEmployeePreview {
   employeeId: number;
@@ -319,6 +319,7 @@ export class ReferencePeriodService {
         transferredFromN: number;
         removedOldNMinus1: number;
         removedOldNPlus1: number;
+        roundingSupplement: number;
       }> = [];
 
       for (const [employeeId, balances] of grouped.entries()) {
@@ -357,6 +358,43 @@ export class ReferencePeriodService {
           nextReferencePeriod,
           LeaveBalanceCounterType.N_PLUS_1,
         );
+
+        // L3141-7 : le droit acquis de base (2,5 jours ouvrables/mois) est porté
+        // à l'entier immédiatement supérieur lorsqu'il comporte une fraction de
+        // jour. L'arrondi porte sur le DROIT ACQUIS (base, plafonnée à 30 jours
+        // ouvrables par L3141-3), jamais sur le solde restant après
+        // consommation. Les jours déjà consommés et les droits supplémentaires
+        // (corrections RH, reports) ne sont pas modifiés.
+        let roundingSupplement = 0;
+        if (sourceN) {
+          const baseAcquired = await this.getAcquisitionTotal(
+            manager,
+            sourceN.id,
+          );
+          const definitiveBase = roundAcquiredDaysUp(baseAcquired);
+          roundingSupplement = this.round(definitiveBase - baseAcquired);
+
+          if (roundingSupplement > 0) {
+            const beforeAcquired = this.round(sourceN.acquiredDays);
+            const beforeAvailable = this.round(sourceN.availableDays);
+            sourceN.acquiredDays = this.round(
+              beforeAcquired + roundingSupplement,
+            );
+            sourceN.availableDays = this.round(
+              beforeAvailable + roundingSupplement,
+            );
+            await repository.save(sourceN);
+            await this.saveMovement(manager, {
+              balance: sourceN,
+              actorId: actor.id,
+              type: BalanceMovementType.CORRECTION_POSITIVE,
+              days: roundingSupplement,
+              before: beforeAvailable,
+              after: sourceN.availableDays,
+              reason: `CLOTURE_ARRONDI_L3141_7|${referencePeriod}|Droit acquis de base ${baseAcquired} → ${definitiveBase} jours ouvrables (acquiredDays ${beforeAcquired} → ${sourceN.acquiredDays}).`,
+            });
+          }
+        }
 
         const transferredFromN = roundPeriodCloseDays(sourceN?.availableDays ?? 0);
         const removedOldNMinus1 = this.round(
@@ -434,6 +472,7 @@ export class ReferencePeriodService {
           transferredFromN,
           removedOldNMinus1,
           removedOldNPlus1,
+          roundingSupplement,
         });
       }
 
@@ -485,6 +524,12 @@ export class ReferencePeriodService {
         removedOldNPlus1: this.round(
           result.processed.reduce(
             (sum, row) => sum + row.removedOldNPlus1,
+            0,
+          ),
+        ),
+        roundingSupplement: this.round(
+          result.processed.reduce(
+            (sum, row) => sum + row.roundingSupplement,
             0,
           ),
         ),
@@ -549,6 +594,23 @@ export class ReferencePeriodService {
         reason: data.reason,
       }),
     );
+  }
+
+  private async getAcquisitionTotal(
+    manager: EntityManager,
+    leaveBalanceId: number,
+  ): Promise<number> {
+    const row = await manager
+      .getRepository(BalanceMovement)
+      .createQueryBuilder('movement')
+      .select('COALESCE(SUM(movement.days), 0)', 'total')
+      .where('movement.leaveBalanceId = :leaveBalanceId', { leaveBalanceId })
+      .andWhere('movement.movementType = :movementType', {
+        movementType: BalanceMovementType.ACQUISITION,
+      })
+      .getRawOne<{ total: string }>();
+
+    return this.round(Number(row?.total ?? 0));
   }
 
   private async getApprovedCarryover(

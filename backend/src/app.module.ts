@@ -18,12 +18,14 @@ import { AddDerogationSubmittedAt20260929180000 } from './database/migrations/20
 import { AddUserExitDate20260930180000 } from './database/migrations/20260930180000-add-user-exit-date';
 import { MakeServiceIdNullable20261012100000 } from './database/migrations/20261012100000-make-service-id-nullable';
 import { MakeActorReferencesNullable20261012120000 } from './database/migrations/20261012120000-make-actor-references-nullable';
+import { AddLegalEntities20261014100000 } from './database/migrations/20261014100000-add-legal-entities';
 import { DocumentsModule } from './documents/documents.module';
 import { ExportsModule } from './exports/exports.module';
 import { HolidaysModule } from './holidays/holidays.module';
 import { LeaveBalancesModule } from './leave-balances/leave-balances.module';
 import { LeaveRequestsModule } from './leave-requests/leave-requests.module';
 import { LeaveTypesModule } from './leave-types/leave-types.module';
+import { LegalEntitiesModule } from './legal-entities/legal-entities.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { PresenceModule } from './presence/presence.module';
 import { ReportsModule } from './reports/reports.module';
@@ -62,6 +64,7 @@ import { ValidatorsModule } from './validators/validators.module';
           AddUserExitDate20260930180000,
           MakeServiceIdNullable20261012100000,
           MakeActorReferencesNullable20261012120000,
+          AddLegalEntities20261014100000,
         ],
         migrationsRun: true,
         migrationsTableName: 'typeorm_migrations',
@@ -88,6 +91,7 @@ import { ValidatorsModule } from './validators/validators.module';
     LeaveRequestsModule,
     HolidaysModule,
     ValidatorsModule,
+    LegalEntitiesModule,
   ],
   controllers: [AppController],
   providers: [

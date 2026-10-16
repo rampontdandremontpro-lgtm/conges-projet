@@ -21,7 +21,10 @@ function formatDateTime(value) {
 }
 
 export function RhPriorityCard({ items, onNavigate }) {
-  const list = Array.isArray(items) ? items : []
+  // Limite la carte aux 4 éléments les plus prioritaires. L'ordre et les
+  // règles de priorité restent ceux fournis par le parent ; « Voir tout »
+  // donne accès à l'ensemble des dossiers.
+  const list = (Array.isArray(items) ? items : []).slice(0, 4)
 
   return (
     <section className="dash-card rh-priority-card">

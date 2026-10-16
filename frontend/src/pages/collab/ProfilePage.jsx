@@ -87,6 +87,11 @@ export function ProfilePage() {
       { icon: 'user', label: 'Rôle', value: ROLE_LABELS[profile.role] ?? profile.role },
       { icon: 'building', label: 'Service', value: organisation },
       {
+        icon: 'building',
+        label: 'Entreprise de rattachement',
+        value: profile.legalEntity?.name ?? 'Non renseignée',
+      },
+      {
         icon: 'users',
         label: 'Type de collaboration',
         value: EMPLOYMENT_LABELS[profile.employmentType] ?? profile.employmentType,
