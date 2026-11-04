@@ -1,0 +1,18 @@
+{
+  "purpose": "JUR-027 correction — report puis clôture (pas de double crédit) + seconde clôture refusée (checks C7-C8).",
+  "script": "tests/recette/scripts/retest-jur027-correction-cloture.mjs",
+  "environment": { "api": "http://localhost:3001/api", "database": "gestion_conges_gmes_test", "isolated": true },
+  "executedBy": "Pi — test automatisé",
+  "dateRetest": "2026-10-26",
+  "checks": [
+    { "name": "après report : source 2025-2026 = 6", "ok": true, "detail": "availableDays=6" },
+    { "name": "après report : cible 2026-2027 = 4", "ok": true, "detail": "availableDays=4" },
+    { "name": "clôture 2025-2026 acceptée", "ok": true, "detail": "HTTP 201" },
+    { "name": "après clôture : source = 0", "ok": true, "detail": "availableDays=0" },
+    { "name": "après clôture : cible = 4 (report conservé, pas de double crédit)", "ok": true, "detail": "availableDays=4" },
+    { "name": "un seul crédit REPORT_EXCEPTIONNEL (pas de double crédit)", "ok": true, "detail": "count=1" },
+    { "name": "seconde clôture refusée (409)", "ok": true, "detail": "HTTP 409" }
+  ],
+  "summary": { "total": 7, "passed": 7, "failed": 0 },
+  "conclusion": "Le report débité de la source n'est pas re-crédité à la clôture ; la source débitée est remise à zéro correctement ; la seconde clôture est refusée."
+}

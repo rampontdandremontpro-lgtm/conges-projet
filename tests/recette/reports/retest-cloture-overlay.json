@@ -1,0 +1,42 @@
+{
+  "purpose": "Correction définitive de l'overlay et du verrouillage du défilement de la fenêtre « Clôture de période ».",
+  "scripts": [
+    "tests/recette/scripts/browser-cloture-overlay.mjs",
+    "tests/recette/scripts/browser-cloture-position.mjs"
+  ],
+  "environment": {
+    "frontend": "http://localhost:5174",
+    "api": "http://localhost:3001/api",
+    "database": "gestion_conges_gmes_test",
+    "isolated": true,
+    "browser": "Chromium headless (Playwright)"
+  },
+  "dateRetest": "2026-10-26",
+  "results": {
+    "overlay_scroll": { "total": 24, "passed": 24, "failed": 0 },
+    "position": { "total": 29, "passed": 29, "failed": 0 }
+  },
+  "keyChecks": [
+    { "name": "Fond flou couvre le viewport entier (sidebar + header + bas)", "ok": true },
+    { "name": "backdrop-filter blur appliqué uniformément", "ok": true },
+    { "name": "Gel visuel de la page à la position défilée", "ok": true },
+    { "name": "Molette sur le fond : page figée", "ok": true },
+    { "name": "Touches PageDown/flèches/End/Home/espace : page figée", "ok": true },
+    { "name": "Défilement interne de la fenêtre", "ok": true },
+    { "name": "Pas de report du défilement interne vers la page", "ok": true },
+    { "name": "Verrouillage maintenu après changement onglet + période", "ok": true },
+    { "name": "Confirmation au-dessus + verrou maintenu + Échap", "ok": true },
+    { "name": "Fermeture : position de défilement restaurée exactement", "ok": true },
+    { "name": "Réouverture sans verrou résiduel", "ok": true },
+    { "name": "Zoom 125% : pas de débordement", "ok": true },
+    { "name": "Positionnement fenêtre (centrage zone principale, marge header)", "ok": true }
+  ],
+  "screenshots": [
+    "tests/recette/preuves/overlay-full-1366.png",
+    "tests/recette/preuves/overlay-full-1920.png",
+    "tests/recette/preuves/overlay-confirm-1366.png",
+    "tests/recette/preuves/overlay-zoom125.png",
+    "tests/recette/preuves/overlay-mobile.png"
+  ],
+  "conclusion": "Le fond est désormais plein écran et uniforme, la page arrière est gelée puis restaurée exactement, le défilement interne reste confiné à la fenêtre, et le positionnement de la fenêtre blanche est conservé."
+}

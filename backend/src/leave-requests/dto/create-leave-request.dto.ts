@@ -10,7 +10,7 @@ import {
   Min,
 } from 'class-validator';
 
-import { DayPeriod } from '../leave-request.entity';
+import { DayPeriod, LeaveClassification } from '../leave-request.entity';
 
 export class CreateLeaveRequestDto {
   @IsOptional()
@@ -46,4 +46,8 @@ export class CreateLeaveRequestDto {
   @IsString()
   @MaxLength(1000)
   comment?: string;
+
+  @IsOptional()
+  @IsEnum(LeaveClassification)
+  classification?: LeaveClassification;
 }

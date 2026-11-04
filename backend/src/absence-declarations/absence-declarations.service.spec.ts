@@ -1,7 +1,10 @@
 import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { DataSource } from 'typeorm';
 
+import { AuditService } from '../audit/audit.service';
+import { BirthEventsService } from '../birth-events/birth-events.service';
 import { Document } from '../documents/document.entity';
 import {
   DayPeriod,
@@ -15,6 +18,9 @@ import { LeaveTypesService } from '../leave-types/leave-types.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PresenceService } from '../presence/presence.service';
 import { UsersService } from '../users/users.service';
+import { ArreteChevauchementService } from '../leave-balances/arrete-chevauchement.service';
+import { MonthlyAccrualService } from '../leave-balances/monthly-accrual.service';
+import { HolidaysService } from '../holidays/holidays.service';
 import {
   AbsenceDeclaration,
   AbsenceDeclarationStatus,
@@ -77,9 +83,15 @@ describe('AbsenceDeclarationsService — un seul mode (jours / heures)', () => {
           useValue: {},
         },
         { provide: UsersService, useValue: usersService },
+        { provide: BirthEventsService, useValue: { assertOwnedBy: jest.fn() } },
+        { provide: AuditService, useValue: { record: jest.fn().mockResolvedValue({}) } },
         { provide: LeaveTypesService, useValue: leaveTypesService },
-        { provide: NotificationsService, useValue: {} },
+        { provide: NotificationsService, useValue: { create: jest.fn(), createForActiveRoles: jest.fn(), createForServiceManagers: jest.fn() } },
         { provide: PresenceService, useValue: presenceService },
+        { provide: ArreteChevauchementService, useValue: { shouldRelaxLeaveOverlap: jest.fn().mockResolvedValue(false), restoreForAbsence: jest.fn(), reverseForAbsence: jest.fn() } },
+        { provide: MonthlyAccrualService, useValue: { regularizeAbsenceImpact: jest.fn().mockResolvedValue({ regularizedMonths: [], corrections: [] }) } },
+        { provide: HolidaysService, useValue: { findNonDeductibleBetween: jest.fn().mockResolvedValue([]) } },
+        { provide: DataSource, useValue: { transaction: (cb: (m: unknown) => unknown) => cb({ getRepository: () => ({ save: jest.fn(async (row: unknown) => row) }) }), getRepository: () => ({ findOne: jest.fn() }) } },
       ],
     }).compile();
 
@@ -342,50 +354,9 @@ describe('AbsenceDeclarationsService — un seul mode (jours / heures)', () => {
     });
   });
 
-  describe('autorisation — opérations de déclaration réservées à la RH', () => {
-    const nonRhUsers: Array<[string, never]> = [
-      ['COLLABORATEUR', collaboratorUser],
-      ['RESPONSABLE_SERVICE', { id: 3, role: 'RESPONSABLE_SERVICE' } as never],
-      ['DIRECTEUR', { id: 4, role: 'DIRECTEUR' } as never],
-      ['ADMIN', { id: 6, role: 'ADMIN' } as never],
-    ];
-
-    it.each(nonRhUsers)('%s → createDraft refusé (403)', async (_label, user) => {
-      await expect(
-        service.createDraft(user, {
-          leaveTypeId: 7,
-          startDate: '2026-01-05',
-          endDate: '2026-01-05',
-        } as never),
-      ).rejects.toThrow(ForbiddenException);
-    });
-
-    it.each(nonRhUsers)('%s → updateDraft refusé (403)', async (_label, user) => {
-      await expect(
-        service.updateDraft(42, user, {} as never),
-      ).rejects.toThrow(ForbiddenException);
-    });
-
-    it.each(nonRhUsers)('%s → submit refusé (403)', async (_label, user) => {
-      await expect(
-        service.submit(42, user, { certifiedAccurate: true } as never),
-      ).rejects.toThrow(ForbiddenException);
-    });
-
-    it.each(nonRhUsers)('%s → cancel refusé (403)', async (_label, user) => {
-      await expect(
-        service.cancel(42, user),
-      ).rejects.toThrow(ForbiddenException);
-    });
-
-    it.each(nonRhUsers)('%s → deleteDraft refusé (403)', async (_label, user) => {
-      await expect(
-        service.deleteDraft(42, user),
-      ).rejects.toThrow(ForbiddenException);
-    });
-
-    it('RH → createDraft autorisé (passe le contrôle de rôle)', async () => {
-      const saved = await service.createDraft(rhUser as never, {
+  describe('autorisation — création/soumission des déclarations', () => {
+    it('collaborateur crée un brouillon pour lui-même (type déclarable)', async () => {
+      const saved = await service.createDraft(collaboratorUser as never, {
         leaveTypeId: 7,
         startDate: '2026-01-05',
         endDate: '2026-01-05',
@@ -393,6 +364,94 @@ describe('AbsenceDeclarationsService — un seul mode (jours / heures)', () => {
         endPeriod: DayPeriod.MATIN,
       } as never);
       expect(saved.startPeriod).toBe(DayPeriod.MATIN);
+    });
+
+    it('collaborateur ne peut pas créer une déclaration pour un autre salarié', async () => {
+      serviceAny.resolveEmployee.mockRejectedValueOnce(
+        new ForbiddenException(
+          'Seule la RH peut créer une déclaration pour un autre collaborateur.',
+        ),
+      );
+      await expect(
+        service.createDraft(collaboratorUser as never, {
+          employeeId: 9,
+          leaveTypeId: 7,
+          startDate: '2026-01-05',
+          endDate: '2026-01-05',
+        } as never),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('collaborateur ne peut pas utiliser un type réservé à la RH', async () => {
+      serviceAny.validateLeaveType.mockImplementationOnce(() => {
+        throw new ForbiddenException(
+          'Ce type d’absence ne peut pas être déclaré par un collaborateur.',
+        );
+      });
+      await expect(
+        service.createDraft(collaboratorUser as never, {
+          leaveTypeId: 7,
+          startDate: '2026-01-05',
+          endDate: '2026-01-05',
+        } as never),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('RH crée un brouillon pour un autre salarié', async () => {
+      const saved = await service.createDraft(rhUser as never, {
+        employeeId: 5,
+        leaveTypeId: 7,
+        startDate: '2026-01-05',
+        endDate: '2026-01-05',
+        startPeriod: DayPeriod.MATIN,
+        endPeriod: DayPeriod.MATIN,
+      } as never);
+      expect(saved.startPeriod).toBe(DayPeriod.MATIN);
+    });
+
+    it('collaborateur soumet son propre brouillon', async () => {
+      serviceAny.findAccessibleOne.mockResolvedValue({
+        id: 42,
+        createdById: 1,
+        employeeId: 1,
+        employee: { role: 'COLLABORATEUR' },
+        leaveType,
+        startDate: '2026-01-05',
+        endDate: '2026-01-05',
+        startPeriod: DayPeriod.MATIN,
+        endPeriod: DayPeriod.APRES_MIDI,
+        status: AbsenceDeclarationStatus.BROUILLON,
+        familyEventContext: null,
+        familyEventRule: null,
+      } as never);
+      serviceAny.ensureDraft.mockImplementation(() => undefined);
+
+      const saved = await service.submit(42, collaboratorUser as never, {
+        certifiedAccurate: true,
+      } as never);
+      expect(saved).toBeDefined();
+    });
+
+    it('collaborateur ne soumet pas le brouillon d’un autre salarié', async () => {
+      serviceAny.findAccessibleOne.mockResolvedValue({
+        id: 42,
+        createdById: 2,
+        employeeId: 1,
+        status: AbsenceDeclarationStatus.BROUILLON,
+      } as never);
+      serviceAny.ensureDraft.mockImplementation(() => undefined);
+
+      await expect(
+        service.submit(42, collaboratorUser as never, {
+          certifiedAccurate: true,
+        } as never),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('l’annulation reste réservée à la RH', async () => {
+      await expect(
+        service.cancel(42, collaboratorUser as never),
+      ).rejects.toThrow(ForbiddenException);
     });
   });
 });

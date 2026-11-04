@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import { useAuth } from '@/auth/AuthContext'
@@ -54,7 +54,8 @@ function formatNotificationTime(value) {
 
 export function NotificationsDropdown() {
   const navigate = useNavigate()
-  const { user, effectiveRole } = useAuth()
+  const { user, effectiveRole, profileMode } = useAuth()
+  const scope = profileMode === 'COLLABORATOR' ? 'COLLABORATOR' : undefined
   const [open, setOpen] = useState(false)
   const [items, setItems] = useState([])
   const [unreadCount, setUnreadCount] = useState(0)
@@ -62,33 +63,52 @@ export function NotificationsDropdown() {
   const [error, setError] = useState(false)
   const [markingAll, setMarkingAll] = useState(false)
   const ref = useClickOutside(() => setOpen(false), open)
+  const requestSeqRef = useRef(0)
 
   const refreshUnreadCount = useCallback(async () => {
+    const requestSeq = ++requestSeqRef.current
     try {
-      const count = await getUnreadNotificationCount()
+      const count = await getUnreadNotificationCount(scope)
+      if (requestSeqRef.current !== requestSeq) return
       setUnreadCount(count)
     } catch {
       return
     }
-  }, [])
+  }, [scope])
 
   const loadNotifications = useCallback(async () => {
+    const requestSeq = ++requestSeqRef.current
     setLoading(true)
     setError(false)
 
     try {
       const [notifications, count] = await Promise.all([
-        getMyNotifications(),
-        getUnreadNotificationCount(),
+        getMyNotifications({}, scope),
+        getUnreadNotificationCount(scope),
       ])
+      if (requestSeqRef.current !== requestSeq) return
       setItems(notifications)
       setUnreadCount(count)
     } catch {
+      if (requestSeqRef.current !== requestSeq) return
       setError(true)
     } finally {
-      setLoading(false)
+      if (requestSeqRef.current === requestSeq) {
+        setLoading(false)
+      }
     }
-  }, [])
+  }, [scope])
+
+  // Chaque changement de compte ou de profil réinitialise immédiatement l'état
+  // et invalide toute réponse asynchrone antérieure, puis recharge les
+  // notifications du compte réellement connecté.
+  useEffect(() => {
+    requestSeqRef.current += 1
+    setItems([])
+    setUnreadCount(0)
+    setOpen(false)
+    refreshUnreadCount()
+  }, [user?.id, scope, refreshUnreadCount])
 
   useEffect(() => {
     refreshUnreadCount()
@@ -139,7 +159,7 @@ export function NotificationsDropdown() {
     setUnreadCount((current) => Math.max(0, current - 1))
 
     try {
-      await markNotificationRead(item.id)
+      await markNotificationRead(item.id, scope)
     } catch {
       setItems(previousItems)
       setUnreadCount(previousUnreadCount)
@@ -155,7 +175,7 @@ export function NotificationsDropdown() {
     setError(false)
 
     try {
-      await markAllNotificationsRead()
+      await markAllNotificationsRead(scope)
       const readAt = new Date().toISOString()
       setItems((current) => current.map((item) => ({ ...item, readAt: item.readAt ?? readAt })))
       setUnreadCount(0)

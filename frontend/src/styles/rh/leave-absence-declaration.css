@@ -82,3 +82,7 @@
 @media(max-width:760px){
   .rh-declaration-drawer{width:100vw}.rh-declaration-head{padding:18px 16px}.rh-declaration-form{padding:16px}.rh-declaration-top-grid{grid-template-columns:1fr}.rh-declaration-section{padding:14px}.rh-declaration-section__title{flex-direction:column}.rh-declaration-section__title p{text-align:left}.rh-declaration-calendar.nr-page{padding:7px}.rh-declaration-calendar .nr-cal__body{gap:4px}.rh-declaration-actions{margin:0 -16px -16px;padding:13px 16px}.rh-declaration-actions button{flex:1}.rh-declaration-calendar .nr-cal__legend{display:none}
 }
+
+.rh-declaration-checkbox { display:flex !important; grid-template-columns:auto 1fr; align-items:center; gap:9px; color:#315476; font-size:12.5px; font-weight:750; cursor:pointer; padding:10px 13px; border:1px solid #e2e8f0; border-radius:9px; background:#f8fafc; }
+.rh-declaration-checkbox input { width:16px !important; height:16px; padding:0 !important; margin:0; }
+.rh-declaration-checkbox span { color:#315476 !important; text-transform:none !important; letter-spacing:0 !important; font-size:12.5px !important; }

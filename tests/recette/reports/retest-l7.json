@@ -1,0 +1,78 @@
+{
+  "date": "2026-10-29T11:51:25.769Z",
+  "results": [
+    {
+      "id": "L7-01",
+      "name": "Clôture unifiée : lot transféré + GMES dans une transaction",
+      "ok": true,
+      "detail": "HTTP 201 target=2021-2022"
+    },
+    {
+      "id": "L7-02",
+      "name": "Notification → preuve → vérification → échéance recalculée (L2/L3)",
+      "ok": true,
+      "detail": "status=A_CORRIGER certain=1"
+    },
+    {
+      "id": "L7-03",
+      "name": "Correction + vérification simultanées → état final cohérent (atomique)",
+      "ok": true,
+      "detail": "HTTP 201/409 final=A_CORRIGER"
+    },
+    {
+      "id": "L7-04",
+      "name": "Lot gelé en régularisation → clôture bloquée",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "L7-05",
+      "name": "Jours réservés exclus du reportable (7 j > 6 libres → refus)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "L7-06",
+      "name": "Reliquat inconnu → clôture bloquée",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "L7-07",
+      "name": "Somme des lots > solde → report bloqué",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "L7-08",
+      "name": "Notification obsolète (A_CORRIGER) → vérification refusée",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "L7-09",
+      "name": "Document altéré après enregistrement → vérification refusée",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "L7-10",
+      "name": "Accès croisé entre salariés → refus",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "L7-11",
+      "name": "Cohérence des échéances après correction → confirmation finale",
+      "ok": true,
+      "detail": "status=RECEPTION_VERIFIEE"
+    },
+    {
+      "id": "L7-12",
+      "name": "Aucun envoi réel (courrier/e-mail/SMS) : seules des notifications applicatives",
+      "ok": true,
+      "detail": "REFERENCE_PERIOD_CLOSED=1"
+    }
+  ],
+  "failed": 0
+}

@@ -1,0 +1,13 @@
+OK  avant clôture — embauche 16/07 : acquiredDays = 26,29 — acquiredDays=26.29
+OK  avant clôture — année pleine : acquiredDays = 30 — acquiredDays=30
+OK  avant clôture — départ 16/02/2025 : acquiredDays = 21,43 — acquiredDays=21.43
+OK  clôture 2024-2025 acceptée — HTTP 201
+OK  embauche 16/07 : supplément d’arrondi = 0,71 — supplement=0.71
+OK  embauche 16/07 : transfert N→N-1 = 27 — transferred=27
+OK  année pleine : supplément = 0 (30 → 30) — supplement=0
+OK  départ 16/02/2025 : supplément = 0,57 (21,43 → 22) — supplement=0.57
+OK  après clôture — N-1 2025-2026 reçoit 27 jours — availableDays=27
+OK  mouvement tracé CLOTURE_ARRONDI_L3141_7 (+0,71) — days=0.71 type=CORRECTION_POSITIVE
+OK  idempotence : seconde clôture refusée (409) — HTTP 409
+
+RÉSULTAT : 11/11 OK, 0 KO

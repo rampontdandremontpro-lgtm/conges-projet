@@ -1,0 +1,29 @@
+{
+    "options": {
+        "schema": "spotify_db",
+        "table": "playliststracks",
+        "columns": [
+            "pid",
+            "track_uri",
+            "pos"
+        ],
+        "defaultCharacterSet": "utf8mb4",
+        "fieldsTerminatedBy": "\t",
+        "fieldsEnclosedBy": "",
+        "fieldsOptionallyEnclosed": false,
+        "fieldsEscapedBy": "\\",
+        "linesTerminatedBy": "\n"
+    },
+    "triggers": [],
+    "includesData": true,
+    "includesDdl": true,
+    "extension": "tsv.zst",
+    "chunking": true,
+    "compression": "zstd",
+    "primaryIndex": [
+        "pid",
+        "track_uri"
+    ],
+    "partitions": [],
+    "basenames": {}
+}

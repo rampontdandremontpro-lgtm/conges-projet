@@ -1,0 +1,45 @@
+{
+    "options": {
+        "schema": "gestion_conges_gmes",
+        "table": "users",
+        "columns": [
+            "id",
+            "nom",
+            "prenom",
+            "email",
+            "password_hash",
+            "microsoft_id",
+            "role",
+            "employment_type",
+            "service_id",
+            "legal_entity_id",
+            "hire_date",
+            "exit_date",
+            "presence_status",
+            "is_active",
+            "must_change_password",
+            "signature_type",
+            "signature_data",
+            "signature_updated_at",
+            "created_at",
+            "updated_at"
+        ],
+        "defaultCharacterSet": "utf8mb4",
+        "fieldsTerminatedBy": "\t",
+        "fieldsEnclosedBy": "",
+        "fieldsOptionallyEnclosed": false,
+        "fieldsEscapedBy": "\\",
+        "linesTerminatedBy": "\n"
+    },
+    "triggers": [],
+    "includesData": true,
+    "includesDdl": true,
+    "extension": "tsv.zst",
+    "chunking": true,
+    "compression": "zstd",
+    "primaryIndex": [
+        "id"
+    ],
+    "partitions": [],
+    "basenames": {}
+}

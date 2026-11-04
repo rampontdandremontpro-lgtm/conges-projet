@@ -1,0 +1,45 @@
+{
+    "dumper": "mysqlsh Ver 8.4.10 for Win64 on x86_64 - for MySQL 8.4.10 (MySQL Community Server (GPL))",
+    "version": "2.0.1",
+    "origin": "dumpInstance",
+    "options": {
+        "consistent": false
+    },
+    "schemas": [
+        "gestion_conges_gmes",
+        "backend_base",
+        "cra-projet",
+        "gestion_conges_gmes_test",
+        "sdv-php-bootcamp",
+        "spotify_db"
+    ],
+    "basenames": {
+        "gestion_conges_gmes": "gestion_conges_gmes",
+        "backend_base": "backend_base",
+        "cra-projet": "cra-projet",
+        "gestion_conges_gmes_test": "gestion_conges_gmes_test",
+        "sdv-php-bootcamp": "sdv-php-bootcamp",
+        "spotify_db": "spotify_db"
+    },
+    "users": [
+        "'root'@'localhost'"
+    ],
+    "defaultCharacterSet": "utf8mb4",
+    "tzUtc": true,
+    "bytesPerChunk": 64000000,
+    "user": "root",
+    "hostname": "PcDaffySama",
+    "server": "PcDaffySama",
+    "serverVersion": "5.7.24",
+    "binlogFile": "",
+    "binlogPosition": 0,
+    "gtidExecuted": "",
+    "gtidExecutedInconsistent": true,
+    "consistent": false,
+    "targetVersion": "8.4.10",
+    "partialRevokes": false,
+    "compatibilityOptions": [],
+    "capabilities": [],
+    "checksum": false,
+    "begin": "2026-10-26 15:10:02"
+}

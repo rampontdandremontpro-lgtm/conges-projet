@@ -1,0 +1,114 @@
+{
+  "date": "2026-10-29T11:52:50.108Z",
+  "results": [
+    {
+      "id": "F1",
+      "name": "verifyProof refuse une preuve sans document transmis lié",
+      "ok": true,
+      "detail": "HTTP 400"
+    },
+    {
+      "id": "F2",
+      "name": "Décision NON_CONFORME → A_CORRIGER, échéance non confirmée",
+      "ok": true,
+      "detail": "status=A_CORRIGER"
+    },
+    {
+      "id": "F3",
+      "name": "Collaborateur : téléchargement preuve refusé (403)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "F4",
+      "name": "Collaborateur /my : aucun storageKey/chemin privé",
+      "ok": true,
+      "detail": "items=1"
+    },
+    {
+      "id": "F5",
+      "name": "Collaborateur : accès à la notification d'un autre salarié refusé",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "F6",
+      "name": "Réception antérieure à la transmission → refus (API réel)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "F7",
+      "name": "Réception future → refus (API réel)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "F8",
+      "name": "Transmission puis réception successives → acceptation (API réel)",
+      "ok": true,
+      "detail": "HTTP 201"
+    },
+    {
+      "id": "F9",
+      "name": "Date SQL relue sans changement de jour (Martinique)",
+      "ok": true,
+      "detail": "info=2026-10-29 expected=2026-10-29"
+    },
+    {
+      "id": "F10",
+      "name": "Échéance exacte à 15 mois (clampée)",
+      "ok": true,
+      "detail": "expires=2028-01-29 expected=2028-01-29"
+    },
+    {
+      "id": "F11",
+      "name": "Échéance incohérente détectée → A_CORRIGER",
+      "ok": true,
+      "detail": "status=A_CORRIGER"
+    },
+    {
+      "id": "F12",
+      "name": "Notification corrigée créée (liée, BROUILLON)",
+      "ok": true,
+      "detail": "new=53 from=52"
+    },
+    {
+      "id": "F13",
+      "name": "Ancienne notification obsolète ne peut plus confirmer",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "F14",
+      "name": "Nouvelle notification : confirmation finale possible",
+      "ok": true,
+      "detail": "status=RECEPTION_VERIFIEE"
+    },
+    {
+      "id": "F15",
+      "name": "Plusieurs lots + reliquat inconnu → blocage report",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "F16",
+      "name": "Somme des lots > solde → blocage (rapprochement impossible)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "F17",
+      "name": "Lot modifié entre préparation et vérification → refus",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "F18",
+      "name": "Annulation + vérification simultanées → un seul gagnant",
+      "ok": true,
+      "detail": "HTTP 201/409"
+    }
+  ],
+  "failed": 0
+}

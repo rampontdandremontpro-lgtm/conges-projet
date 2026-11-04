@@ -1,0 +1,72 @@
+{
+  "date": "2026-10-28T19:03:12.838Z",
+  "results": [
+    {
+      "id": "ISO-1a",
+      "name": "Compteur 6j (2 ord + 4 protégés) : demande 2j OK",
+      "ok": true,
+      "detail": "HTTP 201"
+    },
+    {
+      "id": "ISO-1b",
+      "name": "Demande 3j refusée (2 ordinaires seulement)",
+      "ok": true,
+      "detail": "HTTP 400"
+    },
+    {
+      "id": "ISO-1c",
+      "name": "Lot expiré présent : 2 ordinaires utilisables",
+      "ok": true,
+      "detail": "HTTP 201"
+    },
+    {
+      "id": "ISO-1d",
+      "name": "Reliquat inconnu → refus (vérification RH)",
+      "ok": true,
+      "detail": "HTTP 400"
+    },
+    {
+      "id": "ISO-1e",
+      "name": "Reliquat 20j > compteur 10j → incohérence signalée (1j)",
+      "ok": true,
+      "detail": "HTTP 400"
+    },
+    {
+      "id": "ISO-1f",
+      "name": "Compteur sans lot → jours ordinaires fonctionnent",
+      "ok": true,
+      "detail": "HTTP 201"
+    },
+    {
+      "id": "ISO-2a",
+      "name": "Réservation (soumise) : lot 5→3",
+      "ok": true,
+      "detail": "lot=3.00"
+    },
+    {
+      "id": "ISO-2b",
+      "name": "Validation : transformation sans double décrément (lot=3)",
+      "ok": true,
+      "detail": "lot=3.00"
+    },
+    {
+      "id": "ISO-2c",
+      "name": "Compteur : réservé 0, disponible 5 (consommé 5 cumulé)",
+      "ok": true,
+      "detail": "res=0.00 cons=5.00 avail=5.00"
+    },
+    {
+      "id": "ISO-2d",
+      "name": "Refus : libération exacte (lot 3→1 puis 1→3)",
+      "ok": true,
+      "detail": "lot=3.00"
+    },
+    {
+      "id": "ISO-3",
+      "name": "Panne après 1re écriture → rollback intégral (409, lot1 intact, 0 mouvement)",
+      "ok": true,
+      "detail": "HTTP 409 lot1=2.00 mv=0"
+    }
+  ],
+  "failed": 0
+}

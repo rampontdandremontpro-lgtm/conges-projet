@@ -78,24 +78,49 @@ export class NotificationsController {
     @Req() request: AuthenticatedRequest,
     @Query() query: NotificationQueryDto,
   ) {
-    return this.notificationsService.findMy(request.user.id, query);
+    return this.notificationsService.findMy(
+      request.user.id,
+      query,
+      query.scope,
+      request.user.role,
+    );
   }
 
   @Get('my/unread-count')
-  countUnread(@Req() request: AuthenticatedRequest) {
-    return this.notificationsService.countUnread(request.user.id);
+  countUnread(
+    @Req() request: AuthenticatedRequest,
+    @Query('scope') scope?: string,
+  ) {
+    return this.notificationsService.countUnread(
+      request.user.id,
+      scope === 'COLLABORATOR' ? scope : undefined,
+      request.user.role,
+    );
   }
 
   @Patch('my/read-all')
-  markAllRead(@Req() request: AuthenticatedRequest) {
-    return this.notificationsService.markAllRead(request.user.id);
+  markAllRead(
+    @Req() request: AuthenticatedRequest,
+    @Query('scope') scope?: string,
+  ) {
+    return this.notificationsService.markAllRead(
+      request.user.id,
+      scope === 'COLLABORATOR' ? scope : undefined,
+      request.user.role,
+    );
   }
 
   @Patch(':id/read')
   markRead(
     @Req() request: AuthenticatedRequest,
     @Param('id', ParseIntPipe) id: number,
+    @Query('scope') scope?: string,
   ) {
-    return this.notificationsService.markRead(request.user.id, id);
+    return this.notificationsService.markRead(
+      request.user.id,
+      id,
+      scope === 'COLLABORATOR' ? scope : undefined,
+      request.user.role,
+    );
   }
 }

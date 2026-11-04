@@ -1,0 +1,30 @@
+{
+  "purpose": "Vérification du cycle complet du report exceptionnel JUR-027 (report → consommation → clôture) et détection d'un risque de double usage.",
+  "script": "tests/recette/scripts/retest-jur027-cycle-cloture.mjs",
+  "environment": { "api": "http://localhost:3001/api", "database": "gestion_conges_gmes_test", "isolated": true },
+  "executedBy": "Pi — test automatisé",
+  "dateRetest": "2026-10-26",
+  "scenario": "Collaborateur avec 10 jours sur le compteur N-1 2025-2026 ; la RH autorise un report exceptionnel de 4 jours ; puis consommation et clôture.",
+  "checks": [
+    { "name": "report exceptionnel accepté", "ok": true, "detail": "HTTP 201" },
+    { "name": "après report : compteur source N-1 = 10 (PAS débité)", "ok": true, "detail": "availableDays=10" },
+    { "name": "après report : compteur cible N-1 2026-2027 = 4", "ok": true, "detail": "availableDays=4" },
+    { "name": "indicateur de double usage : total disponible = 14 pour 10 initiaux", "ok": true, "detail": "10 + 4" },
+    { "name": "consommation totale simulée sur la source (10 jours)", "ok": true, "detail": "consumed=10 available=0" },
+    { "name": "clôture 2025-2026 acceptée", "ok": true, "detail": "HTTP 201" },
+    { "name": "après clôture : source N-1 = 0 (remise à zéro)", "ok": true, "detail": "availableDays=0" },
+    { "name": "après clôture : cible N-1 2026-2027 = 4 (report conservé)", "ok": true, "detail": "availableDays=4" },
+    { "name": "aucun double crédit du report (un seul mouvement REPORT_EXCEPTIONNEL)", "ok": true, "detail": "count=1" },
+    { "name": "DOUBLE USAGE : 10 consommés + 4 conservés = 14 (pour 10 initiaux)", "ok": true, "detail": "total=14" },
+    { "name": "mouvements source : REMISE_A_ZERO présent", "ok": false, "detail": "absent (source déjà à 0 après consommation) — assertion inadaptée du script, sans incidence sur l'anomalie" },
+    { "name": "audit REFERENCE_PERIOD_CLOSED (2025-2026)", "ok": true, "detail": "count=1" }
+  ],
+  "summary": { "total": 12, "passed": 11, "failed": 1, "note": "L'unique échec (« REMISE_A_ZERO présent ») est une assertion inadaptée du script : dans le scénario de consommation totale, le solde source est déjà à 0 à la clôture, donc aucun mouvement REMISE_A_ZERO n'est attendu. Il ne remet pas en cause l'anomalie démontrée (double usage)." },
+  "finding": {
+    "anomaly": true,
+    "title": "Le report exceptionnel ne débite pas le compteur source → risque de double usage",
+    "detail": "Après un report de 4 jours, le compteur source N-1 reste à 10 jours (non débité) et le compteur cible reçoit 4 jours. Un collaborateur peut donc consommer la totalité des 10 jours sur la source puis conserver les 4 jours reportés après clôture (10 + 4 = 14 jours pour 10 initiaux). En l'absence de consommation, la clôture remet la source à zéro (REMISE_A_ZERO de 10 jours) et le report (4 jours) est conservé : comportement « use it or lose it » correct.",
+    "no_double_credit_at_closure": true
+  },
+  "conclusion": "Anomalie technique démontrée : absence de débit (ou de réservation) du compteur source lors du report exceptionnel. Le report n'est pas re-crédité à la clôture (pas de double crédit), mais le double usage reste possible tant que la source n'est pas débitée."
+}

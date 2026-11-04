@@ -23,6 +23,8 @@ import { UserRole } from '../users/user.entity';
 import { AbsenceDeclarationsService } from './absence-declarations.service';
 import { AbsenceDeclarationQueryDto } from './dto/absence-declaration-query.dto';
 import { CreateAbsenceDeclarationDto } from './dto/create-absence-declaration.dto';
+import { FamilyEventPreviewDto } from './dto/family-event-preview.dto';
+import { RegisterAbsenceDeclarationDto } from './dto/register-absence-declaration.dto';
 import { SubmitAbsenceDeclarationDto } from './dto/submit-absence-declaration.dto';
 import { UpdateAbsenceDeclarationDto } from './dto/update-absence-declaration.dto';
 
@@ -44,12 +46,35 @@ export class AbsenceDeclarationsController {
   ) {}
 
   @Post()
-  @Roles(UserRole.RH)
   createDraft(
     @Req() request: AuthenticatedRequest,
     @Body() dto: CreateAbsenceDeclarationDto,
   ) {
     return this.absenceDeclarationsService.createDraft(
+      request.user,
+      dto,
+    );
+  }
+
+  @Post('family-event/preview')
+  @HttpCode(HttpStatus.OK)
+  previewFamilyEvent(
+    @Req() request: AuthenticatedRequest,
+    @Body() dto: FamilyEventPreviewDto,
+  ) {
+    return this.absenceDeclarationsService.previewFamilyEvent(
+      request.user,
+      dto,
+    );
+  }
+
+  @Post('paternity/preview')
+  @HttpCode(HttpStatus.OK)
+  previewPaternity(
+    @Req() request: AuthenticatedRequest,
+    @Body() dto: FamilyEventPreviewDto,
+  ) {
+    return this.absenceDeclarationsService.previewPaternity(
       request.user,
       dto,
     );
@@ -82,7 +107,6 @@ export class AbsenceDeclarationsController {
 
   @Post(':id/submit')
   @HttpCode(HttpStatus.OK)
-  @Roles(UserRole.RH)
   submit(
     @Param('id', ParseIntPipe) id: number,
     @Req() request: AuthenticatedRequest,
@@ -101,10 +125,12 @@ export class AbsenceDeclarationsController {
   registerByRh(
     @Param('id', ParseIntPipe) id: number,
     @Req() request: AuthenticatedRequest,
+    @Body() dto: RegisterAbsenceDeclarationDto,
   ) {
     return this.absenceDeclarationsService.registerByRh(
       id,
       request.user,
+      dto,
     );
   }
 
@@ -137,7 +163,6 @@ export class AbsenceDeclarationsController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @Roles(UserRole.RH)
   deleteDraft(
     @Param('id', ParseIntPipe) id: number,
     @Req() request: AuthenticatedRequest,
@@ -173,7 +198,6 @@ export class AbsenceDeclarationsController {
   }
 
   @Patch(':id')
-  @Roles(UserRole.RH)
   updateDraft(
     @Param('id', ParseIntPipe) id: number,
     @Req() request: AuthenticatedRequest,

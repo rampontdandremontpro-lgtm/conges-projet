@@ -1,0 +1,208 @@
+{
+  "date": "2026-10-28T14:48:44.525Z",
+  "results": [
+    {
+      "id": "L6-01",
+      "name": "Salarié repris : information à préparer (A_PREPARER)",
+      "ok": true,
+      "detail": "status=A_PREPARER"
+    },
+    {
+      "id": "L6-02",
+      "name": "Salarié encore absent (ENCORE_ABSENT)",
+      "ok": true,
+      "detail": "status=ENCORE_ABSENT"
+    },
+    {
+      "id": "L6-03",
+      "name": "Date de reprise inconnue (REPRISE_INCONNUE)",
+      "ok": true,
+      "detail": "status=REPRISE_INCONNUE"
+    },
+    {
+      "id": "L6-04",
+      "name": "Information préparée (dans le mois)",
+      "ok": {
+        "employeeId": 17,
+        "employeeName": "COL-A Recette",
+        "establishedAt": "2026-10-28",
+        "repriseDate": "2026-10-28",
+        "rights": [
+          {
+            "lotId": 1,
+            "sourceReferencePeriod": "2025-2026",
+            "regime": "GENERAL",
+            "days": 4,
+            "deadlinePrevisionnel": null,
+            "deadlineDefinitif": null,
+            "needsReview": true,
+            "status": "A_VERIFIER"
+          }
+        ],
+        "totals": {
+          "confirmedDays": 0,
+          "toReviewDays": 4
+        },
+        "emittedBy": "DIRECTION DES RESSOURCES HUMAINES"
+      },
+      "detail": "HTTP 201"
+    },
+    {
+      "id": "L6-05",
+      "name": "Document contient les informations obligatoires",
+      "ok": true,
+      "detail": "droits=1"
+    },
+    {
+      "id": "L6-06",
+      "name": "Délai d'information dépassé détecté",
+      "ok": true,
+      "detail": "status=DELAI_DEPASSE"
+    },
+    {
+      "id": "L6-07",
+      "name": "Plusieurs lots avec différentes échéances",
+      "ok": true,
+      "detail": "droits=3"
+    },
+    {
+      "id": "L6-08",
+      "name": "Lot du régime général identifié",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "L6-09",
+      "name": "Lot du régime arrêt long identifié",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "L6-10",
+      "name": "Reprise pendant suspension de délai (L2)",
+      "ok": true,
+      "detail": "statuts=A_VERIFIER,ACTIF,A_VERIFIER"
+    },
+    {
+      "id": "L6-11",
+      "name": "Notification transmise (pas encore reçue)",
+      "ok": true,
+      "detail": "status=TRANSMISSION_ENREGISTREE"
+    },
+    {
+      "id": "L6-12",
+      "name": "E-mail envoyé sans preuve ne vaut pas réception",
+      "ok": true,
+      "detail": "status=TRANSMISSION_ENREGISTREE"
+    },
+    {
+      "id": "L6-13",
+      "name": "Accusé de réception vérifié → RECEPTION_VERIFIEE",
+      "ok": true,
+      "detail": "proof=201 verify=201"
+    },
+    {
+      "id": "L6-14",
+      "name": "Preuve manquante → refus",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "L6-15",
+      "name": "Preuve associée au mauvais salarié → refus",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "L6-16",
+      "name": "Justificatif modifié → refus (empreinte différente)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "L6-17",
+      "name": "Date de réception future → refus",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "L6-18",
+      "name": "Date de réception incohérente (avant transmission) → refus",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "L6-19",
+      "name": "Échéance prévisionnelle ≠ échéance définitive après réception",
+      "ok": true,
+      "detail": "prev=2027-09-10 def=2028-01-28"
+    },
+    {
+      "id": "L6-20",
+      "name": "Notification corrigée (A_CORRIGER)",
+      "ok": true,
+      "detail": "status=A_CORRIGER"
+    },
+    {
+      "id": "L6-21",
+      "name": "Notification annulée (ANNULEE)",
+      "ok": true,
+      "detail": "status=ANNULEE"
+    },
+    {
+      "id": "L6-22",
+      "name": "Deux confirmations concurrentes → une seule",
+      "ok": true,
+      "detail": "HTTP 201/409"
+    },
+    {
+      "id": "L6-23",
+      "name": "Rejeu de la même requête → refus",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "L6-24",
+      "name": "Accès par un autre salarié → refus",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "L6-25",
+      "name": "Accès sans rôle RH → refus",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "L6-26",
+      "name": "Rapprochement L2/L3 : échéance recalculée et lot confirmé",
+      "ok": true,
+      "detail": "certain=1 expires=Fri Jan 28 2028 00:00:00 GMT+0100 (heure normale d’Europe centrale)"
+    },
+    {
+      "id": "L6-27",
+      "name": "Historique conservé (notification + preuves)",
+      "ok": true,
+      "detail": "proofs=1"
+    },
+    {
+      "id": "L6-28",
+      "name": "Rollback après 1re écriture SQL (preuve/lot/notification intacts)",
+      "ok": true,
+      "detail": "HTTP 500 proof=EN_ATTENTE notif=RECEPTION_A_JUSTIFIER"
+    },
+    {
+      "id": "L6-29",
+      "name": "Aucun impact automatique sur les compteurs existants",
+      "ok": true,
+      "detail": "aucune écriture leave_balances par L6"
+    },
+    {
+      "id": "L6-30",
+      "name": "Aucune écriture sur la base réelle",
+      "ok": true,
+      "detail": "carryover_notifications=false"
+    }
+  ],
+  "failed": 0
+}

@@ -8,6 +8,11 @@ import { apiClient } from '@/services/apiClient'
 const PROFILE_MODE_KEY = 'gmes-profile-mode'
 const PROFILE_SWITCH_ROLES = new Set(['RH', 'RESPONSABLE_SERVICE'])
 
+const MANAGEMENT_PROFILE_LABELS = {
+  RH: 'Profil RH',
+  RESPONSABLE_SERVICE: 'Profil responsable',
+}
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [profileMode, setProfileMode] = useState(() => sessionStorage.getItem(PROFILE_MODE_KEY) === 'COLLABORATOR' ? 'COLLABORATOR' : 'MANAGEMENT')
@@ -79,7 +84,11 @@ export function AuthProvider({ children }) {
 
   const availableProfiles = canSwitchProfile
     ? [
-        { id: 'MANAGEMENT', label: 'Profil administrateur', role: user.role },
+        {
+          id: 'MANAGEMENT',
+          label: MANAGEMENT_PROFILE_LABELS[user.role] ?? 'Profil professionnel',
+          role: user.role,
+        },
         { id: 'COLLABORATOR', label: 'Profil collaborateur', role: 'COLLABORATEUR' },
       ]
     : []

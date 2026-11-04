@@ -1,0 +1,18 @@
+{
+  "purpose": "Test APRÈS correction — Étape 3 : la clôture bloque les demandes de congés payés non imputées et les imputations tardives sur période clôturée sont refusées.",
+  "script": "tests/recette/scripts/retest-etape3-apres.mjs",
+  "environment": { "api": "http://localhost:3001/api", "database": "gestion_conges_gmes_test", "isolated": true },
+  "executedBy": "Pi — test automatisé",
+  "dateRetest": "2026-10-26",
+  "checks": [
+    { "name": "C1 : clôture BLOQUÉE par une demande en attente", "ok": true, "detail": "HTTP 400" },
+    { "name": "C2 : clôture OK après refus de la demande", "ok": true, "detail": "HTTP 201" },
+    { "name": "C3 : validation finale sur période clôturée REFUSÉE", "ok": true, "detail": "HTTP 400 — période clôturée" },
+    { "name": "C3 : la demande reste en attente (non validée)", "ok": true, "detail": "status=EN_ATTENTE_VALIDATION" },
+    { "name": "C4 : création congé direct (non imputé)", "ok": true, "detail": "HTTP 201 id=53" },
+    { "name": "C4 : clôture BLOQUÉE par une demande validée non imputée", "ok": true, "detail": "HTTP 400" },
+    { "name": "C5 : clôture OK après imputation définitive", "ok": true, "detail": "HTTP 201" }
+  ],
+  "summary": { "total": 7, "passed": 7, "failed": 0 },
+  "conclusion": "La clôture bloque les demandes en attente et les demandes validées non imputées de la période ; l'imputation tardive sur une période clôturée est refusée ; les demandes refusées/définitivement imputées ne bloquent pas."
+}

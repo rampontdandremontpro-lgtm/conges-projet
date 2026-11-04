@@ -53,6 +53,7 @@ export function buildOccupiedPeriods({
   leaveRequests = [],
   absenceDeclarations = [],
   excludeLeaveRequestId = null,
+  excludeAbsenceDeclarationId = null,
 } = {}) {
   const periods = []
 
@@ -64,6 +65,7 @@ export function buildOccupiedPeriods({
 
   for (const declaration of absenceDeclarations) {
     if (ABSENCE_RELEASED_STATUSES.includes(declaration.status)) continue
+    if (Number(declaration.id) === Number(excludeAbsenceDeclarationId)) continue
     periods.push(periodFromAbsence(declaration))
   }
 

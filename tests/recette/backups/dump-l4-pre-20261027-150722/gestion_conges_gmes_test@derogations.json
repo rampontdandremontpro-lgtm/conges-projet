@@ -1,0 +1,40 @@
+{
+    "options": {
+        "schema": "gestion_conges_gmes_test",
+        "table": "derogations",
+        "columns": [
+            "id",
+            "employee_id",
+            "leave_type_id",
+            "leave_request_id",
+            "requested_start_date",
+            "requested_end_date",
+            "reason",
+            "status",
+            "requested_at",
+            "submitted_at",
+            "decided_by_rh_id",
+            "decision_comment",
+            "decided_at",
+            "expires_at",
+            "used_at"
+        ],
+        "defaultCharacterSet": "utf8mb4",
+        "fieldsTerminatedBy": "\t",
+        "fieldsEnclosedBy": "",
+        "fieldsOptionallyEnclosed": false,
+        "fieldsEscapedBy": "\\",
+        "linesTerminatedBy": "\n"
+    },
+    "triggers": [],
+    "includesData": true,
+    "includesDdl": true,
+    "extension": "tsv.zst",
+    "chunking": true,
+    "compression": "zstd",
+    "primaryIndex": [
+        "id"
+    ],
+    "partitions": [],
+    "basenames": {}
+}

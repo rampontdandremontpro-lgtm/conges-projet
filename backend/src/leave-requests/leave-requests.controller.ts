@@ -23,6 +23,7 @@ import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { UserRole } from '../users/user.entity';
 import { CancelLeaveRequestDto } from './dto/cancel-leave-request.dto';
+import { ClassifyLeaveRequestDto } from './dto/classify-leave-request.dto';
 import { CreateLeaveRequestDto } from './dto/create-leave-request.dto';
 import { RefuseLeaveRequestDto } from './dto/refuse-leave-request.dto';
 import { RequestCancellationAfterValidationDto } from './dto/request-cancellation-after-validation.dto';
@@ -455,6 +456,20 @@ export class LeaveRequestsController {
       id,
       request.user,
       updateLeaveRequestDto,
+    );
+  }
+
+  @Patch(':id/classification')
+  @Roles(UserRole.RH)
+  classifyLeaveRequest(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() request: AuthenticatedRequest,
+    @Body() dto: ClassifyLeaveRequestDto,
+  ) {
+    return this.leaveRequestsService.classifyLeaveRequest(
+      id,
+      request.user,
+      dto,
     );
   }
 

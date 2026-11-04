@@ -1,0 +1,12 @@
+OK  préparation : collaborateur + service + type de congé créés — emp=35 lt=20 svc=23
+OK  report exceptionnel accepté — HTTP 201
+OK  après report : source N-1 = 10 (PAS débitée) — availableDays=10
+OK  après report : cible N-1 2027-2028 = 4 — availableDays=4
+OK  congé direct RH créé (circuit réel) — HTTP 201 deductedDays=10
+OK  après congé : source N-1 consommée (10 → 0 ou moins) — availableDays=0 consumedDays=10
+OK  après congé : cible N-1 2027-2028 = 4 (report conservé) — availableDays=4
+OK  DOUBLE USAGE (circuit réel) : 10 consommés + 4 conservés > 10 initiaux — total=14
+OK  mouvement DEDUCTION sur la source — DEDUCTION
+OK  report conservé (REPORT_EXCEPTIONNEL présent) — count=1
+
+RÉSULTAT : 10/10 OK, 0 KO

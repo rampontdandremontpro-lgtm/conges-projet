@@ -1,0 +1,14 @@
+OK  JUR-027 : report exceptionnel accepté (HTTP 201/200) — HTTP 201
+OK  JUR-027 : N-1 2026-2027 crédité de 4 jours (montant exact) — availableDays=4
+OK  JUR-027 : mouvement REPORT_EXCEPTIONNEL (distinct du transfert N→N-1) — reason=REPORT_EXCEPTIONNEL|2025-2026|Arrêt maladie — cong
+OK  JUR-027 : motif conservé dans la raison — motif présent
+OK  JUR-027 : auteur enregistré (actorId RH) — actorId=14
+OK  JUR-027 : montant enregistré = 4 jours — days=4
+OK  JUR-027 : audit EXCEPTIONAL_CARRYOVER_APPROVED — count=1
+OK  JUR-027 : notification salarié EXCEPTIONAL_CARRYOVER_APPROVED — Report exceptionnel de congés accordé
+OK  JUR-031 : type « Congé d’adoption » présent (déclaratif) — deducts=false category=DECLARATION_ABSENCE
+OK  JUR-031 : déclaration d’absence (brouillon RH) créée — HTTP 201
+OK  JUR-031 : absence soumise/enregistrée (RH) — HTTP 200
+OK  JUR-031 : aucune déduction de solde (absence déclarative) — avant=4 après=4
+
+RÉSULTAT : 12/12 OK, 0 KO

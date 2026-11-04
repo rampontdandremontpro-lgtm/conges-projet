@@ -1,0 +1,66 @@
+{
+  "date": "2026-10-28T12:54:57.765Z",
+  "results": [
+    {
+      "id": "L5-01",
+      "name": "Prévisualisation sans lot (ordinaire=10)",
+      "ok": true,
+      "detail": "ord=10"
+    },
+    {
+      "id": "L5-02",
+      "name": "Clôture sans lot : remise à zéro",
+      "ok": true,
+      "detail": "avail=0.00"
+    },
+    {
+      "id": "L5-03",
+      "name": "Prévisualisation lot actif (protégé=4)",
+      "ok": true,
+      "detail": "prot=4"
+    },
+    {
+      "id": "L5-04",
+      "name": "Lot actif transféré sans double crédit (0 + 4)",
+      "ok": true,
+      "detail": "cur=0.00 next=4.00"
+    },
+    {
+      "id": "L5-05",
+      "name": "Lot expiré : non transféré, statut EXPIRE",
+      "ok": true,
+      "detail": "avail=0.00 status=EXPIRE"
+    },
+    {
+      "id": "L5-06",
+      "name": "Reliquat inconnu → clôture bloquée",
+      "ok": true,
+      "detail": "HTTP 400"
+    },
+    {
+      "id": "L5-07",
+      "name": "Jours réservés → clôture bloquée",
+      "ok": true,
+      "detail": "HTTP 400"
+    },
+    {
+      "id": "L5-08",
+      "name": "Clôture rejouée refusée (409)",
+      "ok": true,
+      "detail": "HTTP 409"
+    },
+    {
+      "id": "L5-09",
+      "name": "Prévisualisation sans écriture",
+      "ok": true,
+      "detail": "mv=6"
+    },
+    {
+      "id": "L5-10",
+      "name": "Deux restore simultanés → un seul recrédit",
+      "ok": true,
+      "detail": "HTTP 201/409 recr=1"
+    }
+  ],
+  "failed": 0
+}

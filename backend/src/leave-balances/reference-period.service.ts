@@ -3,12 +3,14 @@ import {
   ConflictException,
   Injectable,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, EntityManager, Repository } from 'typeorm';
 
 import { AuditService } from '../audit/audit.service';
 import type { AuthenticatedUser } from '../auth/jwt-payload.interface';
 import { NotificationsService } from '../notifications/notifications.service';
+import { Setting } from '../settings/setting.entity';
 import { SettingsService } from '../settings/settings.service';
 import { UserRole } from '../users/user.entity';
 import { UsersService } from '../users/users.service';
@@ -16,6 +18,11 @@ import {
   BalanceMovement,
   BalanceMovementType,
 } from './balance-movement.entity';
+import {
+  BalanceProcessingStatus,
+  LeaveRequest,
+  LeaveRequestStatus,
+} from '../leave-requests/leave-request.entity';
 import { CloseReferencePeriodDto } from './dto/close-reference-period.dto';
 import { ExceptionalCarryoverDto } from './dto/exceptional-carryover.dto';
 import {
@@ -23,14 +30,34 @@ import {
   LeaveBalanceCounterType,
 } from './leave-balance.entity';
 import { roundPeriodCloseDays, roundAcquiredDaysUp } from './reference-period-rounding.util';
+import { withPeriodClosureLock } from './period-closure-lock.util';
+import { referencePeriodStartDate } from './reference-period.util';
+import {
+  applyCarryoverLotPlan,
+  buildCarryoverLotPlan,
+  classifyCarryoverLot,
+} from './carryover-lots/carryover-lot-closure.core';
+import { CarryoverLot, CarryoverLotTargetCounter } from './carryover-lot.entity';
+import {
+  CarryoverLotAllocation,
+  CarryoverLotAllocationOperation,
+} from './carryover-lots/carryover-lot-allocation.entity';
 
 interface ClosureEmployeePreview {
   employeeId: number;
   employeeName: string;
   nMinus1Remaining: number;
   nRemainingToTransfer: number;
+  nToTransfer: number;
+  roundingSupplement: number;
+  nMinus1ToReset: number;
   nPlus1Forecast: number;
+  nPlus1ToReset: number;
   reservedDays: number;
+  negativeBalances: Array<{
+    counterType: LeaveBalanceCounterType;
+    availableDays: number;
+  }>;
   exceptionalCarryoverAlreadyApproved: number;
 }
 
@@ -46,6 +73,7 @@ export class ReferencePeriodService {
     private readonly settingsService: SettingsService,
     private readonly notificationsService: NotificationsService,
     private readonly auditService: AuditService,
+    private readonly configService: ConfigService,
   ) {}
 
   async previewClosure(referencePeriod: string) {
@@ -67,30 +95,94 @@ export class ReferencePeriodService {
       grouped.set(balance.employeeId, list);
     }
 
+    // Totaux d'acquisition (mouvements ACQUISITION) pour chaque compteur N de
+    // la période, afin de reproduire exactement le supplément L3141-7 appliqué
+    // à la clôture. Une seule requête groupée évite les appels N+1.
+    const nBalances = balances.filter(
+      (balance) => balance.counterType === LeaveBalanceCounterType.N,
+    );
+    const acquisitionTotals = new Map<number, number>();
+    if (nBalances.length > 0) {
+      const ids = nBalances.map((balance) => balance.id);
+      const rows = await this.movementRepository
+        .createQueryBuilder('movement')
+        .select('movement.leaveBalanceId', 'leaveBalanceId')
+        .addSelect('COALESCE(SUM(movement.days), 0)', 'total')
+        .where('movement.leaveBalanceId IN (:...ids)', { ids })
+        .andWhere('movement.movementType = :movementType', {
+          movementType: BalanceMovementType.ACQUISITION,
+        })
+        .groupBy('movement.leaveBalanceId')
+        .getRawMany<{ leaveBalanceId: number; total: string }>();
+
+      for (const row of rows) {
+        acquisitionTotals.set(
+          Number(row.leaveBalanceId),
+          this.round(Number(row.total)),
+        );
+      }
+    }
+
     const employees: ClosureEmployeePreview[] = [];
     for (const [employeeId, employeeBalances] of grouped.entries()) {
       const employee = employeeBalances[0].employee;
+      const nMinus1 = employeeBalances.find(
+        (balance) =>
+          balance.counterType === LeaveBalanceCounterType.N_MINUS_1,
+      );
+      const n = employeeBalances.find(
+        (balance) => balance.counterType === LeaveBalanceCounterType.N,
+      );
+      const nPlus1 = employeeBalances.find(
+        (balance) =>
+          balance.counterType === LeaveBalanceCounterType.N_PLUS_1,
+      );
+
+      const nMinus1Remaining = this.round(nMinus1?.availableDays ?? 0);
+      const nAvailable = this.round(n?.availableDays ?? 0);
+      const nPlus1Forecast = this.round(nPlus1?.availableDays ?? 0);
+
+      // Supplément L3141-7 (droit acquis de base → entier supérieur, plafond
+      // 30), identique au traitement de closeReferencePeriod.
+      let roundingSupplement = 0;
+      if (n) {
+        const baseAcquired = acquisitionTotals.get(n.id) ?? 0;
+        roundingSupplement = this.round(
+          roundAcquiredDaysUp(baseAcquired) - baseAcquired,
+        );
+      }
+
+      const nToTransfer = roundPeriodCloseDays(
+        nAvailable + roundingSupplement,
+      );
+      const nMinus1ToReset =
+        nMinus1Remaining > 0 ? nMinus1Remaining : 0;
+      const nPlus1ToReset = nPlus1Forecast > 0 ? nPlus1Forecast : 0;
+      const reservedDays = this.round(
+        employeeBalances.reduce(
+          (sum, balance) => sum + balance.reservedDays,
+          0,
+        ),
+      );
+      const negativeBalances = employeeBalances
+        .filter((balance) => this.round(balance.availableDays) < 0)
+        .map((balance) => ({
+          counterType: balance.counterType,
+          availableDays: this.round(balance.availableDays),
+        }));
+
       employees.push({
         employeeId,
         employeeName: `${employee.nom} ${employee.prenom}`,
-        nMinus1Remaining: this.available(
-          employeeBalances,
-          LeaveBalanceCounterType.N_MINUS_1,
-        ),
-        nRemainingToTransfer: this.available(
-          employeeBalances,
-          LeaveBalanceCounterType.N,
-        ),
-        nPlus1Forecast: this.available(
-          employeeBalances,
-          LeaveBalanceCounterType.N_PLUS_1,
-        ),
-        reservedDays: this.round(
-          employeeBalances.reduce(
-            (sum, balance) => sum + balance.reservedDays,
-            0,
-          ),
-        ),
+        nMinus1Remaining,
+        nRemainingToTransfer: nAvailable,
+        nToTransfer,
+        roundingSupplement,
+        nMinus1ToReset,
+        nPlus1Forecast,
+        nPlus1ToReset,
+        reservedDays,
+        negativeBalances,
         exceptionalCarryoverAlreadyApproved:
           await this.getApprovedCarryover(
             employeeId,
@@ -99,6 +191,10 @@ export class ReferencePeriodService {
           ),
       });
     }
+
+    const blockingRequests = await this.findBlockingLeaveRequests(
+      referencePeriod,
+    );
 
     return {
       referencePeriod,
@@ -110,6 +206,14 @@ export class ReferencePeriodService {
         (employee) => employee.reservedDays > 0,
       ),
       employeeCount: employees.length,
+      reservationCount: employees.filter(
+        (employee) => employee.reservedDays > 0,
+      ).length,
+      negativeBalanceCount: employees.filter(
+        (employee) => employee.negativeBalances.length > 0,
+      ).length,
+      blockingRequestCount: blockingRequests.length,
+      blockingRequests,
       totals: {
         nMinus1Remaining: this.round(
           employees.reduce((sum, row) => sum + row.nMinus1Remaining, 0),
@@ -119,6 +223,15 @@ export class ReferencePeriodService {
             (sum, row) => sum + row.nRemainingToTransfer,
             0,
           ),
+        ),
+        nToTransfer: this.round(
+          employees.reduce((sum, row) => sum + row.nToTransfer, 0),
+        ),
+        nMinus1ToReset: this.round(
+          employees.reduce((sum, row) => sum + row.nMinus1ToReset, 0),
+        ),
+        nPlus1ToReset: this.round(
+          employees.reduce((sum, row) => sum + row.nPlus1ToReset, 0),
         ),
         exceptionalCarryoverApproved: this.round(
           employees.reduce(
@@ -179,19 +292,104 @@ export class ReferencePeriodService {
           );
         }
 
-        const alreadyApproved = await this.getApprovedCarryoverWithManager(
-          manager,
-          employee.id,
-          dto.closingReferencePeriod,
-          nextReferencePeriod,
+        const sourceFreeBalance = this.round(
+          source.availableDays - source.reservedDays,
         );
-        const requestedTotal = this.round(alreadyApproved + dto.days);
 
-        if (requestedTotal > this.round(source.availableDays)) {
-          throw new BadRequestException(
-            'Le total des reports exceptionnels dépasse le reliquat N-1 disponible.',
+        // JUR-027 L5/L6 (recette uniquement) : un report exceptionnel ne doit
+        // jamais prélever silencieusement des jours appartenant à un lot
+        // maladie. Sont exclus du reportable : les lots protégés, les lots
+        // expirés (encore présents dans le compteur), les jours gelés en
+        // régularisation, et les reliquats inconnus (origine incertaine).
+        const recetteLots =
+          this.configService.get<string>('CARRYOVER_LOTS_ENABLED') === 'true' &&
+          this.dataSource.options.database === 'gestion_conges_gmes_test';
+        let protectedLotDays = 0;
+        let expiredLotDays = 0;
+        let frozenLotDays = 0;
+        let unknownReliquat = false;
+        if (recetteLots) {
+          const lots = await manager.getRepository(CarryoverLot).find({
+            where: {
+              employeeId: employee.id,
+              targetReferencePeriod: dto.closingReferencePeriod,
+              targetCounterType: CarryoverLotTargetCounter.N_MINUS_1,
+            },
+          });
+          for (const lot of lots) {
+            if (lot.remainingDays == null) {
+              unknownReliquat = true;
+              break;
+            }
+            const classification = classifyCarryoverLot(lot);
+            if (classification.expired) {
+              expiredLotDays = this.round(
+                expiredLotDays + Number(lot.remainingDays),
+              );
+            } else {
+              protectedLotDays = this.round(
+                protectedLotDays + Number(lot.remainingDays),
+              );
+            }
+          }
+          const frozenRows = await manager
+            .getRepository(CarryoverLotAllocation)
+            .find({
+              where: {
+                leaveBalanceId: source.id,
+                operationType: CarryoverLotAllocationOperation.REGULARISATION,
+                frozenInBalance: true,
+              },
+            });
+          frozenLotDays = this.round(
+            frozenRows.reduce((sum, r) => sum + Number(r.days), 0),
           );
         }
+
+        if (unknownReliquat) {
+          throw new BadRequestException(
+            'Origine incertaine : un lot au reliquat inconnu empêche le report exceptionnel — vérification RH requise.',
+          );
+        }
+
+        const carryableOrdinary = this.round(
+          sourceFreeBalance - protectedLotDays - expiredLotDays - frozenLotDays,
+        );
+
+        if (carryableOrdinary < 0) {
+          throw new BadRequestException(
+            'Rapprochement impossible : les lots excèdent le solde disponible — vérification RH requise.',
+          );
+        }
+
+        if (dto.days > carryableOrdinary) {
+          throw new BadRequestException(
+            `Le report exceptionnel de ${dto.days} j dépasse les jours ordinaires disponibles (${carryableOrdinary} j) : ${protectedLotDays} j protégés, ${expiredLotDays} j expirés, ${frozenLotDays} j gelés. Vérification RH requise.`,
+          );
+        }
+
+        // Débit du compteur source N-1 : les jours reportés ne sont plus
+        // disponibles sur la source. acquiredDays et availableDays sont
+        // diminués du même montant (les jours ne sont pas consommés : ils
+        // sont transférés vers la période suivante).
+        const sourceBefore = this.round(source.availableDays);
+        source.acquiredDays = this.round(source.acquiredDays - dto.days);
+        source.availableDays = this.round(source.availableDays - dto.days);
+        await repository.save(source);
+
+        await manager.getRepository(BalanceMovement).save(
+          manager.getRepository(BalanceMovement).create({
+            employeeId: employee.id,
+            leaveBalanceId: source.id,
+            leaveRequestId: null,
+            actorId: actor.id,
+            movementType: BalanceMovementType.CORRECTION_NEGATIVE,
+            days: this.round(dto.days),
+            balanceBefore: sourceBefore,
+            balanceAfter: source.availableDays,
+            reason: `REPORT_EXCEPTIONNEL_DEBIT|${dto.closingReferencePeriod}|${dto.reason.trim()}`,
+          }),
+        );
 
         const target = await this.findOrCreateBalance(
           manager,
@@ -234,6 +432,10 @@ export class ReferencePeriodService {
               nextReferencePeriod,
               days: this.round(dto.days),
               reason: dto.reason.trim(),
+              sourceBalanceId: source.id,
+              sourceBalanceAfter: source.availableDays,
+              targetBalanceId: target.id,
+              targetBalanceAfter: target.availableDays,
             },
           },
           manager,
@@ -262,6 +464,82 @@ export class ReferencePeriodService {
     };
   }
 
+  /**
+   * Liste les demandes de congés payés (déductrices de solde) qui pourraient
+   * encore imputer des jours sur la période donnée : en attente de validation,
+   * validées mais non imputées, ou en annulation non imputée. Les demandes
+   * refusées, annulées, expirées ou déjà définitivement imputées sont exclues.
+   */
+  private async findBlockingLeaveRequests(
+    referencePeriod: string,
+    manager?: EntityManager,
+    forUpdate = false,
+  ): Promise<
+    Array<{
+      id: number;
+      employeeId: number;
+      employeeName: string;
+      leaveTypeName: string;
+      startDate: string;
+      endDate: string;
+      deductedDays: number;
+      status: LeaveRequestStatus;
+      balanceProcessingStatus: BalanceProcessingStatus;
+    }>
+  > {
+    const startMonthDay = await this.settingsService.getString(
+      'REFERENCE_PERIOD_START',
+      '06-01',
+    );
+    const periodStart = referencePeriodStartDate(
+      referencePeriod,
+      startMonthDay,
+    );
+    const periodEnd = await this.referencePeriodEndDate(referencePeriod);
+    const repository = (manager ?? this.dataSource).getRepository(
+      LeaveRequest,
+    );
+
+    let query = repository
+      .createQueryBuilder('request')
+      .innerJoinAndSelect('request.leaveType', 'leaveType')
+      .innerJoinAndSelect('request.employee', 'employee')
+      .where('leaveType.deductsPaidLeaveBalance = :deducts', {
+        deducts: true,
+      })
+      .andWhere('request.startDate >= :periodStart', { periodStart })
+      .andWhere('request.startDate <= :periodEnd', { periodEnd })
+      .andWhere('request.balanceProcessingStatus != :definitif', {
+        definitif: BalanceProcessingStatus.DEFINITIF,
+      })
+      .andWhere('request.status IN (:...statuses)', {
+        statuses: [
+          LeaveRequestStatus.EN_ATTENTE_VALIDATION,
+          LeaveRequestStatus.VALIDEE,
+          LeaveRequestStatus.ANNULATION_EN_ATTENTE_ACCORD,
+        ],
+      })
+      .orderBy('request.startDate', 'ASC');
+
+    if (forUpdate) {
+      query = query.setLock('pessimistic_write');
+    }
+
+    const rows = await query.getMany();
+
+    return rows.map((request) => ({
+      id: request.id,
+      employeeId: request.employeeId,
+      employeeName: `${request.employee.nom} ${request.employee.prenom}`,
+      leaveTypeName: request.leaveType.name,
+      startDate: request.startDate,
+      endDate: request.endDate,
+      deductedDays: this.round(request.deductedDays),
+      status: request.status,
+      balanceProcessingStatus: request.balanceProcessingStatus,
+    }));
+  }
+
   async closeReferencePeriod(
     actor: AuthenticatedUser,
     dto: CloseReferencePeriodDto,
@@ -275,6 +553,7 @@ export class ReferencePeriodService {
         `La période ${referencePeriod} ne peut pas être clôturée avant le ${expectedEndDate}.`,
       );
     }
+
     const markerKey = this.closureMarkerKey(referencePeriod);
     const marker = await this.settingsService.getValue(markerKey);
 
@@ -296,7 +575,57 @@ export class ReferencePeriodService {
       );
     }
 
-    const result = await this.dataSource.transaction(async (manager) => {
+    // JUR-027 : en recette (flag + base test), la clôture normale partage le
+    // même verrou MySQL par période que la clôture L5, afin qu'elles ne
+    // puissent jamais s'exécuter simultanément. Inerte hors recette.
+    const recetteMode =
+      this.configService.get<string>('CARRYOVER_LOTS_ENABLED') === 'true' &&
+      this.dataSource.options.database === 'gestion_conges_gmes_test';
+
+    const runTransaction = async (manager: EntityManager) => {
+      // Re-vérification autoritaire du marqueur sous le verrou/la transaction :
+      // la lecture et l'écriture du marqueur partagé doivent être sérialisées
+      // sur la même connexion.
+      const existingMarker = await manager.getRepository(Setting).findOneBy({
+        settingKey: markerKey,
+      });
+      if (existingMarker !== null) {
+        throw new ConflictException(
+          `La période ${referencePeriod} a déjà été clôturée le ${existingMarker.settingValue}.`,
+        );
+      }
+
+      const blockingRequests = await this.findBlockingLeaveRequests(
+        referencePeriod,
+        manager,
+        true,
+      );
+      if (blockingRequests.length > 0) {
+        throw new BadRequestException(
+          `La clôture est impossible : ${blockingRequests.length} demande(s) de congés payés ne sont pas encore définitivement imputées sur la période ${referencePeriod}.`,
+        );
+      }
+
+      // JUR-027 L5 (recette uniquement) : traite les lots maladie dans la MÊME
+      // transaction que la clôture GMES. Le plan vérifie l'exhaustivité des
+      // dossiers et la cohérence lots/compteurs AVANT toute écriture ; les
+      // jours expirés sont déduits, les jours protégés transférés. Les jours
+      // ordinaires restent dans le compteur N-1 et seront remis à zéro par la
+      // clôture normale ci-dessous.
+      if (recetteMode) {
+        const lotPlan = await buildCarryoverLotPlan(
+          manager,
+          referencePeriod,
+          true,
+        );
+        if (lotPlan.blocked) {
+          throw new BadRequestException(
+            `Clôture bloquée : ${lotPlan.reasons.join(' ')}`,
+          );
+        }
+        await applyCarryoverLotPlan(manager, referencePeriod, actor.id, lotPlan);
+      }
+
       const repository = manager.getRepository(LeaveBalance);
       const rows = await repository
         .createQueryBuilder('balance')
@@ -501,7 +830,16 @@ export class ReferencePeriodService {
       );
 
       return { closedAt, processed };
-    });
+    };
+
+    const result = recetteMode
+      ? await withPeriodClosureLock(
+          this.dataSource,
+          `carr_closure_${referencePeriod}`,
+          10,
+          async ({ manager }) => runTransaction(manager),
+        )
+      : await this.dataSource.transaction(runTransaction);
 
     return {
       referencePeriod,

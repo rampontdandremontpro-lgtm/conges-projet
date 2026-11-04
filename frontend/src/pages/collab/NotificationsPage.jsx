@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 
 import { useAuth } from '@/auth/AuthContext'
@@ -421,7 +421,8 @@ function NotificationPreferences({ onBack }) {
 
 export function NotificationsPage() {
   const navigate = useNavigate()
-  const { user, effectiveRole } = useAuth()
+  const { user, effectiveRole, profileMode } = useAuth()
+  const scope = profileMode === 'COLLABORATOR' ? 'COLLABORATOR' : undefined
   const [searchParams] = useSearchParams()
   const [filter, setFilter] = useState('all')
   const [items, setItems] = useState([])
@@ -430,24 +431,36 @@ export function NotificationsPage() {
   const [busyId, setBusyId] = useState(null)
   const [markingAll, setMarkingAll] = useState(false)
   const [preferencesOpen, setPreferencesOpen] = useState(false)
+  const requestSeqRef = useRef(0)
 
   const load = useCallback(async () => {
+    const requestSeq = ++requestSeqRef.current
     setLoading(true)
     setError(false)
 
     try {
-      const notifications = await getMyNotifications()
+      const notifications = await getMyNotifications({}, scope)
+      if (requestSeqRef.current !== requestSeq) return
       setItems(notifications)
     } catch {
+      if (requestSeqRef.current !== requestSeq) return
       setError(true)
     } finally {
-      setLoading(false)
+      if (requestSeqRef.current === requestSeq) {
+        setLoading(false)
+      }
     }
-  }, [])
+  }, [scope])
 
+  // Changement de compte ou de profil : état réinitialisé, réponses antérieures
+  // invalidées, puis rechargement du compte réellement connecté.
   useEffect(() => {
+    requestSeqRef.current += 1
+    setItems([])
+    setLoading(true)
+    setError(false)
     load()
-  }, [load])
+  }, [user?.id, scope, load])
 
   const unreadCount = useMemo(
     () => items.reduce((count, item) => count + (item.readAt ? 0 : 1), 0),
@@ -498,7 +511,7 @@ export function NotificationsPage() {
 
     setBusyId(item.id)
     try {
-      const updated = await markNotificationRead(item.id)
+      const updated = await markNotificationRead(item.id, scope)
       setItems((current) =>
         current.map((notification) =>
           notification.id === item.id
@@ -518,7 +531,7 @@ export function NotificationsPage() {
     if (!target || busyId) return
     setBusyId(item.id)
     try {
-      if (!item.readAt) await markNotificationRead(item.id)
+      if (!item.readAt) await markNotificationRead(item.id, scope)
       notifyHeader()
       navigate(target)
     } catch {
@@ -533,7 +546,7 @@ export function NotificationsPage() {
 
     setMarkingAll(true)
     try {
-      await markAllNotificationsRead()
+      await markAllNotificationsRead(scope)
       const readAt = new Date().toISOString()
       setItems((current) =>
         current.map((item) => ({

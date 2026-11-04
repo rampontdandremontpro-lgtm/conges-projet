@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -95,6 +96,103 @@ export class DocumentsController {
   @Get('my')
   findMy(@Req() request: AuthenticatedRequest) {
     return this.documentsService.findMy(request.user);
+  }
+
+  @Post('basis')
+  @Roles(UserRole.RH)
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: {
+        files: 1,
+        fileSize: 10 * 1024 * 1024,
+      },
+    }),
+  )
+  uploadForBasis(
+    @Body() body: { employeeId?: string | number },
+    @Req() request: AuthenticatedRequest,
+    @UploadedFile() file?: UploadedDocumentFile,
+  ) {
+    const employeeId = Number(body?.employeeId);
+    if (!Number.isInteger(employeeId) || employeeId <= 0) {
+      throw new BadRequestException(
+        'employeeId est requis pour rattacher le justificatif de fondement.',
+      );
+    }
+    return this.documentsService.uploadForBasis(
+      employeeId,
+      request.user,
+      file,
+    );
+  }
+
+  @Post('accord-basis')
+  @Roles(UserRole.RH)
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: {
+        files: 1,
+        fileSize: 10 * 1024 * 1024,
+      },
+    }),
+  )
+  uploadForAccordBasis(
+    @Body() body: { legalEntityId?: string | number },
+    @Req() request: AuthenticatedRequest,
+    @UploadedFile() file?: UploadedDocumentFile,
+  ) {
+    const legalEntityId = Number(body?.legalEntityId);
+    if (!Number.isInteger(legalEntityId) || legalEntityId <= 0) {
+      throw new BadRequestException(
+        'legalEntityId est requis pour rattacher le justificatif d’accord.',
+      );
+    }
+    return this.documentsService.uploadForAccordBasis(
+      legalEntityId,
+      request.user,
+      file,
+    );
+  }
+
+  @Post('basis/:id/validate')
+  @Roles(UserRole.RH)
+  @HttpCode(HttpStatus.OK)
+  validateBasisDocument(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() request: AuthenticatedRequest,
+    @Body() body: { justification?: string },
+  ) {
+    return this.documentsService.validateBasisDocument(
+      id,
+      request.user,
+      body?.justification ?? '',
+    );
+  }
+
+  @Post('report')
+  @Roles(UserRole.RH)
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: {
+        files: 1,
+        fileSize: 10 * 1024 * 1024,
+      },
+    }),
+  )
+  uploadForReport(
+    @Req() request: AuthenticatedRequest,
+    @UploadedFile() file?: UploadedDocumentFile,
+  ) {
+    return this.documentsService.uploadForTakePeriodReport(
+      request.user,
+      file,
+    );
+  }
+
+  @Get('report')
+  @Roles(UserRole.RH)
+  listReportDocuments() {
+    return this.documentsService.listReportDocuments();
   }
 
   @Get('management/library')

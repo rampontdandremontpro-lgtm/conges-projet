@@ -12,13 +12,26 @@ import {
   Repository,
 } from 'typeorm';
 
+import { ConfigService } from '@nestjs/config';
+
 import { AuditService } from '../audit/audit.service';
 import type { AuthenticatedUser } from '../auth/jwt-payload.interface';
+import { HolidaysService } from '../holidays/holidays.service';
 import { NotificationsService } from '../notifications/notifications.service';
-import { LeaveRequest, LeaveRequestStatus } from '../leave-requests/leave-request.entity';
+import { DayPeriod, LeaveRequest, LeaveRequestStatus } from '../leave-requests/leave-request.entity';
 import { SettingsService } from '../settings/settings.service';
 import { User, UserRole } from '../users/user.entity';
 import { UsersService } from '../users/users.service';
+import { CarryoverLot, CarryoverLotTargetCounter } from './carryover-lot.entity';
+import {
+  CarryoverLotAllocation,
+  CarryoverLotAllocationOperation,
+} from './carryover-lots/carryover-lot-allocation.entity';
+import { CarryoverLotLedgerService } from './carryover-lots/carryover-lot-ledger.service';
+import { isCarryoverLotsEnvironmentAllowed } from './carryover-lots/carryover-lots.service';
+import { buildDatedLeaveDays } from './dated-leave-days.util';
+import { sumDatedDays } from './carryover-allocation.core';
+import { allocateOrdinaryDays } from './ordinary-allocation.util';
 import { isManagedBalanceEmployee } from './management-eligibility.util';
 import { allocatePaidLeave } from './leave-allocation.util';
 import { buildLeavePeriodSummaries, LeavePeriodSummary } from './leave-period-summary.util';
@@ -96,7 +109,21 @@ export class LeaveBalancesService {
     private readonly notificationsService: NotificationsService,
     private readonly auditService: AuditService,
     private readonly dataSource: DataSource,
+    private readonly configService: ConfigService,
+    private readonly holidaysService: HolidaysService,
+    private readonly ledger: CarryoverLotLedgerService,
   ) {}
+
+  private isRealFlowEnabled(): boolean {
+    const flag = this.configService.get<string>(
+      'CARRYOVER_LOTS_REAL_FLOW_ENABLED',
+    );
+    const database = this.dataSource.options.database;
+    return isCarryoverLotsEnvironmentAllowed(
+      flag,
+      typeof database === 'string' ? database : undefined,
+    );
+  }
 
   async initializeBalance(
     authenticatedUser: AuthenticatedUser,
@@ -1395,6 +1422,11 @@ export class LeaveBalancesService {
       expectedDays: number;
       referencePeriod: string;
       requireSufficientBalance?: boolean;
+      /** Dates effectives (requises en mode lot-aware `CARRYOVER_LOTS_REAL_FLOW_ENABLED`). */
+      startDate?: string;
+      endDate?: string;
+      startPeriod?: DayPeriod;
+      endPeriod?: DayPeriod;
     },
   ): Promise<{
     processedDays: number;
@@ -1407,6 +1439,18 @@ export class LeaveBalancesService {
     }>;
   }> {
     this.validateReferencePeriod(data.referencePeriod);
+
+    // Protection : une période clôturée ne doit plus jamais être imputée
+    // (validation ou consolidation tardive d'une demande).
+    const closureMarker = await this.settingsService.getValue(
+      `REFERENCE_PERIOD_CLOSED_${data.referencePeriod.replace('-', '_')}`,
+    );
+    if (closureMarker !== null) {
+      throw new BadRequestException(
+        `La période ${data.referencePeriod} est clôturée : aucune imputation ne peut plus être effectuée sur ses compteurs.`,
+      );
+    }
+
     const expectedDays = this.validatePositiveDays(data.expectedDays);
 
     const existingMovements = await manager.getRepository(BalanceMovement).find({
@@ -1468,6 +1512,221 @@ export class LeaveBalancesService {
       }
     }
 
+    const applied: Array<{
+      leaveBalanceId: number;
+      referencePeriod: string;
+      counterType: LeaveBalanceCounterType;
+      days: number;
+    }> = [];
+
+    // ---- Chemin réel (lots maladie), flag CARRYOVER_LOTS_REAL_FLOW_ENABLED ----
+    if (this.isRealFlowEnabled()) {
+      if (
+        !data.startDate ||
+        !data.endDate ||
+        !data.startPeriod ||
+        !data.endPeriod
+      ) {
+        throw new BadRequestException(
+          'Les dates de la demande sont requises pour le traitement des lots maladie.',
+        );
+      }
+
+      const nonDeductible = await this.holidaysService.findNonDeductibleBetween(
+        data.startDate,
+        data.endDate,
+      );
+      const datedDays = buildDatedLeaveDays({
+        startDate: data.startDate,
+        endDate: data.endDate,
+        startPeriod: data.startPeriod,
+        endPeriod: data.endPeriod,
+        nonDeductibleDates: new Set(
+          nonDeductible.map((holiday) => holiday.date),
+        ),
+        expectedDays,
+      });
+
+      const lotResult = await this.ledger.consumeDirectWithManager(manager, {
+        employeeId: data.employeeId,
+        leaveRequestId: data.leaveRequestId,
+        datedDays,
+        actorId: data.actorId,
+        reason:
+          'Imputation automatique des jours reportés (maladie) au début effectif du congé.',
+      });
+
+      // Relecture des lots et de TOUS les compteurs N-1 (mis à jour par
+      // l'écriture des lots) + compteur N.
+      const lots = await manager
+        .getRepository(CarryoverLot)
+        .createQueryBuilder('lot')
+        .setLock('pessimistic_write')
+        .where('lot.employeeId = :employeeId', { employeeId: data.employeeId })
+        .andWhere('lot.targetCounterType = :counter', {
+          counter: CarryoverLotTargetCounter.N_MINUS_1,
+        })
+        .getMany();
+      const nMinus1Balances = await manager
+        .getRepository(LeaveBalance)
+        .createQueryBuilder('balance')
+        .setLock('pessimistic_write')
+        .where('balance.employeeId = :employeeId', { employeeId: data.employeeId })
+        .andWhere('balance.counterType = :counterType', {
+          counterType: LeaveBalanceCounterType.N_MINUS_1,
+        })
+        .getMany();
+      const nAfter = await this.findOrCreateBalanceForUpdate(
+        manager,
+        data.employeeId,
+        data.referencePeriod,
+        LeaveBalanceCounterType.N,
+      );
+
+      const balanceByPeriod = new Map(
+        nMinus1Balances.map((balance) => [balance.referencePeriod, balance]),
+      );
+      const balanceById = new Map<number, LeaveBalance>([
+        ...nMinus1Balances.map((b) => [b.id, b] as const),
+        [nAfter.id, nAfter],
+      ]);
+      const lotsById = new Map(lots.map((lot) => [lot.id, lot]));
+
+      // Audit des allocations de lots : associer chaque lot à son VRAI compteur
+      // (jamais de repli silencieux sur un autre compteur).
+      for (const alloc of lotResult.allocations) {
+        const lot = lotsById.get(alloc.lotId);
+        const balance = lot
+          ? balanceByPeriod.get(lot.targetReferencePeriod)
+          : undefined;
+        if (!balance) {
+          throw new BadRequestException(
+            `Compteur N-1 ${lot?.targetReferencePeriod ?? '?'} introuvable pour le lot #${alloc.lotId}.`,
+          );
+        }
+        applied.push({
+          leaveBalanceId: balance.id,
+          referencePeriod: balance.referencePeriod,
+          counterType: LeaveBalanceCounterType.N_MINUS_1,
+          days: alloc.days,
+        });
+      }
+
+      // Protections des compteurs pour les jours ordinaires (identiques L4).
+      const protectedByBalance = new Map<number, number>();
+      const ambiguousByBalance = new Set<number>();
+      for (const balance of nMinus1Balances) {
+        const lotsOnCounter = lots.filter(
+          (lot) => lot.targetReferencePeriod === balance.referencePeriod,
+        );
+        const knownSum = this.round(
+          lotsOnCounter
+            .filter((lot) => lot.remainingDays != null)
+            .reduce((sum, lot) => sum + Number(lot.remainingDays), 0),
+        );
+        const hasUnknown = lotsOnCounter.some(
+          (lot) => lot.remainingDays == null,
+        );
+        protectedByBalance.set(balance.id, knownSum);
+        if (hasUnknown) ambiguousByBalance.add(balance.id);
+      }
+      const frozenRows = await manager
+        .getRepository(CarryoverLotAllocation)
+        .find({
+          where: {
+            operationType: CarryoverLotAllocationOperation.REGULARISATION,
+            frozenInBalance: true,
+          },
+        });
+      const frozenByBalance = new Map<number, number>();
+      for (const row of frozenRows) {
+        if (row.leaveBalanceId != null) {
+          frozenByBalance.set(
+            row.leaveBalanceId,
+            this.round(
+              (frozenByBalance.get(row.leaveBalanceId) ?? 0) + Number(row.days),
+            ),
+          );
+        }
+      }
+
+      const ordinaryDays = sumDatedDays(lotResult.uncovered);
+      if (ordinaryDays > 0) {
+        const ordinaryAlloc = allocateOrdinaryDays(
+          ordinaryDays,
+          nMinus1Balances.map((b) => ({
+            id: b.id,
+            availableDays: b.availableDays,
+            reservedDays: b.reservedDays,
+          })),
+          {
+            id: nAfter.id,
+            availableDays: nAfter.availableDays,
+            reservedDays: nAfter.reservedDays,
+          },
+          protectedByBalance,
+          ambiguousByBalance,
+          frozenByBalance,
+        );
+
+        for (const item of ordinaryAlloc) {
+          const balance = balanceById.get(item.balanceId);
+          if (!balance) {
+            throw new ConflictException(
+              'Le compteur prévu pour l’imputation est introuvable.',
+            );
+          }
+          const days = this.round(item.days);
+          const balanceBefore = this.round(balance.availableDays);
+          balance.consumedDays = this.round(balance.consumedDays + days);
+          balance.availableDays = this.round(balance.availableDays - days);
+          await manager.getRepository(LeaveBalance).save(balance);
+          await this.createMovement(manager, {
+            balance,
+            movementType: BalanceMovementType.DEDUCTION,
+            days,
+            balanceBefore,
+            balanceAfter: balance.availableDays,
+            actorId: data.actorId,
+            leaveRequestId: data.leaveRequestId,
+            reason:
+              balance.counterType === LeaveBalanceCounterType.N_MINUS_1
+                ? 'Imputation automatique sur N-1 au début effectif du congé.'
+                : balance.availableDays < 0
+                  ? 'Imputation automatique sur N avec dépassement du solde disponible.'
+                  : 'Imputation automatique sur N au début effectif du congé.',
+          });
+          applied.push({
+            leaveBalanceId: balance.id,
+            referencePeriod: balance.referencePeriod,
+            counterType: balance.counterType,
+            days,
+          });
+        }
+      }
+
+      // Contrat realBalanceAfter : somme des compteurs réellement touchés.
+      const touchedIds = new Set<number>(
+        applied.map((a) => a.leaveBalanceId),
+      );
+      let realBalanceAfter = 0;
+      for (const balanceId of touchedIds) {
+        const balance = balanceById.get(balanceId);
+        if (balance) {
+          realBalanceAfter = this.round(
+            realBalanceAfter + balance.availableDays,
+          );
+        }
+      }
+
+      return {
+        processedDays: expectedDays,
+        realBalanceAfter,
+        allocations: applied,
+      };
+    }
+
+    // ---- Chemin ordinaire (comportement actuel, inchangé) ----
     const allocation = allocatePaidLeave(
       expectedDays,
       [
@@ -1488,12 +1747,6 @@ export class LeaveBalancesService {
       [nMinus1.id, nMinus1],
       [n.id, n],
     ]);
-    const applied: Array<{
-      leaveBalanceId: number;
-      referencePeriod: string;
-      counterType: LeaveBalanceCounterType;
-      days: number;
-    }> = [];
 
     for (const item of allocation.allocations) {
       const balance = balancesById.get(item.leaveBalanceId);
@@ -1553,6 +1806,10 @@ export class LeaveBalancesService {
     const expectedDays = this.validatePositiveDays(
       data.expectedDays,
     );
+
+    if (this.isRealFlowEnabled()) {
+      return this.recreditWithLots(manager, data, expectedDays);
+    }
 
     const movements = await manager
       .getRepository(BalanceMovement)
@@ -1660,6 +1917,181 @@ export class LeaveBalancesService {
     };
   }
 
+  /**
+   * Restitution après annulation en mode lot-aware : les lots consommés sont
+   * restaurés par le ledger (recrédit du compteur adossé + restitution du lot,
+   * ou régularisation si expiré), puis les mouvements ordinaires sont recrédités
+   * sans double comptabilisation.
+   */
+  private async recreditWithLots(
+    manager: EntityManager,
+    data: { employeeId: number; leaveRequestId: number; actorId: number },
+    expectedDays: number,
+  ): Promise<{ recreditedDays: number; realBalanceAfter: number }> {
+    // Idempotence : une seconde restitution est refusée, quelle que soit la
+    // provenance des mouvements (lots ou ordinaires).
+    const existingRecredits = await manager
+      .getRepository(BalanceMovement)
+      .find({
+        where: {
+          leaveRequestId: data.leaveRequestId,
+          movementType: BalanceMovementType.RECREDIT,
+        },
+      });
+    if (existingRecredits.length > 0) {
+      throw new ConflictException('Cette demande a déjà été restituée.');
+    }
+
+    const consumptionRows = await manager
+      .getRepository(CarryoverLotAllocation)
+      .find({
+        where: {
+          leaveRequestId: data.leaveRequestId,
+          operationType: CarryoverLotAllocationOperation.CONSUMPTION,
+        },
+      });
+
+    let lotRecreditedDays = 0;
+    let lotRegularisationDays = 0;
+    if (consumptionRows.length > 0) {
+      const lotResult = await this.ledger.restoreWithManager(manager, {
+        leaveRequestId: data.leaveRequestId,
+        actorId: data.actorId,
+        reason:
+          'Restitution des jours reportés après annulation de la demande.',
+      });
+      lotRecreditedDays = lotResult.totalLotDays;
+      lotRegularisationDays = lotResult.regularisationDays ?? 0;
+    }
+
+    // Jours ordinaires à recréditer : seuls les DEDUCTION NON adossés à un lot.
+    // Les RECREDIT créés par le ledger pour les lots ne sont PAS retranchés ici.
+    const lotDeductionIds = new Set<number>(
+      consumptionRows
+        .map((row) => row.movementId)
+        .filter((id): id is number => id != null),
+    );
+
+    const deductions = await manager
+      .getRepository(BalanceMovement)
+      .find({
+        where: {
+          leaveRequestId: data.leaveRequestId,
+          movementType: BalanceMovementType.DEDUCTION,
+        },
+        order: { id: 'ASC' },
+      });
+
+    const netByBalance = new Map<number, number>();
+    for (const movement of deductions) {
+      if (lotDeductionIds.has(movement.id)) continue; // déjà recrédité par le ledger
+      netByBalance.set(
+        movement.leaveBalanceId,
+        this.round(
+          (netByBalance.get(movement.leaveBalanceId) ?? 0) +
+            Number(movement.days),
+        ),
+      );
+    }
+
+    const ordinaryAllocations = [...netByBalance.entries()]
+      .filter(([, days]) => days > 0)
+      .map(([leaveBalanceId, days]) => ({
+        leaveBalanceId,
+        days: this.round(days),
+      }));
+
+    const touchedBalanceIds = new Set<number>();
+    for (const row of consumptionRows) {
+      if (row.movementId != null) {
+        const lotMovement = await manager
+          .getRepository(BalanceMovement)
+          .findOne({ where: { id: row.movementId } });
+        if (lotMovement) touchedBalanceIds.add(lotMovement.leaveBalanceId);
+      }
+    }
+
+    let ordinaryRecreditedDays = 0;
+    for (const allocation of ordinaryAllocations) {
+      const balance = await this.findBalanceForUpdate(
+        manager,
+        allocation.leaveBalanceId,
+      );
+
+      if (balance.employeeId !== data.employeeId) {
+        throw new ConflictException(
+          'Le mouvement de solde ne correspond pas au collaborateur de la demande.',
+        );
+      }
+
+      if (balance.consumedDays < allocation.days) {
+        throw new ConflictException(
+          'Le compteur ne contient pas assez de jours consommés pour effectuer le recrédit.',
+        );
+      }
+
+      const balanceBefore = this.round(balance.availableDays);
+      balance.consumedDays = this.round(
+        balance.consumedDays - allocation.days,
+      );
+      balance.availableDays = this.round(
+        balance.availableDays + allocation.days,
+      );
+      await manager.getRepository(LeaveBalance).save(balance);
+      touchedBalanceIds.add(balance.id);
+
+      await this.createMovement(manager, {
+        balance,
+        movementType: BalanceMovementType.RECREDIT,
+        days: allocation.days,
+        balanceBefore,
+        balanceAfter: balance.availableDays,
+        actorId: data.actorId,
+        leaveRequestId: data.leaveRequestId,
+        reason:
+          'Recrédit après annulation d’une demande de congé validée.',
+      });
+
+      ordinaryRecreditedDays = this.round(
+        ordinaryRecreditedDays + allocation.days,
+      );
+    }
+
+    const totalRecredited = this.round(
+      lotRecreditedDays + ordinaryRecreditedDays,
+    );
+    const totalRegularisation = this.round(lotRegularisationDays);
+
+    if (totalRecredited === 0 && totalRegularisation === 0) {
+      throw new ConflictException(
+        'Cette demande a déjà été recréditée ou ne possède aucune déduction active.',
+      );
+    }
+
+    if (this.round(totalRecredited + totalRegularisation) !== expectedDays) {
+      throw new ConflictException(
+        'Le total des déductions actives ne correspond pas au nombre de jours de la demande.',
+      );
+    }
+
+    let realBalanceAfter = 0;
+    for (const balanceId of touchedBalanceIds) {
+      const balance = await manager
+        .getRepository(LeaveBalance)
+        .findOne({ where: { id: balanceId } });
+      if (balance) {
+        realBalanceAfter = this.round(
+          realBalanceAfter + balance.availableDays,
+        );
+      }
+    }
+
+    return {
+      recreditedDays: totalRecredited,
+      realBalanceAfter,
+    };
+  }
+
   private async findActiveReservationAllocations(
     manager: EntityManager,
     leaveRequestId: number,
@@ -1748,7 +2180,18 @@ export class LeaveBalancesService {
     counterType: LeaveBalanceCounterType,
   ): Promise<LeaveBalance> {
     const repository = manager.getRepository(LeaveBalance);
-    let balance = await repository
+
+    // Upsert idempotent atomique (ON DUPLICATE KEY UPDATE id = id) : évite le
+    // deadlock de gap-lock entre deux créations concurrentes du même compteur.
+    await manager.query(
+      `INSERT INTO leave_balances (employee_id, reference_period, counter_type, acquired_days, reserved_days, consumed_days, available_days)
+       VALUES (?, ?, ?, 0, 0, 0, 0)
+       ON DUPLICATE KEY UPDATE id = id`,
+      [employeeId, referencePeriod, counterType],
+    );
+
+    // Verrou de la ligne (créée ici ou préexistante).
+    const balance = await repository
       .createQueryBuilder('balance')
       .setLock('pessimistic_write')
       .where('balance.employeeId = :employeeId', { employeeId })
@@ -1757,24 +2200,10 @@ export class LeaveBalancesService {
       .getOne();
 
     if (!balance) {
-      balance = await repository.save(
-        repository.create({
-          employeeId,
-          referencePeriod,
-          counterType,
-          acquiredDays: 0,
-          reservedDays: 0,
-          consumedDays: 0,
-          availableDays: 0,
-        }),
+      throw new ConflictException(
+        'Impossible de créer ou de verrouiller le compteur de solde.',
       );
-      balance = await repository
-        .createQueryBuilder('balance')
-        .setLock('pessimistic_write')
-        .where('balance.id = :balanceId', { balanceId: balance.id })
-        .getOneOrFail();
     }
-
     return balance;
   }
 

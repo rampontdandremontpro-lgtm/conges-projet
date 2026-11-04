@@ -1,0 +1,39 @@
+{
+  "purpose": "Retest d'intégration L3141-7 — cas complémentaires de clôture (consommation, corrections RH, solde négatif, réservation, double attribution, idempotence).",
+  "script": "tests/recette/scripts/retest-arrondi-l3141-7-cas.mjs",
+  "environment": {
+    "api": "http://localhost:3001/api",
+    "database": "gestion_conges_gmes_test",
+    "isolated": true,
+    "note": "Les états consommés/réservés sont préparés par SQL dans la base de recette (test technique). La clôture, les corrections RH et l'historique passent par l'API réelle."
+  },
+  "executedBy": "Pi — test automatisé",
+  "dateRetest": "2026-10-26",
+  "period": "2023-2024",
+  "rule": {
+    "reference": "L3141-7 (Code du travail) + règle GMES de transfert N→N-1 (roundPeriodCloseDays, inchangée)",
+    "description": "L'arrondi légal porte sur le droit acquis de base ; la règle GMES de transfert arrondit le solde disponible restant au plus proche. Solde négatif conservé sur la période clôturée ; clôture bloquée tant que des jours sont réservés ; un seul mouvement d'arrondi par salarié."
+  },
+  "checks": [
+    { "name": "avant clôture — base acquise 26,29 (c05)", "ok": true, "detail": "acquiredDays=26.29" },
+    { "name": "avant clôture — correction +3 → 29,29", "ok": true, "detail": "acquiredDays=29.29" },
+    { "name": "avant clôture — correction -5 → 21,29", "ok": true, "detail": "acquiredDays=21.29" },
+    { "name": "avant clôture — solde négatif -3,71 (over)", "ok": true, "detail": "availableDays=-3.71" },
+    { "name": "clôture bloquée par réservation (400)", "ok": true, "detail": "HTTP 400 — La clôture est impossible tant que des jours restent réservés sur la période." },
+    { "name": "aucun supplément appliqué pendant le blocage (resv acquis reste 26,29)", "ok": true, "detail": "acquiredDays=26.29" },
+    { "name": "clôture 2023-2024 acceptée après libération", "ok": true, "detail": "HTTP 201" },
+    { "name": "c05 (0,5 consommé) : supplément 0,71", "ok": true, "detail": "supplement=0.71" },
+    { "name": "c05 (0,5 consommé) : disponible 26,5 → transfert GMES 27", "ok": true, "detail": "transferred=27" },
+    { "name": "c10 (10 consommés) : supplément 0,71", "ok": true, "detail": "supplement=0.71" },
+    { "name": "c10 (10 consommés) : disponible 17 → transfert 17", "ok": true, "detail": "transferred=17" },
+    { "name": "pos (+3) : supplément 0,71 → acquis 30, transfert 30", "ok": true, "detail": "supplement=0.71 transferred=30" },
+    { "name": "neg (-5) : supplément 0,71 → acquis 22, transfert 22", "ok": true, "detail": "supplement=0.71 transferred=22" },
+    { "name": "over (négatif) : supplément 0,71, transfert 0, solde négatif conservé", "ok": true, "detail": "supplement=0.71 transferred=0" },
+    { "name": "resv (libéré) : supplément 0,71, transfert 27", "ok": true, "detail": "supplement=0.71 transferred=27" },
+    { "name": "over : solde N négatif conservé après clôture (-3)", "ok": true, "detail": "availableDays=-3 acquiredDays=27" },
+    { "name": "un seul mouvement d'arrondi par salarié (pas de double attribution)", "ok": true, "detail": "" },
+    { "name": "seconde clôture refusée (409)", "ok": true, "detail": "HTTP 409" }
+  ],
+  "summary": { "total": 18, "passed": 18, "failed": 0 },
+  "conclusion": "Conforme"
+}

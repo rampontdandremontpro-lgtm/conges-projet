@@ -14,6 +14,7 @@ import { LeaveBalancesService } from '../leave-balances/leave-balances.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PresenceService } from '../presence/presence.service';
 import { SettingsService } from '../settings/settings.service';
+import { withDeadlockRetry } from '../common/deadlock-retry.util';
 import { User, UserRole } from '../users/user.entity';
 import {
   getMartiniqueDateString,
@@ -306,7 +307,8 @@ export class LeaveRequestSchedulerService
       }
 
       try {
-        await this.dataSource.transaction(async (manager) => {
+        await withDeadlockRetry(
+          () => this.dataSource.transaction(async (manager) => {
           const repository = manager.getRepository(LeaveRequest);
           const locked = await repository
             .createQueryBuilder('request')
@@ -343,6 +345,10 @@ export class LeaveRequestSchedulerService
                 actorId: locked.finalDeciderId,
                 expectedDays: locked.deductedDays,
                 referencePeriod,
+                startDate: locked.startDate,
+                endDate: locked.endDate,
+                startPeriod: locked.startPeriod,
+                endPeriod: locked.endPeriod,
               },
             );
             realBalanceAfter = applied.realBalanceAfter;
@@ -382,7 +388,9 @@ export class LeaveRequestSchedulerService
             },
             manager,
           );
-        });
+        }),
+          { label: 'consolidateValidatedLeaves' },
+        );
         consolidated += 1;
       } catch (error) {
         result.errors.push(

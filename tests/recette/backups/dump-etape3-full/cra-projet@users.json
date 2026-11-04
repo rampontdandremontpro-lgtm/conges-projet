@@ -1,0 +1,46 @@
+{
+    "options": {
+        "schema": "cra-projet",
+        "table": "users",
+        "columns": [
+            "id",
+            "nom",
+            "prenom",
+            "fonction",
+            "email",
+            "password",
+            "role",
+            "contract_type",
+            "is_active",
+            "created_at",
+            "service_id",
+            "contract_start_date",
+            "contract_end_date",
+            "cra_start_date",
+            "password_reset_token_hash",
+            "password_reset_token_expires_at",
+            "company_id",
+            "saved_signature_type",
+            "saved_signature_data",
+            "saved_signature_updated_at",
+            "auth_version"
+        ],
+        "defaultCharacterSet": "utf8mb4",
+        "fieldsTerminatedBy": "\t",
+        "fieldsEnclosedBy": "",
+        "fieldsOptionallyEnclosed": false,
+        "fieldsEscapedBy": "\\",
+        "linesTerminatedBy": "\n"
+    },
+    "triggers": [],
+    "includesData": true,
+    "includesDdl": true,
+    "extension": "tsv.zst",
+    "chunking": true,
+    "compression": "zstd",
+    "primaryIndex": [
+        "id"
+    ],
+    "partitions": [],
+    "basenames": {}
+}

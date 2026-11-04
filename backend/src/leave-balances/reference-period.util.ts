@@ -139,6 +139,23 @@ export function referencePeriodEndDate(
   return addDays(nextStart, -1);
 }
 
+/**
+ * Date du jour en Martinique, au format AAAA-MM-JJ. Partagée par les parcours
+ * de clôture (GMES et L5) afin qu'ils appliquent exactement la même règle de
+ * calendrier (aucune date fixe codée en dur).
+ */
+export function martiniqueDateString(value: Date): string {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Martinique',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(value);
+  const part = (type: string) =>
+    parts.find((entry) => entry.type === type)?.value ?? '';
+  return `${part('year')}-${part('month')}-${part('day')}`;
+}
+
 export function nextReferencePeriod(referencePeriod: string): string {
   const { endYear } = parseReferencePeriod(referencePeriod);
   return `${endYear}-${endYear + 1}`;

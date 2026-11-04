@@ -1,0 +1,41 @@
+{
+    "options": {
+        "schema": "gestion_conges_gmes_test",
+        "table": "documents",
+        "columns": [
+            "id",
+            "leave_request_id",
+            "absence_declaration_id",
+            "document_kind",
+            "original_name",
+            "storage_key",
+            "mime_type",
+            "file_size",
+            "status",
+            "uploaded_by_id",
+            "verified_by_rh_id",
+            "rejection_reason",
+            "retention_until",
+            "uploaded_at",
+            "verified_at",
+            "deleted_at"
+        ],
+        "defaultCharacterSet": "utf8mb4",
+        "fieldsTerminatedBy": "\t",
+        "fieldsEnclosedBy": "",
+        "fieldsOptionallyEnclosed": false,
+        "fieldsEscapedBy": "\\",
+        "linesTerminatedBy": "\n"
+    },
+    "triggers": [],
+    "includesData": true,
+    "includesDdl": true,
+    "extension": "tsv.zst",
+    "chunking": true,
+    "compression": "zstd",
+    "primaryIndex": [
+        "id"
+    ],
+    "partitions": [],
+    "basenames": {}
+}

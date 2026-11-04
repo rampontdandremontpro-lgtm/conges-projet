@@ -1,0 +1,120 @@
+{
+  "date": "2026-10-28T14:49:06.682Z",
+  "results": [
+    {
+      "id": "C1",
+      "name": "Preuve NON_CONFORME → REJET motivé, échéance non confirmée",
+      "ok": true,
+      "detail": "status=A_CORRIGER info=null"
+    },
+    {
+      "id": "C2",
+      "name": "CONFORME sans identité vérifiée → refus",
+      "ok": true,
+      "detail": "HTTP 400"
+    },
+    {
+      "id": "C3",
+      "name": "CONFORME complet → RECEPTION_VERIFIEE",
+      "ok": true,
+      "detail": "status=RECEPTION_VERIFIEE"
+    },
+    {
+      "id": "C4",
+      "name": "Réception 09h pour transmission 16h le même jour → refus",
+      "ok": true,
+      "detail": "HTTP 400"
+    },
+    {
+      "id": "C5",
+      "name": "Réception à une heure future → refus",
+      "ok": true,
+      "detail": "HTTP 400"
+    },
+    {
+      "id": "C6",
+      "name": "Transmission puis réception successives → acceptation",
+      "ok": true,
+      "detail": "HTTP 201"
+    },
+    {
+      "id": "C7",
+      "name": "Date SQL relue sans changement de jour (Martinique)",
+      "ok": true,
+      "detail": "info=2026-10-28 expected=2026-10-28"
+    },
+    {
+      "id": "C8",
+      "name": "Échéance exacte à 15 mois",
+      "ok": true,
+      "detail": "expires=2028-01-28 expected=2028-01-28"
+    },
+    {
+      "id": "C9",
+      "name": "Document transmis figé (référence + empreinte + copie)",
+      "ok": true,
+      "detail": "ref=ND-eb67ed49-ff36-4942-b581-d68279e05237"
+    },
+    {
+      "id": "C10",
+      "name": "Discordance échéance → anomalie + A_CORRIGER (pas RECEPTION_VERIFIEE)",
+      "ok": true,
+      "detail": "status=A_CORRIGER anomaly=1"
+    },
+    {
+      "id": "C11",
+      "name": "MIME PDF déclaré mais contenu non PDF → refus",
+      "ok": true,
+      "detail": "HTTP 400"
+    },
+    {
+      "id": "C12",
+      "name": "Taille maximale serveur → refus (HTTP ou service)",
+      "ok": true,
+      "detail": "HTTP 413"
+    },
+    {
+      "id": "C13",
+      "name": "Modification réelle des octets → refus",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "C14",
+      "name": "Téléchargement RH + réponse salarié sans chemin privé",
+      "ok": true,
+      "detail": "dl=200"
+    },
+    {
+      "id": "C15",
+      "name": "Deux préparations simultanées → une seule",
+      "ok": true,
+      "detail": "HTTP 201/409"
+    },
+    {
+      "id": "C16",
+      "name": "Deux validations simultanées → une seule",
+      "ok": true,
+      "detail": "HTTP 201/409"
+    },
+    {
+      "id": "C17",
+      "name": "Deux transmissions simultanées → une seule",
+      "ok": true,
+      "detail": "HTTP 201/409"
+    },
+    {
+      "id": "C18",
+      "name": "Annulation concurrente + vérification → un seul gagnant",
+      "ok": true,
+      "detail": "HTTP 409/201"
+    },
+    {
+      "id": "C19",
+      "name": "Report exceptionnel : reliquat NULL → blocage",
+      "ok": true,
+      "detail": ""
+    }
+  ],
+  "failed": 0
+}

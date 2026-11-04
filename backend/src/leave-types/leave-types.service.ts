@@ -6,17 +6,27 @@ import {
   OnModuleInit,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Not, Repository } from 'typeorm';
+import { DataSource, Not, Repository } from 'typeorm';
 
 import { CreateLeaveTypeDto } from './dto/create-leave-type.dto';
 import { UpdateLeaveTypeDto } from './dto/update-leave-type.dto';
-import { LeaveType, LeaveTypeCategory } from './leave-type.entity';
+import { UpdateLeaveTypeAbsenceKindDto } from './dto/update-leave-type-absence-kind.dto';
+import { LeaveType, LeaveTypeAbsenceKind, LeaveTypeCategory } from './leave-type.entity';
+import {
+  FAMILY_EVENT_KINDS,
+  applicableFamilyEventRule,
+  type FamilyEventApplicableRule,
+  type FamilyEventKind,
+} from '../leave-balances/family-event-rules.util';
+import { LegalEntityConventionType } from '../legal-entities/legal-entity.entity';
+import { User } from '../users/user.entity';
 
 const REQUIRED_ABSENCE_TYPES = [
   'Congé supplémentaire de naissance',
   'Congé parental',
   'Congé parental d’éducation',
   'Congé d’adoption',
+  'Congé de paternité et d’accueil de l’enfant',
 ] as const;
 
 @Injectable()
@@ -24,6 +34,7 @@ export class LeaveTypesService implements OnModuleInit {
   constructor(
     @InjectRepository(LeaveType)
     private readonly leaveTypeRepository: Repository<LeaveType>,
+    private readonly dataSource: DataSource,
   ) {}
 
   async onModuleInit(): Promise<void> {
@@ -114,10 +125,81 @@ export class LeaveTypesService implements OnModuleInit {
     return this.leaveTypeRepository.save(leaveType);
   }
 
+  /** JUR-028 — classification métier explicite d'un type d'absence. */
+  async updateAbsenceKind(
+    id: number,
+    dto: UpdateLeaveTypeAbsenceKindDto,
+  ): Promise<LeaveType> {
+    const leaveType = await this.findOne(id);
+    leaveType.absenceKind = dto.absenceKind;
+    return this.leaveTypeRepository.save(leaveType);
+  }
+
+  /**
+   * JUR-029/030 — durée applicable (versionnée) d'un événement familial pour
+   * un type classé, une date et une entité donnés.
+   */
+  async familyEventRuleFor(
+    leaveTypeId: number,
+    date: string,
+    employeeId?: number,
+    params: import('../leave-balances/family-event-rules.util').FamilyEventParams = {},
+  ): Promise<FamilyEventApplicableRule | null> {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date ?? '')) {
+      throw new BadRequestException('La date doit être au format AAAA-MM-JJ.');
+    }
+    const leaveType = await this.findOne(leaveTypeId);
+    const kind = leaveType.absenceKind as FamilyEventKind;
+    if (!FAMILY_EVENT_KINDS.includes(kind)) {
+      return null;
+    }
+
+    let conventionType = LegalEntityConventionType.NON_RENSEIGNEE;
+    if (employeeId) {
+      const user = await this.dataSource
+        .getRepository(User)
+        .findOne({ where: { id: employeeId }, relations: { legalEntity: true } });
+      conventionType =
+        user?.legalEntity?.conventionType ?? conventionType;
+    }
+
+    return applicableFamilyEventRule(kind, date, conventionType, params);
+  }
+
   private async ensureRequiredAbsenceTypes(): Promise<void> {
+    const PATERNITY_NAME = 'Congé de paternité et d’accueil de l’enfant';
+
     for (const name of REQUIRED_ABSENCE_TYPES) {
       const existing = await this.leaveTypeRepository.findOneBy({ name });
+      const isPaternity = name === PATERNITY_NAME;
+
       if (existing) {
+        // JUR-031 : un type « Congé de paternité » déjà présent mais non
+        // classifié est classifié PATERNITE_ACCUEIL sans écraser une
+        // classification RH explicite déjà différente. Les autres types
+        // existants ne sont jamais modifiés silencieusement.
+        if (isPaternity) {
+          // On ne met à niveau que le défaut historiquement seedé (non classifié,
+          // ou classifié PATERNITE_ACCUEIL mais réservé RH sans justificatif) ;
+          // une configuration RH explicite différente n'est jamais écrasée.
+          const isLegacySeededDefault =
+            existing.employeeCanCreate === false &&
+            existing.rhOnly === true &&
+            existing.documentRequired === false;
+          if (
+            existing.absenceKind === LeaveTypeAbsenceKind.NON_CLASSIFIE ||
+            (existing.absenceKind === LeaveTypeAbsenceKind.PATERNITE_ACCUEIL &&
+              isLegacySeededDefault)
+          ) {
+            existing.absenceKind = LeaveTypeAbsenceKind.PATERNITE_ACCUEIL;
+            existing.employeeCanCreate = true;
+            existing.rhOnly = false;
+            existing.documentRequired = true;
+            existing.documentCanBeAddedLater = true;
+            existing.requiresValidation = true;
+            await this.leaveTypeRepository.save(existing);
+          }
+        }
         continue;
       }
 
@@ -126,15 +208,18 @@ export class LeaveTypesService implements OnModuleInit {
           name,
           category: LeaveTypeCategory.DECLARATION_ABSENCE,
           deductsPaidLeaveBalance: false,
-          documentRequired: false,
-          documentCanBeAddedLater: false,
-          employeeCanCreate: false,
-          rhOnly: true,
+          documentRequired: isPaternity,
+          documentCanBeAddedLater: isPaternity,
+          employeeCanCreate: isPaternity,
+          rhOnly: !isPaternity,
           allowsDays: true,
           allowsHalfDays: false,
           allowsHours: false,
-          requiresValidation: false,
+          requiresValidation: isPaternity,
           isActive: true,
+          absenceKind: isPaternity
+            ? LeaveTypeAbsenceKind.PATERNITE_ACCUEIL
+            : LeaveTypeAbsenceKind.NON_CLASSIFIE,
         }),
       );
     }

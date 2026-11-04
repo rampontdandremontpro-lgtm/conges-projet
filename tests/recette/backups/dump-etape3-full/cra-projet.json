@@ -1,0 +1,38 @@
+{
+    "schema": "cra-projet",
+    "includesDdl": true,
+    "includesViewsDdl": true,
+    "includesData": true,
+    "tables": [
+        "cra_activity_entries",
+        "astreinte",
+        "companies",
+        "collaborator_assignments",
+        "cra",
+        "cra_activity_columns",
+        "cra_days",
+        "cra_history",
+        "holidays",
+        "mail_reminder_logs",
+        "services",
+        "users"
+    ],
+    "views": [],
+    "events": [],
+    "functions": [],
+    "procedures": [],
+    "basenames": {
+        "cra_activity_entries": "cra-projet@cra_activity_entries",
+        "astreinte": "cra-projet@astreinte",
+        "companies": "cra-projet@companies",
+        "collaborator_assignments": "cra-projet@collaborator_assignments",
+        "cra": "cra-projet@cra",
+        "cra_activity_columns": "cra-projet@cra_activity_columns",
+        "cra_days": "cra-projet@cra_days",
+        "cra_history": "cra-projet@cra_history",
+        "holidays": "cra-projet@holidays",
+        "mail_reminder_logs": "cra-projet@mail_reminder_logs",
+        "services": "cra-projet@services",
+        "users": "cra-projet@users"
+    }
+}

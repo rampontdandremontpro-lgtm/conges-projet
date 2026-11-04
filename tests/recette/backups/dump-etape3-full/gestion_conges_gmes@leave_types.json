@@ -1,0 +1,40 @@
+{
+    "options": {
+        "schema": "gestion_conges_gmes",
+        "table": "leave_types",
+        "columns": [
+            "id",
+            "name",
+            "category",
+            "deducts_paid_leave_balance",
+            "document_required",
+            "document_can_be_added_later",
+            "employee_can_create",
+            "rh_only",
+            "allows_days",
+            "allows_half_days",
+            "allows_hours",
+            "requires_validation",
+            "is_active",
+            "created_at",
+            "updated_at"
+        ],
+        "defaultCharacterSet": "utf8mb4",
+        "fieldsTerminatedBy": "\t",
+        "fieldsEnclosedBy": "",
+        "fieldsOptionallyEnclosed": false,
+        "fieldsEscapedBy": "\\",
+        "linesTerminatedBy": "\n"
+    },
+    "triggers": [],
+    "includesData": true,
+    "includesDdl": true,
+    "extension": "tsv.zst",
+    "chunking": true,
+    "compression": "zstd",
+    "primaryIndex": [
+        "id"
+    ],
+    "partitions": [],
+    "basenames": {}
+}

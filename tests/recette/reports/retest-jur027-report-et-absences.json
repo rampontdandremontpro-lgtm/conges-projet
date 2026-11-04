@@ -1,0 +1,23 @@
+{
+  "purpose": "Vérifications techniques JUR-027 (report exceptionnel RH) et JUR-031 (absence déclarative « Congé d'adoption » sans déduction).",
+  "script": "tests/recette/scripts/retest-jur027-report-et-absences.mjs",
+  "environment": { "api": "http://localhost:3001/api", "database": "gestion_conges_gmes_test", "isolated": true },
+  "executedBy": "Pi — test automatisé",
+  "dateRetest": "2026-10-26",
+  "checks": [
+    { "name": "JUR-027 : report exceptionnel accepté (HTTP 201/200)", "ok": true, "detail": "HTTP 201" },
+    { "name": "JUR-027 : N-1 2026-2027 crédité de 4 jours (montant exact)", "ok": true, "detail": "availableDays=4" },
+    { "name": "JUR-027 : mouvement REPORT_EXCEPTIONNEL (distinct du transfert N→N-1)", "ok": true, "detail": "reason=REPORT_EXCEPTIONNEL|2025-2026|Arrêt maladie…" },
+    { "name": "JUR-027 : motif conservé dans la raison", "ok": true, "detail": "motif présent" },
+    { "name": "JUR-027 : auteur enregistré (actorId RH)", "ok": true, "detail": "actorId=14" },
+    { "name": "JUR-027 : montant enregistré = 4 jours", "ok": true, "detail": "days=4" },
+    { "name": "JUR-027 : audit EXCEPTIONAL_CARRYOVER_APPROVED", "ok": true, "detail": "count=1" },
+    { "name": "JUR-027 : notification salarié EXCEPTIONAL_CARRYOVER_APPROVED", "ok": true, "detail": "Report exceptionnel de congés accordé" },
+    { "name": "JUR-031 : type « Congé d'adoption » présent (déclaratif)", "ok": true, "detail": "deducts=false category=DECLARATION_ABSENCE" },
+    { "name": "JUR-031 : déclaration d'absence (brouillon RH) créée", "ok": true, "detail": "HTTP 201" },
+    { "name": "JUR-031 : absence soumise/enregistrée (RH)", "ok": true, "detail": "HTTP 200" },
+    { "name": "JUR-031 : aucune déduction de solde (absence déclarative)", "ok": true, "detail": "avant=4 après=4" }
+  ],
+  "summary": { "total": 12, "passed": 12, "failed": 0 },
+  "conclusion": "Techniquement démontré : le report exceptionnel RH est opérationnel (motif, auteur, montant, audit, notification, distinct du transfert N→N-1) ; les absences déclaratives type « Congé d'adoption » ne déduisent pas le solde. Ces preuves techniques ne constituent pas une validation juridique complète."
+}

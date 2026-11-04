@@ -59,11 +59,11 @@ export async function capture(page, fileName) {
 
 export function dbConn() {
   return mysql.createConnection({
-    host: 'localhost',
-    port: 3306,
-    user: 'root',
-    password: 'root',
-    database: 'gestion_conges_gmes_test',
+    host: config.DB_HOST,
+    port: config.DB_PORT,
+    user: config.DB_USERNAME,
+    password: config.DB_PASSWORD,
+    database: config.DB_DATABASE,
   })
 }
 

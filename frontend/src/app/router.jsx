@@ -11,6 +11,7 @@ import { NotFound } from '@/pages/shared/NotFound'
 import { DashboardGate } from '@/pages/shared/DashboardGate'
 import { PracticalInfoPage } from '@/pages/shared/PracticalInfoPage'
 import { NewRequest } from '@/pages/collab/NewRequestPage'
+import { NewAbsencePage } from '@/pages/collab/NewAbsencePage'
 import { HistoryPage } from '@/pages/collab/HistoryPage'
 import { MyRequestsPage } from '@/pages/collab/MyRequestsPage'
 import { DocumentsPage } from '@/pages/collab/DocumentsPage'
@@ -34,6 +35,9 @@ import { RhDocumentsPage } from '@/pages/rh/DocumentsPage'
 import { RhLeaveTypesPage } from '@/pages/rh/LeaveTypesPage'
 import { RhHolidaysPage } from '@/pages/rh/HolidaysPage'
 import { RhSummerPeriodPage } from '@/pages/rh/SummerPeriodPage'
+import { RhExtraDaysPage } from '@/pages/rh/ExtraDaysPage'
+import { RhIllnessMaintenancePage } from '@/pages/rh/IllnessMaintenancePage'
+import { RhAccrualAnomaliesPage } from '@/pages/rh/AccrualAnomaliesPage'
 import { RhValidatorsPage } from '@/pages/rh/ValidatorsPage'
 import { RhHistoryPage } from '@/pages/rh/HistoryPage'
 import { DirectorAllRequestsPage } from '@/pages/director/AllRequestsPage'
@@ -284,6 +288,22 @@ export const router = createBrowserRouter([
         ),
       },
       {
+        path: 'rh-illness-maintenance',
+        element: (
+          <RoleRoute roles={[ROLES.RH]}>
+            <RhIllnessMaintenancePage />
+          </RoleRoute>
+        ),
+      },
+      {
+        path: 'rh-accrual-anomalies',
+        element: (
+          <RoleRoute roles={[ROLES.RH]}>
+            <RhAccrualAnomaliesPage />
+          </RoleRoute>
+        ),
+      },
+      {
         path: 'rh-leave-types',
         element: (
           <RoleRoute roles={[ROLES.RH]}>
@@ -304,6 +324,14 @@ export const router = createBrowserRouter([
         element: (
           <RoleRoute roles={[ROLES.RH]}>
             <RhSummerPeriodPage />
+          </RoleRoute>
+        ),
+      },
+      {
+        path: 'rh-extra-days',
+        element: (
+          <RoleRoute roles={[ROLES.RH]}>
+            <RhExtraDaysPage />
           </RoleRoute>
         ),
       },
@@ -372,6 +400,14 @@ export const router = createBrowserRouter([
         element: (
           <RoleRoute roles={NEW_REQUEST_ROLES}>
             <NewRequest />
+          </RoleRoute>
+        ),
+      },
+      {
+        path: 'new-absence',
+        element: (
+          <RoleRoute roles={[ROLES.COLLABORATEUR]}>
+            <NewAbsencePage />
           </RoleRoute>
         ),
       },

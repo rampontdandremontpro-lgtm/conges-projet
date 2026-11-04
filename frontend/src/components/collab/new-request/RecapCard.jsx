@@ -1,6 +1,11 @@
+import { useAuth } from '@/auth/AuthContext'
 import { Icon } from '@/components/ui/Icon'
 import { formatDays, formatRangeCompactFR } from '@/utils/format'
 import { formatRelativeReferencePeriod } from '@/utils/referencePeriods'
+import {
+  COLLABORATOR_MASKED_VALUE,
+  isCollaboratorCounterMasked,
+} from '@/config/collaboratorCounterMask'
 import { buildRequestRightsSituation } from '@/utils/requestRightsSituation'
 import { evaluateNotice } from '@/utils/leaveNotice'
 import { calculateDeductedDaysPreview } from '@/utils/leaveDuration'
@@ -47,6 +52,12 @@ export function RecapCard({
   preparedForName = '',
   isAnticipatedLeave = false,
 }) {
+  const { effectiveRole } = useAuth()
+  const counterValue = (key, value) => (
+    isCollaboratorCounterMasked(key, effectiveRole)
+      ? COLLABORATOR_MASKED_VALUE
+      : `${formatDays(value)} j`
+  )
   const { startDate, endDate, startPeriod, endPeriod } = selection ?? {}
   const periodComplete = Boolean(startDate && endDate)
 
@@ -212,9 +223,9 @@ export function RecapCard({
                   {rightsSituation.map((item) => (
                     <div className="nr-rights-impact__period" key={item.referencePeriod}>
                       <strong>{formatRelativeReferencePeriod(item.referencePeriod)}</strong>
-                      <span>Pris <b>{formatDays(item.metrics.takenDays)} j</b></span>
-                      <span>En attente <b>{formatDays(item.metrics.pendingDays)} j</b></span>
-                      <span>Validées <b>{formatDays(item.metrics.validatedDays)} j</b></span>
+                      <span>Pris <b>{counterValue('takenDays', item.metrics.takenDays)}</b></span>
+                      <span>En attente <b>{counterValue('pendingDays', item.metrics.pendingDays)}</b></span>
+                      <span>Validées <b>{counterValue('validatedDays', item.metrics.validatedDays)}</b></span>
                     </div>
                   ))}
                 </div>

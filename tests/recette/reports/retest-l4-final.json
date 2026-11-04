@@ -1,0 +1,84 @@
+{
+  "date": "2026-10-28T19:15:48.385Z",
+  "results": [
+    {
+      "id": "FIN-1a",
+      "name": "Réservation ordinaire (reserved=2)",
+      "ok": true,
+      "detail": "res=2.00"
+    },
+    {
+      "id": "FIN-1b",
+      "name": "Finalisation ordinaire (réservé 0, consommé 2, disponible 8)",
+      "ok": true,
+      "detail": "res=0.00 cons=2.00 avail=8.00"
+    },
+    {
+      "id": "FIN-1c",
+      "name": "Restitution ordinaire exacte (disponible 10)",
+      "ok": true,
+      "detail": "avail=10.00"
+    },
+    {
+      "id": "FIN-1d",
+      "name": "Double restitution refusée",
+      "ok": true,
+      "detail": "HTTP 409"
+    },
+    {
+      "id": "FIN-1e",
+      "name": "Refus ordinaire → libération exacte (réservé 0, disponible 10)",
+      "ok": true,
+      "detail": "res=0.00 avail=10.00"
+    },
+    {
+      "id": "FIN-2a",
+      "name": "Régularisation : ordinaire utilisable inchangé (5 avant/après)",
+      "ok": true,
+      "detail": "avant=5 après=5"
+    },
+    {
+      "id": "FIN-2b",
+      "name": "Lot expiré non recrédité",
+      "ok": true,
+      "detail": "lot=3.00"
+    },
+    {
+      "id": "FIN-2c",
+      "name": "4 jours ordinaires consommables après régularisation",
+      "ok": true,
+      "detail": "HTTP 201"
+    },
+    {
+      "id": "FIN-2d",
+      "name": "6 jours refusés (pas de jours expirés rendus ordinaires)",
+      "ok": true,
+      "detail": "HTTP 400"
+    },
+    {
+      "id": "FIN-3a",
+      "name": "VALIDATE une seule fois (2e VALIDATE, REFUSE, release → 409)",
+      "ok": true,
+      "detail": "HTTP 201/409/409/409"
+    },
+    {
+      "id": "FIN-3b",
+      "name": "Deux VALIDATE simultanés → un seul",
+      "ok": true,
+      "detail": "HTTP 201/409"
+    },
+    {
+      "id": "FIN-3c",
+      "name": "VALIDATE + REFUSE simultanés → un seul gagnant",
+      "ok": true,
+      "detail": "HTTP 201/409"
+    },
+    {
+      "id": "FIN-3d",
+      "name": "REFUSE puis VALIDATE → refusé",
+      "ok": true,
+      "detail": "HTTP 201/409"
+    }
+  ],
+  "failed": 0
+}

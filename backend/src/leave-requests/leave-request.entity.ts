@@ -31,6 +31,19 @@ export enum BalanceProcessingStatus {
   DEFINITIF = 'DEFINITIF',
 }
 
+/**
+ * Classification RH de la demande pour le fractionnement des congés :
+ *  - UNDETERMINED : non classifiée (demandes historiques) — jamais utilisée
+ *    pour un calcul automatique de fractionnement ;
+ *  - MAIN : congé principal confirmé (pris en compte pour le fractionnement) ;
+ *  - FIFTH_WEEK : cinquième semaine confirmée (exclue du fractionnement).
+ */
+export enum LeaveClassification {
+  UNDETERMINED = 'UNDETERMINED',
+  MAIN = 'MAIN',
+  FIFTH_WEEK = 'FIFTH_WEEK',
+}
+
 export enum DayPeriod {
   MATIN = 'MATIN',
   APRES_MIDI = 'APRES_MIDI',
@@ -150,6 +163,14 @@ export class LeaveRequest {
 
   @Column({ name: 'is_anticipated_leave', type: 'boolean', default: false })
   isAnticipatedLeave!: boolean;
+
+  @Column({
+    name: 'leave_classification',
+    type: 'varchar',
+    length: 20,
+    default: LeaveClassification.UNDETERMINED,
+  })
+  classification!: LeaveClassification;
 
   @Column({ type: 'text', nullable: true })
   comment!: string | null;

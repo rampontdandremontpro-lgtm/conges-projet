@@ -1,0 +1,35 @@
+{
+    "options": {
+        "schema": "backend_base",
+        "table": "claims",
+        "columns": [
+            "id",
+            "item_id",
+            "requester_profile_id",
+            "target_profile_id",
+            "message",
+            "status",
+            "resolved_message",
+            "resolved_at",
+            "created_at",
+            "updated_at"
+        ],
+        "defaultCharacterSet": "utf8mb4",
+        "fieldsTerminatedBy": "\t",
+        "fieldsEnclosedBy": "",
+        "fieldsOptionallyEnclosed": false,
+        "fieldsEscapedBy": "\\",
+        "linesTerminatedBy": "\n"
+    },
+    "triggers": [],
+    "includesData": true,
+    "includesDdl": true,
+    "extension": "tsv.zst",
+    "chunking": true,
+    "compression": "zstd",
+    "primaryIndex": [
+        "id"
+    ],
+    "partitions": [],
+    "basenames": {}
+}

@@ -1,0 +1,9 @@
+OK  après report : source 2025-2026 = 6 — availableDays=6
+OK  après report : cible 2026-2027 = 4 — availableDays=4
+OK  clôture 2025-2026 acceptée — HTTP 201
+OK  après clôture : source = 0 — availableDays=0
+OK  après clôture : cible = 4 (report conservé, pas de double crédit) — availableDays=4
+OK  un seul crédit REPORT_EXCEPTIONNEL (pas de double crédit) — count=1
+OK  seconde clôture refusée (409) — HTTP 409
+
+RÉSULTAT : 7/7 OK, 0 KO

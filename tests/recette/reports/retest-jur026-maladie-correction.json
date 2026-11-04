@@ -1,0 +1,34 @@
+{
+  "purpose": "Retest JUR-026 — arrêt maladie non professionnelle : ajustement manuel RH sur les compteurs (aucun calcul automatique de réduction).",
+  "script": "tests/recette/scripts/retest-jur026-maladie-correction.mjs",
+  "environment": {
+    "api": "http://localhost:3001/api",
+    "database": "gestion_conges_gmes_test",
+    "isolated": true
+  },
+  "executedBy": "Pi — test automatisé",
+  "dateRetest": "2026-10-26",
+  "month": "2025-06",
+  "period": "2025-2026",
+  "rule": {
+    "reference": "L3141-5-1 (Code du travail) — source citée via conformite-legale.spec.ts, à confirmer sur Légifrance",
+    "description": "L'acquisition mensuelle automatique crédite 2,5 jours ouvrables/mois. En cas d'arrêt maladie non professionnelle, la RH examine les jours d'arrêt et applique une correction manuelle (ex. -0,5 jour pour un mois complet, soit 2 jours/mois). Aucun calcul automatique de réduction des droits n'est mis en œuvre.",
+    "process": "MANUEL RH (correction sur compteur), distinct des calculs automatiques d'acquisition."
+  },
+  "checks": [
+    { "name": "acquisition mensuelle 2025-06 exécutée", "ok": true, "detail": "HTTP 201" },
+    { "name": "après acquisition : acquiredDays = 2,5 (crédit automatique)", "ok": true, "detail": "acquiredDays=2.5" },
+    { "name": "après acquisition : availableDays = 2,5", "ok": true, "detail": "availableDays=2.5" },
+    { "name": "correction RH -0,5 acceptée", "ok": true, "detail": "HTTP 201" },
+    { "name": "après correction : acquiredDays = 2 (2 jours/mois)", "ok": true, "detail": "acquiredDays=2" },
+    { "name": "après correction : availableDays = 2", "ok": true, "detail": "availableDays=2" },
+    { "name": "mouvement CORRECTION_NEGATIVE historisé", "ok": true, "detail": "movementType=CORRECTION_NEGATIVE" },
+    { "name": "montant du mouvement = 0,5", "ok": true, "detail": "days=0.5" },
+    { "name": "motif enregistré (raison contient « L3141-5-1 »)", "ok": true, "detail": "reason présent" },
+    { "name": "auteur enregistré (actorId renseigné)", "ok": true, "detail": "actorId=14 (RH)" },
+    { "name": "balance_before/after cohérents (2,5 → 2)", "ok": true, "detail": "before=2.5 after=2" },
+    { "name": "audit RH_BALANCE_CORRECTED enregistré", "ok": true, "detail": "actor=14 days=-0.5" }
+  ],
+  "summary": { "total": 12, "passed": 12, "failed": 0 },
+  "conclusion": "Conforme (processus manuel RH démontré de bout en bout : acquisition automatique 2,5 j/mois, correction manuelle RH, historisation motif/auteur/montant)."
+}

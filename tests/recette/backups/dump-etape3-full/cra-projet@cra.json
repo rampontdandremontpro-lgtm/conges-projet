@@ -1,0 +1,48 @@
+{
+    "options": {
+        "schema": "cra-projet",
+        "table": "cra",
+        "columns": [
+            "id",
+            "mois",
+            "annee",
+            "statut",
+            "date_soumission",
+            "date_validation_client",
+            "date_refus_client",
+            "motif_refus_client",
+            "date_validation_admin",
+            "date_refus_admin",
+            "motif_refus_admin",
+            "created_at",
+            "updated_at",
+            "collaborateur_id",
+            "service_id",
+            "client_validator_id",
+            "client_refuser_id",
+            "admin_validator_id",
+            "admin_refuser_id",
+            "client_signature_type",
+            "client_signature_data",
+            "admin_signature_type",
+            "admin_signature_data"
+        ],
+        "defaultCharacterSet": "utf8mb4",
+        "fieldsTerminatedBy": "\t",
+        "fieldsEnclosedBy": "",
+        "fieldsOptionallyEnclosed": false,
+        "fieldsEscapedBy": "\\",
+        "linesTerminatedBy": "\n"
+    },
+    "triggers": [],
+    "includesData": true,
+    "includesDdl": true,
+    "extension": "tsv.zst",
+    "chunking": true,
+    "compression": "zstd",
+    "primaryIndex": [
+        "id"
+    ],
+    "partitions": [],
+    "basenames": {}
+}

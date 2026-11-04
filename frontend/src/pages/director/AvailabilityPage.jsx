@@ -541,6 +541,7 @@ export function DirectorAvailabilityPage() {
                 onBoundaryPeriodChange={handleBoundaryPeriodChange}
                 onPrev={() => setMonth((current) => prevMonthOf(current))}
                 onNext={() => setMonth((current) => nextMonthOf(current))}
+                hideOccupancyLegend
               />
             </div>
           </section>

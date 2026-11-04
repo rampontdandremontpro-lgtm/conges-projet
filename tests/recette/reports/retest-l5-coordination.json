@@ -1,0 +1,72 @@
+{
+  "date": "2026-10-28T14:50:21.653Z",
+  "results": [
+    {
+      "id": "C1",
+      "name": "Deux clôtures simultanées (avec lots) → 1 clôture définitive",
+      "ok": true,
+      "detail": "HTTP 201/409 cur=0.00 next=4.00 mv=2 markers=1 lockFree=1"
+    },
+    {
+      "id": "C2",
+      "name": "Deux clôtures simultanées (sans lot) → 201/409",
+      "ok": true,
+      "detail": "HTTP 409/201 markers=1"
+    },
+    {
+      "id": "C3",
+      "name": "Clôture unifiée : lot transféré + N arrondi/transféré + N+1 remis à zéro",
+      "ok": true,
+      "detail": "HTTP 201 next=25.00 lotTarget=2018-2019 N=0.00"
+    },
+    {
+      "id": "C4",
+      "name": "Clôture rejouée refusée (409)",
+      "ok": true,
+      "detail": "HTTP 201/409"
+    },
+    {
+      "id": "C5",
+      "name": "Pré-traitement autonome L5 bloqué (aucune écriture)",
+      "ok": true,
+      "detail": "HTTP 400 avail=5.00 marker=null"
+    },
+    {
+      "id": "C6",
+      "name": "Verrou occupé → 409 après délai d'attente",
+      "ok": true,
+      "detail": "HTTP 409 heldBy=1092(conn 1092) elapsed=10082ms"
+    },
+    {
+      "id": "C6-rel",
+      "name": "Verrou libéré sur la connexion connue",
+      "ok": true,
+      "detail": "free=1"
+    },
+    {
+      "id": "C7",
+      "name": "Rollback complet : lots traités puis erreur GMES → rien ne subsiste",
+      "ok": true,
+      "detail": "HTTP 500 N-1=4.00→4.00 N=20.50→20.50 lot=2011-2012/ACTIF mv=1→1 marker=null"
+    },
+    {
+      "id": "C8",
+      "name": "Après rollback : nouvelle tentative 201 puis 409",
+      "ok": true,
+      "detail": "HTTP 201/409 next=25.00 marker=true"
+    },
+    {
+      "id": "C9",
+      "name": "Période future refusée sans écriture",
+      "ok": true,
+      "detail": "HTTP 400 mv=19→19 marker=null"
+    },
+    {
+      "id": "C10",
+      "name": "Période terminée acceptée",
+      "ok": true,
+      "detail": "HTTP 201 avail=0.00"
+    }
+  ],
+  "failed": 0
+}

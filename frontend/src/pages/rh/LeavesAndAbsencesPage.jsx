@@ -174,11 +174,21 @@ export function RhLeavesAndAbsencesPage() {
     await load()
   }
 
-  const handleRegister = async (declaration) => {
+  const handleRegister = async (declaration, decision = {}) => {
     if (busy) return
+    if (declaration.familyEvent?.uncertain) {
+      if (!decision?.decisionReason?.trim() || !decision?.decisionSource?.trim()) {
+        showFeedback('error', 'Motif et source/fondement sont requis pour autoriser une demande incertaine.')
+        return
+      }
+    }
     setBusy(true)
     try {
-      await registerRhAbsence(declaration.id)
+      await registerRhAbsence(
+        declaration.id,
+        decision?.decisionReason?.trim() || undefined,
+        decision?.decisionSource?.trim() || undefined,
+      )
       setSelectedAbsence(null)
       showFeedback('success', `L’absence de ${fullName(declaration.employee)} a été autorisée.`)
       await load()
@@ -260,6 +270,8 @@ export function RhLeavesAndAbsencesPage() {
           employees={state.employees}
           leaveTypes={state.leaveTypes}
           absenceTypes={state.absenceTypes}
+          leaves={state.leaves}
+          absences={state.absences}
           onClose={() => setDeclarationOpen(false)}
           onSaved={handleDeclarationSaved}
         />
@@ -270,6 +282,8 @@ export function RhLeavesAndAbsencesPage() {
           employees={state.employees}
           leaveTypes={state.leaveTypes}
           absenceTypes={state.absenceTypes}
+          leaves={state.leaves}
+          absences={state.absences}
           editingDeclaration={editingAbsence}
           onClose={() => setEditingAbsence(null)}
           onSaved={async (message) => { setEditingAbsence(null); setSelectedAbsence(null); showFeedback('success', message); await load() }}

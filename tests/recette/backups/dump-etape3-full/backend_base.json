@@ -1,0 +1,24 @@
+{
+    "schema": "backend_base",
+    "includesDdl": true,
+    "includesViewsDdl": true,
+    "includesData": true,
+    "tables": [
+        "categories",
+        "claims",
+        "user_credentials",
+        "items",
+        "user_profiles"
+    ],
+    "views": [],
+    "events": [],
+    "functions": [],
+    "procedures": [],
+    "basenames": {
+        "categories": "backend_base@categories",
+        "claims": "backend_base@claims",
+        "user_credentials": "backend_base@user_credentials",
+        "items": "backend_base@items",
+        "user_profiles": "backend_base@user_profiles"
+    }
+}

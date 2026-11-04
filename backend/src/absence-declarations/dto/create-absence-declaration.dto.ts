@@ -1,3 +1,4 @@
+import { Type } from 'class-transformer';
 import {
   IsDateString,
   IsEnum,
@@ -8,9 +9,11 @@ import {
   Max,
   MaxLength,
   Min,
+  ValidateNested,
 } from 'class-validator';
 
 import { DayPeriod } from '../../leave-requests/leave-request.entity';
+import { FamilyEventContextDto } from './family-event-context.dto';
 
 export class CreateAbsenceDeclarationDto {
   @IsOptional()
@@ -46,4 +49,9 @@ export class CreateAbsenceDeclarationDto {
   @IsString()
   @MaxLength(1000)
   comment?: string;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => FamilyEventContextDto)
+  familyEventContext?: FamilyEventContextDto;
 }

@@ -1,8 +1,13 @@
 import { createPortal } from 'react-dom'
 
+import { useAuth } from '@/auth/AuthContext'
 import { Icon } from '@/components/ui/Icon'
 import { formatDays, formatRangeCompactFR } from '@/utils/format'
 import { formatRelativeReferencePeriod } from '@/utils/referencePeriods'
+import {
+  COLLABORATOR_MASKED_VALUE,
+  isCollaboratorCounterMasked,
+} from '@/config/collaboratorCounterMask'
 import { buildRequestRightsSituation } from '@/utils/requestRightsSituation'
 import { evaluateNotice } from '@/utils/leaveNotice'
 
@@ -18,6 +23,12 @@ function periodLabel(startPeriod, endPeriod, startDate, endDate) {
 }
 
 function LeaveSituation({ periodSummaries, projection, selectedReferencePeriod, isAnticipatedLeave }) {
+  const { effectiveRole } = useAuth()
+  const counterValue = (key, value) => (
+    isCollaboratorCounterMasked(key, effectiveRole)
+      ? COLLABORATOR_MASKED_VALUE
+      : `${formatDays(value)} j`
+  )
   const situations = buildRequestRightsSituation({
     periodSummaries,
     projection,
@@ -33,9 +44,9 @@ function LeaveSituation({ periodSummaries, projection, selectedReferencePeriod, 
       {situations.map((item) => (
         <div key={item.referencePeriod}>
           <strong>{formatRelativeReferencePeriod(item.referencePeriod)}</strong>
-          <span>Pris : {formatDays(item.metrics.takenDays)} j</span>
-          <span>En attente : {formatDays(item.metrics.pendingDays)} j</span>
-          <span>Validées : {formatDays(item.metrics.validatedDays)} j</span>
+          <span>Pris : {counterValue('takenDays', item.metrics.takenDays)}</span>
+          <span>En attente : {counterValue('pendingDays', item.metrics.pendingDays)}</span>
+          <span>Validées : {counterValue('validatedDays', item.metrics.validatedDays)}</span>
         </div>
       ))}
       {isAnticipatedLeave && <span className="nr-anticipated-badge">Congé anticipé</span>}

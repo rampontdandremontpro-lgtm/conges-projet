@@ -1,0 +1,19 @@
+OK  prévisualisation HTTP 200 — HTTP 200
+OK  statut non bloqué malgré réservation (lecture seule) — blocked=true
+OK  employeeCount = 6 — count=6
+OK  transfert 26,5 → 27 — nToTransfer=27
+OK  transfert 14,5 → 15 — nToTransfer=15
+OK  N-1 restant = 10 / remise à zéro = 10 — nMinus1=10 reset=10
+OK  solde négatif N=-3 détecté — [{"counterType":"N","availableDays":-3}]
+OK  nToTransfer = 0 pour solde négatif — nToTransfer=0
+OK  réservé 5 détecté — reserved=5
+OK  N+1 = 7 / remise à zéro = 7 — nPlus1=7 reset=7
+OK  compteurs manquants tolérés (aucune erreur)
+OK  totaux nToTransfer = 42 — nToTransfer=42
+OK  totaux nMinus1ToReset = 18 — nMinus1ToReset=18
+OK  totaux nPlus1ToReset = 7 — nPlus1ToReset=7
+OK  negativeBalanceCount = 1 — count=1
+OK  reservationCount = 1 — count=1
+OK  aucune modification des soldes (lecture seule)
+
+RÉSULTAT : 17/17 OK, 0 KO

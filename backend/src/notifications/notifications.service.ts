@@ -200,6 +200,8 @@ export class NotificationsService {
   async findMy(
     userId: number,
     query: NotificationQueryDto,
+    profileScope?: string,
+    role?: UserRole,
   ): Promise<Notification[]> {
     const qb = this.notificationRepository
       .createQueryBuilder('notification')
@@ -212,6 +214,19 @@ export class NotificationsService {
       })
       .orderBy('notification.createdAt', 'DESC')
       .take(200);
+
+    // Un COLLABORATEUR n'a pas de profil d'acteur : le périmètre personnel
+    // est TOUJOURS appliqué, indépendamment du paramètre `scope` envoyé par le
+    // client. Le scope reste optionnel uniquement pour les profils mixtes
+    // (RH / Responsable / Directeur) qui voient tout par défaut.
+    if (
+      profileScope === 'COLLABORATOR' ||
+      role === UserRole.COLLABORATEUR
+    ) {
+      qb.andWhere(this.personalScopeSql('notification'), {
+        personalUserId: userId,
+      });
+    }
 
     if (query.unreadOnly) {
       qb.andWhere('notification.readAt IS NULL');
@@ -226,26 +241,63 @@ export class NotificationsService {
     return qb.getMany();
   }
 
-  async countUnread(userId: number): Promise<{ unreadCount: number }> {
-    const unreadCount = await this.notificationRepository.count({
-      where: {
-        userId,
-        readAt: IsNull(),
-        channel: In([
+  async countUnread(
+    userId: number,
+    profileScope?: string,
+    role?: UserRole,
+  ): Promise<{ unreadCount: number }> {
+    const qb = this.notificationRepository
+      .createQueryBuilder('notification')
+      .where('notification.userId = :userId', { userId })
+      .andWhere('notification.readAt IS NULL')
+      .andWhere('notification.channel IN (:...applicationChannels)', {
+        applicationChannels: [
           NotificationChannel.APPLICATION,
           NotificationChannel.LES_DEUX,
-        ]),
-      },
-    });
+        ],
+      });
+
+    if (
+      profileScope === 'COLLABORATOR' ||
+      role === UserRole.COLLABORATEUR
+    ) {
+      qb.andWhere(this.personalScopeSql('notification'), {
+        personalUserId: userId,
+      });
+    }
+
+    const unreadCount = await qb.getCount();
 
     return { unreadCount };
   }
 
-  async markRead(userId: number, id: number): Promise<Notification> {
-    const notification = await this.notificationRepository.findOneBy({
-      id,
-      userId,
-    });
+  async markRead(
+    userId: number,
+    id: number,
+    profileScope?: string,
+    role?: UserRole,
+  ): Promise<Notification> {
+    let notification: Notification | null;
+    if (
+      profileScope === 'COLLABORATOR' ||
+      role === UserRole.COLLABORATEUR
+    ) {
+      // Marquer comme lu ne doit concerner QUE les notifications du profil
+      // Collaborateur : on réutilise le même filtre de périmètre personnel.
+      notification = await this.notificationRepository
+        .createQueryBuilder('notification')
+        .where('notification.id = :id', { id })
+        .andWhere('notification.userId = :userId', { userId })
+        .andWhere(this.personalScopeSql('notification'), {
+          personalUserId: userId,
+        })
+        .getOne();
+    } else {
+      notification = await this.notificationRepository.findOneBy({
+        id,
+        userId,
+      });
+    }
 
     if (!notification) {
       throw new NotFoundException(
@@ -257,8 +309,12 @@ export class NotificationsService {
     return this.notificationRepository.save(notification);
   }
 
-  async markAllRead(userId: number): Promise<{ updated: number }> {
-    const result = await this.notificationRepository
+  async markAllRead(
+    userId: number,
+    profileScope?: string,
+    role?: UserRole,
+  ): Promise<{ updated: number }> {
+    const qb = this.notificationRepository
       .createQueryBuilder()
       .update(Notification)
       .set({ readAt: new Date() })
@@ -269,10 +325,77 @@ export class NotificationsService {
           NotificationChannel.APPLICATION,
           NotificationChannel.LES_DEUX,
         ],
-      })
-      .execute();
+      });
+
+    if (
+      profileScope === 'COLLABORATOR' ||
+      role === UserRole.COLLABORATEUR
+    ) {
+      qb.andWhere(this.personalScopeSql('notifications'), {
+        personalUserId: userId,
+      });
+    }
+
+    const result = await qb.execute();
 
     return { updated: result.affected ?? 0 };
+  }
+
+  /**
+   * Types adressés à un ACTEUR (RH / Responsable / Directeur) pour traiter la
+   * demande d'un AUTRE salarié : ils ne sont jamais des notifications
+   * personnelles et ne doivent pas apparaître dans le profil Collaborateur,
+   * même lorsqu'ils n'ont aucune entité liée (ex. échec de régularisation,
+   * solde négatif, correction de solde).
+   */
+  private static readonly MANAGEMENT_NOTIFICATION_TYPES: readonly string[] = [
+    'LEAVE_REQUEST_SUBMITTED',
+    'ABSENCE_DECLARATION_SUBMITTED_MANAGER',
+    'ABSENCE_DECLARATION_SUBMITTED_RH',
+    'ABSENCE_DECLARATION_TO_REVIEW',
+    'SUPPORTING_DOCUMENT_RECEIVED',
+    'DEROGATION_SUBMITTED_RH',
+    'DEROGATION_WAITING_DIRECTOR',
+    'DEROGATION_DEADLINE_EXPIRED_ACTION',
+    'DEROGATION_DEADLINE_EXPIRED_INFO',
+    'DEROGATION_FINAL_DECISION_INFO',
+    'ACCRUAL_REGULARIZATION_FAILED',
+    'REFERENCE_PERIOD_NEGATIVE_BALANCE',
+    'BALANCE_CORRECTION_INFO',
+    'ARRET_CHEVAUCHEMENT_REGULARISATION',
+    'CONGE_DIRECTEUR_INFORMATION',
+    'CONGE_DIRECTEUR_MODIFIE',
+    'CONGE_DIRECTEUR_ANNULE',
+    'ABSENCE_DIRECTEUR_INFORMATION',
+    'ABSENCE_DIRECTEUR_MODIFIEE',
+    'ABSENCE_DIRECTEUR_ANNULEE',
+  ];
+
+  /**
+   * Filtre « profil Collaborateur » : une notification n'est PERSONNELLE que si
+   *  - son type n'est pas un type « acteur » (RH/Responsable/Directeur), ET
+   *  - le salarié est le TITULAIRE de l'entité liée (demande de congé, absence,
+   *    dérogation) — ou il n'y a aucune entité liée.
+   * Les types sans entité liée adressés à un acteur sont ainsi exclus.
+   */
+  private personalScopeSql(alias: string): string {
+    const managementList = NotificationsService.MANAGEMENT_NOTIFICATION_TYPES.map(
+      (type) => `'${type}'`,
+    ).join(', ');
+
+    return `(
+      ${alias}.type NOT IN (${managementList})
+      AND (
+        ${alias}.leave_request_id IS NULL
+        OR EXISTS (SELECT 1 FROM leave_requests lr WHERE lr.id = ${alias}.leave_request_id AND lr.employee_id = :personalUserId)
+      ) AND (
+        ${alias}.absence_declaration_id IS NULL
+        OR EXISTS (SELECT 1 FROM absence_declarations ad WHERE ad.id = ${alias}.absence_declaration_id AND ad.employee_id = :personalUserId)
+      ) AND (
+        ${alias}.derogation_id IS NULL
+        OR EXISTS (SELECT 1 FROM derogations dg WHERE dg.id = ${alias}.derogation_id AND dg.employee_id = :personalUserId)
+      )
+    )`;
   }
 
   async getDashboardReminders(userId: number, role: UserRole) {

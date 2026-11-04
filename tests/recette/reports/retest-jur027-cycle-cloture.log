@@ -1,0 +1,14 @@
+OK  report exceptionnel accepté — HTTP 201
+OK  après report : compteur source N-1 = 10 (PAS débité) — availableDays=10
+OK  après report : compteur cible N-1 2026-2027 = 4 — availableDays=4
+OK  indicateur de double usage : total disponible = 14 pour 10 initiaux — 10 + 4
+OK  consommation totale simulée sur la source (10 jours) — consumed=10 available=0
+OK  clôture 2025-2026 acceptée — HTTP 201
+OK  après clôture : source N-1 = 0 (remise à zéro) — availableDays=0
+OK  après clôture : cible N-1 2026-2027 = 4 (report conservé) — availableDays=4
+OK  aucun double crédit du report (un seul mouvement REPORT_EXCEPTIONNEL) — count=1
+OK  DOUBLE USAGE : 10 consommés + 4 conservés = 14 (pour 10 initiaux) — total=14
+KO  mouvements source : REMISE_A_ZERO présent
+OK  audit REFERENCE_PERIOD_CLOSED (2025-2026) — count=1
+
+RÉSULTAT : 11/12 OK, 1 KO

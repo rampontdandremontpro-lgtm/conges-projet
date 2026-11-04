@@ -4,12 +4,15 @@ import { useNavigate } from 'react-router-dom'
 import { LeaveCalendar } from '@/components/collab/new-request/LeaveCalendar'
 import { LeaveTypeSelector } from '@/components/collab/new-request/LeaveTypeSelector'
 import { HalfDaySelector } from '@/components/collab/new-request/HalfDaySelector'
+import { FamilyEventFields } from '@/components/absence/FamilyEventFields'
+import { PaternityFields } from '@/components/absence/PaternityFields'
 import { Icon } from '@/components/ui/Icon'
 import { PageContainer } from '@/components/ui/PageContainer'
 import { Toast } from '@/components/ui/Toast'
 import {
   createAbsenceDeclaration,
   getCollaboratorAbsenceTypes,
+  submitAbsenceDeclaration,
 } from '@/services/absenceDeclarations'
 import { getHolidays } from '@/services/leaveRequests'
 import {
@@ -26,6 +29,18 @@ import { todayISO } from '@/utils/format'
 import { notifyAppDataChanged } from '@/utils/dataRefresh'
 
 import '@/styles/collab/new-request/index.css'
+
+const FAMILY_EVENT_KINDS = new Set([
+  'MARIAGE_PACS',
+  'MARIAGE_ENFANT',
+  'NAISSANCE',
+  'ADOPTION',
+  'DECES',
+  'DECES_ENFANT',
+  'DEUIL_ENFANT',
+  'ANNONCE_HANDICAP_ENFANT',
+  'ENFANT_MALADE',
+])
 
 export function NewAbsencePage() {
   const navigate = useNavigate()
@@ -47,6 +62,7 @@ export function NewAbsencePage() {
   })
   const [durationMode, setDurationMode] = useState('PERIOD')
   const [durationHours, setDurationHours] = useState('')
+  const [familyEventContext, setFamilyEventContext] = useState({})
   const [comment, setComment] = useState('')
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState(false)
@@ -115,6 +131,19 @@ export function NewAbsencePage() {
     [selectedTypeId, types],
   )
 
+  const isFamilyEvent = useMemo(
+    () => FAMILY_EVENT_KINDS.has(selectedType?.absenceKind),
+    [selectedType],
+  )
+
+  const isPaternity = selectedType?.absenceKind === 'PATERNITE_ACCUEIL'
+  const isFullDay = isFamilyEvent || isPaternity
+
+  const handleTypeSelect = (typeId) => {
+    setSelectedTypeId(typeId)
+    setFamilyEventContext({})
+  }
+
   const canSave = Boolean(
     selectedTypeId &&
     selection.startDate &&
@@ -148,14 +177,20 @@ export function NewAbsencePage() {
         payload.startPeriod = selection.startPeriod ?? 'MATIN'
         payload.endPeriod = selection.endPeriod ?? 'APRES_MIDI'
       }
+      if (isFamilyEvent || isPaternity) {
+        payload.familyEventContext = familyEventContext
+      }
+
       const saved = await createAbsenceDeclaration(payload)
-      notifyAppDataChanged({ source: 'absence', action: 'draft-saved', id: saved.id })
+      await submitAbsenceDeclaration(saved.id, { certifiedAccurate: true })
+
+      notifyAppDataChanged({ source: 'absence', action: 'submitted', id: saved.id })
       navigate('/app/my-requests', {
         replace: true,
         state: {
           flash: {
             kind: 'success',
-            message: 'Brouillon d’absence enregistré.',
+            message: 'Déclaration d’absence transmise à la RH.',
           },
         },
       })
@@ -176,7 +211,7 @@ export function NewAbsencePage() {
       <header className="nr-page__header">
         <div>
           <h1>Déclarer une absence</h1>
-          <p>Créez un brouillon que vous pourrez soumettre à la RH.</p>
+          <p>Renseignez votre absence et transmettez-la à la RH.</p>
         </div>
       </header>
 
@@ -195,8 +230,30 @@ export function NewAbsencePage() {
             <LeaveTypeSelector
               leaveTypes={types}
               selectedId={selectedTypeId}
-              onSelect={setSelectedTypeId}
+              onSelect={handleTypeSelect}
             />
+
+            {isFamilyEvent && (
+              <FamilyEventFields
+                type={selectedType}
+                employeeId={null}
+                startDate={selection.startDate}
+                endDate={selection.endDate}
+                value={familyEventContext}
+                onChange={setFamilyEventContext}
+              />
+            )}
+
+            {isPaternity && (
+              <PaternityFields
+                type={selectedType}
+                employeeId={null}
+                startDate={selection.startDate}
+                endDate={selection.endDate}
+                value={familyEventContext}
+                onChange={setFamilyEventContext}
+              />
+            )}
 
             <section className="nr-cal-card">
               <LeaveCalendar
@@ -204,7 +261,8 @@ export function NewAbsencePage() {
                 todayIso={today}
                 selection={selection}
                 holidays={holidays}
-                allowsHalfDays
+                allowsHalfDays={!isFullDay}
+                blockNonDeductibleDates={!isPaternity}
                 onPick={(iso) => setSelection((current) => selectLeaveDate(current, iso))}
                 onPrev={handlePrev}
                 onNext={handleNext}
@@ -214,6 +272,7 @@ export function NewAbsencePage() {
               />
             </section>
 
+            {!isFullDay && (
             <section className="nr-cal-card">
               <div className="nr-halfdays__heading" style={{ marginTop: 0 }}>
                 Mode de saisie
@@ -266,6 +325,7 @@ export function NewAbsencePage() {
                 />
               )}
             </section>
+            )}
 
             <section className="nr-cal-card">
               <span className="nr-halfdays__label">Commentaire (optionnel)</span>
@@ -308,7 +368,7 @@ export function NewAbsencePage() {
                   disabled={!canSave}
                   onClick={handleSave}
                 >
-                  {saving ? 'Enregistrement…' : 'Enregistrer le brouillon'}
+                  {saving ? 'Transmission…' : 'Transmettre la déclaration'}
                 </button>
               </div>
             </section>

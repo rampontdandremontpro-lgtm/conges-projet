@@ -49,15 +49,17 @@ function readEnvFile(fileName) {
 }
 
 function loadConfiguration() {
-  const recette = readEnvFile('.env.recette')
+  // Le clonage de schéma (DROP/CREATE DATABASE + lecture de la base source
+  // gestion_conges_gmes) exige un compte administrateur : .env.recette.admin.
+  const admin = readEnvFile('.env.recette.admin')
   const dev = readEnvFile('.env')
 
   const get = (key, fallback) =>
-    process.env[key] ?? recette[key] ?? dev[key] ?? fallback
+    process.env[key] ?? admin[key] ?? dev[key] ?? fallback
 
   return {
-    host: get('DB_HOST', 'localhost'),
-    port: Number(get('DB_PORT', '3306')),
+    host: get('DB_HOST', '127.0.0.1'),
+    port: Number(get('DB_PORT', '3307')),
     user: get('DB_USERNAME', 'root'),
     password: get('DB_PASSWORD', ''),
     database: get('DB_DATABASE', TEST_DATABASE),

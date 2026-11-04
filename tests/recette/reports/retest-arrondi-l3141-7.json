@@ -1,0 +1,36 @@
+{
+  "purpose": "Retest d'intégration L3141-7 — arrondi légal du droit acquis à l'entier supérieur lors de la clôture de période (cycle réel API).",
+  "script": "tests/recette/scripts/retest-arrondi-l3141-7.mjs",
+  "environment": {
+    "api": "http://localhost:3001/api",
+    "database": "gestion_conges_gmes_test",
+    "isolated": true
+  },
+  "executedBy": "Pi — test automatisé",
+  "dateRetest": "2026-10-26",
+  "period": "2024-2025",
+  "rule": {
+    "reference": "L3141-7 (Code du travail)",
+    "description": "Droit acquis de base (2,5 jours ouvrables/mois) porté à l'entier immédiatement supérieur ; plafond 30 jours ouvrables (L3141-3). Le supplément d'arrondi ne modifie ni les jours consommés ni les corrections RH antérieures.",
+    "cases": [
+      "embauche 16/07/2024 : base acquise 26,29 jours ouvrables -> supplément +0,71 -> 27 jours définitifs",
+      "année pleine : 30 jours -> supplément 0 (30 -> 30)",
+      "départ 16/02/2025 : 21,43 jours -> supplément +0,57 -> 22 jours"
+    ]
+  },
+  "checks": [
+    { "name": "avant clôture — embauche 16/07 : acquiredDays = 26,29", "ok": true, "detail": "acquiredDays=26.29" },
+    { "name": "avant clôture — année pleine : acquiredDays = 30", "ok": true, "detail": "acquiredDays=30" },
+    { "name": "avant clôture — départ 16/02/2025 : acquiredDays = 21,43", "ok": true, "detail": "acquiredDays=21.43" },
+    { "name": "clôture 2024-2025 acceptée", "ok": true, "detail": "HTTP 201" },
+    { "name": "embauche 16/07 : supplément d'arrondi = 0,71", "ok": true, "detail": "supplement=0.71" },
+    { "name": "embauche 16/07 : transfert N→N-1 = 27", "ok": true, "detail": "transferred=27" },
+    { "name": "année pleine : supplément = 0 (30 → 30)", "ok": true, "detail": "supplement=0" },
+    { "name": "départ 16/02/2025 : supplément = 0,57 (21,43 → 22)", "ok": true, "detail": "supplement=0.57" },
+    { "name": "après clôture — N-1 2025-2026 reçoit 27 jours", "ok": true, "detail": "availableDays=27" },
+    { "name": "mouvement tracé CLOTURE_ARRONDI_L3141_7 (+0,71)", "ok": true, "detail": "days=0.71 type=CORRECTION_POSITIVE" },
+    { "name": "idempotence : seconde clôture refusée (409)", "ok": true, "detail": "HTTP 409" }
+  ],
+  "summary": { "total": 11, "passed": 11, "failed": 0 },
+  "conclusion": "Conforme"
+}

@@ -1,0 +1,14 @@
+OK  acquisition mensuelle 2025-06 exécutée — HTTP 201
+OK  après acquisition : acquiredDays = 2,5 (crédit automatique) — acquiredDays=2.5
+OK  après acquisition : availableDays = 2,5 — availableDays=2.5
+OK  correction RH -0,5 acceptée — HTTP 201
+OK  après correction : acquiredDays = 2 (2 jours/mois) — acquiredDays=2
+OK  après correction : availableDays = 2 — availableDays=2
+OK  mouvement CORRECTION_NEGATIVE historisé — movementType=CORRECTION_NEGATIVE
+OK  montant du mouvement = 0,5 — days=0.5
+OK  motif enregistré (raison contient « L3141-5-1 ») — reason présent
+OK  auteur enregistré (actorId renseigné) — actorId=14
+OK  balance_before/after cohérents (2,5 → 2) — before=2.5 after=2
+OK  audit RH_BALANCE_CORRECTED enregistré — actor=14 days=-0.5
+
+RÉSULTAT : 12/12 OK, 0 KO

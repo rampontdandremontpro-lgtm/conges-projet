@@ -1,0 +1,15 @@
+{
+  "purpose": "Vérification du supplément L3141-7 dans la prévisualisation : acquisition réelle 26,29 → supplément 0,71 → nToTransfer = 27.",
+  "script": "tests/recette/scripts/retest-preview-l3141.mjs",
+  "environment": { "api": "http://localhost:3001/api", "database": "gestion_conges_gmes_test", "isolated": true },
+  "executedBy": "Pi — test automatisé",
+  "dateRetest": "2026-10-26",
+  "period": "2024-2025",
+  "checks": [
+    { "name": "prévisualisation 200", "ok": true, "detail": "HTTP 200" },
+    { "name": "supplément L3141-7 = 0,71", "ok": true, "detail": "supplement=0.71" },
+    { "name": "nToTransfer = 27 (26,29 + 0,71 → 27)", "ok": true, "detail": "nToTransfer=27" }
+  ],
+  "summary": { "total": 3, "passed": 3, "failed": 0 },
+  "conclusion": "La prévisualisation applique exactement le supplément L3141-7 (droit acquis 26,29 → 27) puis l'arrondi de transfert GMES (27), reproduisant le traitement de closeReferencePeriod."
+}

@@ -1,0 +1,27 @@
+{
+    "options": {
+        "schema": "spotify_db",
+        "table": "albums",
+        "columns": [
+            "album_uri",
+            "album_name"
+        ],
+        "defaultCharacterSet": "utf8mb4",
+        "fieldsTerminatedBy": "\t",
+        "fieldsEnclosedBy": "",
+        "fieldsOptionallyEnclosed": false,
+        "fieldsEscapedBy": "\\",
+        "linesTerminatedBy": "\n"
+    },
+    "triggers": [],
+    "includesData": true,
+    "includesDdl": true,
+    "extension": "tsv.zst",
+    "chunking": true,
+    "compression": "zstd",
+    "primaryIndex": [
+        "album_uri"
+    ],
+    "partitions": [],
+    "basenames": {}
+}

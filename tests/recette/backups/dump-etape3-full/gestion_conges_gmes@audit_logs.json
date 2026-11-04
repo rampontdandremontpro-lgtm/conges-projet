@@ -1,0 +1,34 @@
+{
+    "options": {
+        "schema": "gestion_conges_gmes",
+        "table": "audit_logs",
+        "columns": [
+            "id",
+            "actor_id",
+            "action",
+            "resource_type",
+            "resource_id",
+            "old_value",
+            "new_value",
+            "ip_address",
+            "created_at"
+        ],
+        "defaultCharacterSet": "utf8mb4",
+        "fieldsTerminatedBy": "\t",
+        "fieldsEnclosedBy": "",
+        "fieldsOptionallyEnclosed": false,
+        "fieldsEscapedBy": "\\",
+        "linesTerminatedBy": "\n"
+    },
+    "triggers": [],
+    "includesData": true,
+    "includesDdl": true,
+    "extension": "tsv.zst",
+    "chunking": true,
+    "compression": "zstd",
+    "primaryIndex": [
+        "id"
+    ],
+    "partitions": [],
+    "basenames": {}
+}

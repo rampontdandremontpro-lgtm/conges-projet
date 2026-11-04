@@ -1,0 +1,44 @@
+.illness-maintenance-page { display: flex; flex-direction: column; gap: 18px; padding: 20px; }
+.illness-maintenance-page .im-loading,
+.illness-maintenance-page .im-empty { color: #64748b; padding: 12px 0; }
+.illness-maintenance-page .im-state { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+.im-header small { text-transform: uppercase; letter-spacing: 0.04em; color: #64748b; font-size: 12px; }
+.im-header h1 { margin: 4px 0 6px; font-size: 20px; }
+.im-header p { color: #475569; max-width: 720px; }
+.im-feedback { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 8px; }
+.im-feedback--success { background: #ecfdf5; color: #047857; }
+.im-feedback--error { background: #fef2f2; color: #b91c1c; }
+.im-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px; }
+.im-card h2 { margin: 0 0 12px; font-size: 16px; }
+.im-form { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.im-field { display: flex; flex-direction: column; gap: 5px; font-size: 13px; }
+.im-field--full { grid-column: 1 / -1; }
+.im-field span { color: #475569; }
+.im-field select,
+.im-field input,
+.im-field textarea {
+  border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px; font: inherit; background: #fff;
+}
+.im-actions { margin-top: 14px; display: flex; gap: 10px; }
+.im-save {
+  background: #0f172a; color: #fff; border: 0; border-radius: 6px; padding: 9px 16px; cursor: pointer;
+}
+.im-save:disabled, .im-cancel:disabled { opacity: 0.5; cursor: not-allowed; }
+.im-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.im-table th, .im-table td { text-align: left; padding: 8px; border-bottom: 1px solid #e2e8f0; }
+.im-table th { color: #64748b; font-weight: 600; }
+.im-justification { max-width: 340px; white-space: normal; }
+.im-cancel { background: transparent; border: 1px solid #fca5a5; color: #b91c1c; border-radius: 6px; padding: 5px 10px; cursor: pointer; }
+
+.im-basis-ref { display: block; color: #64748b; font-size: 11px; margin-top: 3px; }
+
+.im-basis-upload { display: flex; flex-direction: column; gap: 6px; }
+.im-basis-upload__row { display: flex; gap: 10px; align-items: center; }
+.im-basis-upload__row input[type="file"] { border: 0; padding: 0; }
+.im-basis-upload__row button,
+.im-basis-upload__validate button {
+  background: #0f172a; color: #fff; border: 0; border-radius: 6px; padding: 7px 12px; cursor: pointer;
+}
+.im-basis-upload__row button:disabled,
+.im-basis-upload__validate button:disabled { opacity: 0.5; cursor: not-allowed; }
+.im-basis-upload__validate { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }

@@ -1,6 +1,6 @@
 .page-container.director-dashboard-page {
   max-width: none;
-  margin: -10px 0 0;
+  margin: 8px 0 0;
   padding: 0 0 var(--space-8);
 }
 
@@ -531,7 +531,7 @@
 
 @media (min-width: 1400px) and (min-height: 820px) {
   .page-container.director-dashboard-page {
-    margin-top: -12px;
+    margin-top: 8px;
     padding-top: 0;
   }
 

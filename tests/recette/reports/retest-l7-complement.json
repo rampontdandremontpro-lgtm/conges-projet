@@ -1,0 +1,72 @@
+{
+  "date": "2026-10-28T15:30:42.555Z",
+  "results": [
+    {
+      "id": "G1",
+      "name": "Circuit 1 : validation bout-en-bout VALIDEE, lot et solde intacts",
+      "ok": true,
+      "detail": "derog=null sub=200 v1=200 v2=200 status=VALIDEE lot=4.00→4.00 bal=10.00→10.00"
+    },
+    {
+      "id": "G2",
+      "name": "Circuit 2 : validation bout-en-bout VALIDEE, lot et solde intacts",
+      "ok": true,
+      "detail": "derog=null sub=200 v1=200 v2=200 status=VALIDEE lot=4.00→4.00 bal=10.00→10.00"
+    },
+    {
+      "id": "G3",
+      "name": "Circuit 3 : validation bout-en-bout VALIDEE, lot et solde intacts",
+      "ok": true,
+      "detail": "derog=201 sub=200 v1=200 v2=200 status=VALIDEE lot=4.00→4.00 bal=10.00→10.00"
+    },
+    {
+      "id": "G4",
+      "name": "Circuit 4 : validation bout-en-bout VALIDEE, lot et solde intacts",
+      "ok": true,
+      "detail": "derog=201 sub=200 v1=200 v2=200 status=VALIDEE lot=4.00→4.00 bal=10.00→10.00"
+    },
+    {
+      "id": "G5-A",
+      "name": "Consommation L4 isolée : allocation lot maladie accessible (preview)",
+      "ok": true,
+      "detail": "HTTP 201"
+    },
+    {
+      "id": "G5-B",
+      "name": "Raccordement automatique lots→circuits : NON TESTÉ (manquant)",
+      "ok": false,
+      "detail": "non câblé — réserve technique"
+    },
+    {
+      "id": "G6",
+      "name": "Arrêt long incertain → clôture bloquée sans remise à zéro",
+      "ok": true,
+      "detail": "HTTP 400 avail=6.00"
+    },
+    {
+      "id": "G7",
+      "name": "Lots multi-périodes : origines distinctes sans mélange",
+      "ok": true,
+      "detail": "prot=6 lots=2"
+    },
+    {
+      "id": "G8",
+      "name": "Reports exceptionnels simultanés sur lot protégé → au plus un succès, sans double soustraction",
+      "ok": true,
+      "detail": "HTTP 400/400 avail=10.00"
+    },
+    {
+      "id": "G9",
+      "name": "Dates contrôlées : avant=400, future=400, successif=201",
+      "ok": true,
+      "detail": "HTTP 400/400/201"
+    },
+    {
+      "id": "G10",
+      "name": "Aucun envoi externe : aucune notification de type envoi réel",
+      "ok": true,
+      "detail": "aucun"
+    }
+  ],
+  "failed": 1
+}

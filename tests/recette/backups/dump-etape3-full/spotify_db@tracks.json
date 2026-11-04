@@ -1,0 +1,30 @@
+{
+    "options": {
+        "schema": "spotify_db",
+        "table": "tracks",
+        "columns": [
+            "track_uri",
+            "track_name",
+            "duration_ms",
+            "album_uri",
+            "artist_uri"
+        ],
+        "defaultCharacterSet": "utf8mb4",
+        "fieldsTerminatedBy": "\t",
+        "fieldsEnclosedBy": "",
+        "fieldsOptionallyEnclosed": false,
+        "fieldsEscapedBy": "\\",
+        "linesTerminatedBy": "\n"
+    },
+    "triggers": [],
+    "includesData": true,
+    "includesDdl": true,
+    "extension": "tsv.zst",
+    "chunking": true,
+    "compression": "zstd",
+    "primaryIndex": [
+        "track_uri"
+    ],
+    "partitions": [],
+    "basenames": {}
+}

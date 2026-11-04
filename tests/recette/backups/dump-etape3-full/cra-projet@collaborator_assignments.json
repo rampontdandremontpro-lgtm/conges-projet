@@ -1,0 +1,33 @@
+{
+    "options": {
+        "schema": "cra-projet",
+        "table": "collaborator_assignments",
+        "columns": [
+            "id",
+            "start_date",
+            "end_date",
+            "is_active",
+            "created_at",
+            "collaborator_id",
+            "service_id",
+            "assigned_by_user_id"
+        ],
+        "defaultCharacterSet": "utf8mb4",
+        "fieldsTerminatedBy": "\t",
+        "fieldsEnclosedBy": "",
+        "fieldsOptionallyEnclosed": false,
+        "fieldsEscapedBy": "\\",
+        "linesTerminatedBy": "\n"
+    },
+    "triggers": [],
+    "includesData": true,
+    "includesDdl": true,
+    "extension": "tsv.zst",
+    "chunking": true,
+    "compression": "zstd",
+    "primaryIndex": [
+        "id"
+    ],
+    "partitions": [],
+    "basenames": {}
+}

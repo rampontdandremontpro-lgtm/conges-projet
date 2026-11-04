@@ -1,0 +1,68 @@
+{
+    "end": "2026-10-27 14:33:30",
+    "dataBytes": 6300,
+    "tableDataBytes": {
+        "gestion_conges_gmes_test": {
+            "absence_declarations": 159,
+            "leave_balances": 120,
+            "holidays": 0,
+            "balance_movements": 305,
+            "audit_logs": 1679,
+            "leave_requests": 0,
+            "carryover_lots": 0,
+            "derogations": 0,
+            "notifications": 541,
+            "validator_replacements": 0,
+            "leave_types": 435,
+            "documents": 0,
+            "service_backup_validators": 0,
+            "legal_entities": 0,
+            "users": 1792,
+            "typeorm_migrations": 575,
+            "services": 101,
+            "settings": 593
+        }
+    },
+    "tableRows": {
+        "gestion_conges_gmes_test": {
+            "absence_declarations": 1,
+            "leave_balances": 2,
+            "holidays": 0,
+            "balance_movements": 2,
+            "audit_logs": 6,
+            "leave_requests": 0,
+            "carryover_lots": 0,
+            "derogations": 0,
+            "notifications": 3,
+            "validator_replacements": 0,
+            "leave_types": 4,
+            "documents": 0,
+            "service_backup_validators": 0,
+            "legal_entities": 0,
+            "users": 9,
+            "typeorm_migrations": 11,
+            "services": 1,
+            "settings": 7
+        }
+    },
+    "chunkFileBytes": {
+        "gestion_conges_gmes_test@absence_declarations@@0.tsv.zst": 159,
+        "gestion_conges_gmes_test@leave_balances@@0.tsv.zst": 120,
+        "gestion_conges_gmes_test@holidays@@0.tsv.zst": 0,
+        "gestion_conges_gmes_test@audit_logs@@0.tsv.zst": 1679,
+        "gestion_conges_gmes_test@carryover_lots@@0.tsv.zst": 0,
+        "gestion_conges_gmes_test@balance_movements@@0.tsv.zst": 305,
+        "gestion_conges_gmes_test@derogations@@0.tsv.zst": 0,
+        "gestion_conges_gmes_test@leave_requests@@0.tsv.zst": 0,
+        "gestion_conges_gmes_test@validator_replacements@@0.tsv.zst": 0,
+        "gestion_conges_gmes_test@leave_types@@0.tsv.zst": 435,
+        "gestion_conges_gmes_test@documents@@0.tsv.zst": 0,
+        "gestion_conges_gmes_test@typeorm_migrations@@0.tsv.zst": 575,
+        "gestion_conges_gmes_test@service_backup_validators@@0.tsv.zst": 0,
+        "gestion_conges_gmes_test@legal_entities@@0.tsv.zst": 0,
+        "gestion_conges_gmes_test@notifications@@0.tsv.zst": 541,
+        "gestion_conges_gmes_test@users@@0.tsv.zst": 1792,
+        "gestion_conges_gmes_test@services@@0.tsv.zst": 101,
+        "gestion_conges_gmes_test@settings@@0.tsv.zst": 593
+    }
+}

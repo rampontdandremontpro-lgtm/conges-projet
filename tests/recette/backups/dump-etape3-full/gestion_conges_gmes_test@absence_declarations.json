@@ -1,0 +1,43 @@
+{
+    "options": {
+        "schema": "gestion_conges_gmes_test",
+        "table": "absence_declarations",
+        "columns": [
+            "id",
+            "employee_id",
+            "created_by_id",
+            "leave_type_id",
+            "service_id",
+            "start_date",
+            "end_date",
+            "start_period",
+            "end_period",
+            "duration_days",
+            "duration_hours",
+            "status",
+            "comment",
+            "declared_at",
+            "verified_by_rh_id",
+            "verified_at",
+            "created_at",
+            "updated_at"
+        ],
+        "defaultCharacterSet": "utf8mb4",
+        "fieldsTerminatedBy": "\t",
+        "fieldsEnclosedBy": "",
+        "fieldsOptionallyEnclosed": false,
+        "fieldsEscapedBy": "\\",
+        "linesTerminatedBy": "\n"
+    },
+    "triggers": [],
+    "includesData": true,
+    "includesDdl": true,
+    "extension": "tsv.zst",
+    "chunking": true,
+    "compression": "zstd",
+    "primaryIndex": [
+        "id"
+    ],
+    "partitions": [],
+    "basenames": {}
+}

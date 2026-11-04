@@ -1,0 +1,37 @@
+{
+    "options": {
+        "schema": "gestion_conges_gmes",
+        "table": "services",
+        "columns": [
+            "id",
+            "name",
+            "service_type",
+            "external_company_name",
+            "primary_manager_id",
+            "validation_mode",
+            "takeover_delay_days",
+            "minimum_presence",
+            "has_minimum_presence_rule",
+            "is_active",
+            "created_at",
+            "updated_at"
+        ],
+        "defaultCharacterSet": "utf8mb4",
+        "fieldsTerminatedBy": "\t",
+        "fieldsEnclosedBy": "",
+        "fieldsOptionallyEnclosed": false,
+        "fieldsEscapedBy": "\\",
+        "linesTerminatedBy": "\n"
+    },
+    "triggers": [],
+    "includesData": true,
+    "includesDdl": true,
+    "extension": "tsv.zst",
+    "chunking": true,
+    "compression": "zstd",
+    "primaryIndex": [
+        "id"
+    ],
+    "partitions": [],
+    "basenames": {}
+}

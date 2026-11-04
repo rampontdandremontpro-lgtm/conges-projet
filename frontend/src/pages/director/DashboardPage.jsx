@@ -252,11 +252,6 @@ function AttentionCard({ items, onNavigate }) {
           ))}
         </div>
       )}
-
-      <button type="button" className="director-availability-action" onClick={() => onNavigate('/app/director-availability')}>
-        <Icon name="calendar" size={16} />
-        Enregistrer mon indisponibilité
-      </button>
     </section>
   )
 }

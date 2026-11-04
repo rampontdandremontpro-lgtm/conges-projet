@@ -1,0 +1,34 @@
+{
+    "options": {
+        "schema": "gestion_conges_gmes",
+        "table": "holidays",
+        "columns": [
+            "id",
+            "date",
+            "name",
+            "holiday_type",
+            "deductible",
+            "source",
+            "created_by_id",
+            "is_active",
+            "created_at"
+        ],
+        "defaultCharacterSet": "utf8mb4",
+        "fieldsTerminatedBy": "\t",
+        "fieldsEnclosedBy": "",
+        "fieldsOptionallyEnclosed": false,
+        "fieldsEscapedBy": "\\",
+        "linesTerminatedBy": "\n"
+    },
+    "triggers": [],
+    "includesData": true,
+    "includesDdl": true,
+    "extension": "tsv.zst",
+    "chunking": true,
+    "compression": "zstd",
+    "primaryIndex": [
+        "id"
+    ],
+    "partitions": [],
+    "basenames": {}
+}

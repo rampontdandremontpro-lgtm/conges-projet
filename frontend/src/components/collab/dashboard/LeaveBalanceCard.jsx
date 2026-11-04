@@ -1,11 +1,22 @@
+import { useAuth } from '@/auth/AuthContext'
 import { Icon } from '@/components/ui/Icon'
 import { formatDays } from '@/utils/format'
 import { formatReferencePeriodRange } from '@/utils/referencePeriods'
+import {
+  COLLABORATOR_MASKED_VALUE,
+  isCollaboratorCounterMasked,
+} from '@/config/collaboratorCounterMask'
 import { CardSkeleton, CardError } from '@/components/collab/dashboard/DashboardStates'
 
 export function LeaveBalanceCard({
   summary, loading, error, onRetry, periodOptions = [], selectedPeriod, onPeriodChange, actionLabel, actionIcon = 'arrowRight', onAction,
 }) {
+  const { effectiveRole } = useAuth()
+  const counterValue = (key, value) => (
+    isCollaboratorCounterMasked(key, effectiveRole)
+      ? COLLABORATOR_MASKED_VALUE
+      : `${formatDays(value)} j`
+  )
   const effectivePeriod = selectedPeriod ?? summary?.referencePeriod ?? ''
   const option = periodOptions.find((item) => item.value === effectivePeriod)
   const range = effectivePeriod ? formatReferencePeriodRange(effectivePeriod) : null
@@ -27,17 +38,25 @@ export function LeaveBalanceCard({
     content = (
       <>
         <div className="balance-period-grid">
+          <div className="balance-period-kpi balance-period-kpi--acquired">
+            <span className="balance-period-kpi__icon"><Icon name="wallet" size={20} /></span>
+            <div><span>Acquis</span><strong data-testid="balance-acquired">{formatDays(summary.acquiredDays)} j</strong></div>
+          </div>
+          <div className="balance-period-kpi balance-period-kpi--available">
+            <span className="balance-period-kpi__icon"><Icon name="sparkles" size={20} /></span>
+            <div><span>Disponible</span><strong data-testid="balance-available">{formatDays(summary.balanceDays)} j</strong></div>
+          </div>
           <div className="balance-period-kpi balance-period-kpi--taken">
             <span className="balance-period-kpi__icon"><Icon name="calendar" size={20} /></span>
-            <div><span>Pris</span><strong>{formatDays(summary.takenDays)} j</strong></div>
+            <div><span>Pris</span><strong>{counterValue('takenDays', summary.takenDays)}</strong></div>
           </div>
           <div className="balance-period-kpi balance-period-kpi--pending">
             <span className="balance-period-kpi__icon"><Icon name="clock" size={20} /></span>
-            <div><span>En attente</span><strong>{formatDays(summary.pendingDays)} j</strong></div>
+            <div><span>En attente</span><strong>{counterValue('pendingDays', summary.pendingDays)}</strong></div>
           </div>
           <div className="balance-period-kpi balance-period-kpi--validated">
             <span className="balance-period-kpi__icon"><Icon name="check" size={20} /></span>
-            <div><span>Validées</span><strong>{formatDays(summary.validatedDays)} j</strong></div>
+            <div><span>Validées</span><strong>{counterValue('validatedDays', summary.validatedDays)}</strong></div>
           </div>
         </div>
         {actionLabel && onAction && (

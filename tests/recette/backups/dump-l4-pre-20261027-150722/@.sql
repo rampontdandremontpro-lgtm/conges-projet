@@ -1,0 +1,5 @@
+-- MySQLShell dump 2.0.1  Distrib Ver 8.4.10 for Win64 on x86_64 - for MySQL 8.4.10 (MySQL Community Server (GPL)), for Win64 (x86_64)
+--
+-- Host: localhost
+-- ------------------------------------------------------
+-- Server version	5.7.24

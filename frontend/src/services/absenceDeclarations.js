@@ -17,6 +17,41 @@ export async function createAbsenceDeclaration(payload) {
   return data
 }
 
+export async function previewFamilyEvent(payload) {
+  const { data } = await apiClient.post(
+    '/absence-declarations/family-event/preview',
+    payload,
+  )
+  return data
+}
+
+export async function previewPaternity(payload) {
+  const { data } = await apiClient.post(
+    '/absence-declarations/paternity/preview',
+    payload,
+  )
+  return data
+}
+
+export async function getMyBirthEvents() {
+  const { data } = await apiClient.get('/birth-events/my')
+  return data
+}
+
+export async function getBirthEvents(employeeId) {
+  const { data } = await apiClient.get('/birth-events', {
+    params: { employeeId },
+  })
+  return data
+}
+
+export async function createBirthEvent(payload, employeeId) {
+  const { data } = await apiClient.post('/birth-events', payload, {
+    params: employeeId ? { employeeId } : undefined,
+  })
+  return data
+}
+
 export async function updateAbsenceDeclaration(id, payload) {
   const { data } = await apiClient.patch(`/absence-declarations/${id}`, payload)
   return data

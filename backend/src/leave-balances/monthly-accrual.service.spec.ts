@@ -23,8 +23,13 @@ describe('MonthlyAccrualService — REF-1 période d’acquisition', () => {
   } as unknown as SettingsService;
 
   const dataSource = {} as DataSource;
+  const accrualAnomalyService = { reconcile: jest.fn().mockResolvedValue(null) } as never;
 
-  const service = new MonthlyAccrualService(dataSource, settingsService);
+  const service = new MonthlyAccrualService(
+    dataSource,
+    settingsService,
+    accrualAnomalyService,
+  );
 
   const info = (accrualMonth: string, referencePeriodStart: string) =>
     (service as unknown as {
@@ -154,8 +159,11 @@ describe('MonthlyAccrualService — REF-1 période d’acquisition', () => {
     const runDataSource = {
       getRepository: jest.fn().mockReturnValue({
         createQueryBuilder: jest.fn().mockReturnValue(queryBuilder),
+        find: jest.fn().mockResolvedValue([]),
+        findOneBy: jest.fn().mockResolvedValue(null),
       }),
       transaction: jest.fn(),
+      query: jest.fn().mockResolvedValue([]),
     } as unknown as DataSource;
 
     let runService: MonthlyAccrualService;
@@ -166,6 +174,7 @@ describe('MonthlyAccrualService — REF-1 période d’acquisition', () => {
       runService = new MonthlyAccrualService(
         runDataSource,
         settingsService,
+        accrualAnomalyService,
       );
       martiniqueSpy = jest
         .spyOn(
@@ -234,32 +243,32 @@ describe('MonthlyAccrualService — REF-1 période d’acquisition', () => {
       }).computeMonthlyCredit(rate, { daysPresent, daysInMonth });
 
     it('mois complet 01/07 → 31/07 : 31 jours, crédit 2,50', () => {
-      expect(computePresence(null, null)).toEqual({ daysPresent: 31, daysInMonth: 31 });
+      expect(computePresence(null, null)).toMatchObject({ daysPresent: 31, daysInMonth: 31 });
       expect(computeCredit(31, 31)).toBe(2.5);
     });
 
     it('arrivée 16/07 : 16 jours de présence, crédit 1,29', () => {
-      expect(computePresence('2026-07-16', null)).toEqual({ daysPresent: 16, daysInMonth: 31 });
+      expect(computePresence('2026-07-16', null)).toMatchObject({ daysPresent: 16, daysInMonth: 31 });
       expect(computeCredit(16, 31)).toBe(1.29);
     });
 
     it('arrivée 31/07 : 1 jour, crédit 0,08', () => {
-      expect(computePresence('2026-07-31', null)).toEqual({ daysPresent: 1, daysInMonth: 31 });
+      expect(computePresence('2026-07-31', null)).toMatchObject({ daysPresent: 1, daysInMonth: 31 });
       expect(computeCredit(1, 31)).toBe(0.08);
     });
 
     it('départ 15/07 : 15 jours, crédit 1,21', () => {
-      expect(computePresence('2026-07-01', '2026-07-15')).toEqual({ daysPresent: 15, daysInMonth: 31 });
+      expect(computePresence('2026-07-01', '2026-07-15')).toMatchObject({ daysPresent: 15, daysInMonth: 31 });
       expect(computeCredit(15, 31)).toBe(1.21);
     });
 
     it('départ 31/07 : mois complet, crédit 2,50', () => {
-      expect(computePresence('2026-07-01', '2026-07-31')).toEqual({ daysPresent: 31, daysInMonth: 31 });
+      expect(computePresence('2026-07-01', '2026-07-31')).toMatchObject({ daysPresent: 31, daysInMonth: 31 });
       expect(computeCredit(31, 31)).toBe(2.5);
     });
 
     it('arrivée 16/07 + départ 20/07 : 5 jours, crédit 0,40', () => {
-      expect(computePresence('2026-07-16', '2026-07-20')).toEqual({ daysPresent: 5, daysInMonth: 31 });
+      expect(computePresence('2026-07-16', '2026-07-20')).toMatchObject({ daysPresent: 5, daysInMonth: 31 });
       expect(computeCredit(5, 31)).toBe(0.4);
     });
 
@@ -274,12 +283,12 @@ describe('MonthlyAccrualService — REF-1 période d’acquisition', () => {
     it('exitDate dans le mois alors que le salarié est désormais inactif : prorata du dernier mois', () => {
       // L'éligibilité est gérée dans findEligibleEmployees ; ici le calcul
       // ne dépend que des dates.
-      expect(computePresence('2026-05-01', '2026-07-15')).toEqual({ daysPresent: 15, daysInMonth: 31 });
+      expect(computePresence('2026-05-01', '2026-07-15')).toMatchObject({ daysPresent: 15, daysInMonth: 31 });
       expect(computeCredit(15, 31)).toBe(1.21);
     });
 
     it('exitDate null : comportement normal (mois complet)', () => {
-      expect(computePresence('2026-01-01', null)).toEqual({ daysPresent: 31, daysInMonth: 31 });
+      expect(computePresence('2026-01-01', null)).toMatchObject({ daysPresent: 31, daysInMonth: 31 });
     });
   });
 });

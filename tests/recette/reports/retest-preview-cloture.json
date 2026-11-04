@@ -1,0 +1,29 @@
+{
+  "purpose": "Test de la prévisualisation de clôture améliorée (GET /leave-balances/period/:period/preview) : exactitude des valeurs et lecture seule.",
+  "script": "tests/recette/scripts/retest-preview-cloture.mjs",
+  "environment": { "api": "http://localhost:3001/api", "database": "gestion_conges_gmes_test", "isolated": true },
+  "executedBy": "Pi — test automatisé",
+  "dateRetest": "2026-10-26",
+  "period": "2026-2027",
+  "checks": [
+    { "name": "prévisualisation HTTP 200", "ok": true, "detail": "HTTP 200" },
+    { "name": "statut bloqué si réservation (lecture seule)", "ok": true, "detail": "blocked=true" },
+    { "name": "employeeCount = 6", "ok": true, "detail": "count=6" },
+    { "name": "transfert 26,5 → 27", "ok": true, "detail": "nToTransfer=27" },
+    { "name": "transfert 14,5 → 15", "ok": true, "detail": "nToTransfer=15" },
+    { "name": "N-1 restant 10 / remise à zéro 10", "ok": true, "detail": "nMinus1=10 reset=10" },
+    { "name": "solde négatif N=-3 détecté", "ok": true, "detail": "[{\"counterType\":\"N\",\"availableDays\":-3}]" },
+    { "name": "nToTransfer = 0 pour solde négatif", "ok": true, "detail": "nToTransfer=0" },
+    { "name": "réservé 5 détecté", "ok": true, "detail": "reserved=5" },
+    { "name": "N+1 = 7 / remise à zéro = 7", "ok": true, "detail": "nPlus1=7 reset=7" },
+    { "name": "compteurs manquants tolérés", "ok": true, "detail": "" },
+    { "name": "totaux nToTransfer = 42", "ok": true, "detail": "nToTransfer=42" },
+    { "name": "totaux nMinus1ToReset = 18", "ok": true, "detail": "nMinus1ToReset=18" },
+    { "name": "totaux nPlus1ToReset = 7", "ok": true, "detail": "nPlus1ToReset=7" },
+    { "name": "negativeBalanceCount = 1", "ok": true, "detail": "count=1" },
+    { "name": "reservationCount = 1", "ok": true, "detail": "count=1" },
+    { "name": "aucune modification des soldes (lecture seule)", "ok": true, "detail": "" }
+  ],
+  "summary": { "total": 17, "passed": 17, "failed": 0 },
+  "conclusion": "Prévisualisation exacte et lecture seule : nToTransfer applique les règles existantes (roundPeriodCloseDays après supplément L3141-7), soldes négatifs/réservés/N+1 détectés, compteurs manquants tolérés, aucune modification des compteurs."
+}

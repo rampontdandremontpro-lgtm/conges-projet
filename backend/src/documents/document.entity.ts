@@ -101,6 +101,32 @@ export class Document {
   @Column({ name: 'uploaded_by_id', type: 'bigint', nullable: true })
   uploadedById!: number | null;
 
+  /**
+   * Salarié auquel le document se rapporte (périmètre du fondement).
+   * Pour un justificatif de fondement (CONTRACTUEL/AUTRE), un document
+   * rattaché à un AUTRE salarié ne peut pas justifier le maintien.
+   */
+  @Column({
+    name: 'related_employee_id',
+    type: 'bigint',
+    nullable: true,
+    transformer: nullableBigintTransformer,
+  })
+  relatedEmployeeId!: number | null;
+
+  /**
+   * Entité juridique à laquelle le document se rapporte (fondement d'accord
+   * d'entreprise). Un document rattaché à une AUTRE entité ne peut pas justifier
+   * l'accord de cette entité.
+   */
+  @Column({
+    name: 'related_legal_entity_id',
+    type: 'bigint',
+    nullable: true,
+    transformer: nullableBigintTransformer,
+  })
+  relatedLegalEntityId!: number | null;
+
   @ManyToOne(() => User, { nullable: true, onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'uploaded_by_id' })
   uploadedBy!: User | null;

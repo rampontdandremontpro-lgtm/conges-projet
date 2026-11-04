@@ -1,0 +1,102 @@
+{
+  "date": "2026-10-29T11:49:27.905Z",
+  "results": [
+    {
+      "id": "L4-M1",
+      "name": "Consommation sur deux lots (201)",
+      "ok": true,
+      "detail": "HTTP 201"
+    },
+    {
+      "id": "L4-M1b",
+      "name": "Lot1 3→0, Lot2 2→1",
+      "ok": true,
+      "detail": "lot1=0.00 lot2=1.00"
+    },
+    {
+      "id": "L4-M1c",
+      "name": "Deux allocations, deux mouvements DISTINCTS",
+      "ok": true,
+      "detail": "movementIds=415,416"
+    },
+    {
+      "id": "L4-M1d",
+      "name": "Compteur débité 10→6",
+      "ok": true,
+      "detail": "avail=6.00"
+    },
+    {
+      "id": "L4-M1e",
+      "name": "Restitution des deux lots (3 et 2, compteur 10)",
+      "ok": true,
+      "detail": "lot1=3.00 lot2=2.00 avail=10.00"
+    },
+    {
+      "id": "L4-M4",
+      "name": "Restitution après expiration → régularisation RH (lot non recrédité)",
+      "ok": true,
+      "detail": "régularisation=1 lot1=1.00"
+    },
+    {
+      "id": "L4-M6",
+      "name": "Réservation (lot décrémenté, RESERVATION)",
+      "ok": true,
+      "detail": "lot3=0.00"
+    },
+    {
+      "id": "L4-M6b",
+      "name": "Libération (lot restitué)",
+      "ok": true,
+      "detail": "lot3=2.00"
+    },
+    {
+      "id": "L4-M2",
+      "name": "Sans lot éligible → jours ordinaires débités une fois",
+      "ok": true,
+      "detail": "avail=8.00"
+    },
+    {
+      "id": "L4-M2b",
+      "name": "Rejeu sans lot → refusé (409)",
+      "ok": true,
+      "detail": "HTTP 409"
+    },
+    {
+      "id": "L4-M2c",
+      "name": "Concurrence sans lot → un seul débit (1×201, 1×409)",
+      "ok": true,
+      "detail": "HTTP 201/409 avail=6.00"
+    },
+    {
+      "id": "L4-M3",
+      "name": "Lot sur le 2e N-1 + ordinaire sur le 1er N-1",
+      "ok": true,
+      "detail": "2425=1.00 2526=7.00"
+    },
+    {
+      "id": "L4-M5",
+      "name": "Statut non VALIDEE refusé",
+      "ok": true,
+      "detail": "HTTP 400"
+    },
+    {
+      "id": "L4-M5b",
+      "name": "Période de référence inconnue refusée",
+      "ok": true,
+      "detail": "HTTP 404"
+    },
+    {
+      "id": "L4-M8",
+      "name": "Incohérence compteur épuisé → refus, aucun mouvement écrit",
+      "ok": true,
+      "detail": "HTTP 400 mv=0"
+    },
+    {
+      "id": "L4-SEC",
+      "name": "Non-RH refusé (403)",
+      "ok": true,
+      "detail": "HTTP 403"
+    }
+  ],
+  "failed": 0
+}

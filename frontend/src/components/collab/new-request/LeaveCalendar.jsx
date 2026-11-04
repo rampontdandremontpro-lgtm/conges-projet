@@ -184,6 +184,7 @@ export function LeaveCalendar({
   onBlockedMessage,
   maxSelectableDate = null,
   periodStart = '06-01',
+  hideOccupancyLegend = false,
 }) {
   const { startDate, endDate, startPeriod, endPeriod } = selection ?? {}
   const [selectionEmojis, setSelectionEmojis] = useState({ startEmoji: '😊', endEmoji: '😔' })
@@ -786,18 +787,22 @@ export function LeaveCalendar({
         <span className="nr-cal__legend-item">
           <i className="nr-cal__legend-dot nr-cal__legend-dot--closure" /> Fermeture GMES
         </span>
-        <span className="nr-cal__legend-item">
-          <i className="nr-cal__legend-dot nr-cal__legend-dot--draft" /> Brouillon
-        </span>
-        <span className="nr-cal__legend-item">
-          <i className="nr-cal__legend-dot nr-cal__legend-dot--pending" /> En attente
-        </span>
-        <span className="nr-cal__legend-item">
-          <i className="nr-cal__legend-dot nr-cal__legend-dot--validated" /> Validé
-        </span>
-        <span className="nr-cal__legend-item">
-          <i className="nr-cal__legend-dot nr-cal__legend-dot--absence" /> Absence
-        </span>
+        {!hideOccupancyLegend && (
+          <>
+            <span className="nr-cal__legend-item">
+              <i className="nr-cal__legend-dot nr-cal__legend-dot--draft" /> Brouillon
+            </span>
+            <span className="nr-cal__legend-item">
+              <i className="nr-cal__legend-dot nr-cal__legend-dot--pending" /> En attente
+            </span>
+            <span className="nr-cal__legend-item">
+              <i className="nr-cal__legend-dot nr-cal__legend-dot--validated" /> Validé
+            </span>
+            <span className="nr-cal__legend-item">
+              <i className="nr-cal__legend-dot nr-cal__legend-dot--absence" /> Absence
+            </span>
+          </>
+        )}
       </div>
 
       {maxSelectableDate && (

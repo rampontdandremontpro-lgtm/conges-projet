@@ -1,0 +1,35 @@
+{
+    "options": {
+        "schema": "gestion_conges_gmes",
+        "table": "validator_replacements",
+        "columns": [
+            "id",
+            "employee_id",
+            "replacement_validator_id",
+            "start_date",
+            "end_date",
+            "reason",
+            "created_by_rh_id",
+            "is_active",
+            "created_at",
+            "updated_at"
+        ],
+        "defaultCharacterSet": "utf8mb4",
+        "fieldsTerminatedBy": "\t",
+        "fieldsEnclosedBy": "",
+        "fieldsOptionallyEnclosed": false,
+        "fieldsEscapedBy": "\\",
+        "linesTerminatedBy": "\n"
+    },
+    "triggers": [],
+    "includesData": true,
+    "includesDdl": true,
+    "extension": "tsv.zst",
+    "chunking": true,
+    "compression": "zstd",
+    "primaryIndex": [
+        "id"
+    ],
+    "partitions": [],
+    "basenames": {}
+}

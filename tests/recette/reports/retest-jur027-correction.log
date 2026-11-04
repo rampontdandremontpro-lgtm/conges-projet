@@ -1,0 +1,26 @@
+OK  C1 : report accepté — HTTP 201
+OK  C1 : source = 6 (débitée) — availableDays=6
+OK  C1 : cible = 4 (créditée) — availableDays=4
+OK  C2 : congé de 6 jours créé — HTTP 201 deducted=6
+OK  C2 : source consommée à 0 — availableDays=0
+OK  C3 : après report, source = 6 (les 4 jours reportés indisponibles) — availableDays=6
+OK  C3 : congé de 10 jours (source 6 + N négatif) — deducted=10
+OK  C3 : source N-1 = 0 (pas de réutilisation des 4 jours) — availableDays=0
+OK  C3 : N négatif (anticipation, pas les jours reportés) — N=-4
+OK  C3 : cible = 4 (report conservé) — availableDays=4
+OK  C4 : deux reports acceptés — HTTP 201/201
+OK  C4 : source = 3 (7 débités) — availableDays=3
+OK  C4 : cible = 7 — availableDays=7
+OK  C5 : report 11/10 refusé (400) — HTTP 400
+OK  C5 : source inchangée (10) — availableDays=10
+OK  C6 : report 6 avec 5 réservés refusé — HTTP 400
+OK  C6 : compteurs inchangés — available=10 reserved=5
+OK  C6 : report 5 (libre) accepté — HTTP 201
+OK  C6 : source available=5, reserved=5 (pas de double affectation) — available=5 reserved=5
+OK  C9 : un seul des deux reports concurrents aboutit — statuses=201/400
+OK  C9 : intégrité source + cible = 10 — source=4 cible=6
+OK  C10 : mouvement de débit source tracé (REPORT_EXCEPTIONNEL_DEBIT) — type=CORRECTION_NEGATIVE before=10 after=6
+OK  C10 : mouvement de crédit cible tracé (REPORT_EXCEPTIONNEL) — type=CORRECTION_POSITIVE
+OK  C10 : audit avec solde source/cible — count=6
+
+RÉSULTAT : 24/24 OK, 0 KO

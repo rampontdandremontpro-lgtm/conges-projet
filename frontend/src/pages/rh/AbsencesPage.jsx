@@ -417,6 +417,8 @@ export function DetailDrawer({
   const [replacingDocumentId, setReplacingDocumentId] = useState(null)
   const [rejectingDocumentId, setRejectingDocumentId] = useState(null)
   const [rejectionReason, setRejectionReason] = useState('')
+  const [decisionReason, setDecisionReason] = useState('')
+  const [decisionSource, setDecisionSource] = useState('')
   const [preview, setPreview] = useState({
     document: null,
     blob: null,
@@ -642,6 +644,42 @@ export function DetailDrawer({
             <div><small>Service</small><strong>{declaration.service?.name ?? '—'}</strong></div>
           </div>
 
+          {declaration.familyEvent?.rule && (
+            <div className="rh-absence-detail-comment">
+              <small>{declaration.familyEvent.rule.unit === 'CALENDAIRES' ? 'Droit de paternité' : 'Droit événement familial'}</small>
+              <p>
+                {declaration.familyEvent.rule.unit === 'CALENDAIRES' ? (
+                  <>
+                    {declaration.familyEvent.rule.totalDays} jours calendaires au total
+                    {' '}— {declaration.familyEvent.requestedDays} j calendaires demandés
+                  </>
+                ) : (
+                  <>
+                    {declaration.familyEvent.rule.days}{' '}
+                    {declaration.familyEvent.rule.unit === 'OUVRES' ? 'jours ouvrés' : 'jours ouvrables'}{' '}
+                    ({declaration.familyEvent.rule.source === 'CODE_TRAVAIL' ? 'Code du travail' : 'Convention collective'})
+                    {' '}— {declaration.familyEvent.requestedDays} j demandés
+                  </>
+                )}
+              </p>
+              {declaration.familyEvent.rule.fractionnement && (
+                <p style={{ marginTop: 4 }}>{declaration.familyEvent.rule.fractionnement}</p>
+              )}
+              {declaration.familyEvent.quota && (
+                <p style={{ marginTop: 4 }}>
+                  Solde de l’événement {declaration.familyEvent.quota.periodKey} :{' '}
+                  {declaration.familyEvent.quota.alreadyUsedDays} j utilisés,{' '}
+                  {declaration.familyEvent.quota.remainingDays} j restants
+                </p>
+              )}
+              {declaration.familyEvent.rule.anomalies?.length > 0 && (
+                <ul style={{ margin: '6px 0 0 18px', padding: 0 }}>
+                  {declaration.familyEvent.rule.anomalies.map((anomaly, index) => <li key={index}>{anomaly}</li>)}
+                </ul>
+              )}
+            </div>
+          )}
+
           {declaration.comment && (
             <div className="rh-absence-detail-comment">
               <small>Commentaire</small>
@@ -865,6 +903,20 @@ export function DetailDrawer({
 
 
 
+          {declaration.familyEvent?.uncertain && declaration.status === 'A_VERIFIER_PAR_RH' && (
+            <div className="rh-absence-detail-comment">
+              <small>Décision RH motivée (demande incertaine)</small>
+              <label style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 6 }}>
+                <span style={{ fontSize: 12, color: '#475569' }}>Motif de la décision</span>
+                <textarea rows={2} value={decisionReason} onChange={(event) => setDecisionReason(event.target.value)} placeholder="Motif de l’autorisation…" />
+              </label>
+              <label style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 8 }}>
+                <span style={{ fontSize: 12, color: '#475569' }}>Source / fondement de la durée accordée</span>
+                <input type="text" value={decisionSource} onChange={(event) => setDecisionSource(event.target.value)} placeholder="Ex. L3142-4, accord d’entreprise, convention…" />
+              </label>
+            </div>
+          )}
+
           <div className="rh-absence-detail-actions">
             {['JUSTIFICATIF_EN_ATTENTE', 'A_VERIFIER_PAR_RH', 'JUSTIFICATIF_REJETE', 'ENREGISTREE'].includes(declaration.status) && (
               <button type="button" className="rh-absence-button rh-absence-button--secondary" onClick={() => onEdit?.(declaration)}>
@@ -876,7 +928,7 @@ export function DetailDrawer({
                 type="button"
                 className="rh-absence-button rh-absence-button--primary"
                 disabled={busy}
-                onClick={() => onRegister(declaration)}
+                onClick={() => onRegister(declaration, { decisionReason, decisionSource })}
               >
                 <Icon name="check" size={16} /> Autoriser l’absence
               </button>
@@ -996,11 +1048,21 @@ export function RhAbsencesPage() {
     await load()
   }
 
-  const handleRegister = async (declaration) => {
+  const handleRegister = async (declaration, decision = {}) => {
     if (busy) return
+    if (declaration.familyEvent?.uncertain) {
+      if (!decision?.decisionReason?.trim() || !decision?.decisionSource?.trim()) {
+        showFeedback('error', 'Motif et source/fondement sont requis pour autoriser une demande incertaine.')
+        return
+      }
+    }
     setBusy(true)
     try {
-      await registerRhAbsence(declaration.id)
+      await registerRhAbsence(
+        declaration.id,
+        decision?.decisionReason?.trim() || undefined,
+        decision?.decisionSource?.trim() || undefined,
+      )
       setSelected(null)
       showFeedback('success', `L’absence de ${fullName(declaration.employee)} a été autorisée.`)
       await load()

@@ -1,0 +1,22 @@
+{
+  "purpose": "Reproduction RÉELLE du double usage JUR-027 via les API métier (report exceptionnel RH + congé direct RH imputé sur le compteur source, sans simulation SQL de la consommation).",
+  "script": "tests/recette/scripts/retest-jur027-circuit-reel.mjs",
+  "environment": { "api": "http://localhost:3001/api", "database": "gestion_conges_gmes_test", "isolated": true },
+  "executedBy": "Pi — test automatisé",
+  "dateRetest": "2026-10-26",
+  "scenario": "Collaborateur avec 10 jours sur N-1 2026-2027 ; report exceptionnel de 4 jours ; puis congé direct RH de 10 jours imputé sur la source via le service métier réel (applyPaidLeaveForRequest).",
+  "checks": [
+    { "name": "préparation : collaborateur + service + type de congé créés", "ok": true, "detail": "emp=35 lt=20 svc=23" },
+    { "name": "report exceptionnel accepté", "ok": true, "detail": "HTTP 201" },
+    { "name": "après report : source N-1 = 10 (PAS débitée)", "ok": true, "detail": "availableDays=10" },
+    { "name": "après report : cible N-1 2027-2028 = 4", "ok": true, "detail": "availableDays=4" },
+    { "name": "congé direct RH créé (circuit réel)", "ok": true, "detail": "HTTP 201 deductedDays=10" },
+    { "name": "après congé : source N-1 consommée (10 → 0)", "ok": true, "detail": "availableDays=0 consumedDays=10" },
+    { "name": "après congé : cible N-1 2027-2028 = 4 (report conservé)", "ok": true, "detail": "availableDays=4" },
+    { "name": "DOUBLE USAGE (circuit réel) : 10 consommés + 4 conservés > 10 initiaux", "ok": true, "detail": "total=14" },
+    { "name": "mouvement DEDUCTION sur la source", "ok": true, "detail": "DEDUCTION" },
+    { "name": "report conservé (REPORT_EXCEPTIONNEL présent)", "ok": true, "detail": "count=1" }
+  ],
+  "summary": { "total": 10, "passed": 10, "failed": 0 },
+  "conclusion": "Anomalie CONFIRMÉE par le circuit métier réel : le report exceptionnel ne débite pas le compteur source, un congé réel peut consommer la totalité de la source (10 jours) et les 4 jours reportés restent disponibles → 14 jours pour 10 initiaux. La clôture 2026-2027 n'est pas exécutable ce jour (période se terminant le 31/05/2027, postérieure à la date du test) ; son comportement a été vérifié séparément sur la période 2025-2026 (retest-jur027-cycle-cloture)."
+}

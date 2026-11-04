@@ -117,6 +117,20 @@ export class AbsenceDeclaration {
   @Column({ type: 'text', nullable: true })
   comment!: string | null;
 
+  /** JUR-029/030 — contexte d'événement familial (JSON). */
+  @Column({ name: 'family_event_context', type: 'text', nullable: true })
+  familyEventContext!: string | null;
+
+  /** JUR-029/030 — règle résolue d'événement familial (JSON). */
+  @Column({ name: 'family_event_rule', type: 'text', nullable: true })
+  familyEventRule!: string | null;
+
+  /**
+   * Champs calculés, NON persistés, renseignés à la lecture pour l'affichage
+   * et le traitement (durée autorisée, jours demandés, anomalies, quota).
+   */
+  familyEvent?: unknown | null;
+
   @Column({ name: 'declared_at', type: 'datetime', nullable: true })
   declaredAt!: Date | null;
 

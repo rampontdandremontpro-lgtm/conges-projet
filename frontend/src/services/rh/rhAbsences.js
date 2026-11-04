@@ -28,13 +28,24 @@ export async function createRhAbsenceDraft(payload) {
   return data
 }
 
+export async function previewRhFamilyEvent(payload) {
+  const { data } = await apiClient.post(
+    '/absence-declarations/family-event/preview',
+    payload,
+  )
+  return data
+}
+
 export async function submitRhAbsence(id) {
   const { data } = await apiClient.post(`/absence-declarations/${id}/submit`, {})
   return data
 }
 
-export async function registerRhAbsence(id) {
-  const { data } = await apiClient.post(`/absence-declarations/${id}/register`, {})
+export async function registerRhAbsence(id, decisionReason, decisionSource) {
+  const { data } = await apiClient.post(`/absence-declarations/${id}/register`, {
+    ...(decisionReason ? { decisionReason } : {}),
+    ...(decisionSource ? { decisionSource } : {}),
+  })
   return data
 }
 

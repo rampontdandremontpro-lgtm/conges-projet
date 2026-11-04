@@ -1,0 +1,16 @@
+{
+    "schema": "sdv-php-bootcamp",
+    "includesDdl": true,
+    "includesViewsDdl": true,
+    "includesData": true,
+    "tables": [
+        "product"
+    ],
+    "views": [],
+    "events": [],
+    "functions": [],
+    "procedures": [],
+    "basenames": {
+        "product": "sdv-php-bootcamp@product"
+    }
+}

@@ -1,0 +1,36 @@
+{
+    "options": {
+        "schema": "gestion_conges_gmes_test",
+        "table": "balance_movements",
+        "columns": [
+            "id",
+            "employee_id",
+            "leave_balance_id",
+            "leave_request_id",
+            "actor_id",
+            "movement_type",
+            "days",
+            "balance_before",
+            "balance_after",
+            "reason",
+            "created_at"
+        ],
+        "defaultCharacterSet": "utf8mb4",
+        "fieldsTerminatedBy": "\t",
+        "fieldsEnclosedBy": "",
+        "fieldsOptionallyEnclosed": false,
+        "fieldsEscapedBy": "\\",
+        "linesTerminatedBy": "\n"
+    },
+    "triggers": [],
+    "includesData": true,
+    "includesDdl": true,
+    "extension": "tsv.zst",
+    "chunking": true,
+    "compression": "zstd",
+    "primaryIndex": [
+        "id"
+    ],
+    "partitions": [],
+    "basenames": {}
+}

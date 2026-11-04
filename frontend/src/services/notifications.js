@@ -1,23 +1,33 @@
 import { apiClient } from '@/services/apiClient'
 
-export async function getMyNotifications(params = {}) {
-  const response = await apiClient.get('/notifications/my', { params })
+export async function getMyNotifications(params = {}, scope) {
+  const query = { ...params }
+  if (scope) {
+    query.scope = scope
+  }
+  const response = await apiClient.get('/notifications/my', { params: query })
   return Array.isArray(response.data) ? response.data : []
 }
 
-export async function getUnreadNotificationCount() {
-  const response = await apiClient.get('/notifications/my/unread-count')
+export async function getUnreadNotificationCount(scope) {
+  const response = await apiClient.get('/notifications/my/unread-count', {
+    params: scope ? { scope } : {},
+  })
   const count = Number(response.data?.unreadCount)
   return Number.isFinite(count) && count > 0 ? count : 0
 }
 
-export async function markNotificationRead(notificationId) {
-  const response = await apiClient.patch(`/notifications/${notificationId}/read`)
+export async function markNotificationRead(notificationId, scope) {
+  const response = await apiClient.patch(`/notifications/${notificationId}/read`, null, {
+    params: scope ? { scope } : {},
+  })
   return response.data
 }
 
-export async function markAllNotificationsRead() {
-  const response = await apiClient.patch('/notifications/my/read-all')
+export async function markAllNotificationsRead(scope) {
+  const response = await apiClient.patch('/notifications/my/read-all', null, {
+    params: scope ? { scope } : {},
+  })
   return response.data
 }
 

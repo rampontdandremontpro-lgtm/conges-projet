@@ -5,6 +5,7 @@ import {
   counterReferencePeriod,
   currentReferencePeriod,
   formatFrenchDate,
+  martiniqueDateString,
   nextReferencePeriod,
   referencePeriodEndDate,
   referencePeriodStartDate,
@@ -165,5 +166,16 @@ describe('reference-period.util — limite de sélection N/N+1', () => {
     // Début de période au 15/04 : N+1 se termine le 14/04 de l'année N+2.
     expect(endOfNPlusOne('2027-04-14', '04-15')).toBe('2028-04-14');
     expect(endOfNPlusOne('2027-04-15', '04-15')).toBe('2029-04-14');
+  });
+});
+
+describe('reference-period.util — date d\'opération America/Martinique (UTC−4)', () => {
+  it('autour de minuit : bascule de jour correcte', () => {
+    // 03:30 UTC = 23:30 la veille en Martinique.
+    expect(martiniqueDateString(new Date('2026-10-29T03:30:00Z'))).toBe('2026-10-28');
+    // 04:30 UTC = 00:30 le jour même en Martinique.
+    expect(martiniqueDateString(new Date('2026-10-29T04:30:00Z'))).toBe('2026-10-29');
+    // 05:00 UTC = 01:00 en Martinique.
+    expect(martiniqueDateString(new Date('2026-10-29T05:00:00Z'))).toBe('2026-10-29');
   });
 });

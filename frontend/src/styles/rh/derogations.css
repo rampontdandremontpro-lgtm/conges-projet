@@ -140,13 +140,15 @@
 .rh-derogations-eye { display: grid; width: 31px; height: 31px; place-items: center; border-radius: 9px; color: #8da5c2; }
 .rh-derogations-row--body:hover .rh-derogations-eye { background: #edf5ff; color: var(--rh-derog-blue); }
 
-.rh-derogation-status { display: inline-flex; min-height: 27px; align-items: center; justify-content: center; padding: 4px 9px; border: 1px solid; border-radius: 999px; font-size: 10.5px; font-weight: 850; white-space: nowrap; }
-.rh-derogation-status--pending { border-color: #ffd08b; background: #fff8e9; color: #b16a08; }
-.rh-derogation-status--granted { border-color: #a9ead0; background: #ecfbf5; color: #12845a; }
-.rh-derogation-status--refused { border-color: #ffc6cf; background: #fff2f4; color: #c63d51; }
-.rh-derogation-status--used { border-color: #b9d5ff; background: #eff6ff; color: #276bc4; }
-.rh-derogation-status--expired { border-color: #d6dfe9; background: #f5f7fa; color: #73859a; }
-.rh-derogation-status--neutral { border-color: #dde5ee; background: #f6f8fb; color: #71839a; }
+/* Alignement visuel sur les badges de la page Congés & Absences
+   (rh-events-status) : même structure, couleurs et typographie. */
+.rh-derogation-status { display: inline-flex; min-height: 24px; align-items: center; justify-content: center; padding: 4px 8px; border-radius: 999px; font-size: 9.5px; font-weight: 850; white-space: nowrap; }
+.rh-derogation-status--pending { background: #fff5e8; color: #a65a11; }
+.rh-derogation-status--granted { background: #eaf8f0; color: #197447; }
+.rh-derogation-status--refused { background: #fff0f1; color: #b42318; }
+.rh-derogation-status--used { background: #eff6ff; color: #276bc4; }
+.rh-derogation-status--expired { background: #eef1f5; color: #667789; }
+.rh-derogation-status--neutral { background: #eef1f5; color: #667789; }
 
 .rh-derogations-footer { display: flex; min-height: 58px; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 20px; border-top: 1px solid #edf2f7; color: #8196b1; font-size: 11.5px; }
 .rh-derogations-pagination { display: flex; align-items: center; gap: 8px; }
@@ -344,9 +346,9 @@
   }
 
   .rh-derogation-status {
-    min-height: 29px;
+    min-height: 28px;
     padding: 5px 10px;
-    font-size: 11.2px;
+    font-size: 10.7px;
   }
 
   .rh-derogations-eye {

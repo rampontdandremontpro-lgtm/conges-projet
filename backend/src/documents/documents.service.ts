@@ -27,6 +27,7 @@ import {
   AbsenceDeclarationStatus,
 } from '../absence-declarations/absence-declaration.entity';
 import { AbsenceDeclarationsService } from '../absence-declarations/absence-declarations.service';
+import { AuditService } from '../audit/audit.service';
 import type { AuthenticatedUser } from '../auth/jwt-payload.interface';
 import {
   LeaveRequest,
@@ -153,6 +154,7 @@ export class DocumentsService {
     private readonly absenceDeclarationsService: AbsenceDeclarationsService,
     private readonly notificationsService: NotificationsService,
     private readonly dataSource: DataSource,
+    private readonly auditService: AuditService,
     configService: ConfigService,
   ) {
     this.privateStorageRoot = path.resolve(
@@ -256,6 +258,457 @@ export class DocumentsService {
     );
 
     return this.toMetadata(document);
+  }
+
+  /**
+   * JUR-023 — preuve écrite d'un report de période de prise : la RH joint un
+   * véritable justificatif (fichier stocké, non rattaché à une demande/déclaration).
+   * Le document est créé avec le statut ACCEPTE (fourni et contrôlé par la RH).
+   */
+  async uploadForTakePeriodReport(
+    authenticatedUser: AuthenticatedUser,
+    file: UploadedDocumentFile | undefined,
+  ): Promise<DocumentMetadataResponse> {
+    const validated = this.validateFile(file);
+    const storageKey = this.createStorageKey(
+      'take-period-report',
+      validated.extension,
+    );
+
+    await this.writeFile(storageKey, validated.buffer);
+
+    try {
+      const document = this.documentRepository.create({
+        leaveRequestId: null,
+        absenceDeclarationId: null,
+        documentKind: DocumentKind.JUSTIFICATIF,
+        originalName: validated.originalName,
+        storageKey,
+        mimeType: validated.mimeType,
+        fileSize: validated.size,
+        status: DocumentStatus.ACCEPTE,
+        uploadedById: authenticatedUser.id,
+        verifiedByRhId: authenticatedUser.id,
+        verifiedAt: new Date(),
+        rejectionReason: null,
+        retentionUntil: null,
+        deletedAt: null,
+      });
+
+      return this.toMetadata(
+        await this.documentRepository.save(document),
+      );
+    } catch (error) {
+      await this.deletePhysicalFile(storageKey);
+      throw error;
+    }
+  }
+
+  /**
+   * Liste les justificatifs de report disponibles (documents autonomes,
+   * conservés et validés) pour la sélection côté RH.
+   */
+  async listReportDocuments(): Promise<DocumentMetadataResponse[]> {
+    const documents = await this.documentRepository.find({
+      where: {
+        leaveRequestId: IsNull(),
+        absenceDeclarationId: IsNull(),
+        documentKind: DocumentKind.JUSTIFICATIF,
+        status: DocumentStatus.ACCEPTE,
+      },
+      order: { uploadedAt: 'DESC' },
+    });
+
+    return documents.map((document) =>
+      this.toMetadata(document),
+    );
+  }
+
+  /**
+   * JUR-025/037 — téléversement d'un justificatif de fondement salarié (clause
+   * contractuelle / « autre » disposition). Le fichier est créé EN ATTENTE : il
+   * ne devient une preuve qu'après une VALIDATION RH explicite et justifiée.
+   */
+  async uploadForBasis(
+    employeeId: number,
+    authenticatedUser: AuthenticatedUser,
+    file: UploadedDocumentFile | undefined,
+  ): Promise<DocumentMetadataResponse> {
+    const rows = await this.dataSource.query(
+      'SELECT id, legal_entity_id FROM users WHERE id = ? LIMIT 1',
+      [employeeId],
+    );
+    if (!rows || rows.length === 0) {
+      throw new NotFoundException(
+        `Le salarié ${employeeId} est introuvable.`,
+      );
+    }
+    await this.assertRhPerimeter(
+      authenticatedUser,
+      rows[0].legal_entity_id ?? null,
+    );
+
+    const validated = this.validateFile(file);
+    const storageKey = this.createStorageKey(
+      'take-period-report',
+      validated.extension,
+    );
+
+    await this.writeFile(storageKey, validated.buffer);
+
+    try {
+      const document = this.documentRepository.create({
+        leaveRequestId: null,
+        absenceDeclarationId: null,
+        documentKind: DocumentKind.JUSTIFICATIF,
+        originalName: validated.originalName,
+        storageKey,
+        mimeType: validated.mimeType,
+        fileSize: validated.size,
+        status: DocumentStatus.EN_ATTENTE,
+        uploadedById: authenticatedUser.id,
+        relatedEmployeeId: employeeId,
+        relatedLegalEntityId: null,
+        verifiedByRhId: null,
+        verifiedAt: null,
+        rejectionReason: null,
+        retentionUntil: null,
+        deletedAt: null,
+      });
+
+      return this.toMetadata(
+        await this.documentRepository.save(document),
+      );
+    } catch (error) {
+      await this.deletePhysicalFile(storageKey);
+      throw error;
+    }
+  }
+
+  /**
+   * JUR-025/037 — téléversement d'un justificatif d'ACCORD D'ENTREPRISE,
+   * rattaché à une entité (périmètre RH contrôlé), créé EN ATTENTE.
+   */
+  async uploadForAccordBasis(
+    legalEntityId: number,
+    authenticatedUser: AuthenticatedUser,
+    file: UploadedDocumentFile | undefined,
+  ): Promise<DocumentMetadataResponse> {
+    const rows = await this.dataSource.query(
+      'SELECT id FROM legal_entities WHERE id = ? LIMIT 1',
+      [legalEntityId],
+    );
+    if (!rows || rows.length === 0) {
+      throw new NotFoundException(
+        `L’entité juridique ${legalEntityId} est introuvable.`,
+      );
+    }
+    await this.assertRhPerimeter(authenticatedUser, legalEntityId);
+
+    const validated = this.validateFile(file);
+    const storageKey = this.createStorageKey(
+      'take-period-report',
+      validated.extension,
+    );
+
+    await this.writeFile(storageKey, validated.buffer);
+
+    try {
+      const document = this.documentRepository.create({
+        leaveRequestId: null,
+        absenceDeclarationId: null,
+        documentKind: DocumentKind.JUSTIFICATIF,
+        originalName: validated.originalName,
+        storageKey,
+        mimeType: validated.mimeType,
+        fileSize: validated.size,
+        status: DocumentStatus.EN_ATTENTE,
+        uploadedById: authenticatedUser.id,
+        relatedEmployeeId: null,
+        relatedLegalEntityId: legalEntityId,
+        verifiedByRhId: null,
+        verifiedAt: null,
+        rejectionReason: null,
+        retentionUntil: null,
+        deletedAt: null,
+      });
+
+      return this.toMetadata(
+        await this.documentRepository.save(document),
+      );
+    } catch (error) {
+      await this.deletePhysicalFile(storageKey);
+      throw error;
+    }
+  }
+
+  /**
+   * JUR-025/037 — validation RH EXPLICITE et justifiée d'un justificatif de
+   * fondement (salarié ou accord). Le simple téléversement ne vaut pas preuve.
+   */
+  async validateBasisDocument(
+    documentId: number,
+    authenticatedUser: AuthenticatedUser,
+    justification: string,
+  ): Promise<DocumentMetadataResponse> {
+    const justificationTrimmed = justification?.trim();
+    if (!justificationTrimmed) {
+      throw new BadRequestException(
+        'Une justification RH est requise pour valider un fondement.',
+      );
+    }
+
+    const document = await this.findActiveOne(documentId);
+    if (
+      document.relatedEmployeeId === null &&
+      document.relatedLegalEntityId === null
+    ) {
+      throw new BadRequestException(
+        'Ce document n’est pas un justificatif de fondement.',
+      );
+    }
+    if (document.status !== DocumentStatus.EN_ATTENTE) {
+      throw new BadRequestException(
+        'Seul un justificatif de fondement en attente peut être validé.',
+      );
+    }
+
+    const scopeEntityId =
+      document.relatedLegalEntityId !== null
+        ? document.relatedLegalEntityId
+        : await this.resolveEmployeeLegalEntityId(
+            document.relatedEmployeeId as number,
+          );
+    await this.assertRhPerimeter(authenticatedUser, scopeEntityId);
+
+    // Même transaction : le passage à ACCEPTE et sa trace d'audit sont cohérents
+    // (aucun ACCEPTE sans audit, aucun audit sans ACCEPTE).
+    const updated = await this.dataSource.transaction(async (manager) => {
+      const result = await manager.getRepository(Document).update(
+        { id: document.id, status: DocumentStatus.EN_ATTENTE },
+        {
+          status: DocumentStatus.ACCEPTE,
+          verifiedByRhId: authenticatedUser.id,
+          verifiedAt: new Date(),
+          rejectionReason: null,
+        },
+      );
+      if (!result.affected) {
+        throw new ConflictException(
+          'Ce justificatif a déjà été traité par un autre utilisateur.',
+        );
+      }
+
+      const reloaded = await manager
+        .getRepository(Document)
+        .findOneBy({ id: document.id });
+
+      // Trace durable : document, périmètre (salarié/entité), valideur, date,
+      // justification et changement de statut.
+      await this.auditService.record(
+        {
+          actorId: authenticatedUser.id,
+          action: 'DOCUMENT_BASIS_VALIDATED',
+          resourceType: 'DOCUMENT',
+          resourceId: document.id,
+          oldValue: {
+            status: DocumentStatus.EN_ATTENTE,
+            verifiedByRhId: null,
+            verifiedAt: null,
+            relatedEmployeeId: document.relatedEmployeeId,
+            relatedLegalEntityId: document.relatedLegalEntityId,
+          },
+          newValue: {
+            status: DocumentStatus.ACCEPTE,
+            verifiedByRhId: authenticatedUser.id,
+            verifiedAt: reloaded?.verifiedAt ?? null,
+            justification: justificationTrimmed,
+            relatedEmployeeId: document.relatedEmployeeId,
+            relatedLegalEntityId: document.relatedLegalEntityId,
+          },
+        },
+        manager,
+      );
+
+      return reloaded;
+    });
+
+    if (!updated) {
+      throw new NotFoundException(
+        `Le justificatif ${documentId} est introuvable.`,
+      );
+    }
+    this.logger.log(
+      `Justificatif de fondement ${documentId} validé par la RH ${authenticatedUser.id}.`,
+    );
+
+    return this.toMetadata(updated);
+  }
+
+  /**
+   * JUR-025/037 — vérifie qu'un document de fondement est réellement utilisable
+   * pour un salarié donné : actif, ACCEPTE, validé par la RH, non supprimé,
+   * rattaché au bon salarié et physiquement conservé.
+   */
+  async assertBasisProof(
+    documentId: number,
+    employeeId: number,
+  ): Promise<DocumentMetadataResponse> {
+    let document: Document;
+    try {
+      document = await this.findActiveOne(documentId);
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw new BadRequestException(
+          'Le justificatif du fondement est introuvable ou a été supprimé.',
+        );
+      }
+      throw error;
+    }
+
+    if (document.status !== DocumentStatus.ACCEPTE) {
+      throw new BadRequestException(
+        'Le justificatif du fondement doit être un document validé (statut ACCEPTE).',
+      );
+    }
+    if (!document.verifiedByRhId || !document.verifiedAt) {
+      throw new BadRequestException(
+        'Le justificatif du fondement doit avoir été validé par la RH.',
+      );
+    }
+    if (document.deletedAt) {
+      throw new BadRequestException(
+        'Le justificatif du fondement a été supprimé.',
+      );
+    }
+    if (document.relatedEmployeeId !== employeeId) {
+      throw new BadRequestException(
+        'Le justificatif du fondement n’appartient pas au salarié concerné.',
+      );
+    }
+    if (!document.storageKey?.trim()) {
+      throw new BadRequestException(
+        'Le justificatif du fondement est incomplet (aucun fichier référencé).',
+      );
+    }
+
+    const absolutePath = this.resolveStoragePath(document.storageKey);
+    try {
+      await fs.access(absolutePath);
+    } catch {
+      throw new BadRequestException(
+        'Le fichier physique du justificatif du fondement est introuvable.',
+      );
+    }
+
+    return this.toMetadata(document);
+  }
+
+  /**
+   * JUR-025/037 — vérifie qu'un justificatif d'ACCORD est réellement utilisable
+   * pour une entité donnée : actif, ACCEPTE, validé RH, rattaché à la bonne
+   * entité et physiquement conservé.
+   */
+  async assertAccordProof(
+    documentId: number,
+    legalEntityId: number,
+  ): Promise<DocumentMetadataResponse> {
+    const document = await this.findActiveOne(documentId).catch(() => {
+      throw new BadRequestException(
+        'Le justificatif de l’accord est introuvable ou a été supprimé.',
+      );
+    });
+
+    if (document.status !== DocumentStatus.ACCEPTE) {
+      throw new BadRequestException(
+        'Le justificatif de l’accord doit être un document validé (statut ACCEPTE).',
+      );
+    }
+    if (!document.verifiedByRhId || !document.verifiedAt) {
+      throw new BadRequestException(
+        'Le justificatif de l’accord doit avoir été validé par la RH.',
+      );
+    }
+    if (document.deletedAt) {
+      throw new BadRequestException(
+        'Le justificatif de l’accord a été supprimé.',
+      );
+    }
+    if (document.relatedLegalEntityId !== legalEntityId) {
+      throw new BadRequestException(
+        'Le justificatif de l’accord n’appartient pas à l’entité concernée.',
+      );
+    }
+    if (!document.storageKey?.trim()) {
+      throw new BadRequestException(
+        'Le justificatif de l’accord est incomplet (aucun fichier référencé).',
+      );
+    }
+
+    const absolutePath = this.resolveStoragePath(document.storageKey);
+    try {
+      await fs.access(absolutePath);
+    } catch {
+      throw new BadRequestException(
+        'Le fichier physique du justificatif de l’accord est introuvable.',
+      );
+    }
+
+    return this.toMetadata(document);
+  }
+
+  /**
+   * JUR-023 — vérifie qu'une preuve de report est réellement conservée et
+   * utilisable : document actif, validé (ACCEPTE) et fichier physique présent.
+   * Renvoie les métadonnées ou lève une exception (aucune validation silencieuse).
+   */
+  async assertConservedProof(
+    documentId: number,
+  ): Promise<DocumentMetadataResponse> {
+    let document: Document;
+    try {
+      document = await this.findActiveOne(documentId);
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw new BadRequestException(
+          'Le justificatif du report est introuvable ou a été supprimé.',
+        );
+      }
+      throw error;
+    }
+
+    if (document.status !== DocumentStatus.ACCEPTE) {
+      throw new BadRequestException(
+        'Le justificatif du report doit être un document validé (statut ACCEPTE).',
+      );
+    }
+
+    const absolutePath = this.resolveStoragePath(
+      document.storageKey,
+    );
+
+    try {
+      await fs.access(absolutePath);
+    } catch {
+      throw new BadRequestException(
+        'Le fichier physique du justificatif est introuvable (document non conservé).',
+      );
+    }
+
+    return this.toMetadata(document);
+  }
+
+  /**
+   * Variante booléenne (sans exception) : vraie uniquement si le document est
+   * actif, ACCEPTE et physiquement présent sur le stockage.
+   */
+  async isConservedProof(documentId: number): Promise<boolean> {
+    try {
+      await this.assertConservedProof(documentId);
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   async findMy(
@@ -679,6 +1132,18 @@ export class DocumentsService {
     authenticatedUser: AuthenticatedUser,
   ): Promise<DocumentMetadataResponse> {
     const document = await this.findActiveOne(id);
+
+    // JUR-025/037 — un justificatif de FONDEMENT ne peut pas être accepté par
+    // l'endpoint général (sans justification, périmètre ni audit dédié) : il
+    // doit passer par le parcours spécifique validateBasisDocument.
+    if (
+      document.relatedEmployeeId !== null ||
+      document.relatedLegalEntityId !== null
+    ) {
+      throw new BadRequestException(
+        'Un justificatif de fondement doit être validé via le parcours dédié (justification RH + périmètre).',
+      );
+    }
 
     await this.ensureParentReadyForReview(document);
 
@@ -1288,6 +1753,40 @@ export class DocumentsService {
     return document;
   }
 
+  /**
+   * JUR-025/037 — périmètre RH : une RH rattachée à une entité ne peut pas
+   * téléverser ni valider un fondement pour un salarié/une entité hors de son
+   * périmètre. Une RH sans entité (périmètre global) peut agir sur tout.
+   */
+  private async assertRhPerimeter(
+    authenticatedUser: AuthenticatedUser,
+    targetLegalEntityId: number | null,
+  ): Promise<void> {
+    if (authenticatedUser.role !== UserRole.RH) {
+      return;
+    }
+    const rows = await this.dataSource.query(
+      'SELECT legal_entity_id FROM users WHERE id = ? LIMIT 1',
+      [authenticatedUser.id],
+    );
+    const rhEntityId = rows?.[0]?.legal_entity_id ?? null;
+    if (rhEntityId !== null && rhEntityId !== targetLegalEntityId) {
+      throw new ForbiddenException(
+        'Hors de votre périmètre autorisé pour ce salarié / cette entité.',
+      );
+    }
+  }
+
+  private async resolveEmployeeLegalEntityId(
+    employeeId: number,
+  ): Promise<number | null> {
+    const rows = await this.dataSource.query(
+      'SELECT legal_entity_id FROM users WHERE id = ? LIMIT 1',
+      [employeeId],
+    );
+    return rows?.[0]?.legal_entity_id ?? null;
+  }
+
   private async countActiveForParent(input: {
     leaveRequestId: number | null;
     absenceDeclarationId: number | null;
@@ -1416,7 +1915,7 @@ export class DocumentsService {
   }
 
   private createStorageKey(
-    folder: 'absence' | 'leave-request',
+    folder: 'absence' | 'leave-request' | 'take-period-report',
     extension: string,
   ): string {
     const year = new Date().getFullYear().toString();

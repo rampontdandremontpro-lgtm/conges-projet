@@ -1,0 +1,48 @@
+{
+  "date": "2026-10-28T12:55:18.868Z",
+  "results": [
+    {
+      "id": "CONS-1",
+      "name": "Clôture unifiée : lot confirmé transféré",
+      "ok": true,
+      "detail": "HTTP 201 target=2025-2026"
+    },
+    {
+      "id": "CONS-2",
+      "name": "Deux clôtures simultanées → une seule",
+      "ok": true,
+      "detail": "HTTP 201/409"
+    },
+    {
+      "id": "CONS-3",
+      "name": "Lot A_VERIFIER → blocage sans remise à zéro",
+      "ok": true,
+      "detail": "HTTP 400 avail=8.00→8.00"
+    },
+    {
+      "id": "CONS-4",
+      "name": "Échéance incertaine → clôture bloquée",
+      "ok": true,
+      "detail": "HTTP 400"
+    },
+    {
+      "id": "CONS-5",
+      "name": "Gel frozen_in_balance → clôture bloquée",
+      "ok": true,
+      "detail": "HTTP 400"
+    },
+    {
+      "id": "CONS-6",
+      "name": "Consommation multi-lots",
+      "ok": true,
+      "detail": "HTTP 201"
+    },
+    {
+      "id": "CONS-7",
+      "name": "Restitution concurrente multi-lots → une seule",
+      "ok": true,
+      "detail": "HTTP 201/409 recr=2"
+    }
+  ],
+  "failed": 0
+}

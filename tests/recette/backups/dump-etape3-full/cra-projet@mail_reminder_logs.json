@@ -1,0 +1,32 @@
+{
+    "options": {
+        "schema": "cra-projet",
+        "table": "mail_reminder_logs",
+        "columns": [
+            "id",
+            "recipient_email",
+            "digest_date",
+            "dedup_key",
+            "reminder_status",
+            "last_attempt_at",
+            "created_at"
+        ],
+        "defaultCharacterSet": "utf8mb4",
+        "fieldsTerminatedBy": "\t",
+        "fieldsEnclosedBy": "",
+        "fieldsOptionallyEnclosed": false,
+        "fieldsEscapedBy": "\\",
+        "linesTerminatedBy": "\n"
+    },
+    "triggers": [],
+    "includesData": true,
+    "includesDdl": true,
+    "extension": "tsv.zst",
+    "chunking": true,
+    "compression": "zstd",
+    "primaryIndex": [
+        "id"
+    ],
+    "partitions": [],
+    "basenames": {}
+}

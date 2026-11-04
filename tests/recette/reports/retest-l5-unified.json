@@ -1,0 +1,66 @@
+{
+  "date": "2026-10-28T19:16:08.467Z",
+  "results": [
+    {
+      "id": "U1",
+      "name": "Report exceptionnel distinct tracé",
+      "ok": true,
+      "detail": "HTTP 201 sourceN1=10.00"
+    },
+    {
+      "id": "U2",
+      "name": "Clôture mixte acceptée (une seule transaction)",
+      "ok": true,
+      "detail": "HTTP 201"
+    },
+    {
+      "id": "U3",
+      "name": "Salarié A : N-1/N/N+1 remis à zéro",
+      "ok": true,
+      "detail": "N-1=0.00 N=0.00 N+1=0.00"
+    },
+    {
+      "id": "U4",
+      "name": "Salarié A : N-1 suivant = 27 (report 2 + lot 4 + N arrondi 21)",
+      "ok": true,
+      "detail": "nextN-1=27.00"
+    },
+    {
+      "id": "U5",
+      "name": "Salarié B (sans lot) : compteurs traités par la clôture normale",
+      "ok": true,
+      "detail": "N-1=0.00 N=0.00 nextN-1=12.00"
+    },
+    {
+      "id": "U6",
+      "name": "Lot confirmé transféré vers la période suivante (statut conservé)",
+      "ok": true,
+      "detail": "target=2021-2022 status=ACTIF"
+    },
+    {
+      "id": "U7",
+      "name": "Mouvements GMES + lots présents (arrondi, transfert N, transfert lot, remise à zéro)",
+      "ok": true,
+      "detail": ",REPORT_EXCEPTIONNEL_DEBIT|2020-2021|Arrêt maladie — report L3141-19-1 (unifié),REPORT_EXCEPTIONNEL|2020-2021|Arrêt maladie — report L3141-19-1 (unifié),REPORT_TRANSFERT|2020-2021|2021-2022,REPORT_TRANSFERT|2020-2021|2021-2022,CLOTURE_ARRONDI_L3141_7|2020-2021|Droit acquis de base 20.5 → 21 jours ouvrables (acquiredDays 20.5 → 21).,CLOTURE_TRANSFERT_N|2020-2021|Droits N transférés vers N-1 pour 2021-2022.,CLOTURE_PERIODE|2020-2021|Remise à zéro lors de la clôture.,CLOTURE_PERIODE|2020-2021|Remise à zéro lors de la clôture.,CLOTURE_PERIODE|2020-2021|Remise à zéro lors de la clôture."
+    },
+    {
+      "id": "U8",
+      "name": "Marqueur définitif unique (aucun marqueur de pré-traitement)",
+      "ok": true,
+      "detail": "definitif=1 pretraitement=0"
+    },
+    {
+      "id": "U9",
+      "name": "Notifications + audit de clôture présents",
+      "ok": true,
+      "detail": "notif=2 audit=1"
+    },
+    {
+      "id": "U10",
+      "name": "Échéance incertaine → blocage sans remise à zéro ni marqueur",
+      "ok": true,
+      "detail": "HTTP 400 avail=5.00→5.00 mv=14→14 marker=0"
+    }
+  ],
+  "failed": 0
+}

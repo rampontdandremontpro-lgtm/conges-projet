@@ -1,0 +1,180 @@
+{
+  "date": "2026-10-29T11:49:14.167Z",
+  "results": [
+    {
+      "id": "L3-01",
+      "name": "Création d’un lot (201)",
+      "ok": true,
+      "detail": "HTTP 201"
+    },
+    {
+      "id": "L3-01b",
+      "name": "Reliquat inconnu (remainingDays null)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "L3-01c",
+      "name": "Échéance indicative (non opposable)",
+      "ok": true,
+      "detail": "indicative=2027-10-21"
+    },
+    {
+      "id": "L3-01d",
+      "name": "Statut A_VERIFIER",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "L3-02",
+      "name": "Deux lots distincts pour le même salarié",
+      "ok": true,
+      "detail": "lot #464"
+    },
+    {
+      "id": "L3-03",
+      "name": "Échéances indicatives différentes",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "L3-07",
+      "name": "Arrêt long conditions non confirmées → A_VERIFIER",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "L3-07b",
+      "name": "Arrêt long : échéance indicative = fin de période + 15 mois",
+      "ok": true,
+      "detail": "indicative=2027-08-31"
+    },
+    {
+      "id": "L3-07c",
+      "name": "Fin de période de référence FIGÉE (2026-05-31)",
+      "ok": true,
+      "detail": "end=2026-05-31"
+    },
+    {
+      "id": "L3-07d",
+      "name": "Changement de REFERENCE_PERIOD_START sans recalcul silencieux",
+      "ok": true,
+      "detail": "indicative=2027-08-31"
+    },
+    {
+      "id": "L3-05a",
+      "name": "Clé d’idempotence obligatoire (400 si absente)",
+      "ok": true,
+      "detail": "HTTP 400"
+    },
+    {
+      "id": "L3-05b",
+      "name": "Rejeu idempotent (même clé, mêmes données → lot existant, aucun doublon)",
+      "ok": true,
+      "detail": "HTTP 201 lot #463, rows=1"
+    },
+    {
+      "id": "L3-05c",
+      "name": "Même clé, données différentes → 409",
+      "ok": true,
+      "detail": "HTTP 409"
+    },
+    {
+      "id": "L3-08a",
+      "name": "Confirmation preuve valide → en attente, pas d’échéance définitive",
+      "ok": true,
+      "detail": "status=EN_ATTENTE"
+    },
+    {
+      "id": "L3-08b",
+      "name": "Aucune déduction automatique de informationDateCertain",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "L3-08c",
+      "name": "Document inexistant → refusé",
+      "ok": true,
+      "detail": "HTTP 400"
+    },
+    {
+      "id": "L3-08d",
+      "name": "Document d’un autre salarié → refusé",
+      "ok": true,
+      "detail": "HTTP 400"
+    },
+    {
+      "id": "L3-08e",
+      "name": "Date future enregistrable comme prévision (indicatif)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "L3-08f",
+      "name": "Confirmation d’une réception future → refusée",
+      "ok": true,
+      "detail": "HTTP 400"
+    },
+    {
+      "id": "L3-09",
+      "name": "Créations concurrentes → un seul lot",
+      "ok": true,
+      "detail": "HTTP 201/201, rows=1"
+    },
+    {
+      "id": "L3-10",
+      "name": "Modification RH acceptée",
+      "ok": true,
+      "detail": "days=3"
+    },
+    {
+      "id": "L3-10b",
+      "name": "Journalisation avant/après",
+      "ok": true,
+      "detail": "old=2 → new=3"
+    },
+    {
+      "id": "L3-11",
+      "name": "Deux PATCH concurrents : un gagnant, pas d’écrasement silencieux",
+      "ok": true,
+      "detail": "HTTP 200/409, days=7.00"
+    },
+    {
+      "id": "L3-12",
+      "name": "Concurrence PATCH/confirmation : cohérente, sans 500",
+      "ok": true,
+      "detail": "HTTP 200/409"
+    },
+    {
+      "id": "L3-13",
+      "name": "RH : accès global à tous les salariés (documenté)",
+      "ok": true,
+      "detail": "A=4, B=1"
+    },
+    {
+      "id": "L3-14",
+      "name": "Non-RH refusé (403) + IDOR refusé",
+      "ok": true,
+      "detail": "HTTP 403/403/403"
+    },
+    {
+      "id": "L3-15",
+      "name": "Aucun changement des soldes N-1/N/N+1",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "L3-16",
+      "name": "Aucun mouvement de congé créé",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "L3-17",
+      "name": "Aucun impact sur les reports exceptionnels",
+      "ok": true,
+      "detail": ""
+    }
+  ],
+  "failed": 0
+}

@@ -62,6 +62,10 @@ import { evaluateSubmissionNotice } from '../leave-requests/leave-request-notice
 import { allocatePaidLeave } from './leave-allocation.util';
 import { roundPeriodCloseDays } from './reference-period-rounding.util';
 import {
+  fullYearsBetween,
+  syntecSeniorityExtraDays,
+} from './syntec-seniority.util';
+import {
   counterReferencePeriod,
   currentReferencePeriod,
   referencePeriodEndDate,
@@ -299,13 +303,28 @@ describe('CONFORMITÉ G — prévenance et période de congés (règles internes
 // faux succès et restent traçables pour un développement ultérieur.
 // ---------------------------------------------------------------------------
 
-describe.skip('CONFORMITÉ B — congés d’ancienneté Syntec 5.1 (NON GÉRÉ)', () => {
-  it('5 ans d’ancienneté : +1 jour ouvré supplémentaire', () => {});
-  it('10 ans : +2 jours ouvrés supplémentaires', () => {});
-  it('15 ans : +3 jours ouvrés supplémentaires', () => {});
-  it('20 ans : +4 jours ouvrés supplémentaires', () => {});
-  it('ancienneté appréciée à l’ouverture de la période de prise (1er mai à défaut de stipulation)', () => {});
-  it('durées exprimées en jours ouvrés (lun→ven, non fériés et non chômés)', () => {});
+describe('CONFORMITÉ B — congés d’ancienneté Syntec 5.1', () => {
+  const REF = '2026-05-01';
+
+  it('5 ans d’ancienneté : +1 jour ouvré supplémentaire', () => {
+    expect(syntecSeniorityExtraDays('2021-05-01', REF)).toBe(1);
+  });
+  it('10 ans : +2 jours ouvrés supplémentaires', () => {
+    expect(syntecSeniorityExtraDays('2016-05-01', REF)).toBe(2);
+  });
+  it('15 ans : +3 jours ouvrés supplémentaires', () => {
+    expect(syntecSeniorityExtraDays('2011-05-01', REF)).toBe(3);
+  });
+  it('20 ans : +4 jours ouvrés supplémentaires', () => {
+    expect(syntecSeniorityExtraDays('2006-05-01', REF)).toBe(4);
+  });
+  it('ancienneté appréciée à l’ouverture de la période de prise (1er mai à défaut de stipulation)', () => {
+    expect(fullYearsBetween('2021-05-02', REF)).toBe(4); // pas encore 5 ans révolus au 1er mai
+    expect(fullYearsBetween('2021-04-30', REF)).toBe(5);
+  });
+  it('paliers en jours ouvrés — totaux, non cumulatifs', () => {
+    expect(syntecSeniorityExtraDays('2006-05-01', REF)).toBe(4); // 20 ans = 4, pas 1+2+3+4
+  });
 });
 
 describe.skip('CONFORMITÉ C — fractionnement (NON GÉRÉ) : Syntec 5.1 vs régime légal supplétif', () => {

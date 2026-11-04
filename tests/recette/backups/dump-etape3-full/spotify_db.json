@@ -1,0 +1,24 @@
+{
+    "schema": "spotify_db",
+    "includesDdl": true,
+    "includesViewsDdl": true,
+    "includesData": true,
+    "tables": [
+        "tracks",
+        "albums",
+        "artists",
+        "playlists",
+        "playliststracks"
+    ],
+    "views": [],
+    "events": [],
+    "functions": [],
+    "procedures": [],
+    "basenames": {
+        "tracks": "spotify_db@tracks",
+        "albums": "spotify_db@albums",
+        "artists": "spotify_db@artists",
+        "playlists": "spotify_db@playlists",
+        "playliststracks": "spotify_db@playliststracks"
+    }
+}

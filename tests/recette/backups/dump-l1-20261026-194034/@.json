@@ -1,0 +1,33 @@
+{
+    "dumper": "mysqlsh Ver 8.4.10 for Win64 on x86_64 - for MySQL 8.4.10 (MySQL Community Server (GPL))",
+    "version": "2.0.1",
+    "origin": "dumpSchemas",
+    "options": {
+        "consistent": true,
+        "showProgress": false
+    },
+    "schemas": [
+        "gestion_conges_gmes_test"
+    ],
+    "basenames": {
+        "gestion_conges_gmes_test": "gestion_conges_gmes_test"
+    },
+    "defaultCharacterSet": "utf8mb4",
+    "tzUtc": true,
+    "bytesPerChunk": 64000000,
+    "user": "root",
+    "hostname": "PcDaffySama",
+    "server": "PcDaffySama",
+    "serverVersion": "5.7.24",
+    "binlogFile": "",
+    "binlogPosition": 0,
+    "gtidExecuted": "",
+    "gtidExecutedInconsistent": false,
+    "consistent": true,
+    "targetVersion": "8.4.10",
+    "partialRevokes": false,
+    "compatibilityOptions": [],
+    "capabilities": [],
+    "checksum": false,
+    "begin": "2026-10-26 19:40:36"
+}

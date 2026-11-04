@@ -31,6 +31,7 @@ import { HolidaysService } from '../holidays/holidays.service';
 import {
   LeaveBalancesService,
 } from '../leave-balances/leave-balances.service';
+import { FractionnementService } from '../leave-balances/fractionnement.service';
 import {
   LeaveType,
   LeaveTypeCategory,
@@ -48,8 +49,10 @@ import {
 import { UsersService } from '../users/users.service';
 import { PresenceService } from '../presence/presence.service';
 import { SettingsService } from '../settings/settings.service';
+import { withDeadlockRetry } from '../common/deadlock-retry.util';
 import { NotificationsService } from '../notifications/notifications.service';
 import { CancelLeaveRequestDto } from './dto/cancel-leave-request.dto';
+import { ClassifyLeaveRequestDto } from './dto/classify-leave-request.dto';
 import { CreateLeaveRequestDto } from './dto/create-leave-request.dto';
 import { RefuseLeaveRequestDto } from './dto/refuse-leave-request.dto';
 import { RequestCancellationAfterValidationDto } from './dto/request-cancellation-after-validation.dto';
@@ -82,6 +85,7 @@ import { ServiceAvailabilityService } from './service-availability.service';
 import {
   BalanceProcessingStatus,
   DayPeriod,
+  LeaveClassification,
   LeaveRequest,
   LeaveRequestStatus,
   SignatureType,
@@ -108,6 +112,7 @@ export class LeaveRequestsService {
     private readonly holidaysService: HolidaysService,
     private readonly derogationsService: DerogationsService,
     private readonly leaveBalancesService: LeaveBalancesService,
+    private readonly fractionnementService: FractionnementService,
     private readonly documentPdfService: DocumentPdfService,
     private readonly settingsService: SettingsService,
     private readonly notificationsService: NotificationsService,
@@ -186,6 +191,8 @@ export class LeaveRequestsService {
       status: LeaveRequestStatus.BROUILLON,
       balanceProcessingStatus: BalanceProcessingStatus.DEMANDE_ACTUELLE,
       isAnticipatedLeave,
+      classification:
+        createLeaveRequestDto.classification ?? LeaveClassification.UNDETERMINED,
       comment: createLeaveRequestDto.comment?.trim() || null,
       submittedAt: null,
       modificationDeadline: await this.calculateModificationDeadline(
@@ -309,7 +316,8 @@ export class LeaveRequestsService {
     );
     let requestId = 0;
 
-    await this.dataSource.transaction(async (manager) => {
+    await withDeadlockRetry(
+      () => this.dataSource.transaction(async (manager) => {
       const now = new Date();
       const requestReferencePeriod = await this.getReferencePeriodForDate(
         createLeaveRequestDto.startDate,
@@ -341,6 +349,8 @@ export class LeaveRequestsService {
         status: LeaveRequestStatus.VALIDEE,
         balanceProcessingStatus,
         isAnticipatedLeave,
+        classification:
+        createLeaveRequestDto.classification ?? LeaveClassification.UNDETERMINED,
         comment: createLeaveRequestDto.comment?.trim() || null,
         submittedAt: now,
         modificationDeadline: null,
@@ -385,6 +395,10 @@ export class LeaveRequestsService {
             actorId: authenticatedUser.id,
             expectedDays: saved.deductedDays,
             referencePeriod: requestReferencePeriod,
+            startDate: saved.startDate,
+            endDate: saved.endDate,
+            startPeriod: saved.startPeriod,
+            endPeriod: saved.endPeriod,
           },
         );
         saved.realBalanceAfter = balanceResult.realBalanceAfter;
@@ -421,7 +435,9 @@ export class LeaveRequestsService {
         },
         manager,
       );
-    });
+    }),
+      { label: 'createRhDirectLeave' },
+    );
 
     await this.presenceService.refreshUserStatus(employee.id);
     return this.findDecidedRequest(requestId);
@@ -498,7 +514,8 @@ export class LeaveRequestsService {
     let requestId = 0;
     let requestEmployeeId = employee.id;
 
-    await this.dataSource.transaction(async (manager) => {
+    await withDeadlockRetry(
+      () => this.dataSource.transaction(async (manager) => {
       const savedRequest = await manager
         .getRepository(LeaveRequest)
         .save(
@@ -520,6 +537,8 @@ export class LeaveRequestsService {
             durationHours: duration.durationHours,
             status: LeaveRequestStatus.VALIDEE,
             balanceProcessingStatus: BalanceProcessingStatus.DEFINITIF,
+            classification:
+              createLeaveRequestDto.classification ?? LeaveClassification.UNDETERMINED,
             comment: createLeaveRequestDto.comment?.trim() || null,
             submittedAt: new Date(),
             modificationDeadline: null,
@@ -564,6 +583,10 @@ export class LeaveRequestsService {
               expectedDays: duration.deductedDays,
               referencePeriod,
               requireSufficientBalance: true,
+              startDate: savedRequest.startDate,
+              endDate: savedRequest.endDate,
+              startPeriod: savedRequest.startPeriod,
+              endPeriod: savedRequest.endPeriod,
             },
           );
 
@@ -607,7 +630,9 @@ export class LeaveRequestsService {
 
       requestId = savedRequest.id;
       requestEmployeeId = savedRequest.employeeId;
-    });
+    }),
+      { label: 'createDirectorRequest' },
+    );
 
     await this.presenceService.refreshUserStatus(employee.id);
 
@@ -1852,7 +1877,8 @@ export class LeaveRequestsService {
     let forwardedToSecondLevel = false;
     let forwardedStage: string | null = null;
 
-    await this.dataSource.transaction(async (manager) => {
+    await withDeadlockRetry(
+      () => this.dataSource.transaction(async (manager) => {
       const leaveRequest =
         await this.findRequestForDecisionUpdate(manager, id);
 
@@ -2052,6 +2078,10 @@ export class LeaveRequestsService {
                 actorId: authenticatedUser.id,
                 expectedDays: leaveRequest.deductedDays,
                 referencePeriod,
+                startDate: leaveRequest.startDate,
+                endDate: leaveRequest.endDate,
+                startPeriod: leaveRequest.startPeriod,
+                endPeriod: leaveRequest.endPeriod,
               },
             );
           realBalanceAfter = balanceResult.realBalanceAfter;
@@ -2135,7 +2165,9 @@ export class LeaveRequestsService {
         },
         manager,
       );
-    });
+    }),
+      { label: 'validateRequest' },
+    );
 
     const decidedRequest = await this.findDecidedRequest(id);
 
@@ -2561,6 +2593,25 @@ export class LeaveRequestsService {
 
       await manager.getRepository(LeaveRequest).save(leaveRequest);
 
+      // JUR-021/022 : l'annulation modifie les congés effectivement pris
+      // hors période → recalculer le droit de fractionnement dans la même
+      // transaction (ajustement positif/négatif tracé), une fois le statut
+      // ANNULEE_APRES_VALIDATION enregistré.
+      if (
+        leaveRequest.leaveType.deductsPaidLeaveBalance &&
+        leaveRequest.balanceProcessingStatus ===
+          BalanceProcessingStatus.DEFINITIF
+      ) {
+        const cancellationReferencePeriod =
+          await this.getReferencePeriodForDate(leaveRequest.startDate);
+        await this.fractionnementService.recomputeForEmployee(
+          manager,
+          leaveRequest.employeeId,
+          cancellationReferencePeriod,
+          authenticatedUser.id,
+        );
+      }
+
       await this.auditService.recordStatusChange(
         {
           actorId: authenticatedUser.id,
@@ -2725,6 +2776,66 @@ export class LeaveRequestsService {
         'Tous les justificatifs actifs doivent être acceptés par la RH avant toute décision.',
       );
     }
+  }
+
+  async classifyLeaveRequest(
+    id: number,
+    authenticatedUser: AuthenticatedUser,
+    dto: ClassifyLeaveRequestDto,
+  ): Promise<LeaveRequest> {
+    if (authenticatedUser.role !== UserRole.RH) {
+      throw new ForbiddenException(
+        'Seule la RH peut classifier une demande de congé.',
+      );
+    }
+
+    await this.dataSource.transaction(async (manager) => {
+      const leaveRequest = await this.findRequestForUpdateLocked(manager, id);
+      const previous = leaveRequest.classification;
+      leaveRequest.classification = dto.classification;
+      leaveRequest.version += 1;
+      await manager.getRepository(LeaveRequest).save(leaveRequest);
+
+      await this.auditService.record(
+        {
+          actorId: authenticatedUser.id,
+          action: 'LEAVE_REQUEST_CLASSIFIED',
+          resourceType: 'LEAVE_REQUESTS',
+          resourceId: leaveRequest.id,
+          oldValue: { classification: previous },
+          newValue: { classification: dto.classification },
+        },
+        manager,
+      );
+
+      // Remettre le fractionnement en cohérence dans la MÊME transaction
+      // (verrou du compteur + ajustement tracé, idempotent et concurrentiel).
+      if (leaveRequest.leaveType?.deductsPaidLeaveBalance) {
+        const referencePeriod = await this.getReferencePeriodForDate(
+          leaveRequest.startDate,
+        );
+        await this.fractionnementService.recomputeForEmployee(
+          manager,
+          leaveRequest.employeeId,
+          referencePeriod,
+          authenticatedUser.id,
+        );
+      }
+    });
+
+    const leaveRequest = await this.leaveRequestRepository.findOne({
+      where: { id },
+      relations: {
+        employee: true,
+        createdBy: true,
+        leaveType: true,
+        service: true,
+      },
+    });
+    if (!leaveRequest) {
+      throw new NotFoundException(`La demande de congé ${id} est introuvable.`);
+    }
+    return leaveRequest;
   }
 
   private async findRequestForDecisionUpdate(

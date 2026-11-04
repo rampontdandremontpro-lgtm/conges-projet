@@ -1,0 +1,20 @@
+OK  avant clôture — base acquise 26,29 (c05) — acquiredDays=26.29
+OK  avant clôture — correction +3 → 29,29 — acquiredDays=29.29
+OK  avant clôture — correction -5 → 21,29 — acquiredDays=21.29
+OK  avant clôture — solde négatif -3,71 (over) — availableDays=-3.71
+OK  clôture bloquée par réservation (400) — HTTP 400 La clôture est impossible tant que des jours restent réservés sur la période.
+OK  aucun supplément appliqué pendant le blocage (resv acquis reste 26,29) — acquiredDays=26.29
+OK  clôture 2023-2024 acceptée après libération — HTTP 201
+OK  c05 (0,5 consommé) : supplément 0,71 — supplement=0.71
+OK  c05 (0,5 consommé) : disponible 26,5 → transfert GMES 27 — transferred=27
+OK  c10 (10 consommés) : supplément 0,71 — supplement=0.71
+OK  c10 (10 consommés) : disponible 17 → transfert 17 — transferred=17
+OK  pos (+3) : supplément 0,71 → acquis 30, transfert 30 — supplement=0.71 transferred=30
+OK  neg (-5) : supplément 0,71 → acquis 22, transfert 22 — supplement=0.71 transferred=22
+OK  over (négatif) : supplément 0,71, transfert 0, solde négatif conservé — supplement=0.71 transferred=0
+OK  resv (libéré) : supplément 0,71, transfert 27 — supplement=0.71 transferred=27
+OK  over : solde N négatif conservé après clôture (-3) — availableDays=-3 acquiredDays=27
+OK  un seul mouvement d’arrondi par salarié (pas de double attribution)
+OK  seconde clôture refusée (409) — HTTP 409
+
+RÉSULTAT : 18/18 OK, 0 KO

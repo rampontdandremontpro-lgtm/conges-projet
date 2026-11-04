@@ -21,11 +21,18 @@ export enum BalanceMovementType {
   CORRECTION_NEGATIVE = 'CORRECTION_NEGATIVE',
   RECREDIT = 'RECREDIT',
   REMISE_A_ZERO = 'REMISE_A_ZERO',
+  SENIORITY_EXTRA = 'SENIORITY_EXTRA',
+  FRACTIONNEMENT = 'FRACTIONNEMENT',
+  ARRET_RESTITUTION = 'ARRET_RESTITUTION',
 }
 
 const decimalTransformer = {
-  to: (value: number): number => value,
-  from: (value: string): number => Number(value),
+  to: (value: number | null): number | null => value,
+  // Préserve NULL : un mouvement ANCIEN/manuel (illness_days NULL) doit rester
+  // distinguable d'un mouvement moteur (illness_days = 0). Number(null) = 0
+  // écraserait cette distinction utilisée pour protéger le crédit historique.
+  from: (value: string | null): number | null =>
+    value === null || value === undefined ? null : Number(value),
 };
 
 @Entity('balance_movements')
@@ -91,6 +98,27 @@ export class BalanceMovement {
     transformer: decimalTransformer,
   })
   balanceAfter!: number;
+
+  /**
+   * JUR-025/037 — mois d'acquisition stable (AAAA-MM) pour une idempotence
+   * indépendante du libellé du motif.
+   */
+  @Column({ name: 'accrual_month', type: 'varchar', length: 7, nullable: true })
+  accrualMonth!: string | null;
+
+  /**
+   * JUR-037 — part du crédit acquise au titre de la maladie non professionnelle
+   * (L3141-5-1), isolée par période de référence pour le plafond de 24 jours.
+   */
+  @Column({
+    name: 'illness_days',
+    type: 'decimal',
+    precision: 7,
+    scale: 2,
+    nullable: true,
+    transformer: decimalTransformer,
+  })
+  illnessDays!: number | null;
 
   @Column({ type: 'text', nullable: true })
   reason!: string | null;

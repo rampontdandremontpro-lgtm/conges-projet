@@ -4,7 +4,9 @@ import {
   Get,
   Param,
   ParseIntPipe,
+  Patch,
   Post,
+  Put,
   Query,
   Req,
   UseGuards,
@@ -23,11 +25,28 @@ import { ImportLeaveBalancesDto } from './dto/import-leave-balances.dto';
 import { LeaveBalanceProjectionQueryDto } from './dto/leave-balance-projection-query.dto';
 import { LeaveBalanceQueryDto } from './dto/leave-balance-query.dto';
 import { RunMonthlyAccrualDto } from './dto/run-monthly-accrual.dto';
+import { RegularizeAccrualDto } from './dto/regularize-accrual.dto';
 import { CloseReferencePeriodDto } from './dto/close-reference-period.dto';
 import { ExceptionalCarryoverDto } from './dto/exceptional-carryover.dto';
 import { LeaveBalancesService } from './leave-balances.service';
 import { MonthlyAccrualService } from './monthly-accrual.service';
 import { ReferencePeriodService } from './reference-period.service';
+import { SeniorityExtraDaysService } from './seniority-extra-days.service';
+import { FractionnementService } from './fractionnement.service';
+import { TakePeriodService } from './take-period.service';
+import { ApplySeniorityExtraDto } from './dto/apply-seniority-extra.dto';
+import { UpdateSeniorityExtraConfigDto } from './dto/update-seniority-extra-config.dto';
+import { ApplyFractionnementDto } from './dto/apply-fractionnement.dto';
+import { UpdateFractionnementConfigDto } from './dto/update-fractionnement-config.dto';
+import { CreateTakePeriodReportDto } from './dto/create-take-period-report.dto';
+import { UpdateTakePeriodReportDto } from './dto/update-take-period-report.dto';
+import { ArreteChevauchementService } from './arrete-chevauchement.service';
+import { AccrualAnomalyService } from './accrual-anomaly.service';
+import {
+  AccrualAnomalyResolutionMode,
+  AccrualAnomalyStatus,
+} from './accrual-anomaly.entity';
+import { NotFoundException } from '@nestjs/common';
 
 type AuthenticatedRequest = Request & {
   user: AuthenticatedUser;
@@ -40,6 +59,11 @@ export class LeaveBalancesController {
     private readonly leaveBalancesService: LeaveBalancesService,
     private readonly monthlyAccrualService: MonthlyAccrualService,
     private readonly referencePeriodService: ReferencePeriodService,
+    private readonly seniorityExtraDaysService: SeniorityExtraDaysService,
+    private readonly fractionnementService: FractionnementService,
+    private readonly takePeriodService: TakePeriodService,
+    private readonly arreteChevauchementService: ArreteChevauchementService,
+    private readonly accrualAnomalyService: AccrualAnomalyService,
   ) {}
 
   @Get('management')
@@ -220,6 +244,66 @@ export class LeaveBalancesController {
     );
   }
 
+  @Post('accrual/regularize')
+  @Roles(UserRole.RH)
+  regularizeAccrual(
+    @Req() request: AuthenticatedRequest,
+    @Body() dto: RegularizeAccrualDto,
+  ) {
+    return this.monthlyAccrualService.regularizeAbsenceImpact(
+      dto.employeeId,
+      dto.startDate,
+      dto.endDate,
+      request.user.id,
+    );
+  }
+
+  @Get('accrual-anomalies')
+  @Roles(UserRole.RH)
+  listAccrualAnomalies(@Query('status') status?: string) {
+    const normalized = status === 'RESOLVED' ? AccrualAnomalyStatus.RESOLVED
+      : status === 'OPEN' ? AccrualAnomalyStatus.OPEN
+      : status === 'RH_DECIDED' ? AccrualAnomalyStatus.RH_DECIDED
+      : undefined;
+    return this.accrualAnomalyService.list(normalized);
+  }
+
+  @Post('accrual-anomalies/:id/resolve')
+  @Roles(UserRole.RH)
+  async resolveAccrualAnomaly(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() request: AuthenticatedRequest,
+    @Body() body?: { decisionReason?: string; retainedKind?: string },
+  ) {
+    const anomaly = await this.accrualAnomalyService.findById(id);
+    if (!anomaly) {
+      throw new NotFoundException(`L’anomalie ${id} est introuvable.`);
+    }
+
+    // Vérification de l'état RÉEL des déclarations avant toute clôture.
+    const actualDays = await this.monthlyAccrualService.recomputeAnomalyDays({
+      employeeId: anomaly.employeeId,
+      type: anomaly.type,
+      referencePeriod: anomaly.referencePeriod,
+      accrualMonth: anomaly.accrualMonth,
+      conflictKey: anomaly.conflictKey,
+    });
+
+    // Incohérence technique (salarié introuvable, période incohérente…) :
+    // jamais de clôture VERIFIED automatique ; décision RH justifiée requise.
+    if (actualDays === null || actualDays > 0) {
+      return this.accrualAnomalyService.resolve(id, request.user.id, {
+        mode: AccrualAnomalyResolutionMode.RH_DECISION,
+        decisionReason: body?.decisionReason,
+        retainedKind: body?.retainedKind,
+      });
+    }
+
+    return this.accrualAnomalyService.resolve(id, request.user.id, {
+      mode: AccrualAnomalyResolutionMode.VERIFIED,
+    });
+  }
+
   @Post(':id/accrual')
   @Roles(UserRole.RH)
   addAccrual(
@@ -245,6 +329,172 @@ export class LeaveBalancesController {
       id,
       request.user,
       dto,
+    );
+  }
+
+  // ── JUR-019 / JUR-020 — Congés d'ancienneté (Syntec 5.1) ────────────────
+
+  @Get('seniority-extra/config')
+  @Roles(UserRole.RH)
+  getSeniorityExtraConfig() {
+    return this.seniorityExtraDaysService.getConfig();
+  }
+
+  @Put('seniority-extra/config')
+  @Roles(UserRole.RH)
+  updateSeniorityExtraConfig(
+    @Req() request: AuthenticatedRequest,
+    @Body() dto: UpdateSeniorityExtraConfigDto,
+  ) {
+    return this.seniorityExtraDaysService.updateConfig(
+      dto,
+      request.user.id,
+    );
+  }
+
+  @Get('seniority-extra/preview/:referencePeriod')
+  @Roles(UserRole.RH)
+  previewSeniorityExtra(
+    @Param('referencePeriod') referencePeriod: string,
+  ) {
+    return this.seniorityExtraDaysService.preview(referencePeriod);
+  }
+
+  @Post('seniority-extra/apply')
+  @Roles(UserRole.RH)
+  applySeniorityExtra(
+    @Req() request: AuthenticatedRequest,
+    @Body() dto: ApplySeniorityExtraDto,
+  ) {
+    return this.seniorityExtraDaysService.apply(
+      dto.referencePeriod,
+      request.user.id,
+    );
+  }
+
+  // ── JUR-021 / JUR-022 — Fractionnement (Syntec 5.1 / L3141-23) ──────────
+
+  @Get('fractionnement/config')
+  @Roles(UserRole.RH)
+  getFractionnementConfig() {
+    return this.fractionnementService.getConfig();
+  }
+
+  @Put('fractionnement/config')
+  @Roles(UserRole.RH)
+  updateFractionnementConfig(
+    @Req() request: AuthenticatedRequest,
+    @Body() dto: UpdateFractionnementConfigDto,
+  ) {
+    return this.fractionnementService.updateConfig(
+      dto,
+      request.user.id,
+    );
+  }
+
+  @Get('fractionnement/preview/:referencePeriod')
+  @Roles(UserRole.RH)
+  previewFractionnement(
+    @Param('referencePeriod') referencePeriod: string,
+  ) {
+    return this.fractionnementService.preview(referencePeriod);
+  }
+
+  @Post('fractionnement/apply')
+  @Roles(UserRole.RH)
+  applyFractionnement(
+    @Req() request: AuthenticatedRequest,
+    @Body() dto: ApplyFractionnementDto,
+  ) {
+    return this.fractionnementService.apply(
+      dto.referencePeriod,
+      request.user.id,
+    );
+  }
+
+  @Post('fractionnement/recompute')
+  @Roles(UserRole.RH)
+  recomputeFractionnement(
+    @Req() request: AuthenticatedRequest,
+    @Body() dto: ApplyFractionnementDto,
+  ) {
+    return this.fractionnementService.recomputeAll(
+      dto.referencePeriod,
+      request.user.id,
+    );
+  }
+
+  // ── JUR-023 — Période de prise (13 mois) ─────────────────────────────────
+
+  @Get('take-period/:referencePeriod')
+  @Roles(UserRole.RH)
+  getTakePeriodOverview(
+    @Param('referencePeriod') referencePeriod: string,
+  ) {
+    return this.takePeriodService.getOverview(referencePeriod);
+  }
+
+  @Get('take-period/:referencePeriod/reports')
+  @Roles(UserRole.RH)
+  listTakePeriodReports(
+    @Param('referencePeriod') referencePeriod: string,
+  ) {
+    return this.takePeriodService.listReports(referencePeriod);
+  }
+
+  @Post('take-period/report')
+  @Roles(UserRole.RH)
+  createTakePeriodReport(
+    @Req() request: AuthenticatedRequest,
+    @Body() dto: CreateTakePeriodReportDto,
+  ) {
+    return this.takePeriodService.createReport(request.user, dto);
+  }
+
+  @Patch('take-period/report/:id')
+  @Roles(UserRole.RH)
+  updateTakePeriodReport(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() request: AuthenticatedRequest,
+    @Body() dto: UpdateTakePeriodReportDto,
+  ) {
+    return this.takePeriodService.updateReport(request.user, id, dto);
+  }
+
+  // ── JUR-028 — Interaction arrêt maladie / congés posés ──────────────────
+
+  @Get('arret-chevauchement/:absenceDeclarationId')
+  @Roles(UserRole.RH)
+  previewArreteChevauchement(
+    @Param('absenceDeclarationId', ParseIntPipe)
+    absenceDeclarationId: number,
+  ) {
+    return this.arreteChevauchementService.preview(absenceDeclarationId);
+  }
+
+  @Post('arret-chevauchement/:absenceDeclarationId/restore')
+  @Roles(UserRole.RH)
+  restoreArreteChevauchement(
+    @Param('absenceDeclarationId', ParseIntPipe)
+    absenceDeclarationId: number,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    return this.arreteChevauchementService.restoreForAbsence(
+      absenceDeclarationId,
+      request.user.id,
+    );
+  }
+
+  @Post('arret-chevauchement/:absenceDeclarationId/reverse')
+  @Roles(UserRole.RH)
+  reverseArreteChevauchement(
+    @Param('absenceDeclarationId', ParseIntPipe)
+    absenceDeclarationId: number,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    return this.arreteChevauchementService.reverseForAbsence(
+      absenceDeclarationId,
+      request.user.id,
     );
   }
 }

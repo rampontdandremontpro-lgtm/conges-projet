@@ -1,0 +1,35 @@
+{
+    "options": {
+        "schema": "spotify_db",
+        "table": "playlists",
+        "columns": [
+            "pid",
+            "name",
+            "collaborative",
+            "modified_at",
+            "num_tracks",
+            "num_albums",
+            "num_followers",
+            "num_edits",
+            "duration_ms",
+            "num_artists"
+        ],
+        "defaultCharacterSet": "utf8mb4",
+        "fieldsTerminatedBy": "\t",
+        "fieldsEnclosedBy": "",
+        "fieldsOptionallyEnclosed": false,
+        "fieldsEscapedBy": "\\",
+        "linesTerminatedBy": "\n"
+    },
+    "triggers": [],
+    "includesData": true,
+    "includesDdl": true,
+    "extension": "tsv.zst",
+    "chunking": true,
+    "compression": "zstd",
+    "primaryIndex": [
+        "pid"
+    ],
+    "partitions": [],
+    "basenames": {}
+}

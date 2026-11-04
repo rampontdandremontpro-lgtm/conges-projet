@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 
 import { LeaveCalendar } from '@/components/collab/new-request/LeaveCalendar'
+import { FamilyEventFields } from '@/components/absence/FamilyEventFields'
+import { PaternityFields } from '@/components/absence/PaternityFields'
 import { Icon } from '@/components/ui/Icon'
 import {
   createRhAbsenceDraft,
@@ -14,12 +16,25 @@ import { getHolidays } from '@/services/leaveRequests'
 import { todayISO } from '@/utils/format'
 import { changeLeaveBoundaryPeriod, selectLeaveDate } from '@/utils/leaveDateSelection'
 import { isReservedDirectorLeaveType } from '@/utils/filterOptions'
+import { buildOccupiedPeriods } from '@/utils/occupiedPeriods'
 
 import '@/styles/collab/new-request/01-page-types-calendar.css'
 import '@/styles/rh/leave-absence-declaration.css'
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024
 const ACCEPTED_FILE_TYPES = new Set(['application/pdf', 'image/jpeg', 'image/png'])
+
+const FAMILY_EVENT_KINDS = new Set([
+  'MARIAGE_PACS',
+  'MARIAGE_ENFANT',
+  'NAISSANCE',
+  'ADOPTION',
+  'DECES',
+  'DECES_ENFANT',
+  'DEUIL_ENFANT',
+  'ANNONCE_HANDICAP_ENFANT',
+  'ENFANT_MALADE',
+])
 
 function fullName(user) {
   return `${user?.nom ?? ''} ${user?.prenom ?? ''}`.trim() || '—'
@@ -78,6 +93,8 @@ function buildInitialForm(employees, editingDeclaration) {
       halfDayPeriod: 'MATIN',
       durationHours: '',
       comment: '',
+      classification: 'UNDETERMINED',
+      familyEventContext: {},
       file: null,
     }
   }
@@ -101,7 +118,18 @@ function buildInitialForm(employees, editingDeclaration) {
     halfDayPeriod: declaration.startPeriod ?? 'MATIN',
     durationHours: hours !== null && hours !== undefined ? String(hours) : '',
     comment: declaration.comment ?? '',
+    classification: declaration.classification ?? 'UNDETERMINED',
+    familyEventContext: parseFamilyEventContext(declaration.familyEventContext),
     file: null,
+  }
+}
+
+function parseFamilyEventContext(raw) {
+  if (!raw) return {}
+  try {
+    return JSON.parse(raw)
+  } catch {
+    return {}
   }
 }
 
@@ -109,6 +137,8 @@ export function RhLeaveAbsenceDeclarationDrawer({
   employees,
   leaveTypes,
   absenceTypes,
+  leaves = [],
+  absences = [],
   editingDeclaration,
   onClose,
   onSaved,
@@ -136,7 +166,31 @@ export function RhLeaveAbsenceDeclarationDrawer({
     () => employees.find((employee) => Number(employee.id) === Number(form.employeeId)) ?? null,
     [employees, form.employeeId],
   )
+
+  // Calendrier RH intelligent : n'expose QUE les congés/absences du salarié
+  // sélectionné, avec les mêmes conventions visuelles que le calendrier
+  // collaborateur. Recalcul immédiat au changement de salarié (aucun mélange
+  // de périodes entre deux salariés).
+  const selectedEmployeeId = Number(form.employeeId)
+  const occupiedPeriods = useMemo(() => {
+    const employeeIdOf = (item) => Number(item?.employeeId ?? item?.employee?.id)
+    return buildOccupiedPeriods({
+      leaveRequests: (leaves ?? []).filter(
+        (item) => Number.isFinite(employeeIdOf(item)) && employeeIdOf(item) === selectedEmployeeId,
+      ),
+      absenceDeclarations: (absences ?? []).filter(
+        (item) => Number.isFinite(employeeIdOf(item)) && employeeIdOf(item) === selectedEmployeeId,
+      ),
+      // En modification, la déclaration éditée ne doit pas bloquer sa propre période.
+      excludeAbsenceDeclarationId: isEditing ? editingDeclaration?.id ?? null : null,
+    })
+  }, [leaves, absences, selectedEmployeeId, isEditing, editingDeclaration?.id])
   const units = useMemo(() => modeOptions(selectedType), [selectedType])
+  const isFamilyEvent = useMemo(
+    () => selectedType?.declarationCategory === 'ABSENCE' && FAMILY_EVENT_KINDS.has(selectedType?.absenceKind),
+    [selectedType],
+  )
+  const isPaternity = selectedType?.declarationCategory === 'ABSENCE' && selectedType?.absenceKind === 'PATERNITE_ACCUEIL'
 
   useEffect(() => {
     const year = month.year
@@ -175,6 +229,7 @@ export function RhLeaveAbsenceDeclarationDrawer({
       halfDayPeriod: 'MATIN',
       durationHours: '',
       comment: '',
+      familyEventContext: {},
       file: null,
     }))
     setMonth(currentMonth())
@@ -272,6 +327,7 @@ export function RhLeaveAbsenceDeclarationDrawer({
           endDate: form.mode === 'days' ? form.endDate : form.startDate,
           comment: form.comment.trim(),
         }
+        if (isFamilyEvent || isPaternity) payload.familyEventContext = form.familyEventContext
         if (form.mode === 'hours') {
           payload.durationHours = Number(form.durationHours)
         } else if (form.mode === 'half-day') {
@@ -294,6 +350,7 @@ export function RhLeaveAbsenceDeclarationDrawer({
           endDate: form.endDate,
           startPeriod: form.startPeriod,
           endPeriod: form.endPeriod,
+          classification: form.classification,
         })
         onSaved(`Congé déclaré et validé pour ${fullName(selectedEmployee)}.`)
         return
@@ -306,6 +363,7 @@ export function RhLeaveAbsenceDeclarationDrawer({
         endDate: form.mode === 'days' ? form.endDate : form.startDate,
         comment: form.comment.trim(),
       }
+      if (isFamilyEvent || isPaternity) payload.familyEventContext = form.familyEventContext
       if (form.mode === 'hours') {
         payload.durationHours = Number(form.durationHours)
       } else if (form.mode === 'half-day') {
@@ -395,6 +453,8 @@ export function RhLeaveAbsenceDeclarationDrawer({
                   todayIso={todayISO()}
                   selection={selection}
                   holidays={holidays}
+                  occupiedPeriods={occupiedPeriods}
+                  onBlockedMessage={(message) => setError(message)}
                   onPick={handleLeavePick}
                   onPrev={() => setMonth((current) => shiftMonth(current, -1))}
                   onNext={() => setMonth((current) => shiftMonth(current, 1))}
@@ -425,6 +485,8 @@ export function RhLeaveAbsenceDeclarationDrawer({
                   todayIso={todayISO()}
                   selection={selection}
                   holidays={holidays}
+                  occupiedPeriods={occupiedPeriods}
+                  onBlockedMessage={(message) => setError(message)}
                   onPick={handleAbsencePick}
                   onPrev={() => setMonth((current) => shiftMonth(current, -1))}
                   onNext={() => setMonth((current) => shiftMonth(current, 1))}
@@ -452,8 +514,43 @@ export function RhLeaveAbsenceDeclarationDrawer({
                 </label>
               )}
 
+              {isFamilyEvent && (
+                <FamilyEventFields
+                  type={selectedType}
+                  employeeId={form.employeeId}
+                  startDate={form.startDate}
+                  endDate={form.mode === 'days' ? form.endDate : form.startDate}
+                  value={form.familyEventContext ?? {}}
+                  onChange={(context) => setForm((current) => ({ ...current, familyEventContext: context }))}
+                />
+              )}
+
+              {isPaternity && (
+                <PaternityFields
+                  type={selectedType}
+                  employeeId={form.employeeId}
+                  startDate={form.startDate}
+                  endDate={form.mode === 'days' ? form.endDate : form.startDate}
+                  value={form.familyEventContext ?? {}}
+                  onChange={(context) => setForm((current) => ({ ...current, familyEventContext: context }))}
+                />
+              )}
+
+              {isLeave && (
+                <label className="rh-declaration-field">
+                  <span>Classification pour le fractionnement</span>
+                  <select
+                    value={form.classification}
+                    onChange={(event) => setForm((current) => ({ ...current, classification: event.target.value }))}
+                  >
+                    <option value="UNDETERMINED">Non classifiée</option>
+                    <option value="MAIN">Congé principal</option>
+                    <option value="FIFTH_WEEK">Cinquième semaine</option>
+                  </select>
+                </label>
+              )}
+
               <label className="rh-declaration-field">
-                <span>Commentaire <small>(optionnel)</small></span>
                 <textarea rows="3" maxLength={1000} value={form.comment} placeholder="Informations complémentaires…" onChange={(event) => setForm((current) => ({ ...current, comment: event.target.value }))} />
               </label>
 
