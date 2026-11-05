@@ -1,0 +1,729 @@
+/* ==========================================================================
+   Langage visuel commun des pages de paramétrage RH
+   (Droits supplémentaires · Maintien de salaire · Anomalies d'acquisition)
+   Aligné sur le tableau de bord RH, Congés & Absences et Dérogations.
+   ========================================================================== */
+
+/* ---------- En-tête de page (hero) ---------- */
+.rh-page-hero {
+  display: flex;
+  align-items: flex-start;
+  gap: 18px;
+  padding: 4px 2px 6px;
+}
+
+.rh-page-hero__icon {
+  display: grid;
+  width: 56px;
+  height: 56px;
+  flex: 0 0 56px;
+  place-items: center;
+  border: 1px solid #d9e7f7;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #eef6ff 0%, #e3efff 100%);
+  color: #1769d3;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .8), 0 6px 16px rgba(23, 105, 211, .12);
+}
+
+.rh-page-hero__body {
+  min-width: 0;
+  flex: 1;
+}
+
+.rh-page-hero__eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: #1769d3;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.rh-page-hero h1 {
+  margin: 7px 0 6px;
+  color: #0e315b;
+  font-size: clamp(23px, 2.6vw, 30px);
+  font-weight: 850;
+  letter-spacing: -.015em;
+  line-height: 1.1;
+}
+
+.rh-page-hero__title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.rh-page-hero__title-row h1 { margin-bottom: 6px; }
+.rh-page-hero__title-row .statistic-info-button { margin-bottom: 6px; }
+
+.rh-page-hero p {
+  margin: 0;
+  max-width: 780px;
+  color: #66809f;
+  font-size: 13.5px;
+  line-height: 1.6;
+}
+
+.rh-page-hero__aside {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-self: flex-start;
+  flex: 0 0 auto;
+  min-width: 176px;
+  padding: 12px 14px;
+  border: 1px solid #e3ecf6;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 6px 18px rgba(26, 61, 104, .05);
+}
+
+.rh-page-hero__aside > span {
+  color: #7c90aa;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+}
+
+.rh-page-hero__aside input {
+  width: 100%;
+  min-height: 38px;
+  padding: 0 10px;
+  border: 1px solid #d9e3ef;
+  border-radius: 10px;
+  background: #f9fbfd;
+  color: #24496e;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+  letter-spacing: .03em;
+}
+
+.rh-page-hero__aside input:focus-visible {
+  outline: 2px solid #1769d3;
+  outline-offset: 1px;
+}
+
+/* ---------- Feedback ---------- */
+.rh-feedback {
+  display: flex;
+  min-height: 46px;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 15px;
+  border: 1px solid;
+  border-radius: 13px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.rh-feedback span { flex: 1; }
+
+.rh-feedback--success {
+  border-color: #c9ebd9;
+  background: #edf9f3;
+  color: #16714b;
+}
+
+.rh-feedback--error {
+  border-color: #f6cfcf;
+  background: #fef2f2;
+  color: #b42318;
+}
+
+/* ---------- Onglets ---------- */
+.rh-tabs {
+  display: flex;
+  gap: 6px;
+  padding: 5px;
+  overflow-x: auto;
+  border: 1px solid #e3ecf6;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(19, 51, 86, .05);
+  scrollbar-width: none;
+}
+
+.rh-tabs::-webkit-scrollbar { display: none; }
+
+.rh-tab {
+  display: inline-flex;
+  min-height: 46px;
+  align-items: center;
+  gap: 9px;
+  flex: 1 1 auto;
+  justify-content: center;
+  padding: 8px 14px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: #587495;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 800;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background .16s ease, color .16s ease, box-shadow .16s ease;
+}
+
+.rh-tab:hover { background: #f2f7fd; color: #24496e; }
+
+.rh-tab.is-active {
+  background: #1769d3;
+  color: #fff;
+  box-shadow: 0 6px 14px rgba(23, 105, 211, .28);
+}
+
+.rh-tab__icon {
+  display: grid;
+  width: 22px;
+  height: 22px;
+  flex: 0 0 22px;
+  place-items: center;
+  border-radius: 7px;
+  background: #eaf3ff;
+  color: #236dd9;
+}
+
+.rh-tab.is-active .rh-tab__icon {
+  background: rgba(255, 255, 255, .22);
+  color: #fff;
+}
+
+.rh-tab__count {
+  display: grid;
+  min-width: 22px;
+  height: 22px;
+  place-items: center;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: #edf3fa;
+  color: #7289a7;
+  font-size: 10.5px;
+  font-weight: 900;
+}
+
+.rh-tab.is-active .rh-tab__count {
+  background: rgba(255, 255, 255, .22);
+  color: #fff;
+}
+
+/* ---------- Panneau / carte ---------- */
+.rh-panel {
+  overflow: hidden;
+  border: 1px solid #dfe8f3;
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 10px 30px rgba(26, 61, 104, .06);
+}
+
+.rh-panel__head {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid #e9f0f8;
+}
+
+.rh-panel__icon {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+  place-items: center;
+  border-radius: 12px;
+}
+
+.rh-panel__icon--blue { background: #eaf3ff; color: #1769d3; }
+.rh-panel__icon--orange { background: #fff3e8; color: #e2680e; }
+.rh-panel__icon--green { background: #eaf8f0; color: #197447; }
+.rh-panel__icon--red { background: #fff0f1; color: #b42318; }
+.rh-panel__icon--violet { background: #f3efff; color: #7352c6; }
+
+.rh-panel__title {
+  margin: 1px 0 4px;
+  color: #153c67;
+  font-size: 16.5px;
+  font-weight: 850;
+  letter-spacing: -.01em;
+}
+
+.rh-panel__title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rh-panel__title-row .statistic-info-button { align-self: center; }
+
+.rh-panel__head:has(.rh-panel__title-row) .rh-panel__icon { align-self: flex-start; }
+
+.rh-panel__sub {
+  margin: 0;
+  color: #7a8ea5;
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+
+.rh-panel__body {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 20px 24px;
+}
+
+.rh-panel__foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  padding: 16px 24px;
+  border-top: 1px solid #e9f0f8;
+  background: #fbfcfe;
+}
+
+/* ---------- Champs de formulaire ---------- */
+.rh-field {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.rh-field__label {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  color: #3f5873;
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: .01em;
+}
+
+.rh-field__hint {
+  color: #8ca0bb;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.rh-input,
+.rh-select,
+.rh-textarea {
+  width: 100%;
+  min-height: 42px;
+  padding: 9px 12px;
+  border: 1px solid #d9e3ef;
+  border-radius: 10px;
+  background: #f9fbfd;
+  color: #1f3c5c;
+  font: inherit;
+  font-size: 13.5px;
+  transition: border-color .15s ease, background .15s ease, box-shadow .15s ease;
+}
+
+.rh-textarea {
+  min-height: 84px;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.rh-input:hover,
+.rh-select:hover,
+.rh-textarea:hover { border-color: #bccfe4; }
+
+.rh-input:focus,
+.rh-select:focus,
+.rh-textarea:focus {
+  outline: none;
+  border-color: #1769d3;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(23, 105, 211, .14);
+}
+
+.rh-input:disabled,
+.rh-select:disabled,
+.rh-textarea:disabled {
+  background: #f1f5f9;
+  color: #94a3b8;
+  cursor: not-allowed;
+}
+
+.rh-field.is-error .rh-input,
+.rh-field.is-error .rh-select,
+.rh-field.is-error .rh-textarea {
+  border-color: #dc2626;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, .12);
+}
+
+/* ---------- Grilles ---------- */
+.rh-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.rh-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+/* ---------- Interrupteur ---------- */
+.rh-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.rh-switch input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.rh-switch__track {
+  position: relative;
+  width: 42px;
+  height: 24px;
+  flex: 0 0 42px;
+  border-radius: 999px;
+  background: #cdd9e8;
+  transition: background .18s ease;
+}
+
+.rh-switch__track::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 5px rgba(15, 23, 42, .25);
+  transition: transform .18s ease;
+}
+
+.rh-switch input:checked + .rh-switch__track { background: #1769d3; }
+.rh-switch input:checked + .rh-switch__track::after { transform: translateX(18px); }
+.rh-switch input:focus-visible + .rh-switch__track { box-shadow: 0 0 0 3px rgba(23, 105, 211, .25); }
+
+.rh-switch__label {
+  color: #2f4b6b;
+  font-size: 13.5px;
+  font-weight: 750;
+}
+
+.rh-switch__state {
+  margin-left: auto;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #eef1f5;
+  color: #667789;
+  font-size: 10.5px;
+  font-weight: 850;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+.rh-switch input:checked ~ .rh-switch__state {
+  background: #eaf8f0;
+  color: #197447;
+}
+
+/* ---------- Puces sélectionnables ---------- */
+.rh-chip {
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 13px;
+  border: 1px solid #dce6f2;
+  border-radius: 11px;
+  background: #fff;
+  color: #405f81;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color .15s ease, background .15s ease, color .15s ease, box-shadow .15s ease;
+}
+
+.rh-chip input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.rh-chip:hover { border-color: #b9cde6; background: #f8fbff; }
+
+.rh-chip:has(input:checked) {
+  border-color: #1769d3;
+  background: #eaf3ff;
+  color: #0f5cbd;
+  box-shadow: inset 0 0 0 1px #1769d3;
+}
+
+.rh-chip__dot {
+  display: grid;
+  width: 17px;
+  height: 17px;
+  flex: 0 0 17px;
+  place-items: center;
+  border: 1.5px solid #b9cde6;
+  border-radius: 5px;
+  background: #fff;
+  color: transparent;
+  font-size: 11px;
+  transition: all .15s ease;
+}
+
+.rh-chip:has(input:checked) .rh-chip__dot {
+  border-color: #1769d3;
+  background: #1769d3;
+  color: #fff;
+}
+
+/* ---------- Boutons ---------- */
+.rh-btn {
+  display: inline-flex;
+  min-height: 42px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 9px 17px;
+  border: 1px solid #d9e3ef;
+  border-radius: 11px;
+  background: #fff;
+  color: #335072;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: transform .14s ease, box-shadow .14s ease, background .14s ease, border-color .14s ease;
+}
+
+.rh-btn:hover { background: #f6faff; border-color: #c3d6ec; }
+.rh-btn:active { transform: translateY(1px); }
+.rh-btn:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+
+.rh-btn--primary {
+  border-color: #1769d3;
+  background: #1769d3;
+  color: #fff;
+  box-shadow: 0 7px 16px rgba(23, 105, 211, .22);
+}
+.rh-btn--primary:hover { background: #0f5cbd; border-color: #0f5cbd; }
+
+.rh-btn--accent {
+  border-color: #f26f21;
+  background: #f26f21;
+  color: #fff;
+  box-shadow: 0 7px 16px rgba(242, 111, 33, .22);
+}
+.rh-btn--accent:hover { background: #e2620f; border-color: #e2620f; }
+
+.rh-btn--danger {
+  border-color: #f5c0c0;
+  background: #fff;
+  color: #b42318;
+}
+.rh-btn--danger:hover { background: #fff5f5; border-color: #eda1a1; }
+
+.rh-btn--sm { min-height: 36px; padding: 6px 12px; font-size: 12px; border-radius: 9px; }
+
+/* ---------- Indicateurs (KPI) ---------- */
+.rh-kpis {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.rh-kpi {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 20px;
+  border: 1px solid;
+  border-radius: 16px;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: transform .16s ease, box-shadow .16s ease, filter .16s ease;
+}
+
+.rh-kpi:hover { transform: translateY(-2px); box-shadow: 0 10px 22px rgba(26, 61, 104, .1); }
+.rh-kpi.is-active { box-shadow: inset 0 0 0 2px currentColor, 0 10px 22px rgba(26, 61, 104, .1); }
+.rh-kpi:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(23, 105, 211, .45), 0 10px 22px rgba(26, 61, 104, .1);
+}
+
+.rh-kpi__icon {
+  display: grid;
+  width: 46px;
+  height: 46px;
+  flex: 0 0 46px;
+  place-items: center;
+  border-radius: 13px;
+  background: rgba(255, 255, 255, .75);
+}
+
+.rh-kpi__value {
+  color: inherit;
+  font-size: 30px;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+.rh-kpi__label {
+  color: inherit;
+  font-size: 12.5px;
+  font-weight: 750;
+  opacity: .9;
+}
+
+.rh-kpi__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.rh-kpi--blue { border-color: #cfe0f5; background: linear-gradient(135deg, #eaf3ff, #dfecfc); color: #0e4c9a; }
+.rh-kpi--violet { border-color: #e3dbf7; background: linear-gradient(135deg, #f4f0ff, #ece3fc); color: #5b3cc4; }
+.rh-kpi--green { border-color: #c9ebd9; background: linear-gradient(135deg, #eaf8f0, #dff2e8); color: #166b45; }
+.rh-kpi--orange { border-color: #f6ddc3; background: linear-gradient(135deg, #fff3e8, #fde9d6); color: #b35a10; }
+.rh-kpi--red { border-color: #f6cfcf; background: linear-gradient(135deg, #fff0f1, #fde4e5); color: #a52318; }
+
+/* ---------- Tableau ---------- */
+.rh-table-scroll { width: 100%; overflow-x: auto; }
+
+.rh-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.8px;
+}
+
+.rh-table thead th {
+  padding: 11px 14px;
+  border-bottom: 1px solid #e5edf6;
+  background: #f5f8fc;
+  color: #8498b4;
+  font-size: 9.8px;
+  font-weight: 850;
+  letter-spacing: .05em;
+  text-align: left;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.rh-table tbody td {
+  padding: 12px 14px;
+  border-bottom: 1px solid #edf2f7;
+  color: #405f81;
+  vertical-align: top;
+}
+
+.rh-table tbody tr:last-child td { border-bottom: 0; }
+.rh-table tbody tr:hover td { background: #f9fbfe; }
+
+/* ---------- État vide ---------- */
+.rh-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 40px 24px;
+  text-align: center;
+}
+
+.rh-empty__icon {
+  display: grid;
+  width: 56px;
+  height: 56px;
+  place-items: center;
+  margin-bottom: 4px;
+  border-radius: 17px;
+  background: #eef5ff;
+  color: #1769d3;
+}
+
+.rh-empty__icon--muted { background: #eef1f5; color: #71869e; }
+.rh-empty__icon--green { background: #eaf8f0; color: #197447; }
+
+.rh-empty strong { color: #2b4566; font-size: 15px; font-weight: 850; }
+.rh-empty > span:last-child { max-width: 420px; color: #8296ae; font-size: 12.8px; line-height: 1.55; }
+
+/* ---------- Badges de statut ---------- */
+.rh-badge {
+  display: inline-flex;
+  min-height: 24px;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 10.3px;
+  font-weight: 850;
+  white-space: nowrap;
+}
+
+.rh-badge--blue { background: #eaf3ff; color: #1769d3; }
+.rh-badge--green { background: #eaf8f0; color: #197447; }
+.rh-badge--orange { background: #fff5e8; color: #a65a11; }
+.rh-badge--red { background: #fff0f1; color: #b42318; }
+.rh-badge--violet { background: #f3efff; color: #7352c6; }
+.rh-badge--neutral { background: #eef1f5; color: #667789; }
+
+/* ---------- Note / info ---------- */
+.rh-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid #e3ecf6;
+  border-radius: 12px;
+  background: #f8fbfe;
+  color: #66809f;
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+
+.rh-note .icon { flex: 0 0 auto; margin-top: 1px; color: #1769d3; }
+
+/* ---------- Responsive ---------- */
+@media (max-width: 900px) {
+  .rh-page-hero { flex-wrap: wrap; }
+  .rh-page-hero__aside { width: 100%; min-width: 0; }
+  .rh-grid-2,
+  .rh-grid-3,
+  .rh-kpis { grid-template-columns: 1fr; }
+  .rh-tab { flex: 1 0 auto; justify-content: flex-start; }
+}
+
+@media (max-width: 520px) {
+  .rh-page-hero__icon { width: 46px; height: 46px; flex-basis: 46px; }
+  .rh-panel__head,
+  .rh-panel__body,
+  .rh-panel__foot { padding-left: 16px; padding-right: 16px; }
+  .rh-btn { flex: 1 1 auto; }
+}

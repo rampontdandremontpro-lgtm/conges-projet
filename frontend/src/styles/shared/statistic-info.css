@@ -33,13 +33,17 @@
   transform: scale(.96);
 }
 
+/* Le popover est rendu dans un portail (document.body) et positionné en fixed
+   par le composant. Il ne peut donc plus être découpé par un parent en
+   overflow:hidden ni passer derrière les cartes, le sidebar ou l'en-tête. */
 .statistic-info-button__popover {
-  position: absolute;
-  z-index: 90;
-  top: calc(100% + 9px);
-  left: 50%;
+  position: fixed;
+  z-index: 2000;
   display: block;
-  width: min(330px, calc(100vw - 32px));
+  width: min(330px, calc(100vw - 24px));
+  max-height: calc(100vh - 24px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 14px 15px 15px;
   border: 1px solid #d8e2ed;
   border-radius: 13px;
@@ -48,10 +52,14 @@
   white-space: normal;
   overflow-wrap: anywhere;
   box-shadow: 0 16px 38px rgba(36, 62, 91, .18);
-  transform: translateX(-50%);
   animation: statistic-info-in .16s ease-out;
 }
 
+.statistic-info-button__popover--wide {
+  width: min(400px, calc(100vw - 24px));
+}
+
+/* Flèche sous le popover (au-dessus du bouton). */
 .statistic-info-button__popover::before {
   content: '';
   position: absolute;
@@ -65,12 +73,28 @@
   transform: translateX(-50%) rotate(45deg);
 }
 
+/* Flèche au-dessus du popover lorsqu'il est retourné (bouton proche du bas). */
+.statistic-info-button__popover--above::before {
+  top: auto;
+  bottom: -6px;
+  border-top: 0;
+  border-left: 0;
+  border-bottom: 1px solid #d8e2ed;
+  border-right: 1px solid #d8e2ed;
+}
+
 .statistic-info-button__popover-head {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 8px;
+  padding: 0 0 8px;
+  position: sticky;
+  top: -1px;
+  z-index: 1;
+  background: #fff;
+  border-bottom: 1px solid #eef2f7;
 }
 
 .statistic-info-button__popover-head strong {
@@ -131,35 +155,25 @@
 @keyframes statistic-info-in {
   from {
     opacity: 0;
-    transform: translate(-50%, -4px) scale(.98);
+    transform: scale(.97) translateY(-3px);
   }
   to {
     opacity: 1;
-    transform: translate(-50%, 0) scale(1);
+    transform: scale(1) translateY(0);
   }
 }
 
-@media (max-width: 620px) {
-  .statistic-info-button__popover {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    width: min(340px, calc(100vw - 28px));
-    transform: translate(-50%, -50%);
-  }
+.statistic-info-button__popover--above {
+  animation-name: statistic-info-in-above;
+}
 
-  .statistic-info-button__popover::before {
-    display: none;
+@keyframes statistic-info-in-above {
+  from {
+    opacity: 0;
+    transform: scale(.97) translateY(3px);
   }
-
-  @keyframes statistic-info-in {
-    from {
-      opacity: 0;
-      transform: translate(-50%, calc(-50% - 4px)) scale(.98);
-    }
-    to {
-      opacity: 1;
-      transform: translate(-50%, -50%) scale(1);
-    }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
   }
 }

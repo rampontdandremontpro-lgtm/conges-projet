@@ -196,6 +196,7 @@ export class AbsenceDeclarationsService {
     authenticatedUser: AuthenticatedUser,
     dto: CreateAbsenceDeclarationDto,
   ): Promise<AbsenceDeclaration> {
+    this.ensureRhOnly(authenticatedUser);
     const employee = await this.resolveEmployee(
       authenticatedUser,
       dto.employeeId,
@@ -469,6 +470,7 @@ export class AbsenceDeclarationsService {
     authenticatedUser: AuthenticatedUser,
     dto: UpdateAbsenceDeclarationDto,
   ): Promise<AbsenceDeclaration> {
+    this.ensureRhOnly(authenticatedUser);
     const declaration = await this.findAccessibleOne(
       id,
       authenticatedUser,
@@ -682,6 +684,7 @@ export class AbsenceDeclarationsService {
     authenticatedUser: AuthenticatedUser,
     dto: SubmitAbsenceDeclarationDto,
   ): Promise<AbsenceDeclaration> {
+    this.ensureRhOnly(authenticatedUser);
     const preload = await this.findAccessibleOne(id, authenticatedUser);
     const key = this.familyQuotaLockKey(
       preload.leaveType?.absenceKind,
@@ -1199,6 +1202,7 @@ export class AbsenceDeclarationsService {
     id: number,
     authenticatedUser: AuthenticatedUser,
   ): Promise<void> {
+    this.ensureRhOnly(authenticatedUser);
     const declaration = await this.findAccessibleOne(
       id,
       authenticatedUser,
@@ -1490,6 +1494,18 @@ export class AbsenceDeclarationsService {
     ) {
       throw new BadRequestException(
         'Tous les justificatifs actifs doivent être acceptés par la RH avant l’enregistrement de l’absence.',
+      );
+    }
+  }
+
+  /**
+   * Défense en profondeur : seule la RH peut déclarer, modifier, soumettre ou
+   * supprimer une absence (le contrôle de rôles du contrôleur est doublé ici).
+   */
+  private ensureRhOnly(authenticatedUser: AuthenticatedUser): void {
+    if (authenticatedUser.role !== UserRole.RH) {
+      throw new ForbiddenException(
+        'Seule la RH peut déclarer une absence.',
       );
     }
   }

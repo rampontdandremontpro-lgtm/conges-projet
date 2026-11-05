@@ -355,15 +355,16 @@ describe('AbsenceDeclarationsService — un seul mode (jours / heures)', () => {
   });
 
   describe('autorisation — création/soumission des déclarations', () => {
-    it('collaborateur crée un brouillon pour lui-même (type déclarable)', async () => {
-      const saved = await service.createDraft(collaboratorUser as never, {
-        leaveTypeId: 7,
-        startDate: '2026-01-05',
-        endDate: '2026-01-05',
-        startPeriod: DayPeriod.MATIN,
-        endPeriod: DayPeriod.MATIN,
-      } as never);
-      expect(saved.startPeriod).toBe(DayPeriod.MATIN);
+    it('collaborateur ne peut plus créer de brouillon (déclaration réservée à la RH)', async () => {
+      await expect(
+        service.createDraft(collaboratorUser as never, {
+          leaveTypeId: 7,
+          startDate: '2026-01-05',
+          endDate: '2026-01-05',
+          startPeriod: DayPeriod.MATIN,
+          endPeriod: DayPeriod.MATIN,
+        } as never),
+      ).rejects.toThrow(ForbiddenException);
     });
 
     it('collaborateur ne peut pas créer une déclaration pour un autre salarié', async () => {
@@ -409,27 +410,12 @@ describe('AbsenceDeclarationsService — un seul mode (jours / heures)', () => {
       expect(saved.startPeriod).toBe(DayPeriod.MATIN);
     });
 
-    it('collaborateur soumet son propre brouillon', async () => {
-      serviceAny.findAccessibleOne.mockResolvedValue({
-        id: 42,
-        createdById: 1,
-        employeeId: 1,
-        employee: { role: 'COLLABORATEUR' },
-        leaveType,
-        startDate: '2026-01-05',
-        endDate: '2026-01-05',
-        startPeriod: DayPeriod.MATIN,
-        endPeriod: DayPeriod.APRES_MIDI,
-        status: AbsenceDeclarationStatus.BROUILLON,
-        familyEventContext: null,
-        familyEventRule: null,
-      } as never);
-      serviceAny.ensureDraft.mockImplementation(() => undefined);
-
-      const saved = await service.submit(42, collaboratorUser as never, {
-        certifiedAccurate: true,
-      } as never);
-      expect(saved).toBeDefined();
+    it('collaborateur ne peut plus soumettre un brouillon (déclaration réservée à la RH)', async () => {
+      await expect(
+        service.submit(42, collaboratorUser as never, {
+          certifiedAccurate: true,
+        } as never),
+      ).rejects.toThrow(ForbiddenException);
     });
 
     it('collaborateur ne soumet pas le brouillon d’un autre salarié', async () => {

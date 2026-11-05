@@ -1,44 +1,201 @@
-.illness-maintenance-page { display: flex; flex-direction: column; gap: 18px; padding: 20px; }
-.illness-maintenance-page .im-loading,
-.illness-maintenance-page .im-empty { color: #64748b; padding: 12px 0; }
-.illness-maintenance-page .im-state { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
-.im-header small { text-transform: uppercase; letter-spacing: 0.04em; color: #64748b; font-size: 12px; }
-.im-header h1 { margin: 4px 0 6px; font-size: 20px; }
-.im-header p { color: #475569; max-width: 720px; }
-.im-feedback { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 8px; }
-.im-feedback--success { background: #ecfdf5; color: #047857; }
-.im-feedback--error { background: #fef2f2; color: #b91c1c; }
-.im-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px; }
-.im-card h2 { margin: 0 0 12px; font-size: 16px; }
-.im-form { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.im-field { display: flex; flex-direction: column; gap: 5px; font-size: 13px; }
-.im-field--full { grid-column: 1 / -1; }
-.im-field span { color: #475569; }
-.im-field select,
-.im-field input,
-.im-field textarea {
-  border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px; font: inherit; background: #fff;
-}
-.im-actions { margin-top: 14px; display: flex; gap: 10px; }
-.im-save {
-  background: #0f172a; color: #fff; border: 0; border-radius: 6px; padding: 9px 16px; cursor: pointer;
-}
-.im-save:disabled, .im-cancel:disabled { opacity: 0.5; cursor: not-allowed; }
-.im-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-.im-table th, .im-table td { text-align: left; padding: 8px; border-bottom: 1px solid #e2e8f0; }
-.im-table th { color: #64748b; font-weight: 600; }
-.im-justification { max-width: 340px; white-space: normal; }
-.im-cancel { background: transparent; border: 1px solid #fca5a5; color: #b91c1c; border-radius: 6px; padding: 5px 10px; cursor: pointer; }
+@import './rh-common.css';
 
-.im-basis-ref { display: block; color: #64748b; font-size: 11px; margin-top: 3px; }
-
-.im-basis-upload { display: flex; flex-direction: column; gap: 6px; }
-.im-basis-upload__row { display: flex; gap: 10px; align-items: center; }
-.im-basis-upload__row input[type="file"] { border: 0; padding: 0; }
-.im-basis-upload__row button,
-.im-basis-upload__validate button {
-  background: #0f172a; color: #fff; border: 0; border-radius: 6px; padding: 7px 12px; cursor: pointer;
+/* ---------- Maintien de salaire : mise en page ---------- */
+.rh-im-page {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  width: min(100%, 1480px);
+  max-width: none;
+  margin: 0 auto;
+  padding: 26px 28px 40px;
 }
-.im-basis-upload__row button:disabled,
-.im-basis-upload__validate button:disabled { opacity: 0.5; cursor: not-allowed; }
-.im-basis-upload__validate { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
+
+.rh-im-state {
+  display: flex;
+  min-height: 300px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid #dfe8f3;
+  border-radius: 20px;
+  background: #fff;
+  color: #8296ae;
+  text-align: center;
+}
+
+.rh-im-state strong { color: #2b4566; font-size: 15px; }
+.rh-im-state .icon { color: #1769d3; }
+
+/* ---------- Groupes de saisie ---------- */
+.rh-im-section {
+  padding: 0 0 4px;
+  border: 0;
+}
+
+.rh-im-section + .rh-im-section {
+  margin-top: 4px;
+  padding-top: 18px;
+  border-top: 1px solid #eef3f9;
+}
+
+.rh-im-section__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.rh-im-section__num {
+  display: grid;
+  width: 26px;
+  height: 26px;
+  place-items: center;
+  border-radius: 8px;
+  background: #eaf3ff;
+  color: #1769d3;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.rh-im-section__head h3 {
+  margin: 0;
+  color: #24496e;
+  font-size: 13.5px;
+  font-weight: 850;
+}
+
+.rh-im-section__head p {
+  margin: 0 0 0 auto;
+  color: #8ca0bb;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* ---------- Upload / validation de justificatif ---------- */
+.rh-im-upload {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border: 1px dashed #c5d7ec;
+  border-radius: 12px;
+  background: #fbfdff;
+}
+
+.rh-im-upload__row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.rh-im-upload__row input[type='file'] {
+  flex: 1;
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid #d9e3ef;
+  border-radius: 9px;
+  background: #fff;
+  font-size: 12px;
+  color: #405f81;
+}
+
+.rh-im-doc {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: #405f81;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* ---------- Liste des décisions ---------- */
+.rh-im-decision {
+  display: grid;
+  grid-template-columns: minmax(180px, 1.1fr) minmax(170px, 1fr) minmax(120px, .8fr) minmax(0, 1.6fr) 110px auto;
+  align-items: start;
+  gap: 14px;
+  padding: 16px 0;
+  border-bottom: 1px solid #edf2f7;
+}
+
+.rh-im-decision:last-child { border-bottom: 0; }
+
+.rh-im-decision__person {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-width: 0;
+}
+
+.rh-im-decision__avatar {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+  place-items: center;
+  border-radius: 12px;
+  background: #eaf3ff;
+  color: #236dd9;
+  font-size: 10.5px;
+  font-weight: 900;
+}
+
+.rh-im-decision__person strong {
+  display: block;
+  overflow: hidden;
+  color: #173e6c;
+  font-size: 13.5px;
+  font-weight: 850;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rh-im-decision__person small {
+  display: block;
+  margin-top: 3px;
+  color: #8ca0bb;
+  font-size: 10.5px;
+}
+
+.rh-im-decision__cell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  color: #405f81;
+  font-size: 12.5px;
+}
+
+.rh-im-decision__cell > span:first-child {
+  color: #8498b4;
+  font-size: 9.5px;
+  font-weight: 900;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+
+.rh-im-decision__just {
+  color: #405f81;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.rh-im-decision__ref {
+  color: #8498b4;
+  font-size: 11px;
+}
+
+@media (max-width: 1100px) {
+  .rh-im-decision { grid-template-columns: 1fr 1fr; }
+}
+
+@media (max-width: 900px) {
+  .rh-im-page { padding: 18px 16px 32px; }
+  .rh-im-upload__row { flex-direction: column; align-items: stretch; }
+}
+
+@media (max-width: 640px) {
+  .rh-im-decision { grid-template-columns: 1fr; }
+}

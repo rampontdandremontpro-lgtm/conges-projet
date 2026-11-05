@@ -38,14 +38,6 @@ export function LeaveBalanceCard({
     content = (
       <>
         <div className="balance-period-grid">
-          <div className="balance-period-kpi balance-period-kpi--acquired">
-            <span className="balance-period-kpi__icon"><Icon name="wallet" size={20} /></span>
-            <div><span>Acquis</span><strong data-testid="balance-acquired">{formatDays(summary.acquiredDays)} j</strong></div>
-          </div>
-          <div className="balance-period-kpi balance-period-kpi--available">
-            <span className="balance-period-kpi__icon"><Icon name="sparkles" size={20} /></span>
-            <div><span>Disponible</span><strong data-testid="balance-available">{formatDays(summary.balanceDays)} j</strong></div>
-          </div>
           <div className="balance-period-kpi balance-period-kpi--taken">
             <span className="balance-period-kpi__icon"><Icon name="calendar" size={20} /></span>
             <div><span>Pris</span><strong>{counterValue('takenDays', summary.takenDays)}</strong></div>

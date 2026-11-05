@@ -27,7 +27,6 @@ export const NAVIGATION = {
   [ROLES.COLLABORATEUR]: [
     { id: 'dashboard', label: 'Tableau de bord', to: '/app/dashboard', icon: 'dashboard', group: 'MON ESPACE' },
     { id: 'my-requests', label: 'Mes demandes', to: '/app/my-requests', icon: 'list', group: 'MON ESPACE' },
-    { id: 'new-absence', label: 'Déclarer une absence', to: '/app/new-absence', icon: 'plus', group: 'MON ESPACE' },
     { id: 'my-documents', label: 'Mes documents', to: '/app/my-documents', icon: 'doc', group: 'MON ESPACE' },
     { id: 'practical-info', label: 'Informations pratiques', to: '/app/practical-info', icon: 'info', group: 'OUTIL' },
     { id: 'notifications', label: 'Notifications', to: '/app/notifications', icon: 'bell', group: 'OUTIL' },
@@ -57,7 +56,7 @@ export const NAVIGATION = {
     { id: 'rh-holidays', label: 'Jours fériés et fermetures', to: '/app/rh-holidays', icon: 'calendar', group: 'PARAMÉTRAGE' },
     { id: 'rh-summer-period', label: 'Période estivale', to: '/app/rh-summer-period', icon: 'sun', group: 'PARAMÉTRAGE' },
     { id: 'rh-extra-days', label: 'Droits supplémentaires', to: '/app/rh-extra-days', icon: 'sparkles', group: 'PARAMÉTRAGE' },
-    { id: 'rh-illness-maintenance', label: 'Maintien de salaire (maladie)', to: '/app/rh-illness-maintenance', icon: 'shield', group: 'PARAMÉTRAGE' },
+    { id: 'rh-illness-maintenance', label: 'Maintien de salaire et arrêts maladie', to: '/app/rh-illness-maintenance', icon: 'shield', group: 'PARAMÉTRAGE' },
     { id: 'rh-accrual-anomalies', label: 'Anomalies d’acquisition', to: '/app/rh-accrual-anomalies', icon: 'alert', group: 'PARAMÉTRAGE' },
     { id: 'rh-validators', label: 'Valideurs', to: '/app/rh-validators', icon: 'users', group: 'PARAMÉTRAGE' },
 

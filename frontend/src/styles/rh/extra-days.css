@@ -1,389 +1,219 @@
-.rh-extra-days-page {
-  display: grid;
-  gap: 18px;
-  max-width: 960px;
-  margin: 0 auto;
-  padding-bottom: 40px;
-}
+@import './rh-common.css';
 
-.rh-extra-days-loading {
-  padding: 40px;
-  text-align: center;
-  color: #64748b;
+/* ---------- Droits supplémentaires : mise en page ---------- */
+.rh-extra-days-page {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  width: min(100%, 1480px);
+  max-width: none;
+  margin: 0 auto;
+  padding: 26px 28px 40px;
 }
 
 .rh-extra-days-state {
-  display: grid;
-  gap: 8px;
-  justify-items: center;
-  padding: 48px;
-  color: #64748b;
-}
-
-.rh-extra-days-state strong {
-  color: #334155;
-}
-
-.rh-extra-days-state button {
-  padding: 8px 16px;
-  border-radius: 8px;
-  border: 1px solid #cbd5e1;
-  background: #fff;
-  cursor: pointer;
-}
-
-.rh-extra-days-feedback {
   display: flex;
+  min-height: 300px;
+  flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 8px;
-  padding: 12px 16px;
-  border-radius: 10px;
-  font-size: 13.5px;
-  font-weight: 600;
-}
-
-.rh-extra-days-feedback--success {
-  background: #e7f6ec;
-  color: #16794a;
-}
-
-.rh-extra-days-feedback--error {
-  background: #fdeaea;
-  color: #b42318;
-}
-
-.rh-extra-days-toolbar {
-  display: flex;
-  justify-content: flex-end;
-}
-
-.rh-extra-days-toolbar label {
-  display: grid;
-  gap: 4px;
-  font-size: 12px;
-  color: #64748b;
-  font-weight: 600;
-}
-
-.rh-extra-days-toolbar input {
-  padding: 8px 10px;
-  border-radius: 8px;
-  border: 1px solid #cbd5e1;
-  font-size: 14px;
-  width: 130px;
-}
-
-.rh-extra-days-card {
+  border: 1px solid #dfe8f3;
+  border-radius: 20px;
   background: #fff;
-  border: 1px solid #e2e8f0;
-  border-radius: 14px;
-  padding: 20px;
-  display: grid;
-  gap: 16px;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  color: #8296ae;
+  text-align: center;
 }
 
-.rh-extra-days-header {
+.rh-extra-days-state strong { color: #2b4566; font-size: 15px; }
+.rh-extra-days-state .icon { color: #1769d3; }
+
+/* ---------- Paliers d'ancienneté ---------- */
+.rh-ed-threshold-list {
   display: flex;
-  gap: 12px;
-  align-items: flex-start;
+  flex-direction: column;
+  gap: 8px;
 }
 
-.rh-extra-days-header__icon {
+.rh-ed-threshold {
   display: grid;
-  place-items: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
-  background: #eef4ff;
-  color: #315476;
-  flex: none;
+  grid-template-columns: minmax(0, 1fr) 86px minmax(0, 1fr) 96px auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid #e8eef6;
+  border-radius: 11px;
+  background: #fbfcfe;
 }
 
-.rh-extra-days-header__icon--orange {
-  background: #fff4e5;
-  color: #b45309;
-}
-
-.rh-extra-days-header small {
-  color: #64748b;
-  font-weight: 700;
-  font-size: 11.5px;
-  letter-spacing: 0.04em;
-}
-
-.rh-extra-days-header h2 {
-  margin: 2px 0;
-  font-size: 17px;
-  color: #1e293b;
-}
-
-.rh-extra-days-header p {
-  margin: 0;
-  color: #64748b;
-  font-size: 13px;
-}
-
-.rh-extra-days-form {
-  display: grid;
-  gap: 14px;
-}
-
-.rh-extra-days-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-}
-
-.rh-extra-days-field {
-  display: grid;
-  gap: 6px;
-}
-
-.rh-extra-days-field > span,
-.rh-extra-days-toggle span {
+.rh-ed-threshold__step {
+  color: #3f5873;
   font-size: 12.5px;
-  font-weight: 700;
-  color: #475569;
+  font-weight: 750;
 }
 
-.rh-extra-days-field input[type='date'],
-.rh-extra-days-field input[type='number'],
-.rh-extra-days-regime select {
-  padding: 8px 10px;
-  border-radius: 8px;
-  border: 1px solid #cbd5e1;
-  font-size: 14px;
-  background: #fff;
+.rh-ed-threshold__step em {
+  display: block;
+  margin-top: 2px;
+  color: #8ca0bb;
+  font-size: 10.5px;
+  font-style: normal;
+  font-weight: 600;
 }
 
-.rh-extra-days-toggle {
+.rh-ed-threshold .rh-input { min-height: 38px; text-align: center; }
+
+.rh-ed-threshold__sep {
+  color: #8ca0bb;
+  font-size: 12px;
+  font-weight: 750;
+  text-align: center;
+}
+
+/* ---------- Lignes entité (régime / convention / classification) ---------- */
+.rh-ed-entity-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rh-ed-entity-row {
+  display: grid;
+  grid-template-columns: minmax(150px, 0.8fr) minmax(0, 1.6fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid #e8eef6;
+  border-radius: 11px;
+  background: #fbfcfe;
+}
+
+.rh-ed-entity-row__name {
   display: flex;
   align-items: center;
-  gap: 8px;
-  cursor: pointer;
+  gap: 9px;
+  color: #24496e;
+  font-size: 13px;
+  font-weight: 800;
 }
 
-.rh-extra-days-toggle input {
-  width: 16px;
-  height: 16px;
+.rh-ed-entity-row__name::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  flex: 0 0 8px;
+  border-radius: 50%;
+  background: #1769d3;
 }
 
+/* Ligne de classification (arrêt maladie) */
+.rh-ed-kind-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 210px auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid #e8eef6;
+  border-radius: 11px;
+  background: #fbfcfe;
+}
+
+.rh-ed-kind-row__name {
+  color: #24496e;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+/* ---------- Bloc période de prise / résultat ---------- */
+.rh-ed-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.rh-ed-summary__item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 140px;
+  flex: 1 1 auto;
+  padding: 12px 15px;
+  border: 1px solid #e3ecf6;
+  border-radius: 12px;
+  background: #f8fbfe;
+}
+
+.rh-ed-summary__item span {
+  color: #8498b4;
+  font-size: 9.5px;
+  font-weight: 900;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.rh-ed-summary__item strong {
+  color: #24496e;
+  font-size: 13.5px;
+  font-weight: 850;
+}
+
+/* Formulaire de report (sous-section) */
+.rh-ed-subform {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid #e3ecf6;
+  border-radius: 14px;
+  background: #f8fbfe;
+}
+
+.rh-ed-subform h3 {
+  margin: 0;
+  color: #24496e;
+  font-size: 13.5px;
+  font-weight: 850;
+}
+
+/* Groupes de puces (entités concernées) */
 .rh-extra-days-entities {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 9px;
 }
 
-.rh-extra-days-entity {
+/* Bloc convention collective par entité */
+.rh-ed-convention {
   display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 12px;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 13.5px;
-}
-
-.rh-extra-days-threshold {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13.5px;
-  color: #475569;
-}
-
-.rh-extra-days-threshold input {
-  width: 70px;
-}
-
-.rh-extra-days-regime {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 8px 0;
-  border-bottom: 1px dashed #e2e8f0;
-  font-size: 13.5px;
-  color: #334155;
-}
-
-.rh-extra-days-regime select {
-  min-width: 260px;
-}
-
-.rh-extra-days-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.rh-extra-days-actions button {
-  padding: 9px 16px;
-  border-radius: 9px;
-  border: 1px solid #cbd5e1;
-  background: #fff;
-  font-size: 13.5px;
-  font-weight: 600;
-  cursor: pointer;
-  color: #334155;
-}
-
-.rh-extra-days-actions button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.rh-extra-days-actions .rh-extra-days-save {
-  background: #315476;
-  color: #fff;
-  border-color: #315476;
-}
-
-.rh-extra-days-actions .rh-extra-days-primary {
-  background: #16794a;
-  color: #fff;
-  border-color: #16794a;
-}
-
-.rh-extra-days-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 13px;
-}
-
-.rh-extra-days-table th,
-.rh-extra-days-table td {
-  text-align: left;
-  padding: 8px 10px;
-  border-bottom: 1px solid #eef2f7;
-}
-
-.rh-extra-days-table th {
-  color: #64748b;
-  font-size: 11.5px;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-}
-
-.rh-extra-days-note {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: #64748b;
-  font-size: 12.5px;
-  margin: 0;
-}
-
-.rh-extra-days-header__icon--green {
-  background: #e7f6ec;
-  color: #16794a;
-}
-
-.rh-extra-days-header__icon--red {
-  background: #fdeaea;
-  color: #b42318;
-}
-
-.rh-extra-days-header__icon--blue {
-  background: #e8f1fb;
-  color: #1d4ed8;
-}
-
-.rh-extra-days-jur24-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 0;
-  border-bottom: 1px solid #eef2f7;
-}
-
-.rh-extra-days-jur24-row:last-child {
-  border-bottom: none;
-}
-
-.rh-extra-days-jur24-name {
-  min-width: 180px;
-  font-weight: 600;
-  font-size: 13px;
-  color: #0f172a;
-}
-
-.rh-extra-days-jur24-row select,
-.rh-extra-days-jur24-row input[type="text"] {
-  padding: 7px 10px;
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
-  font-size: 13px;
-  color: #0f172a;
-}
-
-.rh-extra-days-jur24-accord {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  color: #334155;
-  cursor: pointer;
-}
-
-.rh-extra-days-hint {
-  display: block;
-  color: #64748b;
-  font-size: 12px;
-  margin-top: 4px;
-}
-
-.rh-extra-days-inline {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0;
-}
-
-.rh-extra-days-inline input {
-  width: 120px;
-}
-
-.rh-extra-days-takeperiod {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 18px;
-  padding: 12px 14px;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  background: #f8fafc;
-  font-size: 13px;
-  color: #334155;
-}
-
-.rh-extra-days-takeperiod b {
-  color: #64748b;
-  margin-right: 4px;
-}
-
-.rh-extra-days-report-form {
-  display: grid;
+  flex-direction: column;
   gap: 12px;
   padding: 14px;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  background: #f8fafc;
+  border: 1px solid #e8eef6;
+  border-radius: 13px;
+  background: #fbfcfe;
 }
 
-.rh-extra-days-report-form h3 {
-  margin: 0;
-  font-size: 13.5px;
-  color: #334155;
+.rh-ed-convention__top {
+  display: grid;
+  grid-template-columns: minmax(150px, .9fr) minmax(200px, 1fr) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
 }
 
-.rh-extra-days-report-form textarea {
-  padding: 9px 12px;
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
-  resize: vertical;
-  font-size: 13.5px;
-  font-family: inherit;
+.rh-ed-convention .rh-switch { align-self: flex-start; }
+
+@media (max-width: 900px) {
+  .rh-extra-days-page { padding: 18px 16px 32px; }
+  .rh-ed-threshold { grid-template-columns: 1fr 1fr; }
+  .rh-ed-threshold__step,
+  .rh-ed-threshold__sep { grid-column: 1 / -1; }
+  .rh-ed-entity-row,
+  .rh-ed-kind-row,
+  .rh-ed-convention__top { grid-template-columns: 1fr; }
+  .rh-ed-entity-row .rh-btn,
+  .rh-ed-kind-row .rh-btn { width: 100%; }
+}
+
+@media (max-width: 520px) {
+  .rh-ed-threshold { grid-template-columns: 1fr; }
 }

@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { Icon } from '@/components/ui/Icon'
+import { StatisticInfoButton } from '@/components/shared/StatisticInfoButton'
 import {
   cancelIllnessMaintenance,
   createIllnessMaintenance,
@@ -10,6 +11,24 @@ import {
   validateBasisDocument,
 } from '@/services/rh/rhIllnessMaintenance'
 import '@/styles/rh/illness-maintenance.css'
+
+const BASIS_LABELS = {
+  SYNTEC_5_5: 'Syntec 5.5',
+  ACCORD_ENTREPRISE: 'Accord d’entreprise',
+  CONTRACTUEL: 'Clause contractuelle',
+  AUTRE: 'Autre fondement',
+}
+
+const BASIS_STATUS = {
+  VALIDATED: { label: 'Validé', badge: 'green' },
+  PROPOSED: { label: 'À examiner', badge: 'orange' },
+  LEGACY_PENDING: { label: 'Historique à vérifier', badge: 'violet' },
+}
+
+function basisBadge(status) {
+  const mapped = BASIS_STATUS[status] ?? BASIS_STATUS.PROPOSED
+  return { label: mapped.label, badge: mapped.badge }
+}
 
 export function RhIllnessMaintenancePage() {
   const [state, setState] = useState({ loading: true, error: null })
@@ -55,6 +74,14 @@ export function RhIllnessMaintenancePage() {
     return () => window.clearTimeout(timer)
   }, [feedback])
 
+  const employeeById = useMemo(
+    () => new Map(employees.map((e) => [e.id, e])),
+    [employees],
+  )
+
+  const needsBasisValidity = form.basis === 'ACCORD_ENTREPRISE' || form.basis === 'CONTRACTUEL' || form.basis === 'AUTRE'
+  const needsBasisDocument = form.basis === 'CONTRACTUEL' || form.basis === 'AUTRE'
+
   const submit = async () => {
     if (!form.employeeId || !form.startDate || !form.endDate || !form.justification.trim()) {
       setFeedback({ kind: 'error', message: 'Renseignez le collaborateur, la période couverte et la justification.' })
@@ -64,11 +91,11 @@ export function RhIllnessMaintenancePage() {
       setFeedback({ kind: 'error', message: 'La date de début doit précéder la date de fin.' })
       return
     }
-    if ((form.basis === 'ACCORD_ENTREPRISE' || form.basis === 'CONTRACTUEL' || form.basis === 'AUTRE') && (!form.basisValidFrom || !form.basisValidTo)) {
+    if (needsBasisValidity && (!form.basisValidFrom || !form.basisValidTo)) {
       setFeedback({ kind: 'error', message: 'Indiquez la période de validité datée du fondement (début et fin).' })
       return
     }
-    if ((form.basis === 'CONTRACTUEL' || form.basis === 'AUTRE') && !form.basisDocumentId) {
+    if (needsBasisDocument && !form.basisDocumentId) {
       setFeedback({ kind: 'error', message: 'Indiquez le justificatif validé rattaché au fondement (identifiant de document).' })
       return
     }
@@ -153,175 +180,271 @@ export function RhIllnessMaintenancePage() {
   }
 
   if (state.loading) {
-    return <main className="page-container illness-maintenance-page"><div className="im-loading">Chargement…</div></main>
+    return <main className="page-container rh-im-page"><div className="rh-im-state">Chargement…</div></main>
   }
 
   if (state.error) {
     return (
-      <main className="page-container illness-maintenance-page">
-        <section className="im-state">
-          <Icon name="alert" size={24} />
+      <main className="page-container rh-im-page">
+        <section className="rh-im-state">
+          <Icon name="alert" size={26} />
           <strong>Impossible de charger les décisions de maintien de salaire</strong>
           <span>{state.error}</span>
-          <button type="button" onClick={load}>Réessayer</button>
+          <button type="button" className="rh-btn rh-btn--primary" onClick={load}>Réessayer</button>
         </section>
       </main>
     )
   }
 
   return (
-    <main className="page-container illness-maintenance-page">
-      <header className="im-header">
-        <div>
-          <small>JUR-025 / JUR-037</small>
-          <h1>Maintien de salaire des arrêts maladie (Syntec 5.5)</h1>
-          <p>
-            Une décision individuelle justifiée prouve l’assimilation au travail effectif (2,5 j/mois)
-            pour la période couverte. Sans décision, le socle légal de 2 j/mois est garanti.
-          </p>
+    <main className="page-container rh-im-page">
+      <header className="rh-page-hero">
+        <div className="rh-page-hero__icon"><Icon name="shield" size={26} /></div>
+        <div className="rh-page-hero__body">
+          <span className="rh-page-hero__eyebrow">Paramétrage RH</span>
+          <h1>Maintien de salaire et arrêts maladie</h1>
         </div>
       </header>
 
       {feedback && (
-        <div className={`im-feedback im-feedback--${feedback.kind}`}>
+        <div className={`rh-feedback rh-feedback--${feedback.kind}`}>
           <Icon name={feedback.kind === 'success' ? 'check' : 'alert'} size={17} />
           <span>{feedback.message}</span>
         </div>
       )}
 
-      <section className="im-card">
-        <h2>Enregistrer une décision de maintien</h2>
-        <div className="im-form">
-          <label className="im-field">
-            <span>Collaborateur</span>
-            <select value={form.employeeId} onChange={(e) => setForm((c) => ({ ...c, employeeId: e.target.value }))}>
-              <option value="">—</option>
-              {employees.map((employee) => (
-                <option key={employee.id} value={employee.id}>
-                  {employee.nom} {employee.prenom} ({employee.email})
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="im-field">
-            <span>Début de la période couverte</span>
-            <input type="date" value={form.startDate} onChange={(e) => setForm((c) => ({ ...c, startDate: e.target.value }))} />
-          </label>
-          <label className="im-field">
-            <span>Fin de la période couverte</span>
-            <input type="date" value={form.endDate} onChange={(e) => setForm((c) => ({ ...c, endDate: e.target.value }))} />
-          </label>
-          <label className="im-field">
-            <span>Fondement</span>
-            <select value={form.basis} onChange={(e) => setForm((c) => ({ ...c, basis: e.target.value }))}>
-              <option value="SYNTEC_5_5">Syntec 5.5</option>
-              <option value="ACCORD_ENTREPRISE">Accord d’entreprise</option>
-              <option value="CONTRACTUEL">Clause contractuelle</option>
-              <option value="AUTRE">Autre fondement</option>
-            </select>
-          </label>
-          {(form.basis === 'ACCORD_ENTREPRISE' || form.basis === 'CONTRACTUEL' || form.basis === 'AUTRE') && (
-            <>
-              <label className="im-field">
-                <span>Validité du fondement (début)</span>
-                <input type="date" value={form.basisValidFrom} onChange={(e) => setForm((c) => ({ ...c, basisValidFrom: e.target.value }))} />
+      <section className="rh-panel">
+        <div className="rh-panel__head">
+          <span className="rh-panel__icon rh-panel__icon--blue"><Icon name="plus" size={21} /></span>
+          <div>
+            <div className="rh-panel__title-row">
+              <h2 className="rh-panel__title">Enregistrer une décision de maintien</h2>
+              <StatisticInfoButton title="À quoi sert une décision de maintien de salaire ?" wide>
+                <p>Lorsqu’un collaborateur est en arrêt maladie, certaines dispositions peuvent prévoir un maintien de salaire et avoir des conséquences sur l’acquisition de ses congés payés.</p>
+                <p>Cette rubrique permet à la RH d’enregistrer la période concernée, le fondement applicable (convention collective, accord d’entreprise, contrat ou autre disposition) et les justificatifs nécessaires.</p>
+                <p>Les informations enregistrées permettent à l’application de déterminer les droits à congés à prendre en compte selon les règles configurées, tout en conservant un historique des décisions.</p>
+                <p>Cette page ne sert pas à calculer ou à verser directement les salaires : elle concerne le suivi RH et ses conséquences sur les droits à congés.</p>
+              </StatisticInfoButton>
+            </div>
+          </div>
+        </div>
+
+        <div className="rh-panel__body">
+          <fieldset className="rh-im-section">
+            <div className="rh-im-section__head">
+              <span className="rh-im-section__num">1</span>
+              <h3>Collaborateur concerné</h3>
+              <p>Salarié bénéficiaire du maintien</p>
+            </div>
+            <label className="rh-field">
+              <span className="rh-field__label">Collaborateur</span>
+              <select className="rh-select" value={form.employeeId} onChange={(e) => setForm((c) => ({ ...c, employeeId: e.target.value }))}>
+                <option value="">— Sélectionner un collaborateur —</option>
+                {employees.map((employee) => (
+                  <option key={employee.id} value={employee.id}>
+                    {employee.nom} {employee.prenom} ({employee.email})
+                  </option>
+                ))}
+              </select>
+            </label>
+          </fieldset>
+
+          <fieldset className="rh-im-section">
+            <div className="rh-im-section__head">
+              <span className="rh-im-section__num">2</span>
+              <h3>Période couverte</h3>
+              <p>Plage de l’arrêt ouvrant droit au maintien</p>
+            </div>
+            <div className="rh-grid-2">
+              <label className="rh-field">
+                <span className="rh-field__label">Début de la période</span>
+                <input className="rh-input" type="date" value={form.startDate} onChange={(e) => setForm((c) => ({ ...c, startDate: e.target.value }))} />
               </label>
-              <label className="im-field">
-                <span>Validité du fondement (fin)</span>
-                <input type="date" value={form.basisValidTo} onChange={(e) => setForm((c) => ({ ...c, basisValidTo: e.target.value }))} />
+              <label className="rh-field">
+                <span className="rh-field__label">Fin de la période</span>
+                <input className="rh-input" type="date" value={form.endDate} onChange={(e) => setForm((c) => ({ ...c, endDate: e.target.value }))} />
               </label>
-              {(form.basis === 'CONTRACTUEL' || form.basis === 'AUTRE') && (
+            </div>
+          </fieldset>
+
+          <fieldset className="rh-im-section">
+            <div className="rh-im-section__head">
+              <span className="rh-im-section__num">3</span>
+              <h3>Fondement</h3>
+              <p>Base conventionnelle, contractuelle ou autre</p>
+            </div>
+            <div className="rh-grid-2">
+              <label className="rh-field">
+                <span className="rh-field__label">Fondement</span>
+                <select className="rh-select" value={form.basis} onChange={(e) => setForm((c) => ({ ...c, basis: e.target.value }))}>
+                  <option value="SYNTEC_5_5">Syntec 5.5</option>
+                  <option value="ACCORD_ENTREPRISE">Accord d’entreprise</option>
+                  <option value="CONTRACTUEL">Clause contractuelle</option>
+                  <option value="AUTRE">Autre fondement</option>
+                </select>
+              </label>
+              {needsBasisValidity && (
                 <>
-                  <label className="im-field">
-                    <span>Justificatif validé (n° document)</span>
-                    <input type="number" value={form.basisDocumentId} onChange={(e) => setForm((c) => ({ ...c, basisDocumentId: e.target.value }))} />
+                  <label className="rh-field">
+                    <span className="rh-field__label">Validité du fondement (début)</span>
+                    <input className="rh-input" type="date" value={form.basisValidFrom} onChange={(e) => setForm((c) => ({ ...c, basisValidFrom: e.target.value }))} />
                   </label>
-                  <div className="im-field im-field--full im-basis-upload">
-                    <span>Téléverser le justificatif (fichier)</span>
-                    <div className="im-basis-upload__row">
-                      <input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={(e) => setBasisFile(e.target.files?.[0] ?? null)} />
-                      <button type="button" onClick={uploadBasis} disabled={busy}>Téléverser</button>
-                    </div>
-                    {basisUpload && (
-                      <small className="im-basis-ref">Document #{basisUpload.id} — {basisUpload.status ?? 'EN_ATTENTE'}</small>
-                    )}
-                    {basisUpload && basisUpload.status === 'EN_ATTENTE' && (
-                      <div className="im-basis-upload__validate">
-                        <textarea rows={2} maxLength={4000} placeholder="Justification RH de la validation du fondement…" value={basisValidationJustification} onChange={(e) => setBasisValidationJustification(e.target.value)} />
-                        <button type="button" onClick={validateBasis} disabled={busy}>Valider le justificatif</button>
-                      </div>
-                    )}
-                  </div>
+                  <label className="rh-field">
+                    <span className="rh-field__label">Validité du fondement (fin)</span>
+                    <input className="rh-input" type="date" value={form.basisValidTo} onChange={(e) => setForm((c) => ({ ...c, basisValidTo: e.target.value }))} />
+                  </label>
                 </>
               )}
-              <label className="im-field im-field--full">
-                <span>Référence du fondement (libellé)</span>
-                <input
-                  type="text"
-                  maxLength={500}
-                  value={form.basisReference}
-                  placeholder="Ex. Accord d’entreprise « … » / clause contractuelle art. …"
-                  onChange={(e) => setForm((c) => ({ ...c, basisReference: e.target.value }))}
-                />
-              </label>
-            </>
+            </div>
+          </fieldset>
+
+          {needsBasisValidity && (
+            <fieldset className="rh-im-section">
+              <div className="rh-im-section__head">
+                <span className="rh-im-section__num">4</span>
+                <h3>Justificatif et référence</h3>
+                <p>Document probant et libellé du fondement</p>
+              </div>
+              <div className="rh-grid-2">
+                <label className="rh-field">
+                  <span className="rh-field__label">Référence du fondement (libellé)</span>
+                  <input
+                    className="rh-input"
+                    type="text"
+                    maxLength={500}
+                    value={form.basisReference}
+                    placeholder="Ex. Accord d’entreprise « … » / clause contractuelle art. …"
+                    onChange={(e) => setForm((c) => ({ ...c, basisReference: e.target.value }))}
+                  />
+                </label>
+                {needsBasisDocument && (
+                  <label className="rh-field">
+                    <span className="rh-field__label">Justificatif validé (n° document)</span>
+                    <input className="rh-input" type="number" value={form.basisDocumentId} onChange={(e) => setForm((c) => ({ ...c, basisDocumentId: e.target.value }))} />
+                  </label>
+                )}
+              </div>
+
+              {needsBasisDocument && (
+                <div className="rh-im-upload">
+                  <div className="rh-im-upload__row">
+                    <input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={(e) => setBasisFile(e.target.files?.[0] ?? null)} />
+                    <button type="button" className="rh-btn rh-btn--primary rh-btn--sm" onClick={uploadBasis} disabled={busy}>Téléverser</button>
+                  </div>
+                  {basisUpload && (
+                    <span className="rh-im-doc">
+                      <Icon name="file" size={14} />
+                      Document #{basisUpload.id} — {basisUpload.status ?? 'EN_ATTENTE'}
+                    </span>
+                  )}
+                  {basisUpload && basisUpload.status === 'EN_ATTENTE' && (
+                    <div className="rh-field" style={{ marginTop: 6 }}>
+                      <span className="rh-field__label">Justification RH de la validation du fondement</span>
+                      <textarea className="rh-textarea" rows={2} maxLength={4000} placeholder="Justification RH de la validation du fondement…" value={basisValidationJustification} onChange={(e) => setBasisValidationJustification(e.target.value)} />
+                      <div>
+                        <button type="button" className="rh-btn rh-btn--accent rh-btn--sm" onClick={validateBasis} disabled={busy}>Valider le justificatif</button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </fieldset>
           )}
-          <label className="im-field im-field--full">
-            <span>Justification</span>
-            <textarea
-              rows={3}
-              maxLength={4000}
-              value={form.justification}
-              placeholder="Maintien de salaire conventionnel confirmé par la paie…"
-              onChange={(e) => setForm((c) => ({ ...c, justification: e.target.value }))}
-            />
-          </label>
+
+          <fieldset className="rh-im-section">
+            <div className="rh-im-section__head">
+              <span className="rh-im-section__num">{needsBasisValidity ? 5 : 4}</span>
+              <h3>Validation et justification</h3>
+              <p>Motivation RH conservée dans l’historique</p>
+            </div>
+            <label className="rh-field">
+              <span className="rh-field__label">Justification</span>
+              <textarea
+                className="rh-textarea"
+                rows={3}
+                maxLength={4000}
+                value={form.justification}
+                placeholder="Maintien de salaire conventionnel confirmé par la paie…"
+                onChange={(e) => setForm((c) => ({ ...c, justification: e.target.value }))}
+              />
+            </label>
+          </fieldset>
         </div>
-        <div className="im-actions">
-          <button type="button" onClick={submit} disabled={busy} className="im-save">Enregistrer la décision</button>
+
+        <div className="rh-panel__foot">
+          <button type="button" onClick={submit} disabled={busy} className="rh-btn rh-btn--accent">
+            <Icon name="check" size={15} /> Enregistrer la décision
+          </button>
         </div>
       </section>
 
-      <section className="im-card">
-        <h2>Décisions actives</h2>
-        {decisions.length === 0 && <p className="im-empty">Aucune décision de maintien enregistrée.</p>}
-        {decisions.length > 0 && (
-          <table className="im-table">
-            <thead>
-              <tr>
-                <th>Collaborateur</th>
-                <th>Période couverte</th>
-                <th>Fondement</th>
-                <th>Justification</th>
-                <th>Décidée par</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {decisions.map((decision) => (
-                <tr key={decision.id} className="im-decision-row">
-                  <td>#{decision.employeeId}</td>
-                  <td>{decision.startDate?.slice(0, 10)} → {decision.endDate?.slice(0, 10)}</td>
-                  <td>
-                    {decision.basis}
-                    <small className="im-basis-ref">{decision.basisValidationStatus ?? 'PROPOSED'}</small>
-                  </td>
-                  <td className="im-justification">
-                    {decision.justification}
-                    {decision.basisReference && <small className="im-basis-ref">Réf. : {decision.basisReference}</small>}
-                    {(decision.basisValidFrom || decision.basisValidTo) && (
-                      <small className="im-basis-ref">Valide {decision.basisValidFrom ?? '…'} → {decision.basisValidTo ?? '…'}</small>
-                    )}
-                  </td>
-                  <td>#{decision.decidedById ?? '—'}</td>
-                  <td>
-                    <button type="button" onClick={() => cancel(decision.id)} disabled={busy} className="im-cancel">Annuler</button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+      <section className="rh-panel">
+        <div className="rh-panel__head">
+          <span className="rh-panel__icon rh-panel__icon--green"><Icon name="list" size={21} /></span>
+          <div>
+            <h2 className="rh-panel__title">Décisions enregistrées</h2>
+            <p className="rh-panel__sub">Historique des décisions de maintien de salaire et de leur fondement.</p>
+          </div>
+          <span className="rh-badge rh-badge--neutral" style={{ marginLeft: 'auto' }}>{decisions.length} décision{decisions.length > 1 ? 's' : ''}</span>
+        </div>
+
+        <div className="rh-panel__body">
+          {decisions.length === 0 && (
+            <div className="rh-empty">
+              <span className="rh-empty__icon rh-empty__icon--green"><Icon name="check" size={26} /></span>
+              <strong>Aucune décision de maintien enregistrée</strong>
+              <span>Les décisions individuelles de maintien de salaire apparaîtront ici, avec leur fondement, leur période couverte et leur statut de validation.</span>
+            </div>
+          )}
+
+          {decisions.length > 0 && (
+            <div>
+              {decisions.map((decision) => {
+                const employee = employeeById.get(decision.employeeId)
+                const badge = basisBadge(decision.basisValidationStatus)
+                const initials = employee ? `${(employee.nom?.[0] ?? '').toUpperCase()}${(employee.prenom?.[0] ?? '').toUpperCase()}` : '??'
+                return (
+                  <div key={decision.id} className="rh-im-decision">
+                    <div className="rh-im-decision__person">
+                      <span className="rh-im-decision__avatar">{initials}</span>
+                      <div>
+                        <strong>{employee ? `${employee.nom} ${employee.prenom}` : `#${decision.employeeId}`}</strong>
+                        <small>{employee?.email ?? 'Collaborateur'}</small>
+                      </div>
+                    </div>
+
+                    <div className="rh-im-decision__cell">
+                      <span>Période couverte</span>
+                      <strong>{decision.startDate?.slice(0, 10)} → {decision.endDate?.slice(0, 10)}</strong>
+                    </div>
+
+                    <div className="rh-im-decision__cell">
+                      <span>Fondement</span>
+                      <strong>{BASIS_LABELS[decision.basis] ?? decision.basis}</strong>
+                      <span className={`rh-badge rh-badge--${badge.badge}`}>{badge.label}</span>
+                    </div>
+
+                    <div className="rh-im-decision__cell">
+                      <span>Justification</span>
+                      <div className="rh-im-decision__just">{decision.justification}</div>
+                      {decision.basisReference && <div className="rh-im-decision__ref">Réf. : {decision.basisReference}</div>}
+                      {(decision.basisValidFrom || decision.basisValidTo) && (
+                        <div className="rh-im-decision__ref">Valide {decision.basisValidFrom ?? '…'} → {decision.basisValidTo ?? '…'}</div>
+                      )}
+                    </div>
+
+                    <div className="rh-im-decision__cell">
+                      <span>Décidée par</span>
+                      <strong>#{decision.decidedById ?? '—'}</strong>
+                    </div>
+
+                    <button type="button" onClick={() => cancel(decision.id)} disabled={busy} className="rh-btn rh-btn--danger rh-btn--sm">Annuler</button>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
       </section>
     </main>
   )

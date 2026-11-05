@@ -18,6 +18,13 @@ export class AddAnomalyConflictKey20261031230000 implements MigrationInterface {
       );
     }
 
+    // Le nouvel index (qui commence aussi par employee_id) doit être créé AVANT
+    // la suppression de l'ancien : MySQL refuse de supprimer un index qui sert
+    // de support à une contrainte de clé étrangère (employee_id).
+    await queryRunner.query(
+      `ALTER TABLE accrual_anomalies ADD UNIQUE INDEX UQ_accrual_anomaly_scoped (employee_id, type, reference_period, accrual_month, conflict_key)`,
+    );
+
     const oldIndexRows: unknown[] = await queryRunner.query(
       `SELECT INDEX_NAME FROM information_schema.STATISTICS
         WHERE TABLE_SCHEMA = DATABASE()
@@ -30,10 +37,6 @@ export class AddAnomalyConflictKey20261031230000 implements MigrationInterface {
         'ALTER TABLE accrual_anomalies DROP INDEX UQ_accrual_anomaly',
       );
     }
-
-    await queryRunner.query(
-      `ALTER TABLE accrual_anomalies ADD UNIQUE INDEX UQ_accrual_anomaly_scoped (employee_id, type, reference_period, accrual_month, conflict_key)`,
-    );
   }
 
   async down(queryRunner: QueryRunner): Promise<void> {

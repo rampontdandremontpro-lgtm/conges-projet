@@ -48,9 +48,21 @@ async function bootstrap(): Promise<void> {
 
   const port = Number(configService.get<string>('PORT', '3000'));
 
-  await app.listen(port);
+  try {
+    await app.listen(port);
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException)?.code;
+    if (code === 'EADDRINUSE') {
+      console.error(
+        `[backend] Le port ${port} est déjà occupé. Arrêtez l'autre instance avant de relancer le backend.`,
+      );
+      await app.close().catch(() => undefined);
+      process.exit(1);
+    }
+    throw error;
+  }
 
-  console.log(`API disponible sur http://localhost:${port}/api`);
+  console.log(`API disponible sur http://localhost:${port}/api (écoute effective)`);
 }
 
 void bootstrap();

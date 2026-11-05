@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { Icon } from '@/components/ui/Icon'
+import { StatisticInfoButton } from '@/components/shared/StatisticInfoButton'
 import {
   applyFractionnement,
   applySeniorityExtra,
@@ -35,6 +36,14 @@ const SYNTEC_THRESHOLDS = [
   { minYears: 20, extraDays: 4 },
 ]
 
+const TABS = [
+  { id: 'anciennete', label: 'Ancienneté', icon: 'sparkles' },
+  { id: 'fractionnement', label: 'Fractionnement', icon: 'calendar' },
+  { id: 'prise', label: 'Périodes de prise', icon: 'clock' },
+  { id: 'arrete', label: 'Arrêt maladie / congés', icon: 'shield' },
+  { id: 'convention', label: 'Conventions collectives', icon: 'building' },
+]
+
 function currentReferencePeriod() {
   const now = new Date()
   const monthDay = `${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
@@ -57,6 +66,7 @@ export function RhExtraDaysPage() {
   const year = new Date().getFullYear()
   const [state, setState] = useState({ loading: true, error: null })
   const [entities, setEntities] = useState([])
+  const [activeTab, setActiveTab] = useState('anciennete')
 
   const [seniority, setSeniority] = useState({
     enabled: false,
@@ -134,7 +144,7 @@ export function RhExtraDaysPage() {
 
   useEffect(() => {
     if (!feedback) return undefined
-    const timer = window.setTimeout(() => setFeedback(null), 5000)
+    const timer = window.setTimeout(() => setFeedback(null), 6000)
     return () => window.clearTimeout(timer)
   }, [feedback])
 
@@ -178,9 +188,9 @@ export function RhExtraDaysPage() {
         thresholds: seniority.thresholds.map((t) => ({ minYears: Number(t.minYears), extraDays: Number(t.extraDays) })),
         legalEntityCodes: seniority.legalEntityCodes,
       })
-      setFeedback({ kind: 'success', message: 'Configuration ancienneté enregistrée.' })
+      setFeedback({ kind: 'success', message: 'Configuration de l’ancienneté enregistrée.' })
     } catch (error) {
-      setFeedback({ kind: 'error', message: error?.response?.data?.message ?? 'Échec de l’enregistrement ancienneté.' })
+      setFeedback({ kind: 'error', message: error?.response?.data?.message ?? 'Échec de l’enregistrement de l’ancienneté.' })
     } finally {
       setBusy(false)
     }
@@ -195,9 +205,9 @@ export function RhExtraDaysPage() {
         eligiblePeriodEnd: fractionnement.eligiblePeriodEnd,
         entities: fractionnement.entities.map((e) => ({ ...e })),
       })
-      setFeedback({ kind: 'success', message: 'Configuration fractionnement enregistrée.' })
+      setFeedback({ kind: 'success', message: 'Configuration du fractionnement enregistrée.' })
     } catch (error) {
-      setFeedback({ kind: 'error', message: error?.response?.data?.message ?? 'Échec de l’enregistrement fractionnement.' })
+      setFeedback({ kind: 'error', message: error?.response?.data?.message ?? 'Échec de l’enregistrement du fractionnement.' })
     } finally {
       setBusy(false)
     }
@@ -213,7 +223,7 @@ export function RhExtraDaysPage() {
     try {
       await loadSeniorityPreviewData()
     } catch (error) {
-      setFeedback({ kind: 'error', message: error?.response?.data?.message ?? 'Échec de la prévisualisation ancienneté.' })
+      setFeedback({ kind: 'error', message: error?.response?.data?.message ?? 'Échec de la prévisualisation de l’ancienneté.' })
     } finally {
       setBusy(false)
     }
@@ -227,7 +237,7 @@ export function RhExtraDaysPage() {
       await loadSeniorityPreviewData()
       setFeedback({ kind: 'success', message: `Ancienneté : ${result.allocated.length} attribution(s), ${result.skipped.length} dossier(s) non concerné(s).` })
     } catch (error) {
-      setFeedback({ kind: 'error', message: error?.response?.data?.message ?? 'Échec de l’attribution ancienneté.' })
+      setFeedback({ kind: 'error', message: error?.response?.data?.message ?? 'Échec de l’attribution de l’ancienneté.' })
     } finally {
       setBusy(false)
     }
@@ -243,7 +253,7 @@ export function RhExtraDaysPage() {
     try {
       await loadFractionnementPreviewData()
     } catch (error) {
-      setFeedback({ kind: 'error', message: error?.response?.data?.message ?? 'Échec de la prévisualisation fractionnement.' })
+      setFeedback({ kind: 'error', message: error?.response?.data?.message ?? 'Échec de la prévisualisation du fractionnement.' })
     } finally {
       setBusy(false)
     }
@@ -257,7 +267,7 @@ export function RhExtraDaysPage() {
       await loadFractionnementPreviewData()
       setFeedback({ kind: 'success', message: `Fractionnement : ${result.allocated.length} attribution(s), ${result.skipped.length} dossier(s) non concerné(s).` })
     } catch (error) {
-      setFeedback({ kind: 'error', message: error?.response?.data?.message ?? 'Échec de l’attribution fractionnement.' })
+      setFeedback({ kind: 'error', message: error?.response?.data?.message ?? 'Échec de l’attribution du fractionnement.' })
     } finally {
       setBusy(false)
     }
@@ -271,7 +281,7 @@ export function RhExtraDaysPage() {
       await loadFractionnementPreviewData()
       setFeedback({ kind: 'success', message: `Fractionnement recalculé : ${result.adjusted.length} ajustement(s).` })
     } catch (error) {
-      setFeedback({ kind: 'error', message: error?.response?.data?.message ?? 'Échec du recalcul fractionnement.' })
+      setFeedback({ kind: 'error', message: error?.response?.data?.message ?? 'Échec du recalcul du fractionnement.' })
     } finally {
       setBusy(false)
     }
@@ -351,9 +361,9 @@ export function RhExtraDaysPage() {
         patchSetting('ARRET_CHEVAUCHEMENT_ENABLED', jur28.enabled ? 'true' : 'false'),
         patchSetting('ARRET_MALADIE_TYPE_IDS', jur28.maladieTypeIds.trim() || ' '),
       ])
-      setFeedback({ kind: 'success', message: 'Configuration JUR-028 enregistrée.' })
+      setFeedback({ kind: 'success', message: 'Configuration de l’interaction arrêt maladie / congés enregistrée.' })
     } catch (error) {
-      setFeedback({ kind: 'error', message: error?.response?.data?.message ?? 'Échec de l’enregistrement JUR-028.' })
+      setFeedback({ kind: 'error', message: error?.response?.data?.message ?? 'Échec de l’enregistrement de l’interaction arrêt maladie / congés.' })
     } finally {
       setBusy(false)
     }
@@ -381,7 +391,7 @@ export function RhExtraDaysPage() {
       const preview = await previewArreteChevauchement(Number(jur28.absenceId))
       setJur28((c) => ({ ...c, preview }))
     } catch (error) {
-      setFeedback({ kind: 'error', message: error?.response?.data?.message ?? 'Échec de la prévisualisation JUR-028.' })
+      setFeedback({ kind: 'error', message: error?.response?.data?.message ?? 'Échec de la prévisualisation de l’interaction arrêt maladie / congés.' })
     } finally {
       setBusy(false)
     }
@@ -396,7 +406,7 @@ export function RhExtraDaysPage() {
       await runJur28Preview()
       setFeedback({ kind: 'success', message: `Restitution : ${result.restoredDays} jour(s) restitué(s).` })
     } catch (error) {
-      setFeedback({ kind: 'error', message: error?.response?.data?.message ?? 'Échec de la restitution JUR-028.' })
+      setFeedback({ kind: 'error', message: error?.response?.data?.message ?? 'Échec de la restitution.' })
     } finally {
       setBusy(false)
     }
@@ -411,7 +421,7 @@ export function RhExtraDaysPage() {
       await runJur28Preview()
       setFeedback({ kind: 'success', message: `Inversion : ${result.reversed} jour(s) reversé(s).` })
     } catch (error) {
-      setFeedback({ kind: 'error', message: error?.response?.data?.message ?? 'Échec de l’inversion JUR-028.' })
+      setFeedback({ kind: 'error', message: error?.response?.data?.message ?? 'Échec de l’inversion.' })
     } finally {
       setBusy(false)
     }
@@ -440,17 +450,17 @@ export function RhExtraDaysPage() {
   }
 
   if (state.loading) {
-    return <main className="page-container rh-extra-days-page"><div className="rh-extra-days-loading">Chargement…</div></main>
+    return <main className="page-container rh-extra-days-page"><div className="rh-extra-days-state">Chargement…</div></main>
   }
 
   if (state.error) {
     return (
       <main className="page-container rh-extra-days-page">
         <section className="rh-extra-days-state">
-          <Icon name="alert" size={24} />
+          <Icon name="alert" size={26} />
           <strong>Impossible de charger les droits supplémentaires</strong>
           <span>{state.error}</span>
-          <button type="button" onClick={load}>Réessayer</button>
+          <button type="button" className="rh-btn rh-btn--primary" onClick={load}>Réessayer</button>
         </section>
       </main>
     )
@@ -458,418 +468,529 @@ export function RhExtraDaysPage() {
 
   return (
     <main className="page-container rh-extra-days-page">
+      <header className="rh-page-hero">
+        <div className="rh-page-hero__icon"><Icon name="sparkles" size={26} /></div>
+        <div className="rh-page-hero__body">
+          <span className="rh-page-hero__eyebrow">Paramétrage RH</span>
+          <h1>Droits supplémentaires</h1>
+        </div>
+        <div className="rh-page-hero__aside">
+          <span>Période de référence</span>
+          <input
+            type="text"
+            value={period}
+            onChange={(e) => setPeriod(e.target.value)}
+            pattern="\d{4}-\d{4}"
+            aria-label="Période de référence"
+          />
+        </div>
+      </header>
+
       {feedback && (
-        <div className={`rh-extra-days-feedback rh-extra-days-feedback--${feedback.kind}`}>
+        <div className={`rh-feedback rh-feedback--${feedback.kind}`}>
           <Icon name={feedback.kind === 'success' ? 'check' : 'alert'} size={17} />
           <span>{feedback.message}</span>
         </div>
       )}
 
-      <div className="rh-extra-days-toolbar">
-        <label>
-          <span>Période de référence</span>
-          <input type="text" value={period} onChange={(e) => setPeriod(e.target.value)} pattern="\d{4}-\d{4}" />
-        </label>
-      </div>
+      <nav className="rh-tabs" role="tablist" aria-label="Rubriques des droits supplémentaires">
+        {TABS.map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            role="tab"
+            aria-selected={activeTab === tab.id}
+            className={`rh-tab${activeTab === tab.id ? ' is-active' : ''}`}
+            onClick={() => setActiveTab(tab.id)}
+          >
+            <span className="rh-tab__icon"><Icon name={tab.icon} size={14} /></span>
+            {tab.label}
+          </button>
+        ))}
+      </nav>
 
-      <section className="rh-extra-days-card">
-        <div className="rh-extra-days-header">
-          <span className="rh-extra-days-header__icon"><Icon name="sparkles" size={20} /></span>
-          <div>
-            <small>JUR-019 / JUR-020</small>
-            <h2>Congés d’ancienneté (Syntec 5.1)</h2>
-            <p>Attribution automatique idempotente, conditionnée à la configuration RH par entité.</p>
-          </div>
-        </div>
-
-        <div className="rh-extra-days-form">
-          <label className="rh-extra-days-toggle">
-            <input type="checkbox" checked={seniority.enabled} onChange={(e) => setSeniority((c) => ({ ...c, enabled: e.target.checked }))} />
-            <span>Activer l’attribution automatique</span>
-          </label>
-
-          <label className="rh-extra-days-field">
-            <span>Date d’appréciation (ouverture de la période de prise)</span>
-            <input
-              type="date"
-              value={monthDayToInput(seniority.referenceMonthDay, year)}
-              onChange={(e) => setSeniority((c) => ({ ...c, referenceMonthDay: inputToMonthDay(e.target.value) }))}
-            />
-          </label>
-
-          <div className="rh-extra-days-field">
-            <span>Entités concernées</span>
-            <div className="rh-extra-days-entities">
-              {entities.map((entity) => (
-                <label key={entity.code} className="rh-extra-days-entity">
-                  <input
-                    type="checkbox"
-                    checked={seniority.legalEntityCodes.includes(entity.code)}
-                    onChange={() => toggleSeniorityEntity(entity.code)}
-                  />
-                  <span>{entity.name}</span>
-                </label>
-              ))}
+      {activeTab === 'anciennete' && (
+        <section className="rh-panel">
+          <div className="rh-panel__head">
+            <span className="rh-panel__icon rh-panel__icon--blue"><Icon name="sparkles" size={21} /></span>
+            <div>
+              <div className="rh-panel__title-row">
+                <h2 className="rh-panel__title">Congés d’ancienneté</h2>
+                <StatisticInfoButton title="Comprendre les congés d’ancienneté" wide>
+                  <p>Les congés d’ancienneté sont des jours de repos supplémentaires accordés à certains salariés en fonction du nombre d’années passées dans leur entreprise.</p>
+                  <p>Par exemple, la convention Syntec prévoit 1 jour supplémentaire après 5 ans d’ancienneté, 2 jours après 10 ans, 3 jours après 15 ans et 4 jours après 20 ans.</p>
+                  <p>Cette rubrique permet à la RH de configurer les conditions applicables à chaque entité, de vérifier les bénéficiaires et de prévisualiser les jours avant leur attribution.</p>
+                </StatisticInfoButton>
+              </div>
             </div>
           </div>
 
-          <div className="rh-extra-days-field">
-            <span>Paliers (jours totaux, non cumulatifs)</span>
-            {seniority.thresholds.map((threshold, index) => (
-              <div key={index} className="rh-extra-days-threshold">
-                <span>à partir de</span>
-                <input
-                  type="number"
-                  min="0"
-                  value={threshold.minYears}
-                  onChange={(e) => setSeniority((c) => ({
-                    ...c,
-                    thresholds: c.thresholds.map((t, i) => i === index ? { ...t, minYears: Number(e.target.value) } : t),
-                  }))}
-                />
-                <span>ans → +</span>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.5"
-                  value={threshold.extraDays}
-                  onChange={(e) => setSeniority((c) => ({
-                    ...c,
-                    thresholds: c.thresholds.map((t, i) => i === index ? { ...t, extraDays: Number(e.target.value) } : t),
-                  }))}
-                />
-                <span>jour(s) ouvré(s)</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="rh-extra-days-actions">
-          <button type="button" onClick={saveSeniority} disabled={busy} className="rh-extra-days-save">Enregistrer</button>
-          <button type="button" onClick={runSeniorityPreview} disabled={busy} className="rh-extra-days-secondary">Prévisualiser</button>
-          <button type="button" onClick={runSeniorityApply} disabled={busy || !seniority.enabled} className="rh-extra-days-primary">Attribuer les jours d’ancienneté</button>
-        </div>
-
-        {seniorityPreview && (
-          <table className="rh-extra-days-table">
-            <thead>
-              <tr><th>Collaborateur</th><th>Entité</th><th>Embauche</th><th>Date d’appréciation</th><th>Ancienneté</th><th>Jours</th><th>Déjà attribué</th></tr>
-            </thead>
-            <tbody>
-              {seniorityPreview.map((item) => (
-                <tr key={item.employeeId}>
-                  <td>{item.nom} {item.prenom}</td>
-                  <td>{item.legalEntityCode ?? '—'}</td>
-                  <td>{item.hireDate ?? '—'}</td>
-                  <td>{item.referenceDate}</td>
-                  <td>{item.fullYears} an(s)</td>
-                  <td>{item.applicable ? `+${item.extraDays}` : '—'}</td>
-                  <td>{item.alreadyAllocated ? 'Oui' : 'Non'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </section>
-
-      <section className="rh-extra-days-card">
-        <div className="rh-extra-days-header">
-          <span className="rh-extra-days-header__icon rh-extra-days-header__icon--orange"><Icon name="calendar" size={20} /></span>
-          <div>
-            <small>JUR-021 / JUR-022</small>
-            <h2>Fractionnement des congés payés</h2>
-            <p>Calcul automatique sur les congés réellement pris hors période (Syntec jours ouvrés / légal jours ouvrables).</p>
-          </div>
-        </div>
-
-        <div className="rh-extra-days-form">
-          <div className="rh-extra-days-row">
-            <label className="rh-extra-days-field">
-              <span>Période légale — début</span>
-              <input
-                type="date"
-                value={monthDayToInput(fractionnement.eligiblePeriodStart, year)}
-                onChange={(e) => setFractionnement((c) => ({ ...c, eligiblePeriodStart: inputToMonthDay(e.target.value) }))}
-              />
+          <div className="rh-panel__body">
+            <label className="rh-switch">
+              <input type="checkbox" checked={seniority.enabled} onChange={(e) => setSeniority((c) => ({ ...c, enabled: e.target.checked }))} />
+              <span className="rh-switch__track" />
+              <span className="rh-switch__label">Activer l’attribution automatique</span>
+              <span className="rh-switch__state">{seniority.enabled ? 'Activée' : 'Désactivée'}</span>
             </label>
-            <label className="rh-extra-days-field">
-              <span>Période légale — fin</span>
-              <input
-                type="date"
-                value={monthDayToInput(fractionnement.eligiblePeriodEnd, year)}
-                onChange={(e) => setFractionnement((c) => ({ ...c, eligiblePeriodEnd: inputToMonthDay(e.target.value) }))}
-              />
-            </label>
-          </div>
 
-          <div className="rh-extra-days-field">
-            <span>Régime par entité (aucun cumul entre régimes)</span>
-            {entities.map((entity) => (
-              <div key={entity.code} className="rh-extra-days-regime">
-                <span>{entity.name}</span>
-                <select
-                  value={regimeOf(entity.code)}
-                  onChange={(e) => setFractionnementEntityRegime(entity.code, e.target.value)}
-                >
-                  <option value="NONE">Non concernée</option>
-                  <option value="SYNTEC">Syntec 5.1 (jours ouvrés)</option>
-                  <option value="LEGAL">Légal supplétif L3141-23 (jours ouvrables)</option>
-                </select>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="rh-extra-days-actions">
-          <button type="button" onClick={saveFractionnement} disabled={busy} className="rh-extra-days-save">Enregistrer</button>
-          <button type="button" onClick={runFractionnementPreview} disabled={busy} className="rh-extra-days-secondary">Prévisualiser</button>
-          <button type="button" onClick={runFractionnementApply} disabled={busy} className="rh-extra-days-primary">Attribuer le fractionnement</button>
-          <button type="button" onClick={runFractionnementRecompute} disabled={busy} className="rh-extra-days-secondary">Recalculer</button>
-        </div>
-
-        {fractionnementPreview && (
-          <table className="rh-extra-days-table">
-            <thead>
-              <tr><th>Collaborateur</th><th>Entité</th><th>Régime</th><th>Jours hors période</th><th>5e semaine exclue</th><th>Bonus</th><th>Déjà attribué</th></tr>
-            </thead>
-            <tbody>
-              {fractionnementPreview.map((item) => (
-                <tr key={item.employeeId}>
-                  <td>{item.nom} {item.prenom}</td>
-                  <td>{item.legalEntityCode ?? '—'}</td>
-                  <td>{item.regime}</td>
-                  <td>{item.outsidePeriodDays}</td>
-                  <td>{item.fifthWeekDays}</td>
-                  <td>{item.applicable ? `+${item.bonusDays}` : '—'}</td>
-                  <td>{item.currentAllocated}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </section>
-
-      <section className="rh-extra-days-card">
-        <div className="rh-extra-days-header">
-          <span className="rh-extra-days-header__icon rh-extra-days-header__icon--green"><Icon name="clock" size={20} /></span>
-          <div>
-            <small>JUR-023</small>
-            <h2>Période de prise des congés (13 mois)</h2>
-            <p>Fenêtre de prise configurable (1er mai par défaut) et alerte sur les soldes non pris à l’échéance.</p>
-          </div>
-        </div>
-
-        <div className="rh-extra-days-actions">
-          <button type="button" onClick={runTakePeriod} disabled={busy} className="rh-extra-days-secondary">Consulter la période de prise</button>
-        </div>
-
-        {takePeriod && (
-          <>
-            <div className="rh-extra-days-takeperiod">
-              <span><b>Début</b> {takePeriod.takePeriod.start}</span>
-              <span><b>Fin</b> {takePeriod.takePeriod.end}</span>
-              <span><b>Statut</b> {takePeriod.status.status} ({takePeriod.status.daysUntilEnd >= 0 ? 'J-' : 'J+'}{Math.abs(takePeriod.status.daysUntilEnd)})</span>
-            </div>
-            <table className="rh-extra-days-table">
-              <thead>
-                <tr><th>Collaborateur</th><th>Entité</th><th>Jours restants</th><th>Échéance effective</th><th>Statut</th></tr>
-              </thead>
-              <tbody>
-                {takePeriod.employees.length === 0 && (
-                  <tr><td colSpan="5">Aucun solde non pris sur cette période.</td></tr>
-                )}
-                {takePeriod.employees.map((item) => (
-                  <tr key={item.employeeId}>
-                    <td>{item.nom} {item.prenom}{item.hasReport ? (item.reportProofStatus === 'VALIDE' ? ' (reporté — preuve validée)' : ' (reporté — en attente de preuve)') : ''}</td>
-                    <td>{item.legalEntityCode ?? '—'}</td>
-                    <td>{item.remainingDays}</td>
-                    <td>{item.effectiveDeadline}</td>
-                    <td>{item.status.status}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-
-            <div className="rh-extra-days-report-form">
-              <h3>Enregistrer un report (demande écrite de l’employeur)</h3>
-              <div className="rh-extra-days-row">
-                <label className="rh-extra-days-field">
-                  <span>Collaborateur</span>
-                  <select value={reportForm.employeeId} onChange={(e) => setReportForm((c) => ({ ...c, employeeId: e.target.value }))}>
-                    <option value="">—</option>
-                    {takePeriod.employees.map((item) => (
-                      <option key={item.employeeId} value={item.employeeId}>{item.nom} {item.prenom}</option>
-                    ))}
-                  </select>
-                </label>
-                <label className="rh-extra-days-field">
-                  <span>Nouvelle échéance</span>
-                  <input type="date" value={reportForm.newDeadline} onChange={(e) => setReportForm((c) => ({ ...c, newDeadline: e.target.value }))} />
-                </label>
-                <label className="rh-extra-days-field">
-                  <span>Justificatif (preuve écrite conservée)</span>
-                  <select value={reportForm.documentId} onChange={(e) => setReportForm((c) => ({ ...c, documentId: e.target.value }))}>
-                    <option value="">— Aucun (report en attente de preuve) —</option>
-                    {reportDocuments.map((doc) => (
-                      <option key={doc.id} value={doc.id}>{doc.originalName ?? `Document ${doc.id}`} ({doc.status})</option>
-                    ))}
-                  </select>
-                </label>
-                <label className="rh-extra-days-field">
-                  <span>Ou joindre un nouveau justificatif</span>
-                  <input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={handleReportFile} disabled={uploading} />
-                </label>
-              </div>
-              <label className="rh-extra-days-field">
-                <span>Justification</span>
-                <textarea rows="2" maxLength={1000} value={reportForm.justification} placeholder="Demande écrite de l’employeur…" onChange={(e) => setReportForm((c) => ({ ...c, justification: e.target.value }))} />
+            <div className="rh-grid-2">
+              <label className="rh-field">
+                <span className="rh-field__label">Date d’appréciation <span className="rh-field__hint">ouverture de la période de prise</span></span>
+                <input
+                  className="rh-input"
+                  type="date"
+                  value={monthDayToInput(seniority.referenceMonthDay, year)}
+                  onChange={(e) => setSeniority((c) => ({ ...c, referenceMonthDay: inputToMonthDay(e.target.value) }))}
+                />
               </label>
-              <button type="button" onClick={submitReport} disabled={busy} className="rh-extra-days-save">Enregistrer le report</button>
+
+              <div className="rh-field">
+                <span className="rh-field__label">Entités concernées</span>
+                <div className="rh-extra-days-entities">
+                  {entities.map((entity) => (
+                    <label key={entity.code} className="rh-chip">
+                      <input
+                        type="checkbox"
+                        checked={seniority.legalEntityCodes.includes(entity.code)}
+                        onChange={() => toggleSeniorityEntity(entity.code)}
+                      />
+                      <span className="rh-chip__dot"><Icon name="check" size={11} /></span>
+                      {entity.name}
+                    </label>
+                  ))}
+                </div>
+              </div>
             </div>
 
-            {takePeriodReports.length > 0 && (
-              <table className="rh-extra-days-table">
-                <thead>
-                  <tr><th>Collaborateur</th><th>Justification</th><th>Preuve</th><th>Nouvelle échéance</th><th>Auteur</th></tr>
-                </thead>
-                <tbody>
-                  {takePeriodReports.map((report) => (
-                    <tr key={report.id}>
-                      <td>{report.employee?.nom} {report.employee?.prenom}</td>
-                      <td>{report.justification}</td>
-                      <td>{report.proofStatus === 'VALIDE' ? (report.document?.originalName ?? `Document ${report.documentId}`) : 'En attente de preuve'}</td>
-                      <td>{report.newDeadline?.slice(0, 10)}</td>
-                      <td>{report.requestedBy?.nom} {report.requestedBy?.prenom}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="rh-field">
+              <span className="rh-field__label">Paliers d’ancienneté <span className="rh-field__hint">jours totaux, non cumulatifs</span></span>
+              <div className="rh-ed-threshold-list">
+                {seniority.thresholds.map((threshold, index) => (
+                  <div key={index} className="rh-ed-threshold">
+                    <span className="rh-ed-threshold__step">
+                      À partir de <em>paller n°{index + 1}</em>
+                    </span>
+                    <input
+                      className="rh-input"
+                      type="number"
+                      min="0"
+                      value={threshold.minYears}
+                      aria-label={`Seuil d'années du palier ${index + 1}`}
+                      onChange={(e) => setSeniority((c) => ({
+                        ...c,
+                        thresholds: c.thresholds.map((t, i) => i === index ? { ...t, minYears: Number(e.target.value) } : t),
+                      }))}
+                    />
+                    <span className="rh-ed-threshold__sep">ans →</span>
+                    <input
+                      className="rh-input"
+                      type="number"
+                      min="0"
+                      step="0.5"
+                      value={threshold.extraDays}
+                      aria-label={`Jours attribués au palier ${index + 1}`}
+                      onChange={(e) => setSeniority((c) => ({
+                        ...c,
+                        thresholds: c.thresholds.map((t, i) => i === index ? { ...t, extraDays: Number(e.target.value) } : t),
+                      }))}
+                    />
+                    <span className="rh-ed-threshold__sep">jour(s) ouvré(s)</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="rh-panel__foot">
+            <button type="button" onClick={saveSeniority} disabled={busy} className="rh-btn rh-btn--primary">Enregistrer</button>
+            <button type="button" onClick={runSeniorityPreview} disabled={busy} className="rh-btn">Prévisualiser</button>
+            <button type="button" onClick={runSeniorityApply} disabled={busy || !seniority.enabled} className="rh-btn rh-btn--accent">Attribuer les jours d’ancienneté</button>
+          </div>
+
+          {seniorityPreview && (
+            <div className="rh-panel__body" style={{ borderTop: '1px solid #e9f0f8' }}>
+              <div className="rh-table-scroll">
+                <table className="rh-table">
+                  <thead>
+                    <tr><th>Collaborateur</th><th>Entité</th><th>Embauche</th><th>Date d’appréciation</th><th>Ancienneté</th><th>Jours</th><th>Déjà attribué</th></tr>
+                  </thead>
+                  <tbody>
+                    {seniorityPreview.map((item) => (
+                      <tr key={item.employeeId}>
+                        <td>{item.nom} {item.prenom}</td>
+                        <td>{item.legalEntityCode ?? '—'}</td>
+                        <td>{item.hireDate ?? '—'}</td>
+                        <td>{item.referenceDate}</td>
+                        <td>{item.fullYears} an(s)</td>
+                        <td>{item.applicable ? `+${item.extraDays}` : '—'}</td>
+                        <td>{item.alreadyAllocated ? 'Oui' : 'Non'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </section>
+      )}
+
+      {activeTab === 'fractionnement' && (
+        <section className="rh-panel">
+          <div className="rh-panel__head">
+            <span className="rh-panel__icon rh-panel__icon--orange"><Icon name="calendar" size={21} /></span>
+            <div>
+              <div className="rh-panel__title-row">
+                <h2 className="rh-panel__title">Fractionnement des congés payés</h2>
+                <StatisticInfoButton title="Comprendre les jours de fractionnement" wide>
+                  <p>Le fractionnement concerne les salariés qui prennent une partie de leur congé principal en dehors de la période habituelle, généralement du 1er mai au 31 octobre.</p>
+                  <p>Selon les règles applicables, ils peuvent bénéficier de jours de congé supplémentaires.</p>
+                  <p>Par exemple, la convention Syntec prévoit, sous conditions, 1 jour supplémentaire pour 3 ou 4 jours ouvrés concernés et 2 jours supplémentaires à partir de 5 jours ouvrés. La cinquième semaine est exclue de ce calcul.</p>
+                  <p>Cette rubrique permet à la RH de vérifier les congés réellement pris, de sélectionner les règles applicables à chaque entité et de prévisualiser les droits avant attribution.</p>
+                </StatisticInfoButton>
+              </div>
+            </div>
+          </div>
+
+          <div className="rh-panel__body">
+            <div className="rh-grid-2">
+              <label className="rh-field">
+                <span className="rh-field__label">Période légale — début</span>
+                <input
+                  className="rh-input"
+                  type="date"
+                  value={monthDayToInput(fractionnement.eligiblePeriodStart, year)}
+                  onChange={(e) => setFractionnement((c) => ({ ...c, eligiblePeriodStart: inputToMonthDay(e.target.value) }))}
+                />
+              </label>
+              <label className="rh-field">
+                <span className="rh-field__label">Période légale — fin</span>
+                <input
+                  className="rh-input"
+                  type="date"
+                  value={monthDayToInput(fractionnement.eligiblePeriodEnd, year)}
+                  onChange={(e) => setFractionnement((c) => ({ ...c, eligiblePeriodEnd: inputToMonthDay(e.target.value) }))}
+                />
+              </label>
+            </div>
+
+            <div className="rh-field">
+              <span className="rh-field__label">Régime par entité <span className="rh-field__hint">aucun cumul entre régimes</span></span>
+              <div className="rh-ed-entity-list">
+                {entities.map((entity) => (
+                  <div key={entity.code} className="rh-ed-entity-row">
+                    <span className="rh-ed-entity-row__name">{entity.name}</span>
+                    <select
+                      className="rh-select"
+                      value={regimeOf(entity.code)}
+                      onChange={(e) => setFractionnementEntityRegime(entity.code, e.target.value)}
+                    >
+                      <option value="NONE">Non concernée</option>
+                      <option value="SYNTEC">Syntec 5.1 (jours ouvrés)</option>
+                      <option value="LEGAL">Légal supplétif L3141-23 (jours ouvrables)</option>
+                    </select>
+                    <span className="rh-badge rh-badge--neutral">{regimeOf(entity.code) === 'NONE' ? 'Non concernée' : regimeOf(entity.code)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="rh-panel__foot">
+            <button type="button" onClick={saveFractionnement} disabled={busy} className="rh-btn rh-btn--primary">Enregistrer</button>
+            <button type="button" onClick={runFractionnementPreview} disabled={busy} className="rh-btn">Prévisualiser</button>
+            <button type="button" onClick={runFractionnementApply} disabled={busy} className="rh-btn rh-btn--accent">Attribuer le fractionnement</button>
+            <button type="button" onClick={runFractionnementRecompute} disabled={busy} className="rh-btn">Recalculer</button>
+          </div>
+
+          {fractionnementPreview && (
+            <div className="rh-panel__body" style={{ borderTop: '1px solid #e9f0f8' }}>
+              <div className="rh-table-scroll">
+                <table className="rh-table">
+                  <thead>
+                    <tr><th>Collaborateur</th><th>Entité</th><th>Régime</th><th>Jours hors période</th><th>5e semaine exclue</th><th>Bonus</th><th>Déjà attribué</th></tr>
+                  </thead>
+                  <tbody>
+                    {fractionnementPreview.map((item) => (
+                      <tr key={item.employeeId}>
+                        <td>{item.nom} {item.prenom}</td>
+                        <td>{item.legalEntityCode ?? '—'}</td>
+                        <td>{item.regime}</td>
+                        <td>{item.outsidePeriodDays}</td>
+                        <td>{item.fifthWeekDays}</td>
+                        <td>{item.applicable ? `+${item.bonusDays}` : '—'}</td>
+                        <td>{item.currentAllocated}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </section>
+      )}
+
+      {activeTab === 'prise' && (
+        <section className="rh-panel">
+          <div className="rh-panel__head">
+            <span className="rh-panel__icon rh-panel__icon--green"><Icon name="clock" size={21} /></span>
+            <div>
+              <div className="rh-panel__title-row">
+                <h2 className="rh-panel__title">Période de prise des congés (13 mois)</h2>
+                <StatisticInfoButton title="Comprendre la période de prise des congés" wide>
+                  <p>La période de prise correspond à l’intervalle pendant lequel les collaborateurs peuvent utiliser leurs congés acquis.</p>
+                  <p>Dans cette application, cette rubrique permet à la RH de suivre la période de 13 mois configurée, de consulter les dates importantes et de repérer les congés qui n’ont pas encore été pris.</p>
+                  <p>Elle facilite le suivi des échéances et des situations nécessitant une vérification, notamment lorsque des congés restent à prendre ou peuvent faire l’objet d’un report.</p>
+                  <p>Les règles de report dépendent de la situation du salarié et des dispositions applicables.</p>
+                </StatisticInfoButton>
+              </div>
+            </div>
+          </div>
+
+          <div className="rh-panel__body">
+            <div className="rh-actions">
+              <button type="button" onClick={runTakePeriod} disabled={busy} className="rh-btn rh-btn--primary">Consulter la période de prise</button>
+            </div>
+
+            {takePeriod && (
+              <>
+                <div className="rh-ed-summary">
+                  <div className="rh-ed-summary__item"><span>Début</span><strong>{takePeriod.takePeriod.start}</strong></div>
+                  <div className="rh-ed-summary__item"><span>Fin</span><strong>{takePeriod.takePeriod.end}</strong></div>
+                  <div className="rh-ed-summary__item"><span>Statut</span><strong>{takePeriod.status.status} ({takePeriod.status.daysUntilEnd >= 0 ? 'J-' : 'J+'}{Math.abs(takePeriod.status.daysUntilEnd)})</strong></div>
+                </div>
+
+                <div className="rh-table-scroll">
+                  <table className="rh-table">
+                    <thead>
+                      <tr><th>Collaborateur</th><th>Entité</th><th>Jours restants</th><th>Échéance effective</th><th>Statut</th></tr>
+                    </thead>
+                    <tbody>
+                      {takePeriod.employees.length === 0 && (
+                        <tr><td colSpan="5">Aucun solde non pris sur cette période.</td></tr>
+                      )}
+                      {takePeriod.employees.map((item) => (
+                        <tr key={item.employeeId}>
+                          <td>{item.nom} {item.prenom}{item.hasReport ? (item.reportProofStatus === 'VALIDE' ? ' (reporté — preuve validée)' : ' (reporté — en attente de preuve)') : ''}</td>
+                          <td>{item.legalEntityCode ?? '—'}</td>
+                          <td>{item.remainingDays}</td>
+                          <td>{item.effectiveDeadline}</td>
+                          <td>{item.status.status}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="rh-ed-subform">
+                  <h3>Enregistrer un report (demande écrite de l’employeur)</h3>
+                  <div className="rh-grid-2">
+                    <label className="rh-field">
+                      <span className="rh-field__label">Collaborateur</span>
+                      <select className="rh-select" value={reportForm.employeeId} onChange={(e) => setReportForm((c) => ({ ...c, employeeId: e.target.value }))}>
+                        <option value="">—</option>
+                        {takePeriod.employees.map((item) => (
+                          <option key={item.employeeId} value={item.employeeId}>{item.nom} {item.prenom}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="rh-field">
+                      <span className="rh-field__label">Nouvelle échéance</span>
+                      <input className="rh-input" type="date" value={reportForm.newDeadline} onChange={(e) => setReportForm((c) => ({ ...c, newDeadline: e.target.value }))} />
+                    </label>
+                    <label className="rh-field">
+                      <span className="rh-field__label">Justificatif (preuve écrite conservée)</span>
+                      <select className="rh-select" value={reportForm.documentId} onChange={(e) => setReportForm((c) => ({ ...c, documentId: e.target.value }))}>
+                        <option value="">— Aucun (report en attente de preuve) —</option>
+                        {reportDocuments.map((doc) => (
+                          <option key={doc.id} value={doc.id}>{doc.originalName ?? `Document ${doc.id}`} ({doc.status})</option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="rh-field">
+                      <span className="rh-field__label">Ou joindre un nouveau justificatif</span>
+                      <input className="rh-input" type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={handleReportFile} disabled={uploading} />
+                    </label>
+                  </div>
+                  <label className="rh-field">
+                    <span className="rh-field__label">Justification</span>
+                    <textarea className="rh-textarea" rows="2" maxLength={1000} value={reportForm.justification} placeholder="Demande écrite de l’employeur…" onChange={(e) => setReportForm((c) => ({ ...c, justification: e.target.value }))} />
+                  </label>
+                  <div>
+                    <button type="button" onClick={submitReport} disabled={busy} className="rh-btn rh-btn--primary">Enregistrer le report</button>
+                  </div>
+                </div>
+
+                {takePeriodReports.length > 0 && (
+                  <div className="rh-table-scroll">
+                    <table className="rh-table">
+                      <thead>
+                        <tr><th>Collaborateur</th><th>Justification</th><th>Preuve</th><th>Nouvelle échéance</th><th>Auteur</th></tr>
+                      </thead>
+                      <tbody>
+                        {takePeriodReports.map((report) => (
+                          <tr key={report.id}>
+                            <td>{report.employee?.nom} {report.employee?.prenom}</td>
+                            <td>{report.justification}</td>
+                            <td>{report.proofStatus === 'VALIDE' ? (report.document?.originalName ?? `Document ${report.documentId}`) : 'En attente de preuve'}</td>
+                            <td>{report.newDeadline?.slice(0, 10)}</td>
+                            <td>{report.requestedBy?.nom} {report.requestedBy?.prenom}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </>
             )}
-          </>
-        )}
-      </section>
-
-      <section className="rh-extra-days-card">
-        <div className="rh-extra-days-header">
-          <span className="rh-extra-days-header__icon rh-extra-days-header__icon--red"><Icon name="shield" size={20} /></span>
-          <div>
-            <small>JUR-028</small>
-            <h2>Interaction arrêt maladie / congés posés</h2>
-            <p>Restitution automatique des jours de congé couverts par un arrêt maladie (configurable, désactivée par défaut).</p>
           </div>
-        </div>
+        </section>
+      )}
 
-        <div className="rh-extra-days-form">
-          <label className="rh-extra-days-toggle">
-            <input type="checkbox" checked={jur28.enabled} onChange={(e) => setJur28((c) => ({ ...c, enabled: e.target.checked }))} />
-            <span>Activer la restitution automatique</span>
-          </label>
-
-          <div className="rh-extra-days-field">
-            <span>Classification métier des types d’absence (explicite, persistante)</span>
-            {absenceTypes.length === 0 && <small className="rh-extra-days-hint">Aucun type d’absence déclaratif actif.</small>}
-            {absenceTypes.map((type) => (
-              <div key={type.id} className="rh-extra-days-jur24-row">
-                <span className="rh-extra-days-jur24-name">{type.name}</span>
-                <select value={type.absenceKind ?? 'NON_CLASSIFIE'} onChange={(e) => setAbsenceTypes((list) => list.map((t) => (t.id === type.id ? { ...t, absenceKind: e.target.value } : t)))}>
-                  <option value="NON_CLASSIFIE">Non classifié</option>
-                  <option value="NON_MEDICAL">Absence non médicale</option>
-                  <option value="ARRET_MALADIE">Arrêt maladie (salarié)</option>
-                  <option value="ENFANT_MALADE">Enfant malade</option>
-                  <option value="AT_MP">AT / MP</option>
-                </select>
-                <button type="button" onClick={() => saveAbsenceKind(type, type.absenceKind ?? 'NON_CLASSIFIE')} disabled={busy} className="rh-extra-days-save">Classer</button>
+      {activeTab === 'arrete' && (
+        <section className="rh-panel">
+          <div className="rh-panel__head">
+            <span className="rh-panel__icon rh-panel__icon--red"><Icon name="shield" size={21} /></span>
+            <div>
+              <div className="rh-panel__title-row">
+                <h2 className="rh-panel__title">Interaction arrêt maladie / congés posés</h2>
+                <StatisticInfoButton title="Que se passe-t-il lorsqu’un arrêt maladie chevauche des congés ?" wide>
+                  <p>Lorsqu’un salarié est en arrêt maladie pendant une période de congés payés déjà posée, les jours concernés peuvent devoir lui être restitués selon les règles applicables.</p>
+                  <p>Cette rubrique permet à la RH d’identifier les périodes qui se chevauchent, de consulter les jours concernés et de vérifier les restitutions à effectuer.</p>
+                  <p>La RH peut prévisualiser les conséquences avant toute opération. Le traitement automatique dépend des paramètres activés dans l’application.</p>
+                </StatisticInfoButton>
               </div>
-            ))}
+            </div>
           </div>
-        </div>
 
-        <div className="rh-extra-days-actions">
-          <button type="button" onClick={saveJur28} disabled={busy} className="rh-extra-days-save">Enregistrer la configuration</button>
-          <label className="rh-extra-days-field rh-extra-days-inline">
-            <span>Déclaration d’absence n°</span>
-            <input type="number" min="1" value={jur28.absenceId} onChange={(e) => setJur28((c) => ({ ...c, absenceId: e.target.value }))} />
-          </label>
-          <button type="button" onClick={runJur28Preview} disabled={busy} className="rh-extra-days-secondary">Prévisualiser</button>
-          <button type="button" onClick={runJur28Restore} disabled={busy} className="rh-extra-days-primary">Restaurer</button>
-          <button type="button" onClick={runJur28Reverse} disabled={busy} className="rh-extra-days-secondary">Inverser</button>
-        </div>
+          <div className="rh-panel__body">
+            <label className="rh-switch">
+              <input type="checkbox" checked={jur28.enabled} onChange={(e) => setJur28((c) => ({ ...c, enabled: e.target.checked }))} />
+              <span className="rh-switch__track" />
+              <span className="rh-switch__label">Activer la restitution automatique</span>
+              <span className="rh-switch__state">{jur28.enabled ? 'Activée' : 'Désactivée'}</span>
+            </label>
 
-        {jur28.preview && (
-          <div className="rh-extra-days-takeperiod">
-            <span><b>Automatisation</b> {jur28.preview.enabled ? 'activée' : 'désactivée'}</span>
-            <span><b>Type maladie</b> {jur28.preview.maladieType ? 'oui' : 'non'}</span>
-            <span><b>Jours à restituer</b> {jur28.preview.restoredDays}</span>
+            <div className="rh-field">
+              <span className="rh-field__label">Classification métier des types d’absence</span>
+              {absenceTypes.length === 0 && <p className="rh-note"><Icon name="info" size={15} />Aucun type d’absence déclaratif actif.</p>}
+              {absenceTypes.length > 0 && (
+                <div className="rh-ed-entity-list">
+                  {absenceTypes.map((type) => (
+                    <div key={type.id} className="rh-ed-kind-row">
+                      <span className="rh-ed-kind-row__name">{type.name}</span>
+                      <select className="rh-select" value={type.absenceKind ?? 'NON_CLASSIFIE'} onChange={(e) => setAbsenceTypes((list) => list.map((t) => (t.id === type.id ? { ...t, absenceKind: e.target.value } : t)))}>
+                        <option value="NON_CLASSIFIE">Non classifié</option>
+                        <option value="NON_MEDICAL">Absence non médicale</option>
+                        <option value="ARRET_MALADIE">Arrêt maladie (salarié)</option>
+                        <option value="ENFANT_MALADE">Enfant malade</option>
+                        <option value="AT_MP">AT / MP</option>
+                      </select>
+                      <button type="button" onClick={() => saveAbsenceKind(type, type.absenceKind ?? 'NON_CLASSIFIE')} disabled={busy} className="rh-btn rh-btn--sm">Classer</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
-        )}
-        {jur28.preview?.overlaps?.length > 0 && (
-          <table className="rh-extra-days-table">
-            <thead>
-              <tr><th>Congé</th><th>Période</th><th>Jours chevauchés</th><th>État</th></tr>
-            </thead>
-            <tbody>
-              {jur28.preview.overlaps.map((item) => (
-                <tr key={item.leaveRequestId}>
-                  <td>#{item.leaveRequestId}</td>
-                  <td>{item.startDate} → {item.endDate}</td>
-                  <td>{item.overlapDays}</td>
-                  <td>{item.alreadyRestored ? 'Restitué' : item.uncertain ? 'Incertain (vérification RH)' : item.reason ?? 'À restituer'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </section>
 
-      <section className="rh-extra-days-card">
-        <div className="rh-extra-days-header">
-          <span className="rh-extra-days-header__icon rh-extra-days-header__icon--blue"><Icon name="shield" size={20} /></span>
-          <div>
-            <small>JUR-024</small>
-            <h2>Convention collective par entité juridique</h2>
-            <p>Aucune convention n’est présumée : la RH identifie la convention de branche et, séparément, un éventuel accord d’entreprise (ils peuvent coexister).</p>
+          <div className="rh-panel__foot">
+            <button type="button" onClick={saveJur28} disabled={busy} className="rh-btn rh-btn--primary">Enregistrer la configuration</button>
+            <label className="rh-field" style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <span className="rh-field__label">Déclaration d’absence n°</span>
+              <input className="rh-input" style={{ width: 120, minHeight: 38 }} type="number" min="1" value={jur28.absenceId} onChange={(e) => setJur28((c) => ({ ...c, absenceId: e.target.value }))} />
+            </label>
+            <button type="button" onClick={runJur28Preview} disabled={busy} className="rh-btn">Prévisualiser</button>
+            <button type="button" onClick={runJur28Restore} disabled={busy} className="rh-btn rh-btn--accent">Restaurer</button>
+            <button type="button" onClick={runJur28Reverse} disabled={busy} className="rh-btn">Inverser</button>
           </div>
-        </div>
 
-        <div className="rh-extra-days-form">
-          {entities.map((entity) => {
-            const config = jur24[entity.id] ?? { conventionType: 'NON_RENSEIGNEE', idcc: '', conventionName: '', accordType: 'NONE', accordName: '', accordIdcc: '' }
-            return (
-              <div key={entity.id} className="rh-extra-days-jur24-row">
-                <span className="rh-extra-days-jur24-name">{entity.name}</span>
-                <select
-                  value={config.conventionType}
-                  onChange={(e) => setJur24((c) => ({ ...c, [entity.id]: { ...config, conventionType: e.target.value } }))}
-                >
-                  <option value="NON_RENSEIGNEE">Branche non renseignée</option>
-                  <option value="LEGAL">Légal supplétif (confirmé)</option>
-                  <option value="SYNTEC">Syntec (IDCC 1486)</option>
-                </select>
-                {config.conventionType === 'SYNTEC' && (
-                  <input type="text" maxLength={20} placeholder="IDCC (ex. 1486)" value={config.idcc} onChange={(e) => setJur24((c) => ({ ...c, [entity.id]: { ...config, idcc: e.target.value } }))} />
-                )}
-                <label className="rh-extra-days-jur24-accord">
-                  <input type="checkbox" checked={config.accordType === 'ACCORD_ENTREPRISE'} onChange={(e) => setJur24((c) => ({ ...c, [entity.id]: { ...config, accordType: e.target.checked ? 'ACCORD_ENTREPRISE' : 'NONE' } }))} />
-                  <span>Accord d’entreprise</span>
-                </label>
-                {config.accordType === 'ACCORD_ENTREPRISE' && (
-                  <input type="text" maxLength={180} placeholder="Nom de l’accord" value={config.accordName} onChange={(e) => setJur24((c) => ({ ...c, [entity.id]: { ...config, accordName: e.target.value } }))} />
-                )}
-                <button type="button" onClick={() => saveJur24Entity(entity)} disabled={busy} className="rh-extra-days-save">Enregistrer</button>
+          {jur28.preview && (
+            <div className="rh-panel__body" style={{ borderTop: '1px solid #e9f0f8' }}>
+              <div className="rh-ed-summary">
+                <div className="rh-ed-summary__item"><span>Automatisation</span><strong>{jur28.preview.enabled ? 'activée' : 'désactivée'}</strong></div>
+                <div className="rh-ed-summary__item"><span>Type maladie</span><strong>{jur28.preview.maladieType ? 'oui' : 'non'}</strong></div>
+                <div className="rh-ed-summary__item"><span>Jours à restituer</span><strong>{jur28.preview.restoredDays}</strong></div>
               </div>
-            )
-          })}
-        </div>
-        <p className="rh-extra-days-note">
-          <Icon name="info" size={15} />
-          Un accord d’entreprise ne remplace pas la convention de branche : il est enregistré séparément et n’est appliqué que s’il est renseigné et validé. La comparaison « disposition la plus favorable » reste une analyse RH/juridique.
-        </p>
-      </section>
+              {jur28.preview?.overlaps?.length > 0 && (
+                <div className="rh-table-scroll">
+                  <table className="rh-table">
+                    <thead>
+                      <tr><th>Congé</th><th>Période</th><th>Jours chevauchés</th><th>État</th></tr>
+                    </thead>
+                    <tbody>
+                      {jur28.preview.overlaps.map((item) => (
+                        <tr key={item.leaveRequestId}>
+                          <td>#{item.leaveRequestId}</td>
+                          <td>{item.startDate} → {item.endDate}</td>
+                          <td>{item.overlapDays}</td>
+                          <td>{item.alreadyRestored ? 'Restitué' : item.uncertain ? 'Incertain (vérification RH)' : item.reason ?? 'À restituer'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+        </section>
+      )}
 
-      <p className="rh-extra-days-note">
-        <Icon name="info" size={15} />
-        Les droits sont inscrits dans les compteurs de la période (mouvements dédiés et audités). Aucune attribution n’a lieu pour une entité non configurée. Une demande non classifiée n’est jamais comptée pour le fractionnement.
-      </p>
+      {activeTab === 'convention' && (
+        <section className="rh-panel">
+          <div className="rh-panel__head">
+            <span className="rh-panel__icon rh-panel__icon--violet"><Icon name="building" size={21} /></span>
+            <div>
+              <div className="rh-panel__title-row">
+                <h2 className="rh-panel__title">Convention collective par entité juridique</h2>
+                <StatisticInfoButton title="À quoi sert la convention collective par entité ?" wide>
+                  <p>Une entreprise peut regrouper plusieurs entités juridiques qui ne sont pas nécessairement soumises aux mêmes dispositions collectives.</p>
+                  <p>Cette rubrique permet à la RH de renseigner la convention collective applicable à chaque entité, par exemple Syntec, ainsi que l’existence éventuelle d’un accord d’entreprise.</p>
+                  <p>Ces informations permettent de mieux paramétrer les droits des collaborateurs en fonction de leur entité.</p>
+                  <p>Un accord d’entreprise et une convention collective peuvent coexister. Leur application doit respecter les règles juridiques en vigueur.</p>
+                </StatisticInfoButton>
+              </div>
+            </div>
+          </div>
+
+          <div className="rh-panel__body">
+            <div className="rh-ed-entity-list">
+              {entities.map((entity) => {
+                const config = jur24[entity.id] ?? { conventionType: 'NON_RENSEIGNEE', idcc: '', conventionName: '', accordType: 'NONE', accordName: '', accordIdcc: '' }
+                return (
+                  <div key={entity.id} className="rh-ed-convention">
+                    <div className="rh-ed-convention__top">
+                      <span className="rh-ed-entity-row__name">{entity.name}</span>
+                      <select
+                        className="rh-select"
+                        value={config.conventionType}
+                        onChange={(e) => setJur24((c) => ({ ...c, [entity.id]: { ...config, conventionType: e.target.value } }))}
+                      >
+                        <option value="NON_RENSEIGNEE">Branche non renseignée</option>
+                        <option value="LEGAL">Légal supplétif (confirmé)</option>
+                        <option value="SYNTEC">Syntec (IDCC 1486)</option>
+                      </select>
+                      {config.conventionType === 'SYNTEC' && (
+                        <input className="rh-input" type="text" maxLength={20} placeholder="IDCC (ex. 1486)" value={config.idcc} onChange={(e) => setJur24((c) => ({ ...c, [entity.id]: { ...config, idcc: e.target.value } }))} />
+                      )}
+                      <button type="button" onClick={() => saveJur24Entity(entity)} disabled={busy} className="rh-btn rh-btn--sm rh-btn--primary">Enregistrer</button>
+                    </div>
+
+                    <label className="rh-switch">
+                      <input type="checkbox" checked={config.accordType === 'ACCORD_ENTREPRISE'} onChange={(e) => setJur24((c) => ({ ...c, [entity.id]: { ...config, accordType: e.target.checked ? 'ACCORD_ENTREPRISE' : 'NONE' } }))} />
+                      <span className="rh-switch__track" />
+                      <span className="rh-switch__label">Accord d’entreprise</span>
+                    </label>
+                    {config.accordType === 'ACCORD_ENTREPRISE' && (
+                      <input className="rh-input" type="text" maxLength={180} placeholder="Nom de l’accord" value={config.accordName} onChange={(e) => setJur24((c) => ({ ...c, [entity.id]: { ...config, accordName: e.target.value } }))} />
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </section>
+      )}
+
     </main>
   )
 }

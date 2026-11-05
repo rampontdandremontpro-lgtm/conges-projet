@@ -46,6 +46,7 @@ export class AbsenceDeclarationsController {
   ) {}
 
   @Post()
+  @Roles(UserRole.RH)
   createDraft(
     @Req() request: AuthenticatedRequest,
     @Body() dto: CreateAbsenceDeclarationDto,
@@ -58,6 +59,7 @@ export class AbsenceDeclarationsController {
 
   @Post('family-event/preview')
   @HttpCode(HttpStatus.OK)
+  @Roles(UserRole.RH)
   previewFamilyEvent(
     @Req() request: AuthenticatedRequest,
     @Body() dto: FamilyEventPreviewDto,
@@ -70,6 +72,7 @@ export class AbsenceDeclarationsController {
 
   @Post('paternity/preview')
   @HttpCode(HttpStatus.OK)
+  @Roles(UserRole.RH)
   previewPaternity(
     @Req() request: AuthenticatedRequest,
     @Body() dto: FamilyEventPreviewDto,
@@ -107,6 +110,7 @@ export class AbsenceDeclarationsController {
 
   @Post(':id/submit')
   @HttpCode(HttpStatus.OK)
+  @Roles(UserRole.RH)
   submit(
     @Param('id', ParseIntPipe) id: number,
     @Req() request: AuthenticatedRequest,
@@ -163,6 +167,7 @@ export class AbsenceDeclarationsController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
+  @Roles(UserRole.RH)
   deleteDraft(
     @Param('id', ParseIntPipe) id: number,
     @Req() request: AuthenticatedRequest,
@@ -198,6 +203,7 @@ export class AbsenceDeclarationsController {
   }
 
   @Patch(':id')
+  @Roles(UserRole.RH)
   updateDraft(
     @Param('id', ParseIntPipe) id: number,
     @Req() request: AuthenticatedRequest,
