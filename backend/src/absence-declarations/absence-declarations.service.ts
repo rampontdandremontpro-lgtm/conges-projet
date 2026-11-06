@@ -888,6 +888,18 @@ export class AbsenceDeclarationsService {
       }
     }
 
+    // JUR-025/037 — la transmission RH sans justificatif obligatoire (ou
+    // l'auto-déclaration Directeur) atteint ENREGISTREE directement : la
+    // régularisation de l'acquisition doit être déclenchée ici aussi
+    // (idempotente, meilleur-effort), comme dans registerByRhInner et update.
+    if (declaration.status === AbsenceDeclarationStatus.ENREGISTREE) {
+      await this.triggerAccrualRegularization(
+        declaration.employeeId,
+        declaration.startDate,
+        declaration.endDate,
+      );
+    }
+
     return this.findAccessibleOne(id, authenticatedUser);
   }
 

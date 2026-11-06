@@ -131,6 +131,14 @@ export class SeniorityExtraDaysService {
     config: SeniorityExtraDaysConfig,
   ): boolean {
     if (!config.enabled) return false;
+    // Filtrage explicite par entité : la configuration limite l'attribution
+    // aux codes d'entités cochés dans l'interface. Une liste vide n'attribue
+    // rien ; une entité hors liste n'est jamais concernée, même si sa
+    // convention est Syntec.
+    const code = employee.legalEntity?.code ?? null;
+    if (!code || !config.legalEntityCodes.includes(code.toUpperCase())) {
+      return false;
+    }
     // JUR-024 : l'ancienneté est une matière conventionnelle (Syntec 5.1).
     // Applicable uniquement si la convention de l'entité est explicitement SYNTEC.
     const convention =

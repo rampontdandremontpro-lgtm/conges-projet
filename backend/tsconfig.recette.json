@@ -1,0 +1,8 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./dist-recette",
+    "incremental": false
+  },
+  "exclude": ["node_modules", "test", "dist", "dist-recette", "**/*spec.ts"]
+}

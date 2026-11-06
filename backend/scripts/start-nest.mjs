@@ -23,10 +23,21 @@ loadRecatteEnv()
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const backendDir = path.join(__dirname, '..')
 const nestCli = path.join(backendDir, 'node_modules', '@nestjs', 'cli', 'bin', 'nest.js')
+// Isolation de la recette : la compilation (même en mode watch) s'effectue
+// exclusivement dans `dist-recette` via `tsconfig.recette.json`. Elle ne touche
+// JAMAIS `dist` qui sert au backend habituel (`npm run start:dev`).
+// Chemin RELATIF au répertoire du projet (cwd du process Nest).
+const recetteTsconfig = 'tsconfig.recette.json'
 const port = Number(process.env.PORT ?? 3001)
 
 if (!existsSync(nestCli)) {
   recetteFail(`CLI NestJS introuvable : « ${nestCli} ».`)
+}
+
+if (!existsSync(recetteTsconfig)) {
+  recetteFail(
+    `tsconfig de recette introuvable : « ${recetteTsconfig} ». La recette exige une compilation isolée.`,
+  )
 }
 
 // Pré-contrôle du port : signaler clairement toute occupation, sans jamais
@@ -41,7 +52,7 @@ if (listener) {
   )
 }
 
-const args = ['start', ...process.argv.slice(2)]
+const args = ['start', '-p', recetteTsconfig, ...process.argv.slice(2)]
 const child = spawn(process.execPath, [nestCli, ...args], {
   cwd: backendDir,
   env: process.env,

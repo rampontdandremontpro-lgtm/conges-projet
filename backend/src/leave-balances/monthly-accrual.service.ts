@@ -35,6 +35,7 @@ import {
   AccrualAnomalyService,
 } from './accrual-anomaly.service';
 import { AccrualAnomalyType } from './accrual-anomaly.entity';
+import { NotificationsService } from '../notifications/notifications.service';
 
 /**
  * Date d'entrée en vigueur des règles actuelles (loi 2024-364, L3141-5/-5-1).
@@ -119,6 +120,7 @@ export class MonthlyAccrualService
     private readonly dataSource: DataSource,
     private readonly settingsService: SettingsService,
     private readonly accrualAnomalyService: AccrualAnomalyService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   onApplicationBootstrap(): void {
@@ -763,27 +765,80 @@ export class MonthlyAccrualService
     return months;
   }
 
-  private async runAutomaticAccrualIfDue(): Promise<void> {
+  private async runAutomaticAccrualIfDue(now: Date = new Date()): Promise<void> {
     if (this.automaticRunInProgress) {
       return;
     }
 
-    const localDate = this.getMartiniqueDateParts(new Date());
-    const lastDay = new Date(
-      Date.UTC(localDate.year, localDate.month, 0),
-    ).getUTCDate();
+    this.automaticRunInProgress = true;
+    try {
+      // Rattrapage idempotent : traite, dans l'ordre, tous les mois terminés
+      // non encore crédités automatiquement (le mois en cours n'est éligible
+      // qu'à partir de son dernier jour, 23 h en Martinique).
+      const months = await this.determineAutomaticMonthsToProcess(now);
+      for (const accrualMonth of months) {
+        const succeeded = await this.runAutomaticMonth(accrualMonth);
+        if (!succeeded) {
+          // Arrêt immédiat : le jalon reste sur le dernier mois réussi. Le mois
+          // échoué sera retenté au prochain cycle, jamais masqué par un mois
+          // suivant (aucun traitement dans le désordre).
+          break;
+        }
+      }
+    } finally {
+      this.automaticRunInProgress = false;
+    }
+  }
 
-    if (localDate.day !== lastDay || localDate.hour < 23) {
-      return;
+  /**
+   * Détermine les mois à traiter automatiquement à partir de `now` (horloge
+   * injectable pour les tests). Le jalon « dernier mois traité » est stocké en
+   * base : une interruption du serveur pendant le créneau de fin de mois est
+   * rattrapée au redémarrage, sans jamais re-créditer un mois déjà traité.
+   */
+  private async determineAutomaticMonthsToProcess(
+    now: Date,
+  ): Promise<string[]> {
+    const mostRecent = this.mostRecentEligibleAccrualMonth(now);
+    if (!mostRecent) {
+      return [];
     }
 
-    this.automaticRunInProgress = true;
-    const accrualMonth = `${localDate.year}-${String(
-      localDate.month,
-    ).padStart(2, '0')}`;
+    const lastProcessed = await this.settingsService.getString(
+      'AUTO_ACCRUAL_LAST_PROCESSED_MONTH',
+      '',
+    );
 
+    let cursor: string;
+    if (!lastProcessed) {
+      // Premier démarrage du mécanisme : ne traiter que le mois éligible le
+      // plus récent. Les mois plus anciens ne sont jamais rattrapés
+      // automatiquement (ils relèvent d'une action RH manuelle).
+      cursor = mostRecent;
+    } else {
+      cursor = this.nextAccrualMonth(lastProcessed);
+      if (cursor > mostRecent) {
+        return [];
+      }
+    }
+
+    const months: string[] = [];
+    while (cursor <= mostRecent) {
+      months.push(cursor);
+      cursor = this.nextAccrualMonth(cursor);
+    }
+    return months;
+  }
+
+  private async runAutomaticMonth(accrualMonth: string): Promise<boolean> {
     try {
       const result = await this.runForMonth(accrualMonth, null);
+      await this.settingsService.upsertInternal(
+        'AUTO_ACCRUAL_LAST_PROCESSED_MONTH',
+        accrualMonth,
+        'Dernier mois d’acquisition traité automatiquement (rattrapage idempotent).',
+        null,
+      );
       this.logger.log(
         [
           `Acquisition mensuelle ${accrualMonth} terminée.`,
@@ -792,15 +847,63 @@ export class MonthlyAccrualService
           `${result.manualReviewRequired.length} dossier(s) à contrôler par la RH.`,
         ].join(' '),
       );
+      return true;
     } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
       this.logger.error(
-        `Échec de l’acquisition mensuelle ${accrualMonth} : ${
-          error instanceof Error ? error.message : String(error)
-        }`,
+        `Échec de l’acquisition mensuelle ${accrualMonth} : ${message}`,
       );
-    } finally {
-      this.automaticRunInProgress = false;
+      // Signalement visible pour la RH, jamais silencieux. Le jalon n'est PAS
+      // avancé en cas d'échec : le prochain cycle réessaiera le même mois.
+      // Une notification elle-même défaillante ne doit pas masquer l'échec ni
+      // faire échouer le cycle : elle est isolée dans son propre try/catch.
+      try {
+        await this.notificationsService.createForActiveRoles([UserRole.RH], {
+          type: 'AUTO_ACCRUAL_FAILED',
+          title: 'Échec de l’acquisition mensuelle automatique',
+          message: `L’acquisition automatique du mois ${accrualMonth} a échoué. Relancez-la via l’endpoint de régularisation. Détail : ${message}`,
+        });
+      } catch (notificationError) {
+        this.logger.error(
+          `Impossible de notifier la RH de l’échec d’acquisition ${accrualMonth} : ${
+            notificationError instanceof Error
+              ? notificationError.message
+              : String(notificationError)
+          }`,
+        );
+      }
+      return false;
     }
+  }
+
+  /** Mois éligible le plus récent : le mois courant s'il est terminé, sinon le précédent. */
+  private mostRecentEligibleAccrualMonth(now: Date): string {
+    const localDate = this.getMartiniqueDateParts(now);
+    const lastDay = new Date(
+      Date.UTC(localDate.year, localDate.month, 0),
+    ).getUTCDate();
+    const currentMonthFinished =
+      localDate.day === lastDay && localDate.hour >= 23;
+
+    let year = localDate.year;
+    let month = localDate.month;
+    if (!currentMonthFinished) {
+      month -= 1;
+      if (month === 0) {
+        month = 12;
+        year -= 1;
+      }
+    }
+
+    return `${year}-${String(month).padStart(2, '0')}`;
+  }
+
+  private nextAccrualMonth(accrualMonth: string): string {
+    const [year, month] = accrualMonth.split('-').map(Number);
+    const next = month === 12
+      ? { year: year + 1, month: 1 }
+      : { year, month: month + 1 };
+    return `${next.year}-${String(next.month).padStart(2, '0')}`;
   }
 
   private async processEmployeeAccrual(data: {

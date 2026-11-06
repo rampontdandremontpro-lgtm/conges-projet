@@ -18,12 +18,15 @@ loadRecatteEnv()
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const backendDir = path.join(__dirname, '..')
-const distMain = path.join(backendDir, 'dist', 'main.js')
+// Isolation de la recette : le backend recette s'exécute depuis `dist-recette`
+// (compilé par `npm run build:recette`), jamais depuis `dist` qui sert au
+// backend habituel sur la base réelle.
+const distMain = path.join(backendDir, 'dist-recette', 'main.js')
 const port = Number(process.env.PORT ?? 3001)
 
 if (!existsSync(distMain)) {
   recetteFail(
-    `backend non compilé : « ${distMain} » introuvable. Lancez d'abord la compilation (npm run build).`,
+    `backend recette non compilé : « ${distMain} » introuvable. Lancez d'abord la compilation isolée (npm run build:recette).`,
   )
 }
 

@@ -67,7 +67,7 @@ async function main() {
   }
 
   const mkType = async (name, kind) => {
-    const t = await apiRequest('/leave-types', { method: 'POST', token: adminToken, body: { name: `${name}-${TAG}`, category: 'DECLARATION_ABSENCE', deductsPaidLeaveBalance: false, documentRequired: false, documentCanBeAddedLater: false, employeeCanCreate: true, rhOnly: false, allowsDays: true, allowsHalfDays: false, allowsHours: false, requiresValidation: false } })
+    const t = await apiRequest('/leave-types', { method: 'POST', token: adminToken, body: { name: `${name}-${TAG}`, category: 'DECLARATION_ABSENCE', deductsPaidLeaveBalance: false, documentRequired: false, documentCanBeAddedLater: false, employeeCanCreate: false, rhOnly: true, allowsDays: true, allowsHalfDays: false, allowsHours: false, requiresValidation: false } })
     await apiRequest(`/leave-types/${t.data.id}/absence-kind`, { method: 'PATCH', token: rhToken, body: { absenceKind: kind } })
     return t.data
   }
@@ -75,10 +75,10 @@ async function main() {
   const atMp = await mkType('AT/MP', 'AT_MP')
   const nonMedical = await mkType('Indispo non médicale', 'NON_MEDICAL')
 
-  const createAbsence = async (token, typeId, start, end) => (await apiRequest('/absence-declarations', { method: 'POST', token, body: { leaveTypeId: typeId, startDate: start, endDate: end } })).data
-  const registerAbsence = async (token, typeId, start, end) => {
-    const d = await createAbsence(token, typeId, start, end)
-    await apiRequest(`/absence-declarations/${d.id}/submit`, { method: 'POST', token, body: { certifiedAccurate: true } })
+  const createAbsence = async (employeeId, typeId, start, end) => (await apiRequest('/absence-declarations', { method: 'POST', token: rhToken, body: { employeeId, leaveTypeId: typeId, startDate: start, endDate: end } })).data
+  const registerAbsence = async (employeeId, typeId, start, end) => {
+    const d = await createAbsence(employeeId, typeId, start, end)
+    await apiRequest(`/absence-declarations/${d.id}/submit`, { method: 'POST', token: rhToken, body: { certifiedAccurate: true } })
     await apiRequest(`/absence-declarations/${d.id}/register`, { method: 'POST', token: rhToken, body: {} })
     return d
   }
@@ -159,20 +159,20 @@ async function main() {
 
   // ── 2. Mois entièrement maladie non professionnelle (légal) → 2 j ────────
   const eMal = await empLogin('MAL')
-  await registerAbsence(eMal.token, arretMaladie.id, '2026-08-01', '2026-08-31')
+  await registerAbsence(eMal.id, arretMaladie.id, '2026-08-01', '2026-08-31')
   await runAccrual('2026-08')
   rec('S02-MALADIE', 'Mois maladie non pro : 2 j', (await creditedFor(eMal.id, '2026-08')) === 2, `days=${await creditedFor(eMal.id, '2026-08')}`)
 
   // ── 3. Mois entièrement AT/MP → 2,5 j (assimilé, sans limite) ────────────
   const eAt = await empLogin('ATMP')
-  await registerAbsence(eAt.token, atMp.id, '2026-08-01', '2026-08-31')
+  await registerAbsence(eAt.id, atMp.id, '2026-08-01', '2026-08-31')
   await runAccrual('2026-08')
   rec('S03-ATMP', 'Mois AT/MP : 2,5 j (assimilé)', (await creditedFor(eAt.id, '2026-08')) === 2.5, `days=${await creditedFor(eAt.id, '2026-08')}`)
 
   // ── 4. Mois mixte travail + maladie + AT/MP ──────────────────────────────
   const eMix = await empLogin('MIX')
-  await registerAbsence(eMix.token, atMp.id, '2026-08-01', '2026-08-10')
-  await registerAbsence(eMix.token, arretMaladie.id, '2026-08-11', '2026-08-20')
+  await registerAbsence(eMix.id, atMp.id, '2026-08-01', '2026-08-10')
+  await registerAbsence(eMix.id, arretMaladie.id, '2026-08-11', '2026-08-20')
   await runAccrual('2026-08')
   const mixDays = await creditedFor(eMix.id, '2026-08')
   const expectedMix = round2((2.5 * 21 + 2 * 10) / 31)
@@ -180,7 +180,7 @@ async function main() {
 
   // ── 5. AT/MP supérieur à un an : pas de limite d'un an ───────────────────
   const eLong = await empLogin('LONG')
-  await registerAbsence(eLong.token, atMp.id, '2025-07-01', '2026-08-31')
+  await registerAbsence(eLong.id, atMp.id, '2025-07-01', '2026-08-31')
   await runAccrual('2026-08')
   rec('S05-ATMP-LONG', 'AT/MP > 1 an : 2,5 j au 14e mois', (await creditedFor(eLong.id, '2026-08')) === 2.5, `days=${await creditedFor(eLong.id, '2026-08')}`)
 
@@ -191,7 +191,7 @@ async function main() {
     const m = ((5 + i) % 12) + 1
     const month = `${y}-${String(m).padStart(2, '0')}`
     const last = new Date(Date.UTC(y, m, 0)).getUTCDate()
-    await registerAbsence(eCap.token, arretMaladie.id, `${month}-01`, `${month}-${last}`)
+    await registerAbsence(eCap.id, arretMaladie.id, `${month}-01`, `${month}-${last}`)
     await runAccrual(month)
   }
   const capPeriod1 = await illnessForPeriod(eCap.id, '2025-2026')
@@ -204,7 +204,7 @@ async function main() {
   rec('S06-MALADIE-CAP', '12 mois maladie : 24 j (plafond période 2025-2026, net)', Math.abs(capPeriod1 - 24) < 0.01 && Math.abs(capNetTotal - 24) < 0.01, `illnessDays=${capPeriod1} net=${capNetTotal}`)
 
   const capMonth13 = '2026-06'
-  await registerAbsence(eCap.token, arretMaladie.id, '2026-06-01', '2026-06-30')
+  await registerAbsence(eCap.id, arretMaladie.id, '2026-06-01', '2026-06-30')
   await runAccrual(capMonth13)
   const cap13 = await creditedFor(eCap.id, capMonth13)
   const capPeriod2 = await illnessForPeriod(eCap.id, '2026-2027')
@@ -212,7 +212,7 @@ async function main() {
 
   // ── 8. P3 — Syntec : maintien INDIVIDUEL → maladie assimilée 2,5 j ──────
   const eSyntecMaintien = await empLogin('SYNMAI')
-  await registerAbsence(eSyntecMaintien.token, arretMaladie.id, '2026-07-01', '2026-07-31')
+  await registerAbsence(eSyntecMaintien.id, arretMaladie.id, '2026-07-01', '2026-07-31')
   await createMaintenance(eSyntecMaintien.id, '2026-07-01', '2026-07-31')
   await runAccrual('2026-07')
   const syntecMaintienDays = await creditedFor(eSyntecMaintien.id, '2026-07')
@@ -220,7 +220,7 @@ async function main() {
 
   // ── 9. P3 — Syntec sans maintien : 2 j + décision RH requise ─────────────
   const eSyntecSans = await empLogin('SYNSAN')
-  await registerAbsence(eSyntecSans.token, arretMaladie.id, '2026-09-01', '2026-09-30')
+  await registerAbsence(eSyntecSans.id, arretMaladie.id, '2026-09-01', '2026-09-30')
   const runSyntecSans = await runAccrual('2026-09')
   const syntecSansDays = await creditedFor(eSyntecSans.id, '2026-09')
   const flaggedSyntec = (runSyntecSans.data?.manualReviewRequired ?? []).some((r) => r.employeeId === eSyntecSans.id)
@@ -228,7 +228,7 @@ async function main() {
 
   // ── 10. Régime légal (EFFICIENCE) → 2 j, sans signal ─────────────────────
   const eLegal = await empLogin('LEGAL', { legalEntityId: effId })
-  await registerAbsence(eLegal.token, arretMaladie.id, '2026-09-01', '2026-09-30')
+  await registerAbsence(eLegal.id, arretMaladie.id, '2026-09-01', '2026-09-30')
   const runLegal = await runAccrual('2026-09')
   const legalDays = await creditedFor(eLegal.id, '2026-09')
   const flaggedLegal = (runLegal.data?.manualReviewRequired ?? []).some((r) => r.employeeId === eLegal.id)
@@ -245,13 +245,13 @@ async function main() {
   const eLate = await empLogin('LATE')
   await runAccrual('2026-08')
   const beforeLate = await creditedFor(eLate.id, '2026-08')
-  await registerAbsence(eLate.token, arretMaladie.id, '2026-08-01', '2026-08-31')
+  await registerAbsence(eLate.id, arretMaladie.id, '2026-08-01', '2026-08-31')
   const netLate = await netFor(eLate.id, '2026-08')
   rec('S12-ENREGISTREMENT-TARDIF', 'Arrêt enregistré après crédit : régularisation', beforeLate === 2.5 && Math.abs(netLate - 2) < 0.01, `avant=${beforeLate} après=${netLate}`)
 
   // ── 13. Requalification maladie → AT/MP → régularisation + ventilation ───
   const eReq = await empLogin('REQ')
-  const reqAbs = await registerAbsence(eReq.token, arretMaladie.id, '2026-08-01', '2026-08-31')
+  const reqAbs = await registerAbsence(eReq.id, arretMaladie.id, '2026-08-01', '2026-08-31')
   await runAccrual('2026-08')
   const beforeReq = await creditedFor(eReq.id, '2026-08')
   await apiRequest(`/absence-declarations/${reqAbs.id}`, { method: 'PATCH', token: rhToken, body: { leaveTypeId: atMp.id } })
@@ -264,7 +264,7 @@ async function main() {
 
   // ── 14. Annulation après crédit → régularisation ─────────────────────────
   const eAnn = await empLogin('ANN')
-  const annAbs = await registerAbsence(eAnn.token, arretMaladie.id, '2026-08-01', '2026-08-31')
+  const annAbs = await registerAbsence(eAnn.id, arretMaladie.id, '2026-08-01', '2026-08-31')
   await runAccrual('2026-08')
   const beforeAnn = await creditedFor(eAnn.id, '2026-08')
   await apiRequest(`/absence-declarations/${annAbs.id}/cancel`, { method: 'POST', token: rhToken })
@@ -281,7 +281,7 @@ async function main() {
 
   // ── 16. Mois traités dans le désordre : résultats cohérents ──────────────
   const eOoo = await empLogin('OOO')
-  await registerAbsence(eOoo.token, arretMaladie.id, '2026-09-01', '2026-09-30')
+  await registerAbsence(eOoo.id, arretMaladie.id, '2026-09-01', '2026-09-30')
   await runAccrual('2026-09')
   const oooSep = await creditedFor(eOoo.id, '2026-09')
   await runAccrual('2026-08')
@@ -290,21 +290,21 @@ async function main() {
 
   // ── 17. Absence non assimilée (non médicale) → crédit 0 ──────────────────
   const eEnf = await empLogin('ENF')
-  await registerAbsence(eEnf.token, nonMedical.id, '2026-08-01', '2026-08-31')
+  await registerAbsence(eEnf.id, nonMedical.id, '2026-08-01', '2026-08-31')
   await runAccrual('2026-08')
   const enfDays = await creditedFor(eEnf.id, '2026-08')
   rec('S17-NON-ASSIMILEE', 'Absence non assimilée (non médicale) : crédit 0', enfDays === 0, `days=${enfDays}`)
 
   // ── 18. P2 — arrondi unique : février 28 j, 25 travaillés + 3 maladie ────
   const eRound = await empLogin('ROUND')
-  await registerAbsence(eRound.token, arretMaladie.id, '2026-02-26', '2026-02-28')
+  await registerAbsence(eRound.id, arretMaladie.id, '2026-02-26', '2026-02-28')
   await runAccrual('2026-02')
   const roundDays = await creditedFor(eRound.id, '2026-02')
   rec('S18-ARRONDI', 'Février 28 j (25 travaillés + 3 maladie) : 2,45 (arrondi unique)', roundDays === 2.45, `days=${roundDays}`)
 
   // ── 19. P4A — embauche en cours de mois + arrêt chevauchant ──────────────
   const eClip = await empLogin('CLIP', { hireDate: '2026-08-16' })
-  await registerAbsence(eClip.token, arretMaladie.id, '2026-08-01', '2026-08-31')
+  await registerAbsence(eClip.id, arretMaladie.id, '2026-08-01', '2026-08-31')
   await runAccrual('2026-08')
   const clipDays = await creditedFor(eClip.id, '2026-08')
   const expectedClip = round2((2 * 16) / 31) // 16 j de maladie couverts par le contrat
@@ -312,7 +312,7 @@ async function main() {
 
   // ── 20. P5 — mois historique (2023) avec maladie : pas de crédit auto ────
   const eHist = await empLogin('HIST', { hireDate: '2020-01-01' })
-  await registerAbsence(eHist.token, arretMaladie.id, '2023-08-01', '2023-08-31')
+  await registerAbsence(eHist.id, arretMaladie.id, '2023-08-01', '2023-08-31')
   const runHist = await runAccrual('2023-08')
   const histDays = await creditedFor(eHist.id, '2023-08')
   const flaggedHist = (runHist.data?.manualReviewRequired ?? []).some((r) => r.employeeId === eHist.id)
@@ -355,10 +355,10 @@ async function main() {
 
   // ── 23. P3 — deux salariés même entité, situations différentes ───────────
   const eMaintA = await empLogin('MAINTA')
-  await registerAbsence(eMaintA.token, arretMaladie.id, '2026-07-01', '2026-07-31')
+  await registerAbsence(eMaintA.id, arretMaladie.id, '2026-07-01', '2026-07-31')
   await createMaintenance(eMaintA.id, '2026-07-01', '2026-07-31')
   const eMaintB = await empLogin('MAINTB')
-  await registerAbsence(eMaintB.token, arretMaladie.id, '2026-07-01', '2026-07-31')
+  await registerAbsence(eMaintB.id, arretMaladie.id, '2026-07-01', '2026-07-31')
   await runAccrual('2026-07')
   const maintADays = await creditedFor(eMaintA.id, '2026-07')
   const maintBDays = await creditedFor(eMaintB.id, '2026-07')
@@ -366,7 +366,7 @@ async function main() {
 
   // ── 24. P3 — maintien partiel d'un arrêt ────────────────────────────────
   const ePart = await empLogin('PART')
-  await registerAbsence(ePart.token, arretMaladie.id, '2026-08-01', '2026-08-10')
+  await registerAbsence(ePart.id, arretMaladie.id, '2026-08-01', '2026-08-10')
   await createMaintenance(ePart.id, '2026-08-01', '2026-08-05')
   await runAccrual('2026-08')
   const partDays = await creditedFor(ePart.id, '2026-08')
@@ -376,7 +376,7 @@ async function main() {
 
   // ── 25. P3 — décision RH modifiée après acquisition → recalcul ───────────
   const eDec = await empLogin('DEC')
-  await registerAbsence(eDec.token, arretMaladie.id, '2026-07-01', '2026-07-31')
+  await registerAbsence(eDec.id, arretMaladie.id, '2026-07-01', '2026-07-31')
   await runAccrual('2026-07')
   const beforeDec = await creditedFor(eDec.id, '2026-07')
   const decision = await createMaintenance(eDec.id, '2026-07-01', '2026-07-31')
@@ -413,7 +413,7 @@ async function main() {
   rec('S27-LEGACY-AUTRE-MOIS', 'Ancien mouvement août 2025 ne bloque pas août 2026', leg2Aug2026 === 2.5 && Number(leg2Null?.[0]?.c) === 1, `2026=${leg2Aug2026} legacyNull=${Number(leg2Null?.[0]?.c)}`)
 
   // ── 28. P1 — modification rétroactive d'une ancienne période légacy ─────
-  await registerAbsence(eLeg2.token, arretMaladie.id, '2025-08-01', '2025-08-31')
+  await registerAbsence(eLeg2.id, arretMaladie.id, '2025-08-01', '2025-08-31')
   const leg2Net2025 = await netFor(eLeg2.id, '2025-08')
   rec('S28-LEGACY-REGULARISATION', 'Régularisation de l’ancienne période rattachée : 2,5 → 2', Math.abs(leg2Net2025 - 2) < 0.01, `net=${leg2Net2025}`)
 
@@ -470,63 +470,63 @@ async function main() {
 
   // ── 34-38. P4 — changement de loi avril 2024 (dates effectives) ─────────
   const eM24 = await empLogin('M24')
-  await registerAbsence(eM24.token, arretMaladie.id, '2024-03-01', '2024-03-31')
+  await registerAbsence(eM24.id, arretMaladie.id, '2024-03-01', '2024-03-31')
   const runM24 = await runAccrual('2024-03')
   rec('S34-HISTO-MARS2024', 'Mars 2024 maladie : 0 j auto + signal historique', (await creditedFor(eM24.id, '2024-03')) === 0 && (runM24.data?.manualReviewRequired ?? []).some((r) => r.employeeId === eM24.id), `days=${await creditedFor(eM24.id, '2024-03')}`)
 
   const eA1 = await empLogin('A1')
-  await registerAbsence(eA1.token, arretMaladie.id, '2024-04-01', '2024-04-23')
+  await registerAbsence(eA1.id, arretMaladie.id, '2024-04-01', '2024-04-23')
   const runA1 = await runAccrual('2024-04')
   const a1Days = await creditedFor(eA1.id, '2024-04')
   rec('S35-HISTO-AVRIL-1-23', 'Avril 2024 arrêt 1→23 : 7 j de travail certains (0,58) + signal', Math.abs(a1Days - round2((2.5 * 7) / 30)) < 0.01 && (runA1.data?.manualReviewRequired ?? []).some((r) => r.employeeId === eA1.id), `days=${a1Days}`)
 
   const eA2 = await empLogin('A2')
-  await registerAbsence(eA2.token, arretMaladie.id, '2024-04-24', '2024-04-30')
+  await registerAbsence(eA2.id, arretMaladie.id, '2024-04-24', '2024-04-30')
   const runA2 = await runAccrual('2024-04')
   const a2Days = await creditedFor(eA2.id, '2024-04')
   const a2Hist = (runA2.data?.manualReviewRequired ?? []).some((r) => r.employeeId === eA2.id && /antérieurs au 24\/04\/2024/.test(r.reason))
   rec('S36-HISTO-AVRIL-24-30', 'Avril 2024 arrêt 24→30 : règles actuelles (2,38), pas de signal historique', Math.abs(a2Days - round2((2.5 * 23 + 2 * 7) / 30)) < 0.01 && !a2Hist, `days=${a2Days}`)
 
   const eA3 = await empLogin('A3')
-  await registerAbsence(eA3.token, arretMaladie.id, '2024-04-20', '2024-04-26')
+  await registerAbsence(eA3.id, arretMaladie.id, '2024-04-20', '2024-04-26')
   const runA3 = await runAccrual('2024-04')
   const a3Days = await creditedFor(eA3.id, '2024-04')
   rec('S37-HISTO-AVRIL-TRAVERSANT', 'Avril 2024 arrêt 20→26 : 4 j historiques + 3 j actuels (2,12)', Math.abs(a3Days - round2((2.5 * 23 + 2 * 3) / 30)) < 0.01 && (runA3.data?.manualReviewRequired ?? []).some((r) => r.employeeId === eA3.id && /antérieurs au 24\/04\/2024/.test(r.reason)), `days=${a3Days}`)
 
   const eMai24 = await empLogin('MAI24')
-  await registerAbsence(eMai24.token, arretMaladie.id, '2024-05-01', '2024-05-31')
+  await registerAbsence(eMai24.id, arretMaladie.id, '2024-05-01', '2024-05-31')
   await runAccrual('2024-05')
   rec('S38-HISTO-MAI2024', 'Mai 2024 maladie : 2 j (règles actuelles)', (await creditedFor(eMai24.id, '2024-05')) === 2, `days=${await creditedFor(eMai24.id, '2024-05')}`)
 
   // ── 39. P4 — AT/MP historique : limite d'un an ───────────────────────────
   const eLongH = await empLogin('LONGH')
-  await registerAbsence(eLongH.token, atMp.id, '2023-01-01', '2024-03-31')
+  await registerAbsence(eLongH.id, atMp.id, '2023-01-01', '2024-03-31')
   const runLongH = await runAccrual('2024-03')
   rec('S39-ATMP-HISTORIQUE-1AN', 'AT/MP > 1 an (2023-2024) : exclu + signal historique', (await creditedFor(eLongH.id, '2024-03')) === 0 && (runLongH.data?.manualReviewRequired ?? []).some((r) => r.employeeId === eLongH.id), `days=${await creditedFor(eLongH.id, '2024-03')}`)
 
   const eShortH = await empLogin('SHORTH')
-  await registerAbsence(eShortH.token, atMp.id, '2023-06-01', '2023-12-31')
+  await registerAbsence(eShortH.id, atMp.id, '2023-06-01', '2023-12-31')
   const runShortH = await runAccrual('2023-07')
   const shortHFlag = (runShortH.data?.manualReviewRequired ?? []).some((r) => r.employeeId === eShortH.id && /antérieurs au 24\/04\/2024/.test(r.reason))
   rec('S39b-ATMP-HISTORIQUE-1AN-OK', 'AT/MP ≤ 1 an (2023) : assimilé 2,5 sans signal', (await creditedFor(eShortH.id, '2023-07')) === 2.5 && !shortHFlag, `days=${await creditedFor(eShortH.id, '2023-07')}`)
 
   // ── 40. P5 — fondement non applicable ────────────────────────────────────
   const eBad = await empLogin('BAD', { legalEntityId: effId })
-  await registerAbsence(eBad.token, arretMaladie.id, '2026-07-01', '2026-07-31')
+  await registerAbsence(eBad.id, arretMaladie.id, '2026-07-01', '2026-07-31')
   const badResp = await createMaintenance(eBad.id, '2026-07-01', '2026-07-31', 'Fondement inapplicable', 'SYNTEC_5_5')
   rec('S40-FONDEMENT-NON-APPLICABLE', 'Syntec 5.5 sur salarié régime légal : refusé (400)', badResp.status === 400, `status=${badResp.status}`)
 
   // ── 41. P1 — AT/MP long : première année assimilée (salarié dédié) ──────
   const eFirstY = await empLogin('FIRSTY')
-  await registerAbsence(eFirstY.token, atMp.id, '2023-01-01', '2024-03-31')
+  await registerAbsence(eFirstY.id, atMp.id, '2023-01-01', '2024-03-31')
   await runAccrual('2023-07')
   const firstYearDays = await creditedFor(eFirstY.id, '2023-07')
   rec('S41-ATMP-PREMIERE-ANNEE', 'AT/MP long : première année (2023-07) assimilée 2,5', firstYearDays === 2.5, `days=${firstYearDays}`)
 
   // ── 42. P1 — deux déclarations AT/MP consécutives = un seul arrêt continu ─
   const eSeq = await empLogin('SEQ')
-  await registerAbsence(eSeq.token, atMp.id, '2023-01-01', '2023-06-30')
-  await registerAbsence(eSeq.token, atMp.id, '2023-07-01', '2024-03-31')
+  await registerAbsence(eSeq.id, atMp.id, '2023-01-01', '2023-06-30')
+  await registerAbsence(eSeq.id, atMp.id, '2023-07-01', '2024-03-31')
   await runAccrual('2023-07')
   await runAccrual('2024-03')
   const seqFirst = await creditedFor(eSeq.id, '2023-07')
@@ -535,8 +535,8 @@ async function main() {
 
   // ── 43. P1 — interruption réelle entre deux arrêts : compteur réinitialisé ─
   const eGap = await empLogin('GAP')
-  await registerAbsence(eGap.token, atMp.id, '2022-01-01', '2022-06-30')
-  await registerAbsence(eGap.token, atMp.id, '2023-01-01', '2024-12-31')
+  await registerAbsence(eGap.id, atMp.id, '2022-01-01', '2022-06-30')
+  await registerAbsence(eGap.id, atMp.id, '2023-01-01', '2024-12-31')
   await runAccrual('2023-07')
   const gapDays = await creditedFor(eGap.id, '2023-07')
   rec('S43-ATMP-INTERRUPTION', 'Interruption entre deux arrêts : 2e période repart à 0 (2,5)', gapDays === 2.5, `days=${gapDays}`)
@@ -578,7 +578,7 @@ async function main() {
 
   // ── 46. P1 — fondement AUTRE : sans document vérifié → PROPOSITION ──────
   const eAutre = await empLogin('AUTRE')
-  await registerAbsence(eAutre.token, arretMaladie.id, '2026-07-01', '2026-07-31')
+  await registerAbsence(eAutre.id, arretMaladie.id, '2026-07-01', '2026-07-31')
   const autreNoDoc = await createMaintenance(eAutre.id, '2026-07-01', '2026-07-31', 'Justification libre', 'AUTRE')
   await runAccrual('2026-07')
   const autreNoDocDays = await creditedFor(eAutre.id, '2026-07')
@@ -604,14 +604,14 @@ async function main() {
   const accordNoDatesEntityId = await mkAccordEntity(`ACCORD-NOD-${TAG}`, null, null, false)
 
   const eAccordExp = await empLogin('ACCORDE', { legalEntityId: accordExpiredEntityId })
-  await registerAbsence(eAccordExp.token, arretMaladie.id, '2026-07-01', '2026-07-31')
+  await registerAbsence(eAccordExp.id, arretMaladie.id, '2026-07-01', '2026-07-31')
   // L'entité enregistre un accord EXPIRÉ au 30/06/2026 : juillet 2026 hors période.
   const accordExpired = await createMaintenance(eAccordExp.id, '2026-07-01', '2026-07-31', 'Accord d’entreprise.', 'ACCORD_ENTREPRISE', 'Accord recette')
   await runAccrual('2026-07')
   const accordExpDays = await creditedFor(eAccordExp.id, '2026-07')
 
   const eAccordOk = await empLogin('ACCORDV', { legalEntityId: accordValidEntityId })
-  await registerAbsence(eAccordOk.token, arretMaladie.id, '2026-05-01', '2026-05-31')
+  await registerAbsence(eAccordOk.id, arretMaladie.id, '2026-05-01', '2026-05-31')
   // Accord ENREGISTRÉ valide couvrant mai 2026 → applicabilité établie.
   const accordValid = await createMaintenance(eAccordOk.id, '2026-05-01', '2026-05-31', 'Accord d’entreprise valide.', 'ACCORD_ENTREPRISE', 'Accord recette')
   await runAccrual('2026-05')
@@ -620,7 +620,7 @@ async function main() {
 
   // ── 47b. P2 — dates librement inventées sur la décision : aucune validation ─
   const eAccordInvent = await empLogin('ACCORDINV', { legalEntityId: accordNoDatesEntityId })
-  await registerAbsence(eAccordInvent.token, arretMaladie.id, '2026-05-01', '2026-05-31')
+  await registerAbsence(eAccordInvent.id, arretMaladie.id, '2026-05-01', '2026-05-31')
   // Aucune validité ENREGISTRÉE sur l'entité : même avec des dates saisies sur la
   // décision, la source de vérité manque → PROPOSITION, aucun crédit supérieur.
   const accordInvented = await createMaintenance(eAccordInvent.id, '2026-05-01', '2026-05-31', 'Accord revendiqué.', 'ACCORD_ENTREPRISE', 'Accord recette', { basisValidFrom: '2020-01-01', basisValidTo: '2030-12-31' })
@@ -630,7 +630,7 @@ async function main() {
 
   // ── 48. P4 — deux décisions simultanées (verrou GET_LOCK) ───────────────
   const eConc2 = await empLogin('CONC2')
-  await registerAbsence(eConc2.token, arretMaladie.id, '2026-10-01', '2026-10-31')
+  await registerAbsence(eConc2.id, arretMaladie.id, '2026-10-01', '2026-10-31')
   const [cA, cB] = await Promise.all([
     createMaintenance(eConc2.id, '2026-10-01', '2026-10-31', 'Décision A'),
     createMaintenance(eConc2.id, '2026-10-15', '2026-10-20', 'Décision B'),
@@ -694,7 +694,7 @@ async function main() {
 
   // ── 50. P2 — date anniversaire : 14 j assimilés + 17 j provisoires ───────
   const eAnniv = await empLogin('ANNIV')
-  await registerAbsence(eAnniv.token, atMp.id, '2023-03-15', '2024-03-31')
+  await registerAbsence(eAnniv.id, atMp.id, '2023-03-15', '2024-03-31')
   await runAccrual('2024-03')
   const [annivAn] = await conn.query(
     "SELECT days FROM accrual_anomalies WHERE employee_id=? AND type='HISTORICAL_PENDING' AND accrual_month='2024-03'",
@@ -706,7 +706,7 @@ async function main() {
 
   // ── 51. P2 — 29 février : date anniversaire en année non bissextile ──────
   const eFeb = await empLogin('FEB')
-  await registerAbsence(eFeb.token, atMp.id, '2020-02-29', '2021-02-28')
+  await registerAbsence(eFeb.id, atMp.id, '2020-02-29', '2021-02-28')
   await runAccrual('2021-02')
   const [febAn] = await conn.query(
     "SELECT days FROM accrual_anomalies WHERE employee_id=? AND type='HISTORICAL_PENDING' AND accrual_month='2021-02'",
@@ -718,7 +718,7 @@ async function main() {
 
   // ── 52. P2 — Cass. 22-17.638 : pas de correction négative définitive ─────
   const eCass = await empLogin('CASS')
-  await registerAbsence(eCass.token, atMp.id, '2023-01-01', '2024-03-31')
+  await registerAbsence(eCass.id, atMp.id, '2023-01-01', '2024-03-31')
   const [cassBal] = await conn.query(
     "INSERT INTO leave_balances (employee_id, reference_period, counter_type, acquired_days, reserved_days, consumed_days, available_days) VALUES (?, '2023-2024', 'N', 2.5, 0, 0, 2.5)",
     [eCass.id],
@@ -737,7 +737,7 @@ async function main() {
 
   // ── 53. P1 — clause contractuelle sans source vérifiée → aucun droit auto ─
   const eContrat = await empLogin('CONTRAT')
-  await registerAbsence(eContrat.token, arretMaladie.id, '2026-07-01', '2026-07-31')
+  await registerAbsence(eContrat.id, arretMaladie.id, '2026-07-01', '2026-07-31')
   const contratResp = await createMaintenance(eContrat.id, '2026-07-01', '2026-07-31', 'Clause contractuelle déclarée sans justificatif.', 'CONTRACTUEL', 'Clause art. 3', { basisValidFrom: '2024-01-01', basisValidTo: '2026-12-31' })
   await runAccrual('2026-07')
   const contratDays = await creditedFor(eContrat.id, '2026-07')
@@ -745,7 +745,7 @@ async function main() {
 
   // ── 54. P1 — AUTRE valable avec Syntec : autorisé après vérification ─────
   const eAutreOk = await empLogin('AUTREOK')
-  await registerAbsence(eAutreOk.token, arretMaladie.id, '2026-07-01', '2026-07-31')
+  await registerAbsence(eAutreOk.id, arretMaladie.id, '2026-07-01', '2026-07-31')
   const docId = await createVerifiedDocument(eAutreOk.id)
   const autreOkResp = await createMaintenance(eAutreOk.id, '2026-07-01', '2026-07-31', 'Disposition distincte plus favorable, justificatif validé.', 'AUTRE', 'Convention de branche distincte art. 12', { basisValidFrom: '2024-01-01', basisValidTo: '2026-12-31', basisDocumentId: docId })
   await runAccrual('2026-07')
@@ -755,7 +755,7 @@ async function main() {
   // ── 55. P1 — accord couvrant seulement une partie de l'arrêt ────────────
   const accordPartialEntityId = await mkAccordEntity(`ACCORD-PART-${TAG}`, '2026-07-01', '2026-07-15')
   const ePartAccord = await empLogin('PARTACC', { legalEntityId: accordPartialEntityId })
-  await registerAbsence(ePartAccord.token, arretMaladie.id, '2026-07-01', '2026-07-31')
+  await registerAbsence(ePartAccord.id, arretMaladie.id, '2026-07-01', '2026-07-31')
   // Accord ENREGISTRÉ valide du 01/07/2026 au 15/07/2026 : seuls les 15 premiers
   // jours de l'arrêt sont assimilés ; les 16 suivants restent au socle légal.
   const partAccordResp = await createMaintenance(ePartAccord.id, '2026-07-01', '2026-07-31', 'Accord partiel.', 'ACCORD_ENTREPRISE', 'Accord recette')
@@ -766,7 +766,7 @@ async function main() {
 
   // ── 56. P1 — modification/annulation du fondement : régularisation tracée ─
   const eMod = await empLogin('MODBAS')
-  await registerAbsence(eMod.token, arretMaladie.id, '2026-07-01', '2026-07-31')
+  await registerAbsence(eMod.id, arretMaladie.id, '2026-07-01', '2026-07-31')
   const modResp = await createMaintenance(eMod.id, '2026-07-01', '2026-07-31', 'Syntec 5.5.', 'SYNTEC_5_5')
   await runAccrual('2026-07')
   const modBefore = await creditedFor(eMod.id, '2026-07')
@@ -786,11 +786,11 @@ async function main() {
   // ── 58. P3 — mois mixte : correction certaine négative appliquée ────────
   const eMixNeg = await empLogin('MIXNEG')
   // 2024-04 : arrêt maladie 1→23 (historique, provisoire) + jours 24→30 travaillés.
-  await registerAbsence(eMixNeg.token, arretMaladie.id, '2024-04-01', '2024-04-23')
+  await registerAbsence(eMixNeg.id, arretMaladie.id, '2024-04-01', '2024-04-23')
   await runAccrual('2024-04')
   const mixNegBefore = await creditedFor(eMixNeg.id, '2024-04')
   // Correction certaine : un arrêt NON MÉDICAL (non assimilé) est ajouté 24→30.
-  await registerAbsence(eMixNeg.token, nonMedical.id, '2024-04-24', '2024-04-30')
+  await registerAbsence(eMixNeg.id, nonMedical.id, '2024-04-24', '2024-04-30')
   const mixNegNet = await netFor(eMixNeg.id, '2024-04')
   rec('S58-MIXTE-CERTAIN-NEGATIF', 'Mois mixte : correction négative certaine appliquée (part non assimilée)', Math.abs(mixNegBefore - round2((2.5 * 7) / 30)) < 0.01 && Math.abs(mixNegNet - 0) < 0.01, `before=${mixNegBefore} net=${mixNegNet}`)
 
@@ -804,7 +804,7 @@ async function main() {
   // ── 60. P2 — décision antérieure (LEGACY_PENDING) : portée exacte ──────
   // (a) Acquis RÉELLEMENT présent avant requalification : recalcul sans retrait.
   const eLegacyKeep = await empLogin('LEGKEEP')
-  await registerAbsence(eLegacyKeep.token, arretMaladie.id, '2026-07-01', '2026-07-31')
+  await registerAbsence(eLegacyKeep.id, arretMaladie.id, '2026-07-01', '2026-07-31')
   const legacyKeepResp = await createMaintenance(eLegacyKeep.id, '2026-07-01', '2026-07-31', 'Maintien historique.', 'AUTRE', 'Disposition historique', { basisValidFrom: '2024-01-01', basisValidTo: '2026-12-31' })
   await conn.query("UPDATE illness_maintenance_decisions SET basis_validation_status='LEGACY_PENDING' WHERE id=?", [legacyKeepResp.data.id])
   const [keepBal] = await conn.query(
@@ -826,7 +826,7 @@ async function main() {
   // (b) Aucun crédit antérieur : une décision LEGACY_PENDING non vérifiée
   //     n'attribue AUCUN avantage conventionnel nouveau.
   const eLegacyNew = await empLogin('LEGNEW')
-  await registerAbsence(eLegacyNew.token, arretMaladie.id, '2026-07-01', '2026-07-31')
+  await registerAbsence(eLegacyNew.id, arretMaladie.id, '2026-07-01', '2026-07-31')
   const legacyNewResp = await createMaintenance(eLegacyNew.id, '2026-07-01', '2026-07-31', 'Maintien historique.', 'AUTRE', 'Disposition historique', { basisValidFrom: '2024-01-01', basisValidTo: '2026-12-31' })
   await conn.query("UPDATE illness_maintenance_decisions SET basis_validation_status='LEGACY_PENDING' WHERE id=?", [legacyNewResp.data.id])
   await runAccrual('2026-07')
@@ -835,7 +835,7 @@ async function main() {
 
   // ── 61. P2 — document appartenant à un autre salarié : refus ────────────
   const eDocOther = await empLogin('DOCOTHER')
-  await registerAbsence(eDocOther.token, arretMaladie.id, '2026-07-01', '2026-07-31')
+  await registerAbsence(eDocOther.id, arretMaladie.id, '2026-07-01', '2026-07-31')
   const otherEmp = await empLogin('DOCOTHER2')
   const otherDocId = await createVerifiedDocument(otherEmp.id)
   const docOtherResp = await createMaintenance(eDocOther.id, '2026-07-01', '2026-07-31', 'Document rattaché à un autre salarié.', 'AUTRE', 'Disposition', { basisValidFrom: '2024-01-01', basisValidTo: '2026-12-31', basisDocumentId: otherDocId })
@@ -845,7 +845,7 @@ async function main() {
 
   // ── 62. P2 — invalidation d'un document après acquisition : réévaluation ─
   const eDocInv = await empLogin('DOCINV')
-  await registerAbsence(eDocInv.token, arretMaladie.id, '2026-07-01', '2026-07-31')
+  await registerAbsence(eDocInv.id, arretMaladie.id, '2026-07-01', '2026-07-31')
   const invDocId = await createVerifiedDocument(eDocInv.id)
   await createMaintenance(eDocInv.id, '2026-07-01', '2026-07-31', 'Document valide.', 'AUTRE', 'Disposition', { basisValidFrom: '2024-01-01', basisValidTo: '2026-12-31', basisDocumentId: invDocId })
   await runAccrual('2026-07')
@@ -893,7 +893,7 @@ async function main() {
 
   // ── 65. P3 — séparation téléversement / vérification juridique ────────
   const eBasisFlow = await empLogin('BASISFLOW')
-  await registerAbsence(eBasisFlow.token, arretMaladie.id, '2026-07-01', '2026-07-31')
+  await registerAbsence(eBasisFlow.id, arretMaladie.id, '2026-07-01', '2026-07-31')
   const uploadedDoc = await uploadBasis('/documents/basis', 'employeeId', eBasisFlow.id)
   const [uploadedRow] = await conn.query('SELECT status, verified_by_rh_id, verified_at FROM documents WHERE id=?', [uploadedDoc.id])
   const decBefore = await createMaintenance(eBasisFlow.id, '2026-07-01', '2026-07-31', 'Clause contractuelle.', 'AUTRE', 'Disposition', { basisValidFrom: '2024-01-01', basisValidTo: '2026-12-31', basisDocumentId: uploadedDoc.id })

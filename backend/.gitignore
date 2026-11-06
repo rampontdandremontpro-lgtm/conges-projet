@@ -1,5 +1,6 @@
 # compiled output
 /dist
+/dist-recette
 /node_modules
 /build
 

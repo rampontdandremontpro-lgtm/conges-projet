@@ -20,15 +20,20 @@ describe('MonthlyAccrualService — REF-1 période d’acquisition', () => {
     getNumber: jest.fn(),
     getValue: jest.fn(),
     getInteger: jest.fn(),
+    upsertInternal: jest.fn(),
   } as unknown as SettingsService;
 
   const dataSource = {} as DataSource;
   const accrualAnomalyService = { reconcile: jest.fn().mockResolvedValue(null) } as never;
+  const notificationsService = {
+    createForActiveRoles: jest.fn().mockResolvedValue([]),
+  } as never;
 
   const service = new MonthlyAccrualService(
     dataSource,
     settingsService,
     accrualAnomalyService,
+    notificationsService,
   );
 
   const info = (accrualMonth: string, referencePeriodStart: string) =>
@@ -175,6 +180,7 @@ describe('MonthlyAccrualService — REF-1 période d’acquisition', () => {
         runDataSource,
         settingsService,
         accrualAnomalyService,
+        notificationsService,
       );
       martiniqueSpy = jest
         .spyOn(
@@ -290,5 +296,221 @@ describe('MonthlyAccrualService — REF-1 période d’acquisition', () => {
     it('exitDate null : comportement normal (mois complet)', () => {
       expect(computePresence('2026-01-01', null)).toMatchObject({ daysPresent: 31, daysInMonth: 31 });
     });
+  });
+});
+
+describe('MonthlyAccrualService — déclenchement automatique et rattrapage', () => {
+  const settingsService = {
+    getString: jest.fn(),
+    getNumber: jest.fn(),
+    getValue: jest.fn(),
+    getInteger: jest.fn(),
+    upsertInternal: jest.fn().mockResolvedValue({}),
+  } as unknown as SettingsService;
+  const dataSource = {} as DataSource;
+  const accrualAnomalyService = { reconcile: jest.fn().mockResolvedValue(null) } as never;
+  const notificationsService = {
+    createForActiveRoles: jest.fn().mockResolvedValue([]),
+  } as never;
+
+  const service = new MonthlyAccrualService(
+    dataSource,
+    settingsService,
+    accrualAnomalyService,
+    notificationsService,
+  );
+
+  const months = (service as unknown as {
+    mostRecentEligibleAccrualMonth: (now: Date) => string;
+    nextAccrualMonth: (month: string) => string;
+    determineAutomaticMonthsToProcess: (now: Date) => Promise<string[]>;
+  });
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    (settingsService.getString as jest.Mock).mockResolvedValue('');
+  });
+
+  describe('mostRecentEligibleAccrualMonth (heure Martinique, UTC-4)', () => {
+    it('dernier jour du mois à 23 h locale → mois courant éligible', () => {
+      // 2026-11-01 03:00 UTC = 31/10/2026 23:00 Martinique
+      expect(months.mostRecentEligibleAccrualMonth(new Date('2026-11-01T03:00:00Z'))).toBe('2026-10');
+    });
+
+    it('dernier jour du mois AVANT 23 h → mois précédent (aucune anticipation)', () => {
+      // 2026-11-01 00:00 UTC = 31/10/2026 20:00 Martinique
+      expect(months.mostRecentEligibleAccrualMonth(new Date('2026-11-01T00:00:00Z'))).toBe('2026-09');
+    });
+
+    it('en milieu de mois → mois précédent', () => {
+      // 2026-11-05 12:00 UTC = 05/11/2026 08:00 Martinique
+      expect(months.mostRecentEligibleAccrualMonth(new Date('2026-11-05T12:00:00Z'))).toBe('2026-10');
+    });
+
+    it('début janvier → décembre de l’année précédente', () => {
+      // 2026-01-05 12:00 UTC = 05/01/2026 08:00 Martinique → mois précédent = 2025-12
+      expect(months.mostRecentEligibleAccrualMonth(new Date('2026-01-05T12:00:00Z'))).toBe('2025-12');
+    });
+
+    it('31/12 AVANT 23 h → novembre (décembre pas encore terminé)', () => {
+      // 2026-01-01 00:00 UTC = 31/12/2025 20:00 Martinique
+      expect(months.mostRecentEligibleAccrualMonth(new Date('2026-01-01T00:00:00Z'))).toBe('2025-11');
+    });
+  });
+
+  describe('nextAccrualMonth', () => {
+    it('passe au mois suivant', () => {
+      expect(months.nextAccrualMonth('2026-11')).toBe('2026-12');
+    });
+
+    it('change d’année en décembre', () => {
+      expect(months.nextAccrualMonth('2026-12')).toBe('2027-01');
+    });
+  });
+
+  describe('determineAutomaticMonthsToProcess — pas d’acquisition prématurée', () => {
+    it('jalon = mois précédent, milieu de mois → aucun mois', async () => {
+      (settingsService.getString as jest.Mock).mockResolvedValue('2026-10');
+      await expect(months.determineAutomaticMonthsToProcess(new Date('2026-11-05T12:00:00Z'))).resolves.toEqual([]);
+    });
+  });
+
+  describe('determineAutomaticMonthsToProcess — créneau prévu', () => {
+    it('dernier jour 23 h → le mois qui vient de se terminer', async () => {
+      (settingsService.getString as jest.Mock).mockResolvedValue('2026-09');
+      await expect(months.determineAutomaticMonthsToProcess(new Date('2026-11-01T03:00:00Z'))).resolves.toEqual(['2026-10']);
+    });
+  });
+
+  describe('determineAutomaticMonthsToProcess — rattrapage après interruption', () => {
+    it('serveur arrêté pendant le créneau : le mois manqué est rattrapé au redémarrage', async () => {
+      // Jalon = septembre ; redémarrage le 05/11 : octobre doit être rattrapé.
+      (settingsService.getString as jest.Mock).mockResolvedValue('2026-09');
+      await expect(months.determineAutomaticMonthsToProcess(new Date('2026-11-05T12:00:00Z'))).resolves.toEqual(['2026-10']);
+    });
+
+    it('plusieurs mois manqués sont traités dans l’ordre', async () => {
+      (settingsService.getString as jest.Mock).mockResolvedValue('2026-07');
+      await expect(months.determineAutomaticMonthsToProcess(new Date('2026-11-05T12:00:00Z'))).resolves.toEqual(['2026-08', '2026-09', '2026-10']);
+    });
+
+    it('jalon = mois éligible le plus récent → aucun re-traitement (idempotence)', async () => {
+      (settingsService.getString as jest.Mock).mockResolvedValue('2026-10');
+      await expect(months.determineAutomaticMonthsToProcess(new Date('2026-11-05T12:00:00Z'))).resolves.toEqual([]);
+    });
+  });
+
+  describe('determineAutomaticMonthsToProcess — premier démarrage', () => {
+    it('sans jalon : seul le mois éligible le plus récent est traité (pas de remontée historique)', async () => {
+      (settingsService.getString as jest.Mock).mockResolvedValue('');
+      await expect(months.determineAutomaticMonthsToProcess(new Date('2026-11-05T12:00:00Z'))).resolves.toEqual(['2026-10']);
+    });
+  });
+});
+
+describe('MonthlyAccrualService — rattrapage : un échec ne masque jamais un mois', () => {
+  const settingsService = {
+    getString: jest.fn(),
+    getNumber: jest.fn(),
+    getValue: jest.fn(),
+    getInteger: jest.fn(),
+    upsertInternal: jest.fn().mockResolvedValue({}),
+  } as unknown as SettingsService;
+  const dataSource = {} as DataSource;
+  const accrualAnomalyService = { reconcile: jest.fn().mockResolvedValue(null) } as never;
+  const notificationsService = {
+    createForActiveRoles: jest.fn().mockResolvedValue([]),
+  } as never;
+
+  const service = new MonthlyAccrualService(
+    dataSource,
+    settingsService,
+    accrualAnomalyService,
+    notificationsService,
+  );
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    // Jalon = juillet ; au 05/11 (Martinique) → mois à traiter : août, sept., oct.
+    // Le jalon est stateful : upsertInternal met à jour la valeur lue ensuite.
+    let watermark = '2026-07';
+    (settingsService.getString as jest.Mock).mockImplementation(
+      async (key: string) =>
+        key === 'AUTO_ACCRUAL_LAST_PROCESSED_MONTH' ? watermark : '',
+    );
+    (settingsService.upsertInternal as jest.Mock).mockImplementation(
+      async (_key: string, value: string) => {
+        watermark = value;
+        return {};
+      },
+    );
+  });
+
+  const runForMonthSpy = (service, behavior) =>
+    jest.spyOn(service, 'runForMonth').mockImplementation(async (month: string) => {
+      const action = behavior[month];
+      if (action === 'fail') throw new Error(`échec simulé ${month}`);
+      return {
+        accrualMonth: month,
+        effectiveDate: `${month}-01`,
+        referencePeriod: '2026-2027',
+        daysPerEmployee: 2.5,
+        creditedEmployees: [],
+        alreadyCreditedEmployees: [],
+        legacyMovementsLinked: [],
+        manualReviewRequired: [],
+      };
+    });
+
+  it('août OK, septembre échoue → octobre N’EST PAS traité, jalon reste août', async () => {
+    const spy = runForMonthSpy(service, { '2026-08': 'ok', '2026-09': 'fail', '2026-10': 'ok' });
+
+    await (service as unknown as { runAutomaticAccrualIfDue: (now: Date) => Promise<void> }).runAutomaticAccrualIfDue(new Date("2026-11-05T12:00:00Z"));
+
+    expect(spy.mock.calls.map((c) => c[0])).toEqual(['2026-08', '2026-09']);
+    expect(settingsService.upsertInternal).toHaveBeenCalledTimes(1);
+    expect(settingsService.upsertInternal).toHaveBeenCalledWith(
+      'AUTO_ACCRUAL_LAST_PROCESSED_MONTH',
+      '2026-08',
+      expect.any(String),
+      null,
+    );
+    expect(notificationsService.createForActiveRoles).toHaveBeenCalledTimes(1);
+    expect(notificationsService.createForActiveRoles).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ type: 'AUTO_ACCRUAL_FAILED' }),
+    );
+  });
+
+  it('notification défaillante → l’échec reste signalé et ne fait pas échouer le cycle', async () => {
+    const spy = runForMonthSpy(service, { '2026-08': 'fail' });
+    (notificationsService.createForActiveRoles as jest.Mock).mockRejectedValue(new Error('notif down'));
+
+    await (service as unknown as { runAutomaticAccrualIfDue: (now: Date) => Promise<void> }).runAutomaticAccrualIfDue(new Date("2026-11-05T12:00:00Z"));
+
+    // août seul tenté ; aucune exception ne remonte ; le jalon n'avance pas.
+    expect(spy.mock.calls.map((c) => c[0])).toEqual(['2026-08']);
+    expect(settingsService.upsertInternal).not.toHaveBeenCalled();
+  });
+
+  it('relance après échec : le mois échoué est retenté, sans double crédit (idempotence)', async () => {
+    const behavior = { '2026-08': 'ok', '2026-09': 'fail', '2026-10': 'ok' };
+    const spy = jest.spyOn(service, 'runForMonth').mockImplementation(async (month: string) => {
+      if (behavior[month] === 'fail') throw new Error(`échec simulé ${month}`);
+      return {
+        accrualMonth: month, effectiveDate: `${month}-01`, referencePeriod: '2026-2027',
+        daysPerEmployee: 2.5, creditedEmployees: [], alreadyCreditedEmployees: [],
+        legacyMovementsLinked: [], manualReviewRequired: [],
+      };
+    });
+
+    // Cycle 1 : août OK, septembre échoue → octobre non tenté.
+    await (service as unknown as { runAutomaticAccrualIfDue: (now: Date) => Promise<void> }).runAutomaticAccrualIfDue(new Date("2026-11-05T12:00:00Z"));
+    expect(spy.mock.calls.map((c) => c[0])).toEqual(['2026-08', '2026-09']);
+
+    // Cycle 2 : septembre réussit désormais → septembre retenté puis octobre (août non rejoué).
+    behavior['2026-09'] = 'ok';
+    await (service as unknown as { runAutomaticAccrualIfDue: (now: Date) => Promise<void> }).runAutomaticAccrualIfDue(new Date("2026-11-05T12:00:00Z"));
+    expect(spy.mock.calls.map((c) => c[0])).toEqual(['2026-08', '2026-09', '2026-09', '2026-10']);
   });
 });
